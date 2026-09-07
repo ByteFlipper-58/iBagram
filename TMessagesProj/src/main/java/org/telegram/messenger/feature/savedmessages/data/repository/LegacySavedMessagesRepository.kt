@@ -5,10 +5,10 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
-import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.MessagesController
 import org.telegram.messenger.NotificationCenter
 import org.telegram.messenger.SavedMessagesController
+import org.telegram.messenger.core.events.NotificationCenterFlowBridge
 import org.telegram.messenger.core.result.AppError
 import org.telegram.messenger.core.result.Result
 import org.telegram.messenger.feature.savedmessages.data.mapper.SavedMessagesMapper
@@ -42,7 +42,7 @@ class LegacySavedMessagesRepository(
             }
         }
 
-        AndroidUtilities.runOnUIThread {
+        NotificationCenterFlowBridge.runOnMainThread {
             NotificationCenter.getInstance(account).addObserver(
                 observer,
                 NotificationCenter.savedMessagesDialogsUpdate
@@ -52,7 +52,7 @@ class LegacySavedMessagesRepository(
         }
 
         awaitClose {
-            AndroidUtilities.runOnUIThread {
+            NotificationCenterFlowBridge.runOnMainThread {
                 NotificationCenter.getInstance(account).removeObserver(
                     observer,
                     NotificationCenter.savedMessagesDialogsUpdate
@@ -61,7 +61,7 @@ class LegacySavedMessagesRepository(
         }
     }
 
-    override suspend fun getSavedDialogs(): Result<List<SavedDialogModel>> = withContext(Dispatchers.IO) {
+    override suspend fun getSavedDialogs(): Result<List<SavedDialogModel>> = withContext(Dispatchers.Main) {
         try {
             val dialogs = controller.allDialogs.map { dialog ->
                 SavedMessagesMapper.mapToDomain(account, dialog)
@@ -105,22 +105,33 @@ class LegacySavedMessagesRepository(
     }
 
     override fun observeSavedTags(): Flow<List<SavedTagModel>> = callbackFlow {
+        val emitTags = {
+            val ms = MessagesController.getInstance(account)
+            val tagsTL = ms.getSavedReactionTags(0L)
+            val tags = if (tagsTL != null && tagsTL.tags != null) {
+                tagsTL.tags.map { SavedMessagesMapper.mapTagToDomain(it) }
+            } else {
+                emptyList()
+            }
+            trySend(tags)
+        }
+
         val observer = NotificationCenter.NotificationCenterDelegate { id, acc, _ ->
             if (id == NotificationCenter.savedReactionTagsUpdate && acc == account) {
-                trySend(emptyList())
+                emitTags()
             }
         }
 
-        AndroidUtilities.runOnUIThread {
+        NotificationCenterFlowBridge.runOnMainThread {
             NotificationCenter.getInstance(account).addObserver(
                 observer,
                 NotificationCenter.savedReactionTagsUpdate
             )
-            trySend(emptyList())
+            emitTags()
         }
 
         awaitClose {
-            AndroidUtilities.runOnUIThread {
+            NotificationCenterFlowBridge.runOnMainThread {
                 NotificationCenter.getInstance(account).removeObserver(
                     observer,
                     NotificationCenter.savedReactionTagsUpdate

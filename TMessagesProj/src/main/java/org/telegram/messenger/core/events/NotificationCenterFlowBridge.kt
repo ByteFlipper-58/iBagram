@@ -1,5 +1,6 @@
 package org.telegram.messenger.core.events
 
+import android.os.Looper
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -38,6 +39,19 @@ data class NotificationEvent(
  */
 object NotificationCenterFlowBridge {
 
+    internal fun runOnMainThread(action: () -> Unit) {
+        val isMainThread = try {
+            Looper.myLooper() != null && Looper.myLooper() == Looper.getMainLooper()
+        } catch (_: Throwable) {
+            false
+        }
+        if (isMainThread) {
+            action()
+        } else {
+            AndroidUtilities.runOnUIThread(action)
+        }
+    }
+
     /**
      * Observes a specific [eventId] on the [NotificationCenter] for [account].
      */
@@ -47,12 +61,12 @@ object NotificationCenterFlowBridge {
             trySend(NotificationEvent(id, acc, safeArgs))
         }
 
-        AndroidUtilities.runOnUIThread {
+        runOnMainThread {
             NotificationCenter.getInstance(account).addObserver(observer, eventId)
         }
 
         awaitClose {
-            AndroidUtilities.runOnUIThread {
+            runOnMainThread {
                 NotificationCenter.getInstance(account).removeObserver(observer, eventId)
             }
         }
@@ -67,7 +81,7 @@ object NotificationCenterFlowBridge {
             trySend(NotificationEvent(id, acc, safeArgs))
         }
 
-        AndroidUtilities.runOnUIThread {
+        runOnMainThread {
             val nc = NotificationCenter.getInstance(account)
             for (id in eventIds) {
                 nc.addObserver(observer, id)
@@ -75,7 +89,7 @@ object NotificationCenterFlowBridge {
         }
 
         awaitClose {
-            AndroidUtilities.runOnUIThread {
+            runOnMainThread {
                 val nc = NotificationCenter.getInstance(account)
                 for (id in eventIds) {
                     nc.removeObserver(observer, id)
@@ -93,12 +107,12 @@ object NotificationCenterFlowBridge {
             trySend(NotificationEvent(id, acc, safeArgs))
         }
 
-        AndroidUtilities.runOnUIThread {
+        runOnMainThread {
             NotificationCenter.getGlobalInstance().addObserver(observer, eventId)
         }
 
         awaitClose {
-            AndroidUtilities.runOnUIThread {
+            runOnMainThread {
                 NotificationCenter.getGlobalInstance().removeObserver(observer, eventId)
             }
         }

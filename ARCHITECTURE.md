@@ -98,7 +98,7 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 │   ├── events/
 │   │   └── NotificationCenterFlowBridge.kt# Cold Flow wrapper for NotificationCenter
 │   └── di/
-│       └── AccountFeatureContainer.kt     # Scoped Service Locator per currentAccount
+│       └── AccountFeatureContainer.kt     # Scoped Service Locator per currentAccount (test-overridable)
 │
 └── feature/                               # Migrated feature slices
     └── savedmessages/                     # Pilot Feature: Saved Messages
@@ -110,7 +110,10 @@ TMessagesProj/src/main/java/org/telegram/messenger/
         │   │   └── SavedMessagesRepository.kt
         │   └── usecase/                   # Isolated business operations
         │       ├── GetSavedDialogsUseCase.kt
-        │       └── TogglePinSavedDialogUseCase.kt
+        │       ├── TogglePinSavedDialogUseCase.kt
+        │       ├── DeleteSavedDialogUseCase.kt
+        │       ├── GetSavedTagsUseCase.kt
+        │       └── SearchSavedDialogsUseCase.kt
         │
         ├── data/
         │   ├── mapper/                    # Pure mappers (Legacy <-> Domain)
@@ -132,12 +135,14 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - Dependent on: Domain Layer + Legacy Core.
   - Implements Domain repository contracts using legacy Telegram classes (`SavedMessagesController`, `MessagesStorage`, etc.).
   - Translates legacy objects and TL models into clean Domain models via dedicated Mappers.
+  - **Threading Policy:** Telegram's in-memory collections (such as `allDialogs`, user caches, and chat lists) are unsynchronized and modified exclusively on the Android Main thread. All Data layer operations reading or mutating these structures must run on `Dispatchers.Main` to prevent `ConcurrentModificationException` and data races.
 - **Presentation Layer (`feature.<name>.presentation`):**
   - Dependent on: Domain Layer + Android Lifecycle/Coroutines.
   - Uses `ViewModel` and exposes immutable `StateFlow<UiState>` and `SharedFlow<UiEvent>`.
+  - Preserves composite state (such as search results and tags) when reactive stream updates arrive.
   - Does **not** communicate with legacy controllers directly.
 - **Core Infrastructure (`core.*`):**
-  - Shared cross-feature utilities: functional `Result`, reactive bridges (`NotificationCenterFlowBridge`), and per-account dependency containers.
+  - Shared cross-feature utilities: functional `Result`, reactive bridges (`NotificationCenterFlowBridge`), and per-account dependency containers with test substitution support.
 
 ---
 
@@ -161,13 +166,13 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 - [x] Core boundaries introduced:
   - [x] `Result.kt` (safe error handling without throwing exceptions across layers)
   - [x] `NotificationCenterFlowBridge.kt` (reactive `callbackFlow` bridge for `NotificationCenter`)
-  - [x] `AccountFeatureContainer.kt` (scoped dependency management per `currentAccount`)
+  - [x] `AccountFeatureContainer.kt` (scoped dependency management per `currentAccount`, test-mockable)
 - [x] Pilot feature migrated: **Saved Messages**
   - [x] Domain entities: `SavedDialogModel`, `SavedTagModel`
   - [x] Repository contract: `SavedMessagesRepository`
-  - [x] Use cases: `GetSavedDialogsUseCase`, `TogglePinSavedDialogUseCase`
-  - [x] Data layer: `SavedMessagesMapper`, `LegacySavedMessagesRepository`
-  - [x] Presentation layer: `SavedMessagesUiState`, `SavedMessagesEvent`, `SavedMessagesViewModel`
+  - [x] Use cases: `GetSavedDialogsUseCase`, `TogglePinSavedDialogUseCase`, `DeleteSavedDialogUseCase`, `GetSavedTagsUseCase`, `SearchSavedDialogsUseCase`
+  - [x] Data layer: `SavedMessagesMapper` (dialog and tag mapping), `LegacySavedMessagesRepository` (Main-thread safe)
+  - [x] Presentation layer: `SavedMessagesUiState` (with query/results/tags), `SavedMessagesEvent`, `SavedMessagesViewModel` (search, delete, pin, tags, state preservation)
 - [ ] Dialogs list (`DialogsActivity`, `DialogsAdapter`)
 - [ ] Chat & Messaging (`ChatActivity`, `ChatMessageCell`)
 - [ ] Profiles & User Info (`ProfileActivity`)

@@ -3,7 +3,10 @@ package org.telegram.messenger.core.di
 import org.telegram.messenger.UserConfig
 import org.telegram.messenger.feature.savedmessages.data.repository.LegacySavedMessagesRepository
 import org.telegram.messenger.feature.savedmessages.domain.repository.SavedMessagesRepository
+import org.telegram.messenger.feature.savedmessages.domain.usecase.DeleteSavedDialogUseCase
 import org.telegram.messenger.feature.savedmessages.domain.usecase.GetSavedDialogsUseCase
+import org.telegram.messenger.feature.savedmessages.domain.usecase.GetSavedTagsUseCase
+import org.telegram.messenger.feature.savedmessages.domain.usecase.SearchSavedDialogsUseCase
 import org.telegram.messenger.feature.savedmessages.domain.usecase.TogglePinSavedDialogUseCase
 import org.telegram.messenger.feature.savedmessages.presentation.SavedMessagesViewModel
 import java.util.concurrent.ConcurrentHashMap
@@ -14,24 +17,41 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class AccountFeatureContainer private constructor(val account: Int) {
 
-    // SavedMessages pilot feature dependencies
-    val savedMessagesRepository: SavedMessagesRepository by lazy {
-        LegacySavedMessagesRepository(account)
-    }
+    private var customSavedMessagesRepository: SavedMessagesRepository? = null
 
-    val getSavedDialogsUseCase: GetSavedDialogsUseCase by lazy {
-        GetSavedDialogsUseCase(savedMessagesRepository)
-    }
+    /**
+     * Repository providing Saved Messages operations.
+     * Can be replaced or mocked via custom setter for testing.
+     */
+    var savedMessagesRepository: SavedMessagesRepository
+        get() = customSavedMessagesRepository ?: LegacySavedMessagesRepository(account)
+        set(value) {
+            customSavedMessagesRepository = value
+        }
 
-    val togglePinSavedDialogUseCase: TogglePinSavedDialogUseCase by lazy {
-        TogglePinSavedDialogUseCase(savedMessagesRepository)
-    }
+    val getSavedDialogsUseCase: GetSavedDialogsUseCase
+        get() = GetSavedDialogsUseCase(savedMessagesRepository)
+
+    val togglePinSavedDialogUseCase: TogglePinSavedDialogUseCase
+        get() = TogglePinSavedDialogUseCase(savedMessagesRepository)
+
+    val deleteSavedDialogUseCase: DeleteSavedDialogUseCase
+        get() = DeleteSavedDialogUseCase(savedMessagesRepository)
+
+    val getSavedTagsUseCase: GetSavedTagsUseCase
+        get() = GetSavedTagsUseCase(savedMessagesRepository)
+
+    val searchSavedDialogsUseCase: SearchSavedDialogsUseCase
+        get() = SearchSavedDialogsUseCase(savedMessagesRepository)
 
     fun createSavedMessagesViewModel(): SavedMessagesViewModel {
         return SavedMessagesViewModel(
             account = account,
             getSavedDialogsUseCase = getSavedDialogsUseCase,
-            togglePinSavedDialogUseCase = togglePinSavedDialogUseCase
+            togglePinSavedDialogUseCase = togglePinSavedDialogUseCase,
+            deleteSavedDialogUseCase = deleteSavedDialogUseCase,
+            getSavedTagsUseCase = getSavedTagsUseCase,
+            searchSavedDialogsUseCase = searchSavedDialogsUseCase
         )
     }
 

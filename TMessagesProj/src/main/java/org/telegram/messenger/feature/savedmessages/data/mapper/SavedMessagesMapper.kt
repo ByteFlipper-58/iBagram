@@ -7,9 +7,12 @@ import org.telegram.messenger.SavedMessagesController
 import org.telegram.messenger.UserConfig
 import org.telegram.messenger.UserObject
 import org.telegram.messenger.feature.savedmessages.domain.model.SavedDialogModel
+import org.telegram.messenger.feature.savedmessages.domain.model.SavedTagModel
+import org.telegram.tgnet.TLRPC
 
 /**
- * Maps legacy Telegram [SavedMessagesController.SavedDialog] objects to clean [SavedDialogModel] instances.
+ * Maps legacy Telegram [SavedMessagesController.SavedDialog] and [TLRPC.TL_savedReactionTag]
+ * objects to clean [SavedDialogModel] and [SavedTagModel] domain instances.
  */
 object SavedMessagesMapper {
 
@@ -36,6 +39,19 @@ object SavedMessagesMapper {
             lastMessageDate = legacyDialog.date,
             topMessageId = legacyDialog.top_message_id,
             topMessageSnippet = resolvedSnippet
+        )
+    }
+
+    fun mapTagToDomain(tag: TLRPC.TL_savedReactionTag): SavedTagModel {
+        val reactionStr = when (val reaction = tag.reaction) {
+            is TLRPC.TL_reactionEmoji -> reaction.emoticon ?: ""
+            is TLRPC.TL_reactionCustomEmoji -> reaction.document_id.toString()
+            else -> tag.reaction?.toString() ?: ""
+        }
+        return SavedTagModel(
+            reaction = reactionStr,
+            title = tag.title ?: "",
+            count = tag.count
         )
     }
 
