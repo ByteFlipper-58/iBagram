@@ -69,6 +69,16 @@ import org.telegram.messenger.feature.folders.domain.usecase.ObserveFoldersUseCa
 import org.telegram.messenger.feature.folders.domain.usecase.ReorderFoldersUseCase
 import org.telegram.messenger.feature.folders.domain.usecase.UpdateFolderUseCase
 import org.telegram.messenger.feature.folders.presentation.FoldersViewModel
+import org.telegram.messenger.feature.stickers.data.repository.LegacyStickersRepository
+import org.telegram.messenger.feature.stickers.domain.repository.StickersRepository
+import org.telegram.messenger.feature.stickers.domain.usecase.GetRecentStickersUseCase
+import org.telegram.messenger.feature.stickers.domain.usecase.GetStickerSetUseCase
+import org.telegram.messenger.feature.stickers.domain.usecase.GetStickerSetsUseCase
+import org.telegram.messenger.feature.stickers.domain.usecase.GetStickersForEmojiUseCase
+import org.telegram.messenger.feature.stickers.domain.usecase.ObserveStickerSetsUseCase
+import org.telegram.messenger.feature.stickers.domain.usecase.ToggleStickerSetArchivedUseCase
+import org.telegram.messenger.feature.stickers.domain.usecase.ToggleStickerSetInstalledUseCase
+import org.telegram.messenger.feature.stickers.presentation.StickersViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -572,6 +582,57 @@ class AccountFeatureContainer private constructor(val account: Int) {
             deleteFolderUseCase = deleteFolderUseCase,
             reorderFoldersUseCase = reorderFoldersUseCase,
             getSuggestedFoldersUseCase = getSuggestedFoldersUseCase
+        )
+    }
+
+    private var customStickersRepository: StickersRepository? = null
+
+    var stickersRepository: StickersRepository
+        get() = customStickersRepository ?: LegacyStickersRepository(account)
+        set(value) {
+            customStickersRepository = value
+        }
+
+    val observeStickerSetsUseCase: ObserveStickerSetsUseCase
+        get() = ObserveStickerSetsUseCase(stickersRepository)
+
+    val getStickerSetsUseCase: GetStickerSetsUseCase
+        get() = GetStickerSetsUseCase(stickersRepository)
+
+    val getStickerSetUseCase: GetStickerSetUseCase
+        get() = GetStickerSetUseCase(stickersRepository)
+
+    val getRecentStickersUseCase: GetRecentStickersUseCase
+        get() = GetRecentStickersUseCase(stickersRepository)
+
+    val getStickersForEmojiUseCase: GetStickersForEmojiUseCase
+        get() = GetStickersForEmojiUseCase(stickersRepository)
+
+    val toggleStickerSetInstalledUseCase: ToggleStickerSetInstalledUseCase
+        get() = ToggleStickerSetInstalledUseCase(stickersRepository)
+
+    val toggleStickerSetArchivedUseCase: ToggleStickerSetArchivedUseCase
+        get() = ToggleStickerSetArchivedUseCase(stickersRepository)
+
+    private val cachedStickersViewModels = ConcurrentHashMap<Int, StickersViewModel>()
+
+    val stickersViewModel: StickersViewModel
+        get() = getStickersViewModel(0)
+
+    fun getStickersViewModel(type: Int = 0): StickersViewModel {
+        return cachedStickersViewModels.computeIfAbsent(type) { createStickersViewModel(it) }
+    }
+
+    fun createStickersViewModel(type: Int = 0): StickersViewModel {
+        return StickersViewModel(
+            observeStickerSetsUseCase = observeStickerSetsUseCase,
+            getStickerSetsUseCase = getStickerSetsUseCase,
+            getStickerSetUseCase = getStickerSetUseCase,
+            getRecentStickersUseCase = getRecentStickersUseCase,
+            getStickersForEmojiUseCase = getStickersForEmojiUseCase,
+            toggleStickerSetInstalledUseCase = toggleStickerSetInstalledUseCase,
+            toggleStickerSetArchivedUseCase = toggleStickerSetArchivedUseCase,
+            stickerType = type
         )
     }
 

@@ -357,6 +357,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── FoldersUiState.kt
             ├── FoldersEvent.kt
             └── FoldersViewModel.kt
+    │
+    └── stickers/                        # Stickers & Emojis Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── StickerModel.kt
+        │   │   ├── StickerSetModel.kt
+        │   │   └── StickerType.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── StickersRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveStickerSetsUseCase.kt
+        │       ├── GetStickerSetsUseCase.kt
+        │       ├── GetStickerSetUseCase.kt
+        │       ├── GetRecentStickersUseCase.kt
+        │       ├── GetStickersForEmojiUseCase.kt
+        │       ├── ToggleStickerSetInstalledUseCase.kt
+        │       └── ToggleStickerSetArchivedUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TLRPC sticker models -> Domain)
+        │   │   └── StickerMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyStickersRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── StickersUiState.kt
+            ├── StickersEvent.kt
+            └── StickersViewModel.kt
 ```
 
 ### Layer Rules
@@ -460,10 +488,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveFoldersUseCase`, `GetFoldersUseCase`, `GetFolderUseCase`, `CreateFolderUseCase`, `UpdateFolderUseCase`, `DeleteFolderUseCase`, `ReorderFoldersUseCase`, `GetSuggestedFoldersUseCase`
   - [x] Data layer: `FolderMapper`, `LegacyFoldersRepository` (Main-thread safe, hooked into `NotificationCenter.dialogFiltersUpdated`, `suggestedFiltersLoaded`)
   - [x] Presentation layer: `FoldersUiState`, `FoldersEvent`, `FoldersViewModel`
+- [x] Stickers & Emojis (`feature.stickers`)
+  - [x] Domain entities: `StickerModel`, `StickerSetModel`, `StickerType` (pure models decoupling from TLRPC.Document and TLRPC.TL_messages_stickerSet)
+  - [x] Repository contract: `StickersRepository`
+  - [x] Use cases: `ObserveStickerSetsUseCase`, `GetStickerSetsUseCase`, `GetStickerSetUseCase`, `GetRecentStickersUseCase`, `GetStickersForEmojiUseCase`, `ToggleStickerSetInstalledUseCase`, `ToggleStickerSetArchivedUseCase`
+  - [x] Data layer: `StickerMapper`, `LegacyStickersRepository` (Main-thread safe, hooked into `NotificationCenter.stickersDidLoad`, `recentDocumentsDidLoad`)
+  - [x] Presentation layer: `StickersUiState`, `StickersEvent`, `StickersViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 014: Stickers & Emojis Media Controller Isolation
+- **Context:** In Telegram Android, sticker sets, recent stickers, and emoji-associated stickers are handled inside `MediaDataController` (~10000 lines). In-memory structures `stickerSets`, `stickersByIds`, and `allStickers` are heavily coupled to `TLRPC.TL_messages_stickerSet` and `TLRPC.Document`. Direct UI consumption caused massive coupling to Telegram's document attributes (`TL_documentAttributeSticker`, `TL_documentAttributeCustomEmoji`).
+- **Decision:** Introduce typed domain entities `StickerModel`, `StickerSetModel`, and enum `StickerType`. Define `StickersRepository` and implement `LegacyStickersRepository` executing on `Dispatchers.Main` with reactive observation through `callbackFlow` hooked into `NotificationCenter.stickersDidLoad` and `recentDocumentsDidLoad`.
+- **Consequences:** Sticker selection, pack installation/archival, and emoji matching are fully isolated behind `StickersViewModel` and domain use cases without leaking TLRPC internals into the UI layer.
 
 ### ADR 013: Folders & Chat Filters Isolation and Order Management
 - **Context:** In Telegram Android, dialog filter tabs / folders are stored in `MessagesController.dialogFilters` (`ArrayList<DialogFilter>`) and `dialogFiltersById` (`SparseArray<DialogFilter>`). Mutation occurs via UI fragments (`FiltersSetupActivity`, `FilterCreateActivity`) directly mutating the in-memory array, calling `MessagesStorage.saveDialogFilter`, and sending RPCs. These collections are modified on `Dispatchers.Main` and lacked clean encapsulation.
