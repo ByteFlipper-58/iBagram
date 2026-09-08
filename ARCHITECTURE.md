@@ -602,6 +602,40 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── DataStorageUiState.kt
             ├── DataStorageEvent.kt
             └── DataStorageViewModel.kt
+    │
+    └── topics/                         # Forum Topics & Supergroup Threads Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── TopicModel.kt
+        │   │   ├── TopicFilterType.kt
+        │   │   └── ForumUnreadCountModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── TopicsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveTopicsUseCase.kt
+        │       ├── ObserveForumUnreadCountUseCase.kt
+        │       ├── GetTopicsUseCase.kt
+        │       ├── GetTopicUseCase.kt
+        │       ├── LoadTopicsUseCase.kt
+        │       ├── ReloadTopicsUseCase.kt
+        │       ├── ToggleCloseTopicUseCase.kt
+        │       ├── TogglePinTopicUseCase.kt
+        │       ├── ToggleShowTopicUseCase.kt
+        │       ├── DeleteTopicsUseCase.kt
+        │       ├── ReorderPinnedTopicsUseCase.kt
+        │       ├── MarkTopicReactionsAsReadUseCase.kt
+        │       └── GetForumUnreadCountUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_forumTopic -> TopicModel)
+        │   │   └── TopicMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyTopicsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── TopicsUiState.kt
+            ├── TopicsEvent.kt
+            └── TopicsViewModel.kt
 ```
 
 ### Layer Rules
@@ -759,10 +793,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveNetworkUsageUseCase`, `ObserveStorageUsageUseCase`, `ObserveAutoDownloadPresetUseCase`, `ObserveKeepMediaSettingsUseCase`, `GetNetworkUsageUseCase`, `ResetNetworkUsageUseCase`, `GetStorageUsageUseCase`, `ClearCacheUseCase`, `ClearDatabaseUseCase`, `GetAutoDownloadPresetUseCase`, `UpdateAutoDownloadPresetUseCase`, `GetKeepMediaSettingsUseCase`, `UpdateKeepMediaUseCase`, `RefreshStorageUsageUseCase`
   - [x] Data layer: `DataStorageMapper`, `LegacyDataStorageRepository` (Main/IO thread safe, adapting `StatsController`, `DownloadController`, `CacheByChatsController`, `FileLoader`, `MessagesStorage`)
   - [x] Presentation layer: `DataStorageUiState`, `DataStorageEvent`, `DataStorageViewModel`
+- [x] Forum Topics & Supergroup Threads (`feature.topics`)
+  - [x] Domain entities: `TopicModel` (with `isGeneral`), `TopicFilterType`, `ForumUnreadCountModel`
+  - [x] Repository contract: `TopicsRepository`
+  - [x] Use cases: `ObserveTopicsUseCase`, `ObserveForumUnreadCountUseCase`, `GetTopicsUseCase`, `GetTopicUseCase`, `LoadTopicsUseCase`, `ReloadTopicsUseCase`, `ToggleCloseTopicUseCase`, `TogglePinTopicUseCase`, `ToggleShowTopicUseCase`, `DeleteTopicsUseCase`, `ReorderPinnedTopicsUseCase`, `MarkTopicReactionsAsReadUseCase`, `GetForumUnreadCountUseCase`
+  - [x] Data layer: `TopicMapper`, `LegacyTopicsRepository` (Main-thread safe, adapting `TopicsController` via `MessagesController` and `NotificationCenterFlowBridge` listening to `topicsDidLoaded`)
+  - [x] Presentation layer: `TopicsUiState`, `TopicsEvent`, `TopicsViewModel` (filtering by OPEN/CLOSED/PINNED/HIDDEN, title search, unread counter badge observation)
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 023: Forum Topics, Supergroup Threads & TopicsController Isolation
+- **Context:** In Telegram Android, forum topics for supergroups are managed by `TopicsController.java` (~1390 lines) instantiated per-account on `MessagesController`. Legacy UI components (`TopicsFragment`, `ForumUtilities`, topic dialog headers) directly manipulated sparse collections (`topicsByChatId`, `topicsMapByChatId`), raw bitmasks, and mutable objects without thread safety guarantees or lifecycle isolation.
+- **Decision:** Introduce pure domain models `TopicModel`, `TopicFilterType`, and `ForumUnreadCountModel`. Define abstract contract `TopicsRepository` and implement `LegacyTopicsRepository` ensuring all `TopicsController` queries and updates run safely on `Dispatchers.Main`. Reactive observation is provided through `NotificationCenterFlowBridge` observing `topicsDidLoaded`. Presentation logic with multi-criteria filtering (open, closed, pinned, hidden, title search) and unread counting is encapsulated in `TopicsViewModel`.
+- **Consequences:** Topic lifecycle operations (close/reopen, pin/unpin, hide/show, delete, reorder pinned, reaction read receipts) can now be driven from modern Kotlin ViewModels with full unit-test coverage while keeping Telegram's internal forum cache and MTProto synchronization intact.
 
 ### ADR 022: Data & Storage Usage, Cache Control & Network Usage Controller Isolation
 - **Context:** In Telegram Android, storage calculation, cache clearing, database compaction, auto-download presets, network traffic statistics, and media retention policies are scattered across `CacheControlActivity.java` (~3140 lines), `DataSettingsActivity.java` (~990 lines), `DataAutoDownloadActivity.java` (~960 lines), `StatsController.java` (~290 lines), `DownloadController.java` (~1810 lines), and `CacheByChatsController.java` (~215 lines). UI components directly executed synchronous file directory walks, mutated global SharedPreferences keys (`mobilePreset`, `wifiPreset`, `roamingPreset`), and performed database reset operations.

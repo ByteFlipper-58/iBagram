@@ -198,6 +198,22 @@ import org.telegram.messenger.feature.datastorage.domain.usecase.ResetNetworkUsa
 import org.telegram.messenger.feature.datastorage.domain.usecase.UpdateAutoDownloadPresetUseCase
 import org.telegram.messenger.feature.datastorage.domain.usecase.UpdateKeepMediaUseCase
 import org.telegram.messenger.feature.datastorage.presentation.DataStorageViewModel
+import org.telegram.messenger.feature.topics.data.repository.LegacyTopicsRepository
+import org.telegram.messenger.feature.topics.domain.repository.TopicsRepository
+import org.telegram.messenger.feature.topics.domain.usecase.DeleteTopicsUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.GetForumUnreadCountUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.GetTopicUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.GetTopicsUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.LoadTopicsUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.MarkTopicReactionsAsReadUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.ObserveForumUnreadCountUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.ObserveTopicsUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.ReloadTopicsUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.ReorderPinnedTopicsUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.ToggleCloseTopicUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.TogglePinTopicUseCase
+import org.telegram.messenger.feature.topics.domain.usecase.ToggleShowTopicUseCase
+import org.telegram.messenger.feature.topics.presentation.TopicsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1321,6 +1337,83 @@ class AccountFeatureContainer private constructor(val account: Int) {
             getKeepMediaSettingsUseCase = getKeepMediaSettingsUseCase,
             updateKeepMediaUseCase = updateKeepMediaUseCase,
             refreshStorageUsageUseCase = refreshStorageUsageUseCase
+        )
+    }
+
+    private var customTopicsRepository: TopicsRepository? = null
+
+    var topicsRepository: TopicsRepository
+        get() = customTopicsRepository ?: LegacyTopicsRepository(account)
+        set(value) {
+            customTopicsRepository = value
+        }
+
+    val observeTopicsUseCase: ObserveTopicsUseCase
+        get() = ObserveTopicsUseCase(topicsRepository)
+
+    val observeForumUnreadCountUseCase: ObserveForumUnreadCountUseCase
+        get() = ObserveForumUnreadCountUseCase(topicsRepository)
+
+    val getTopicsUseCase: GetTopicsUseCase
+        get() = GetTopicsUseCase(topicsRepository)
+
+    val getTopicUseCase: GetTopicUseCase
+        get() = GetTopicUseCase(topicsRepository)
+
+    val loadTopicsUseCase: LoadTopicsUseCase
+        get() = LoadTopicsUseCase(topicsRepository)
+
+    val reloadTopicsUseCase: ReloadTopicsUseCase
+        get() = ReloadTopicsUseCase(topicsRepository)
+
+    val toggleCloseTopicUseCase: ToggleCloseTopicUseCase
+        get() = ToggleCloseTopicUseCase(topicsRepository)
+
+    val togglePinTopicUseCase: TogglePinTopicUseCase
+        get() = TogglePinTopicUseCase(topicsRepository)
+
+    val toggleShowTopicUseCase: ToggleShowTopicUseCase
+        get() = ToggleShowTopicUseCase(topicsRepository)
+
+    val deleteTopicsUseCase: DeleteTopicsUseCase
+        get() = DeleteTopicsUseCase(topicsRepository)
+
+    val reorderPinnedTopicsUseCase: ReorderPinnedTopicsUseCase
+        get() = ReorderPinnedTopicsUseCase(topicsRepository)
+
+    val markTopicReactionsAsReadUseCase: MarkTopicReactionsAsReadUseCase
+        get() = MarkTopicReactionsAsReadUseCase(topicsRepository)
+
+    val getForumUnreadCountUseCase: GetForumUnreadCountUseCase
+        get() = GetForumUnreadCountUseCase(topicsRepository)
+
+    private var cachedTopicsViewModel: TopicsViewModel? = null
+
+    val topicsViewModel: TopicsViewModel
+        get() {
+            var vm = cachedTopicsViewModel
+            if (vm == null) {
+                vm = createTopicsViewModel()
+                cachedTopicsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createTopicsViewModel(): TopicsViewModel {
+        return TopicsViewModel(
+            observeTopicsUseCase = observeTopicsUseCase,
+            observeForumUnreadCountUseCase = observeForumUnreadCountUseCase,
+            getTopicsUseCase = getTopicsUseCase,
+            getTopicUseCase = getTopicUseCase,
+            loadTopicsUseCase = loadTopicsUseCase,
+            reloadTopicsUseCase = reloadTopicsUseCase,
+            toggleCloseTopicUseCase = toggleCloseTopicUseCase,
+            togglePinTopicUseCase = togglePinTopicUseCase,
+            toggleShowTopicUseCase = toggleShowTopicUseCase,
+            deleteTopicsUseCase = deleteTopicsUseCase,
+            reorderPinnedTopicsUseCase = reorderPinnedTopicsUseCase,
+            markTopicReactionsAsReadUseCase = markTopicReactionsAsReadUseCase,
+            getForumUnreadCountUseCase = getForumUnreadCountUseCase
         )
     }
 
