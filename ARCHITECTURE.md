@@ -741,6 +741,39 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── TranslateUiState.kt
             ├── TranslateEvent.kt
             └── TranslateViewModel.kt
+    │
+    └── reactions/                      # Reactions, Polls & Quick Reactions Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── ReactionItemModel.kt
+        │   │   ├── MessageReactionCountModel.kt
+        │   │   ├── MessageReactionsStateModel.kt
+        │   │   └── ReactionsSettingsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ReactionsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveAvailableReactionsUseCase.kt
+        │       ├── GetAvailableReactionsUseCase.kt
+        │       ├── LoadAvailableReactionsUseCase.kt
+        │       ├── ObserveRecentReactionsUseCase.kt
+        │       ├── GetRecentReactionsUseCase.kt
+        │       ├── GetReactionsSettingsUseCase.kt
+        │       ├── GetDoubleTapReactionUseCase.kt
+        │       ├── SetDoubleTapReactionUseCase.kt
+        │       ├── SendReactionUseCase.kt
+        │       ├── ClearReactionsUseCase.kt
+        │       └── SendVoteUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TLRPC.Reaction / TL_availableReaction -> Domain)
+        │   │   └── ReactionMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyReactionsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ReactionsUiState.kt
+            ├── ReactionsEvent.kt
+            └── ReactionsViewModel.kt
 ```
 
 ### Layer Rules
@@ -922,10 +955,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveTranslateSettingsUseCase`, `GetTranslateSettingsUseCase`, `SetChatTranslateEnabledUseCase`, `SetContextTranslateEnabledUseCase`, `SetDoNotTranslateLanguagesUseCase`, `AddDoNotTranslateLanguageUseCase`, `RemoveDoNotTranslateLanguageUseCase`, `ObserveDialogTranslationStateUseCase`, `GetDialogTranslationStateUseCase`, `ToggleDialogTranslatingUseCase`, `SetDialogTargetLanguageUseCase`, `TranslateTextUseCase`, `GetAvailableLanguagesUseCase`, `ApplyAppLanguageUseCase`
   - [x] Data layer: `TranslationMapper`, `LegacyTranslationRepository` (Main-thread safe, adapting `TranslateController`, `LocaleController`, `RestrictedLanguagesSelectActivity`, and MTProto `TLRPC.TL_messages_translateText` with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observing `dialogTranslate` and `suggestedLangpack`)
   - [x] Presentation layer: `TranslateUiState`, `TranslateEvent`, `TranslateViewModel`
+- [x] Message Reactions, Quick Double-Tap Reaction & Poll Voting (`feature.reactions`)
+  - [x] Domain entities: `ReactionItemModel`, `MessageReactionCountModel`, `MessageReactionsStateModel`, `ReactionsSettingsModel`
+  - [x] Repository contract: `ReactionsRepository`
+  - [x] Use cases: `ObserveAvailableReactionsUseCase`, `GetAvailableReactionsUseCase`, `LoadAvailableReactionsUseCase`, `ObserveRecentReactionsUseCase`, `GetRecentReactionsUseCase`, `GetReactionsSettingsUseCase`, `GetDoubleTapReactionUseCase`, `SetDoubleTapReactionUseCase`, `SendReactionUseCase`, `ClearReactionsUseCase`, `SendVoteUseCase`
+  - [x] Data layer: `ReactionMapper`, `LegacyReactionsRepository` (Main-thread safe, adapting `MediaDataController`, `SendMessagesHelper`, `MessagesController`, and MTProto `TL_messages_sendReaction` / `TL_messages_sendVote` with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observing `NotificationCenter.reactionsDidLoad`)
+  - [x] Presentation layer: `ReactionsUiState`, `ReactionsEvent`, `ReactionsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 027: Message Reactions, Quick Double-Tap & Poll Voting Controller Isolation
+- **Context:** In Telegram Android, message reactions and poll voting were split between `MediaDataController.java` (~10000 lines), `SendMessagesHelper.java` (~12300 lines), and UI components (`ChatActivity.java`, `ReactionsLayoutInBubble.java`). Reaction configurations were loaded into mutable lists (`reactionsList`, `recentReactions`, `topReactions`), while double-tap quick reaction was queried via raw SharedPreferences. Sending reactions and submitting poll votes required complex MTProto TL constructions (`TLRPC.TL_messages_sendReaction`, `TLRPC.TL_messages_sendVote`) executed directly inside helper classes with runnables and UI thread callbacks.
+- **Decision:** Introduce pure domain models `ReactionItemModel`, `MessageReactionCountModel`, `MessageReactionsStateModel`, and `ReactionsSettingsModel`. Define abstract contract `ReactionsRepository` covering available and recent reactions observation, double-tap default reaction management, message reaction dispatch (single/multiple/big/recent), reaction removal, and poll vote submission. Implement `LegacyReactionsRepository` executing on `Dispatchers.Main` with reactive Kotlin `Flow`s observing `NotificationCenter.reactionsDidLoad` and coroutine-cancellable MTProto requests (`ConnectionsManager.sendRequest` / `cancelRequest`). Encapsulate presentation state and MVI events in `ReactionsViewModel`.
+- **Consequences:** All reaction queries, quick double-tap preference modifications, message reaction updates, and poll voting operations are cleanly separated from legacy controllers and God objects behind pure domain interfaces, thoroughly verified by unit tests while preserving 100% MTProto and update processing compatibility.
 
 ### ADR 026: In-App Translation, Auto-Translate & Language Preferences Isolation
 - **Context:** In Telegram Android, message and chat translation was fragmented across `TranslateController.java` (~1190 lines), `LocaleController.java` (~2000 lines), and UI activities such as `LanguageSelectActivity.java` and `RestrictedLanguagesSelectActivity.java`. UI views directly queried raw `TLRPC.TL_messages_translateText`, manipulated static `RestrictedLanguagesSelectActivity.getRestrictedLanguages()` sets, and triggered global `NotificationCenter` broadcasts without reactive state modeling or structured error handling.

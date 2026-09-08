@@ -264,6 +264,20 @@ import org.telegram.messenger.feature.translate.domain.usecase.SetDoNotTranslate
 import org.telegram.messenger.feature.translate.domain.usecase.ToggleDialogTranslatingUseCase
 import org.telegram.messenger.feature.translate.domain.usecase.TranslateTextUseCase
 import org.telegram.messenger.feature.translate.presentation.TranslateViewModel
+import org.telegram.messenger.feature.reactions.data.repository.LegacyReactionsRepository
+import org.telegram.messenger.feature.reactions.domain.repository.ReactionsRepository
+import org.telegram.messenger.feature.reactions.domain.usecase.ClearReactionsUseCase
+import org.telegram.messenger.feature.reactions.domain.usecase.GetAvailableReactionsUseCase
+import org.telegram.messenger.feature.reactions.domain.usecase.GetDoubleTapReactionUseCase
+import org.telegram.messenger.feature.reactions.domain.usecase.GetReactionsSettingsUseCase
+import org.telegram.messenger.feature.reactions.domain.usecase.GetRecentReactionsUseCase
+import org.telegram.messenger.feature.reactions.domain.usecase.LoadAvailableReactionsUseCase
+import org.telegram.messenger.feature.reactions.domain.usecase.ObserveAvailableReactionsUseCase
+import org.telegram.messenger.feature.reactions.domain.usecase.ObserveRecentReactionsUseCase
+import org.telegram.messenger.feature.reactions.domain.usecase.SendReactionUseCase
+import org.telegram.messenger.feature.reactions.domain.usecase.SendVoteUseCase
+import org.telegram.messenger.feature.reactions.domain.usecase.SetDoubleTapReactionUseCase
+import org.telegram.messenger.feature.reactions.presentation.ReactionsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1701,6 +1715,75 @@ class AccountFeatureContainer private constructor(val account: Int) {
             translateTextUseCase = translateTextUseCase,
             getAvailableLanguagesUseCase = getAvailableLanguagesUseCase,
             applyAppLanguageUseCase = applyAppLanguageUseCase
+        )
+    }
+
+    private var customReactionsRepository: ReactionsRepository? = null
+
+    var reactionsRepository: ReactionsRepository
+        get() = customReactionsRepository ?: LegacyReactionsRepository(account)
+        set(value) {
+            customReactionsRepository = value
+        }
+
+    val observeAvailableReactionsUseCase: ObserveAvailableReactionsUseCase
+        get() = ObserveAvailableReactionsUseCase(reactionsRepository)
+
+    val getAvailableReactionsUseCase: GetAvailableReactionsUseCase
+        get() = GetAvailableReactionsUseCase(reactionsRepository)
+
+    val loadAvailableReactionsUseCase: LoadAvailableReactionsUseCase
+        get() = LoadAvailableReactionsUseCase(reactionsRepository)
+
+    val observeRecentReactionsUseCase: ObserveRecentReactionsUseCase
+        get() = ObserveRecentReactionsUseCase(reactionsRepository)
+
+    val getRecentReactionsUseCase: GetRecentReactionsUseCase
+        get() = GetRecentReactionsUseCase(reactionsRepository)
+
+    val getReactionsSettingsUseCase: GetReactionsSettingsUseCase
+        get() = GetReactionsSettingsUseCase(reactionsRepository)
+
+    val getDoubleTapReactionUseCase: GetDoubleTapReactionUseCase
+        get() = GetDoubleTapReactionUseCase(reactionsRepository)
+
+    val setDoubleTapReactionUseCase: SetDoubleTapReactionUseCase
+        get() = SetDoubleTapReactionUseCase(reactionsRepository)
+
+    val sendReactionUseCase: SendReactionUseCase
+        get() = SendReactionUseCase(reactionsRepository)
+
+    val clearReactionsUseCase: ClearReactionsUseCase
+        get() = ClearReactionsUseCase(reactionsRepository)
+
+    val sendVoteUseCase: SendVoteUseCase
+        get() = SendVoteUseCase(reactionsRepository)
+
+    private var cachedReactionsViewModel: ReactionsViewModel? = null
+
+    val reactionsViewModel: ReactionsViewModel
+        get() {
+            var vm = cachedReactionsViewModel
+            if (vm == null) {
+                vm = createReactionsViewModel()
+                cachedReactionsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createReactionsViewModel(): ReactionsViewModel {
+        return ReactionsViewModel(
+            observeAvailableReactionsUseCase = observeAvailableReactionsUseCase,
+            getAvailableReactionsUseCase = getAvailableReactionsUseCase,
+            loadAvailableReactionsUseCase = loadAvailableReactionsUseCase,
+            observeRecentReactionsUseCase = observeRecentReactionsUseCase,
+            getRecentReactionsUseCase = getRecentReactionsUseCase,
+            getReactionsSettingsUseCase = getReactionsSettingsUseCase,
+            getDoubleTapReactionUseCase = getDoubleTapReactionUseCase,
+            setDoubleTapReactionUseCase = setDoubleTapReactionUseCase,
+            sendReactionUseCase = sendReactionUseCase,
+            clearReactionsUseCase = clearReactionsUseCase,
+            sendVoteUseCase = sendVoteUseCase
         )
     }
 
