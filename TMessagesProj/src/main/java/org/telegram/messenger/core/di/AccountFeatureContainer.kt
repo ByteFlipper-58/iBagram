@@ -327,6 +327,15 @@ import org.telegram.messenger.feature.birthdays.domain.usecase.HideTodayBirthday
 import org.telegram.messenger.feature.birthdays.domain.usecase.IsBirthdayTodayUseCase
 import org.telegram.messenger.feature.birthdays.domain.usecase.ObserveBirthdaysUseCase
 import org.telegram.messenger.feature.birthdays.presentation.BirthdaysViewModel
+import org.telegram.messenger.feature.chattheme.data.repository.LegacyChatThemeRepository
+import org.telegram.messenger.feature.chattheme.domain.repository.ChatThemeRepository
+import org.telegram.messenger.feature.chattheme.domain.usecase.GetAvailableChatThemesUseCase
+import org.telegram.messenger.feature.chattheme.domain.usecase.GetDialogThemeStateUseCase
+import org.telegram.messenger.feature.chattheme.domain.usecase.ObserveDialogThemeUseCase
+import org.telegram.messenger.feature.chattheme.domain.usecase.ResetDialogThemeUseCase
+import org.telegram.messenger.feature.chattheme.domain.usecase.SaveChatWallpaperUseCase
+import org.telegram.messenger.feature.chattheme.domain.usecase.SetDialogThemeUseCase
+import org.telegram.messenger.feature.chattheme.presentation.ChatThemeViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2090,6 +2099,55 @@ class AccountFeatureContainer private constructor(val account: Int) {
             hideTodayBirthdaysUseCase = hideTodayBirthdaysUseCase,
             isBirthdayTodayUseCase = isBirthdayTodayUseCase,
             hasBirthdaysTodayUseCase = hasBirthdaysTodayUseCase
+        )
+    }
+
+    private var customChatThemeRepository: ChatThemeRepository? = null
+
+    var chatThemeRepository: ChatThemeRepository
+        get() = customChatThemeRepository ?: LegacyChatThemeRepository(account)
+        set(value) {
+            customChatThemeRepository = value
+        }
+
+    val observeDialogThemeUseCase: ObserveDialogThemeUseCase
+        get() = ObserveDialogThemeUseCase(chatThemeRepository)
+
+    val getDialogThemeStateUseCase: GetDialogThemeStateUseCase
+        get() = GetDialogThemeStateUseCase(chatThemeRepository)
+
+    val getAvailableChatThemesUseCase: GetAvailableChatThemesUseCase
+        get() = GetAvailableChatThemesUseCase(chatThemeRepository)
+
+    val setDialogThemeUseCase: SetDialogThemeUseCase
+        get() = SetDialogThemeUseCase(chatThemeRepository)
+
+    val resetDialogThemeUseCase: ResetDialogThemeUseCase
+        get() = ResetDialogThemeUseCase(chatThemeRepository)
+
+    val saveChatWallpaperUseCase: SaveChatWallpaperUseCase
+        get() = SaveChatWallpaperUseCase(chatThemeRepository)
+
+    private var cachedChatThemeViewModel: ChatThemeViewModel? = null
+
+    val chatThemeViewModel: ChatThemeViewModel
+        get() {
+            var vm = cachedChatThemeViewModel
+            if (vm == null) {
+                vm = createChatThemeViewModel()
+                cachedChatThemeViewModel = vm
+            }
+            return vm
+        }
+
+    fun createChatThemeViewModel(): ChatThemeViewModel {
+        return ChatThemeViewModel(
+            observeDialogThemeUseCase = observeDialogThemeUseCase,
+            getDialogThemeStateUseCase = getDialogThemeStateUseCase,
+            getAvailableThemesUseCase = getAvailableChatThemesUseCase,
+            setDialogThemeUseCase = setDialogThemeUseCase,
+            resetDialogThemeUseCase = resetDialogThemeUseCase,
+            saveChatWallpaperUseCase = saveChatWallpaperUseCase
         )
     }
 

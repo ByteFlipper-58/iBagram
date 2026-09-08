@@ -915,6 +915,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BirthdaysUiState.kt
             ├── BirthdaysEvent.kt
             └── BirthdaysViewModel.kt
+    │
+    └── chattheme/                      # Chat Themes, Wallpapers & Emoji Status per Dialog Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── ChatThemeModel.kt
+        │   │   └── DialogThemeStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ChatThemeRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveDialogThemeUseCase.kt
+        │       ├── GetDialogThemeStateUseCase.kt
+        │       ├── GetAvailableChatThemesUseCase.kt
+        │       ├── SetDialogThemeUseCase.kt
+        │       ├── ResetDialogThemeUseCase.kt
+        │       └── SaveChatWallpaperUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (EmojiThemes / TLRPC.WallPaper -> Domain)
+        │   │   └── ChatThemeMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyChatThemeRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ChatThemeUiState.kt
+            ├── ChatThemeEvent.kt
+            └── ChatThemeViewModel.kt
 ```
 
 ### Layer Rules
@@ -1132,10 +1158,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveBirthdaysUseCase`, `GetBirthdaysStateUseCase`, `CheckBirthdaysUseCase`, `HideTodayBirthdaysUseCase`, `IsBirthdayTodayUseCase`, `HasBirthdaysTodayUseCase`
   - [x] Data layer: `BirthdayMapper`, `LegacyBirthdaysRepository` (Main-thread safe, adapting `BirthdayController` with `NotificationCenterFlowBridge` observing `NotificationCenter.premiumPromoUpdated`)
   - [x] Presentation layer: `BirthdaysUiState`, `BirthdaysEvent`, `BirthdaysViewModel`
+- [x] Chat Themes & Wallpapers (`feature.chattheme`)
+  - [x] Domain entities: `ChatThemeModel`, `DialogThemeStateModel`
+  - [x] Repository contract: `ChatThemeRepository`
+  - [x] Use cases: `ObserveDialogThemeUseCase`, `GetDialogThemeStateUseCase`, `GetAvailableChatThemesUseCase`, `SetDialogThemeUseCase`, `ResetDialogThemeUseCase`, `SaveChatWallpaperUseCase`
+  - [x] Data layer: `ChatThemeMapper`, `LegacyChatThemeRepository` (Main-thread safe, adapting `ChatThemeController` with `suspendCancellableCoroutine` for theme loading and `NotificationCenterFlowBridge` observing dialog updates)
+  - [x] Presentation layer: `ChatThemeUiState`, `ChatThemeEvent`, `ChatThemeViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 033: Chat Themes, Custom Wallpapers & Dialog Styling Controller Isolation
+- **Context:** In Telegram Android, dialog-specific emoji themes, gift themes, custom wallpapers, and colors were managed by `ChatThemeController.java` (~1016 lines). The controller directly handled raw SharedPreferences persistence (`chatthemeconfig_` and `chatthemeconfig_emoji`), SQLite database caching (`MessagesStorage.loadGiftChatTheme`), MTProto network requests (`TL_account.getChatThemes`, `TLRPC.TL_messages_setChatTheme`), disk caching of theme bitmaps (`chatThemeQueue`), and mutated in-memory caches (`dialogEmoticonsMap`, `allChatGiftThemes`, `themeIdWallpaperThumbMap`). Presentation components (`ChatActivity`, `ChatThemeBottomSheet`, `EmojiThemes`) directly invoked static controller singletons, manual callbacks, and raw TL object operations without lifecycle or state management.
+- **Decision:** Introduce pure domain models `ChatThemeModel` (with emoticon, gift slug, default flag, and preview colors) and `DialogThemeStateModel`. Define abstract contract `ChatThemeRepository` covering reactive dialog theme observation (`observeDialogTheme`), cached/fresh state retrieval (`getDialogThemeState`), available chat themes loading (`getAvailableChatThemes`), setting custom emoji/gift theme (`setDialogTheme`), resetting theme to default (`resetDialogTheme`), and saving/clearing custom chat wallpapers (`saveChatWallpaper`). Implement `LegacyChatThemeRepository` operating safely on `Dispatchers.Main` with `suspendCancellableCoroutine` for asynchronous theme fetching and reactive `NotificationCenterFlowBridge` observation on dialog updates. Encapsulate presentation state and MVI events in `ChatThemeViewModel`.
+- **Consequences:** Dialog styling, theme application, wallpaper management, and MTProto theme synchronization are decoupled behind clean, testable domain interfaces with complete unit test coverage while maintaining 100% compatibility with Telegram's chat theme serialization and SharedPreferences cache.
 
 ### ADR 032: User Birthdays & Contacts' Celebrations Controller Isolation
 - **Context:** In Telegram Android, user birthdays, contacts' birthdays (`TL_account.contactBirthdays`), and celebration banners were coupled inside `BirthdayController.java` (~310 lines). The controller managed in-memory mutable arrays of users (`yesterday`, `today`, `tomorrow`), custom TL serialization (`TL_birthdays`), SharedPreferences persistence (`bday_check`, `bday_contacts`, `bday_hidden`), and directly triggered `premiumPromoUpdated` events on `NotificationCenter`. UI components (`DialogsActivity`, `ChatActivityEnterView`, `ProfileBirthdayEffect`, `UserSelectorBottomSheet`) queried static methods and raw state objects with direct SharedPreferences mutations.
