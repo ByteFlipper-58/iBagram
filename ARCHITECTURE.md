@@ -173,6 +173,7 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `GetSavedDialogsUseCase`, `TogglePinSavedDialogUseCase`, `DeleteSavedDialogUseCase`, `GetSavedTagsUseCase`, `SearchSavedDialogsUseCase`
   - [x] Data layer: `SavedMessagesMapper` (dialog and tag mapping), `LegacySavedMessagesRepository` (Main-thread safe)
   - [x] Presentation layer: `SavedMessagesUiState` (with query/results/tags), `SavedMessagesEvent`, `SavedMessagesViewModel` (search, delete, pin, tags, state preservation)
+  - [x] UI Integration: Connected `SavedMessagesViewModel` to `SharedMediaLayout.java`
 - [ ] Dialogs list (`DialogsActivity`, `DialogsAdapter`)
 - [ ] Chat & Messaging (`ChatActivity`, `ChatMessageCell`)
 - [ ] Profiles & User Info (`ProfileActivity`)
