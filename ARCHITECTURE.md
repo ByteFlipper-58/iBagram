@@ -304,6 +304,31 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── SecretChatUiState.kt
             ├── SecretChatEvent.kt
             └── SecretChatViewModel.kt
+    │
+    └── contacts/                        # Contacts & Phonebook Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   └── ContactModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ContactsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveContactsUseCase.kt
+        │       ├── GetContactsUseCase.kt
+        │       ├── GetContactUseCase.kt
+        │       ├── AddContactUseCase.kt
+        │       ├── DeleteContactUseCase.kt
+        │       └── SearchContactsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TLRPC.TL_contact/User -> ContactModel)
+        │   │   └── ContactMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyContactsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ContactsUiState.kt
+            ├── ContactsEvent.kt
+            └── ContactsViewModel.kt
 ```
 
 ### Layer Rules
@@ -395,10 +420,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveSecretChatUseCase`, `ObserveSecretChatsUseCase`, `GetSecretChatUseCase`, `StartSecretChatUseCase`, `AcceptSecretChatUseCase`, `DeclineSecretChatUseCase`, `SetSecretChatTtlUseCase`, `SendScreenshotNotificationUseCase`
   - [x] Data layer: `SecretChatMapper`, `LegacySecretChatRepository` (Main-thread safe, hooked into `NotificationCenter.encryptedChatUpdated`, `encryptedChatCreated`, `dialogsNeedReload`)
   - [x] Presentation layer: `SecretChatUiState`, `SecretChatEvent`, `SecretChatViewModel`
+- [x] Contacts & Phonebook (`feature.contacts`)
+  - [x] Domain entities: `ContactModel` (pure model decoupling from TLRPC.TL_contact and TLRPC.User)
+  - [x] Repository contract: `ContactsRepository`
+  - [x] Use cases: `ObserveContactsUseCase`, `GetContactsUseCase`, `GetContactUseCase`, `AddContactUseCase`, `DeleteContactUseCase`, `SearchContactsUseCase`
+  - [x] Data layer: `ContactMapper`, `LegacyContactsRepository` (Main-thread safe, hooked into `NotificationCenter.contactsDidLoad`, `updateInterfaces`)
+  - [x] Presentation layer: `ContactsUiState`, `ContactsEvent`, `ContactsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 012: Contacts Controller Isolation and Synchronization Boundary
+- **Context:** In Telegram Android, `ContactsController` (~3100 lines) manages system contacts synchronization, phonebook hashing, server contacts import, and in-memory lists `contacts` (`ArrayList<TLRPC.TL_contact>`) and `contactsDict` (`HashMap<Long, TLRPC.TL_contact>`). These collections are unsynchronized and modified exclusively on `Dispatchers.Main`. Furthermore, user names, online statuses, and avatars are stored separately in `MessagesController`.
+- **Decision:** Introduce a clean domain model `ContactModel` and contract `ContactsRepository`. Implement `LegacyContactsRepository` adapting `ContactsController` and `MessagesController`, enforcing all reads and mutations on `Dispatchers.Main`. Reactive observation is provided through `callbackFlow` hooked into `NotificationCenter.contactsDidLoad` and `updateInterfaces`.
+- **Consequences:** Contacts list, search, addition, and deletion are isolated behind a testable `ContactsViewModel` and domain use cases, without coupling UI or domain logic to `ContactsController` or raw `TLRPC` objects.
 
 ### ADR 011: Secret Chats End-to-End Encryption and DH State Machine Isolation
 - **Context:** Telegram Secret Chats use client-to-client Diffie-Hellman key exchange and custom MTProto encrypted layers orchestrated by `SecretChatHelper` (~2050 lines). Encrypted chat models in legacy code are polymorphic subclasses of `TLRPC.EncryptedChat` (`TL_encryptedChatWaiting`, `TL_encryptedChatRequested`, `TL_encryptedChat`, `TL_encryptedChatDiscarded`) with separate integer chat IDs mapped to 64-bit dialog IDs (`DialogObject.makeEncryptedDialogId`). Direct UI access to `SecretChatHelper` leaked crypto state and raw network requests into View layers.

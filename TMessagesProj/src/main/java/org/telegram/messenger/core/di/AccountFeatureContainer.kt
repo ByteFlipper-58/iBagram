@@ -49,6 +49,15 @@ import org.telegram.messenger.feature.secretchat.domain.usecase.SendScreenshotNo
 import org.telegram.messenger.feature.secretchat.domain.usecase.SetSecretChatTtlUseCase
 import org.telegram.messenger.feature.secretchat.domain.usecase.StartSecretChatUseCase
 import org.telegram.messenger.feature.secretchat.presentation.SecretChatViewModel
+import org.telegram.messenger.feature.contacts.data.repository.LegacyContactsRepository
+import org.telegram.messenger.feature.contacts.domain.repository.ContactsRepository
+import org.telegram.messenger.feature.contacts.domain.usecase.AddContactUseCase
+import org.telegram.messenger.feature.contacts.domain.usecase.DeleteContactUseCase
+import org.telegram.messenger.feature.contacts.domain.usecase.GetContactUseCase
+import org.telegram.messenger.feature.contacts.domain.usecase.GetContactsUseCase
+import org.telegram.messenger.feature.contacts.domain.usecase.ObserveContactsUseCase
+import org.telegram.messenger.feature.contacts.domain.usecase.SearchContactsUseCase
+import org.telegram.messenger.feature.contacts.presentation.ContactsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -446,6 +455,55 @@ class AccountFeatureContainer private constructor(val account: Int) {
             declineSecretChatUseCase = declineSecretChatUseCase,
             setSecretChatTtlUseCase = setSecretChatTtlUseCase,
             sendScreenshotNotificationUseCase = sendScreenshotNotificationUseCase
+        )
+    }
+
+    private var customContactsRepository: ContactsRepository? = null
+
+    var contactsRepository: ContactsRepository
+        get() = customContactsRepository ?: LegacyContactsRepository(account)
+        set(value) {
+            customContactsRepository = value
+        }
+
+    val observeContactsUseCase: ObserveContactsUseCase
+        get() = ObserveContactsUseCase(contactsRepository)
+
+    val getContactsUseCase: GetContactsUseCase
+        get() = GetContactsUseCase(contactsRepository)
+
+    val getContactUseCase: GetContactUseCase
+        get() = GetContactUseCase(contactsRepository)
+
+    val addContactUseCase: AddContactUseCase
+        get() = AddContactUseCase(contactsRepository)
+
+    val deleteContactUseCase: DeleteContactUseCase
+        get() = DeleteContactUseCase(contactsRepository)
+
+    val searchContactsUseCase: SearchContactsUseCase
+        get() = SearchContactsUseCase(contactsRepository)
+
+    private var cachedContactsViewModel: ContactsViewModel? = null
+
+    val contactsViewModel: ContactsViewModel
+        get() {
+            var vm = cachedContactsViewModel
+            if (vm == null) {
+                vm = createContactsViewModel()
+                cachedContactsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createContactsViewModel(): ContactsViewModel {
+        return ContactsViewModel(
+            observeContactsUseCase = observeContactsUseCase,
+            getContactsUseCase = getContactsUseCase,
+            getContactUseCase = getContactUseCase,
+            addContactUseCase = addContactUseCase,
+            deleteContactUseCase = deleteContactUseCase,
+            searchContactsUseCase = searchContactsUseCase
         )
     }
 
