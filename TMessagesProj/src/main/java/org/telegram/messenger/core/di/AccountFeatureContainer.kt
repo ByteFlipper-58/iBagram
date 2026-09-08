@@ -285,6 +285,19 @@ import org.telegram.messenger.feature.boosts.domain.usecase.CheckCanApplyBoostUs
 import org.telegram.messenger.feature.boosts.domain.usecase.GetBoostsStatusUseCase
 import org.telegram.messenger.feature.boosts.domain.usecase.GetMyBoostsUseCase
 import org.telegram.messenger.feature.boosts.presentation.BoostsViewModel
+import org.telegram.messenger.feature.quickreplies.data.repository.LegacyQuickRepliesRepository
+import org.telegram.messenger.feature.quickreplies.domain.repository.QuickRepliesRepository
+import org.telegram.messenger.feature.quickreplies.domain.usecase.CanAddNewQuickReplyUseCase
+import org.telegram.messenger.feature.quickreplies.domain.usecase.CheckQuickReplyNameBusyUseCase
+import org.telegram.messenger.feature.quickreplies.domain.usecase.DeleteQuickRepliesUseCase
+import org.telegram.messenger.feature.quickreplies.domain.usecase.FindQuickReplyUseCase
+import org.telegram.messenger.feature.quickreplies.domain.usecase.GetQuickRepliesUseCase
+import org.telegram.messenger.feature.quickreplies.domain.usecase.LoadQuickRepliesUseCase
+import org.telegram.messenger.feature.quickreplies.domain.usecase.ObserveQuickRepliesUseCase
+import org.telegram.messenger.feature.quickreplies.domain.usecase.RenameQuickReplyUseCase
+import org.telegram.messenger.feature.quickreplies.domain.usecase.ReorderQuickRepliesUseCase
+import org.telegram.messenger.feature.quickreplies.domain.usecase.SendQuickReplyUseCase
+import org.telegram.messenger.feature.quickreplies.presentation.QuickRepliesViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1832,6 +1845,68 @@ class AccountFeatureContainer private constructor(val account: Int) {
             getMyBoostsUseCase = getMyBoostsUseCase,
             checkCanApplyBoostUseCase = checkCanApplyBoostUseCase,
             applyBoostUseCase = applyBoostUseCase
+        )
+    }
+
+    private var customQuickRepliesRepository: QuickRepliesRepository? = null
+
+    var quickRepliesRepository: QuickRepliesRepository
+        get() = customQuickRepliesRepository ?: LegacyQuickRepliesRepository(account)
+        set(value) {
+            customQuickRepliesRepository = value
+        }
+
+    val observeQuickRepliesUseCase: ObserveQuickRepliesUseCase
+        get() = ObserveQuickRepliesUseCase(quickRepliesRepository)
+
+    val getQuickRepliesUseCase: GetQuickRepliesUseCase
+        get() = GetQuickRepliesUseCase(quickRepliesRepository)
+
+    val loadQuickRepliesUseCase: LoadQuickRepliesUseCase
+        get() = LoadQuickRepliesUseCase(quickRepliesRepository)
+
+    val findQuickReplyUseCase: FindQuickReplyUseCase
+        get() = FindQuickReplyUseCase(quickRepliesRepository)
+
+    val checkQuickReplyNameBusyUseCase: CheckQuickReplyNameBusyUseCase
+        get() = CheckQuickReplyNameBusyUseCase(quickRepliesRepository)
+
+    val canAddNewQuickReplyUseCase: CanAddNewQuickReplyUseCase
+        get() = CanAddNewQuickReplyUseCase(quickRepliesRepository)
+
+    val renameQuickReplyUseCase: RenameQuickReplyUseCase
+        get() = RenameQuickReplyUseCase(quickRepliesRepository)
+
+    val reorderQuickRepliesUseCase: ReorderQuickRepliesUseCase
+        get() = ReorderQuickRepliesUseCase(quickRepliesRepository)
+
+    val deleteQuickRepliesUseCase: DeleteQuickRepliesUseCase
+        get() = DeleteQuickRepliesUseCase(quickRepliesRepository)
+
+    val sendQuickReplyUseCase: SendQuickReplyUseCase
+        get() = SendQuickReplyUseCase(quickRepliesRepository)
+
+    private var cachedQuickRepliesViewModel: QuickRepliesViewModel? = null
+
+    val quickRepliesViewModel: QuickRepliesViewModel
+        get() {
+            var vm = cachedQuickRepliesViewModel
+            if (vm == null) {
+                vm = createQuickRepliesViewModel()
+                cachedQuickRepliesViewModel = vm
+            }
+            return vm
+        }
+
+    fun createQuickRepliesViewModel(): QuickRepliesViewModel {
+        return QuickRepliesViewModel(
+            observeQuickRepliesUseCase = observeQuickRepliesUseCase,
+            loadQuickRepliesUseCase = loadQuickRepliesUseCase,
+            canAddNewQuickReplyUseCase = canAddNewQuickReplyUseCase,
+            renameQuickReplyUseCase = renameQuickReplyUseCase,
+            reorderQuickRepliesUseCase = reorderQuickRepliesUseCase,
+            deleteQuickRepliesUseCase = deleteQuickRepliesUseCase,
+            sendQuickReplyUseCase = sendQuickReplyUseCase
         )
     }
 

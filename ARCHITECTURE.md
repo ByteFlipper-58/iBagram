@@ -800,6 +800,36 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BoostsUiState.kt
             ├── BoostsEvent.kt
             └── BoostsViewModel.kt
+    │
+    └── quickreplies/                   # Business Quick Replies & Shortcuts Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── QuickReplyModel.kt
+        │   │   └── QuickRepliesLimitModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── QuickRepliesRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveQuickRepliesUseCase.kt
+        │       ├── GetQuickRepliesUseCase.kt
+        │       ├── LoadQuickRepliesUseCase.kt
+        │       ├── FindQuickReplyUseCase.kt
+        │       ├── CheckQuickReplyNameBusyUseCase.kt
+        │       ├── CanAddNewQuickReplyUseCase.kt
+        │       ├── RenameQuickReplyUseCase.kt
+        │       ├── ReorderQuickRepliesUseCase.kt
+        │       ├── DeleteQuickRepliesUseCase.kt
+        │       └── SendQuickReplyUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (QuickRepliesController.QuickReply -> Domain)
+        │   │   └── QuickReplyMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyQuickRepliesRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── QuickRepliesUiState.kt
+            ├── QuickRepliesEvent.kt
+            └── QuickRepliesViewModel.kt
 ```
 
 ### Layer Rules
@@ -993,10 +1023,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `GetBoostsStatusUseCase`, `GetMyBoostsUseCase`, `CheckCanApplyBoostUseCase`, `ApplyBoostUseCase`
   - [x] Data layer: `BoostMapper`, `LegacyBoostsRepository` (Main/IO thread safe, adapting `ChannelBoostsController`, `MessagesController`, MTProto `TL_stories.TL_premium_getBoostsStatus`, `TL_stories.TL_premium_getMyBoosts`, and `TL_stories.TL_premium_applyBoost` with `suspendCancellableCoroutine`)
   - [x] Presentation layer: `BoostsUiState`, `BoostsEvent`, `BoostsViewModel`
+- [x] Business Quick Replies & Shortcuts (`feature.quickreplies`)
+  - [x] Domain entities: `QuickReplyModel`, `QuickRepliesLimitModel`
+  - [x] Repository contract: `QuickRepliesRepository`
+  - [x] Use cases: `ObserveQuickRepliesUseCase`, `GetQuickRepliesUseCase`, `LoadQuickRepliesUseCase`, `FindQuickReplyUseCase`, `CheckQuickReplyNameBusyUseCase`, `CanAddNewQuickReplyUseCase`, `RenameQuickReplyUseCase`, `ReorderQuickRepliesUseCase`, `DeleteQuickRepliesUseCase`, `SendQuickReplyUseCase`
+  - [x] Data layer: `QuickReplyMapper`, `LegacyQuickRepliesRepository` (Main-thread safe, adapting `QuickRepliesController` and `SendMessagesHelper` with `NotificationCenterFlowBridge` observing `NotificationCenter.quickRepliesUpdated`)
+  - [x] Presentation layer: `QuickRepliesUiState`, `QuickRepliesEvent`, `QuickRepliesViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 029: Business Quick Replies & Shortcuts Controller Isolation
+- **Context:** In Telegram Android, Business Quick Replies (canned responses, shortcuts `/name`, greeting/away auto-replies) are managed by `QuickRepliesController.java` (~870 lines). Quick reply shortcuts (`QuickReply`) maintain internal message IDs, message counts, order indices, and local pending flags. UI components like `QuickRepliesActivity.java` (~1400 lines) and `QuickRepliesSelectActivity.java` directly manipulated controller collections (`replies`, `localReplies`), invoked synchronous reordering and deletion, and triggered message sends via `SendMessagesHelper` without lifecycle or state isolation.
+- **Decision:** Introduce pure domain models `QuickReplyModel` and `QuickRepliesLimitModel`. Define abstract contract `QuickRepliesRepository` with reactive flows (`observeQuickReplies`) and use cases covering loading, retrieval, name uniqueness validation (`checkQuickReplyNameBusy`), addition limits check (`canAddNewQuickReply`), renaming, reordering, batch deletion, and sending canned shortcut messages into chats. Implement `LegacyQuickRepliesRepository` operating strictly on `Dispatchers.Main` with reactive `NotificationCenterFlowBridge` observation on `quickRepliesUpdated`. Encapsulate presentation state and MVI events in `QuickRepliesViewModel`.
+- **Consequences:** Quick replies management, shortcut expansion, reordering, and auto-reply administration are decoupled behind clean, testable domain interfaces with complete unit test coverage while preserving 100% compatibility with Telegram's MTProto business quick replies protocol and message sending pipelines.
 
 ### ADR 028: Channel Boosts, Status, Slots & Perks Controller Isolation
 - **Context:** In Telegram Android, channel boosts, boost level calculation, available perks, and user boost slots (`myBoosts`) were scattered across `ChannelBoostsController.java` (~190 lines), `BoostRepository.java` (~910 lines), and UI activities (`BoostsActivity.java`, `ChannelBoostLayout.java`, `ReassignBoostBottomSheet.java`). Methods inside `ChannelBoostsController` directly posted alerts (`AlertDialog`, `BulletinFactory`) from inside callback methods when handling errors like `CHANNEL_PRIVATE` or network failures, violating layer separation and making background queries and headless testing impossible.
