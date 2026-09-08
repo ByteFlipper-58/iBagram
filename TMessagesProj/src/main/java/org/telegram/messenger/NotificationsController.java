@@ -1721,7 +1721,7 @@ public class NotificationsController extends BaseController implements Notificat
         });
     }
 
-    private int getTotalAllUnreadCount() {
+    public int getTotalAllUnreadCount() {
         int count = 0;
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             if (!UserConfig.getInstance(a).isClientActivated()) {

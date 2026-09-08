@@ -102,6 +102,26 @@ import org.telegram.messenger.feature.search.domain.usecase.RemoveRecentSearchUs
 import org.telegram.messenger.feature.search.domain.usecase.SearchGlobalUseCase
 import org.telegram.messenger.feature.search.domain.usecase.SearchLocalUseCase
 import org.telegram.messenger.feature.search.presentation.SearchViewModel
+import org.telegram.messenger.feature.notifications.data.repository.LegacyNotificationsRepository
+import org.telegram.messenger.feature.notifications.domain.repository.NotificationsRepository
+import org.telegram.messenger.feature.notifications.domain.usecase.GetBadgeSettingsUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.GetBadgeUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.GetNotificationSettingsUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.IsDialogMutedUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.MuteDialogUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.ObserveBadgeSettingsUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.ObserveBadgeUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.ObserveNotificationSettingsUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.RefreshBadgeUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.ToggleContactJoinedNotificationsUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.ToggleInAppPreviewUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.ToggleInAppSoundsUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.ToggleInAppVibrateUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.ToggleInChatSoundUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.TogglePeerNotificationsUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.TogglePinnedMessagesNotificationsUseCase
+import org.telegram.messenger.feature.notifications.domain.usecase.UpdateBadgeSettingsUseCase
+import org.telegram.messenger.feature.notifications.presentation.NotificationsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -774,6 +794,98 @@ class AccountFeatureContainer private constructor(val account: Int) {
             getRecentHashtagsUseCase = getRecentHashtagsUseCase,
             putRecentHashtagUseCase = putRecentHashtagUseCase,
             clearRecentHashtagsUseCase = clearRecentHashtagsUseCase
+        )
+    }
+
+    private var customNotificationsRepository: NotificationsRepository? = null
+
+    var notificationsRepository: NotificationsRepository
+        get() = customNotificationsRepository ?: LegacyNotificationsRepository(account)
+        set(value) {
+            customNotificationsRepository = value
+        }
+
+    val observeNotificationSettingsUseCase: ObserveNotificationSettingsUseCase
+        get() = ObserveNotificationSettingsUseCase(notificationsRepository)
+
+    val getNotificationSettingsUseCase: GetNotificationSettingsUseCase
+        get() = GetNotificationSettingsUseCase(notificationsRepository)
+
+    val observeBadgeUseCase: ObserveBadgeUseCase
+        get() = ObserveBadgeUseCase(notificationsRepository)
+
+    val getBadgeUseCase: GetBadgeUseCase
+        get() = GetBadgeUseCase(notificationsRepository)
+
+    val observeBadgeSettingsUseCase: ObserveBadgeSettingsUseCase
+        get() = ObserveBadgeSettingsUseCase(notificationsRepository)
+
+    val getBadgeSettingsUseCase: GetBadgeSettingsUseCase
+        get() = GetBadgeSettingsUseCase(notificationsRepository)
+
+    val togglePeerNotificationsUseCase: TogglePeerNotificationsUseCase
+        get() = TogglePeerNotificationsUseCase(notificationsRepository)
+
+    val toggleInChatSoundUseCase: ToggleInChatSoundUseCase
+        get() = ToggleInChatSoundUseCase(notificationsRepository)
+
+    val toggleInAppSoundsUseCase: ToggleInAppSoundsUseCase
+        get() = ToggleInAppSoundsUseCase(notificationsRepository)
+
+    val toggleInAppVibrateUseCase: ToggleInAppVibrateUseCase
+        get() = ToggleInAppVibrateUseCase(notificationsRepository)
+
+    val toggleInAppPreviewUseCase: ToggleInAppPreviewUseCase
+        get() = ToggleInAppPreviewUseCase(notificationsRepository)
+
+    val toggleContactJoinedNotificationsUseCase: ToggleContactJoinedNotificationsUseCase
+        get() = ToggleContactJoinedNotificationsUseCase(notificationsRepository)
+
+    val togglePinnedMessagesNotificationsUseCase: TogglePinnedMessagesNotificationsUseCase
+        get() = TogglePinnedMessagesNotificationsUseCase(notificationsRepository)
+
+    val updateBadgeSettingsUseCase: UpdateBadgeSettingsUseCase
+        get() = UpdateBadgeSettingsUseCase(notificationsRepository)
+
+    val muteDialogUseCase: MuteDialogUseCase
+        get() = MuteDialogUseCase(notificationsRepository)
+
+    val isDialogMutedUseCase: IsDialogMutedUseCase
+        get() = IsDialogMutedUseCase(notificationsRepository)
+
+    val refreshBadgeUseCase: RefreshBadgeUseCase
+        get() = RefreshBadgeUseCase(notificationsRepository)
+
+    private var cachedNotificationsViewModel: NotificationsViewModel? = null
+
+    val notificationsViewModel: NotificationsViewModel
+        get() {
+            var vm = cachedNotificationsViewModel
+            if (vm == null) {
+                vm = createNotificationsViewModel()
+                cachedNotificationsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createNotificationsViewModel(): NotificationsViewModel {
+        return NotificationsViewModel(
+            observeNotificationSettingsUseCase = observeNotificationSettingsUseCase,
+            getNotificationSettingsUseCase = getNotificationSettingsUseCase,
+            observeBadgeUseCase = observeBadgeUseCase,
+            getBadgeUseCase = getBadgeUseCase,
+            observeBadgeSettingsUseCase = observeBadgeSettingsUseCase,
+            getBadgeSettingsUseCase = getBadgeSettingsUseCase,
+            togglePeerNotificationsUseCase = togglePeerNotificationsUseCase,
+            toggleInChatSoundUseCase = toggleInChatSoundUseCase,
+            toggleInAppSoundsUseCase = toggleInAppSoundsUseCase,
+            toggleInAppVibrateUseCase = toggleInAppVibrateUseCase,
+            toggleInAppPreviewUseCase = toggleInAppPreviewUseCase,
+            toggleContactJoinedNotificationsUseCase = toggleContactJoinedNotificationsUseCase,
+            togglePinnedMessagesNotificationsUseCase = togglePinnedMessagesNotificationsUseCase,
+            updateBadgeSettingsUseCase = updateBadgeSettingsUseCase,
+            muteDialogUseCase = muteDialogUseCase,
+            refreshBadgeUseCase = refreshBadgeUseCase
         )
     }
 

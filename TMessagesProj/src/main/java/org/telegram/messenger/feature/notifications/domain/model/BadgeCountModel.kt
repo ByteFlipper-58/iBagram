@@ -1,0 +1,6 @@
+package org.telegram.messenger.feature.notifications.domain.model
+
+data class BadgeCountModel(
+    val totalUnreadCount: Int = 0,
+    val badgeCount: Int = 0
+)

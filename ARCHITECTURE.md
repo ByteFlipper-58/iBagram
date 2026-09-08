@@ -385,6 +385,46 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── StickersUiState.kt
             ├── StickersEvent.kt
             └── StickersViewModel.kt
+    │
+    └── notifications/                 # Notifications, Push & Badges Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── NotificationPeerType.kt
+        │   │   ├── NotificationSettingsModel.kt
+        │   │   ├── BadgeSettingsModel.kt
+        │   │   ├── BadgeCountModel.kt
+        │   │   └── DialogMuteState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── NotificationsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveNotificationSettingsUseCase.kt
+        │       ├── GetNotificationSettingsUseCase.kt
+        │       ├── ObserveBadgeUseCase.kt
+        │       ├── GetBadgeUseCase.kt
+        │       ├── ObserveBadgeSettingsUseCase.kt
+        │       ├── GetBadgeSettingsUseCase.kt
+        │       ├── TogglePeerNotificationsUseCase.kt
+        │       ├── ToggleInChatSoundUseCase.kt
+        │       ├── ToggleInAppSoundsUseCase.kt
+        │       ├── ToggleInAppVibrateUseCase.kt
+        │       ├── ToggleInAppPreviewUseCase.kt
+        │       ├── ToggleContactJoinedNotificationsUseCase.kt
+        │       ├── TogglePinnedMessagesNotificationsUseCase.kt
+        │       ├── UpdateBadgeSettingsUseCase.kt
+        │       ├── MuteDialogUseCase.kt
+        │       ├── IsDialogMutedUseCase.kt
+        │       └── RefreshBadgeUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (SharedPreferences/Controller -> Domain)
+        │   │   └── NotificationMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyNotificationsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── NotificationsUiState.kt
+            ├── NotificationsEvent.kt
+            └── NotificationsViewModel.kt
 ```
 
 ### Layer Rules
@@ -506,10 +546,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `SearchGlobalUseCase`, `SearchLocalUseCase`, `GetRecentSearchesUseCase`, `ClearRecentSearchesUseCase`, `RemoveRecentSearchUseCase`, `GetRecentHashtagsUseCase`, `PutRecentHashtagUseCase`, `ClearRecentHashtagsUseCase`
   - [x] Data layer: `SearchMapper`, `LegacySearchRepository` (Main-thread safe, integrating `SearchAdapterHelper`, `ConnectionsManager`, `MessagesController`, `MessagesStorage`)
   - [x] Presentation layer: `SearchUiState`, `SearchEvent`, `SearchViewModel` (with 300ms query debouncing)
+- [x] Notifications, Push & Badges (`feature.notifications`)
+  - [x] Domain entities: `NotificationSettingsModel`, `BadgeSettingsModel`, `BadgeCountModel`, `DialogMuteState`, `NotificationPeerType`
+  - [x] Repository contract: `NotificationsRepository`
+  - [x] Use cases: `ObserveNotificationSettingsUseCase`, `GetNotificationSettingsUseCase`, `ObserveBadgeUseCase`, `GetBadgeUseCase`, `ObserveBadgeSettingsUseCase`, `GetBadgeSettingsUseCase`, `TogglePeerNotificationsUseCase`, `ToggleInChatSoundUseCase`, `ToggleInAppSoundsUseCase`, `ToggleInAppVibrateUseCase`, `ToggleInAppPreviewUseCase`, `ToggleContactJoinedNotificationsUseCase`, `TogglePinnedMessagesNotificationsUseCase`, `UpdateBadgeSettingsUseCase`, `MuteDialogUseCase`, `IsDialogMutedUseCase`, `RefreshBadgeUseCase`
+  - [x] Data layer: `NotificationMapper`, `LegacyNotificationsRepository` (Main-thread safe, adapting `NotificationsController`, `MessagesController`, `SharedPreferences`, and `NotificationCenterFlowBridge`)
+  - [x] Presentation layer: `NotificationsUiState`, `NotificationsEvent`, `NotificationsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 017: Notifications, Push & Badges Controller Isolation
+- **Context:** In Telegram Android, push notifications, launcher badge count, sound/vibration alerts, and Android O+ notification channels are managed inside `NotificationsController` (~6420 lines). Notification preferences are spread across account-specific `SharedPreferences` keys (`EnableAll2`, `EnableGroup2`, `EnableChannel2`, `EnableInChatSound`, `EnableInAppSounds`, `EnableInAppVibrate`, `EnableInAppPreview`, `EnableContactJoined`, `PinnedMessages`, `badgeNumber`, `badgeNumberMuted`, `badgeNumberMessages`). UI components such as `NotificationsSettingsActivity` directly read and mutate these SharedPreferences and controller fields, leading to tight UI-controller coupling.
+- **Decision:** Introduce pure domain models `NotificationSettingsModel`, `BadgeSettingsModel`, `BadgeCountModel`, `DialogMuteState`, and enum `NotificationPeerType`. Define `NotificationsRepository` and implement `LegacyNotificationsRepository` that wraps `NotificationsController` and `MessagesController` operations on `Dispatchers.Main`. Changes to settings and badge counters are observed reactively using `NotificationCenterFlowBridge` listening to `NotificationCenter.notificationsSettingsUpdated`, `notificationsCountUpdated`, and `updateInterfaces`.
+- **Consequences:** All notification toggles, mute states, and badge counters are decoupled behind a clean, reactive `NotificationsViewModel` and testable domain use cases without modifying upstream `NotificationsController` or risking upstream synchronization conflicts.
 
 ### ADR 016: Search & Global Search Isolation
 - **Context:** In Telegram Android, search functionality is scattered across `DialogsSearchAdapter` (~2550 lines), `SearchAdapterHelper` (~635 lines), `MessagesStorage.searchDialogs`, and `MessagesController`. Search results mix raw `TLRPC.TL_contacts_search` MTProto calls, SQLite queries on `search_recent` and `hashtag_recent_v2`, and in-memory dialog filtering.
