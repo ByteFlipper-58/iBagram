@@ -1,6 +1,14 @@
 package org.telegram.messenger.core.di
 
 import org.telegram.messenger.UserConfig
+import org.telegram.messenger.feature.chat.data.repository.LegacyChatRepository
+import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
+import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
+import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
+import org.telegram.messenger.feature.chat.domain.usecase.LoadHistoryUseCase
+import org.telegram.messenger.feature.chat.domain.usecase.ObserveMessagesUseCase
+import org.telegram.messenger.feature.chat.domain.usecase.SendMessageUseCase
+import org.telegram.messenger.feature.chat.presentation.ChatViewModel
 import org.telegram.messenger.feature.dialogs.data.repository.LegacyDialogsRepository
 import org.telegram.messenger.feature.dialogs.domain.repository.DialogsRepository
 import org.telegram.messenger.feature.dialogs.domain.usecase.DeleteDialogUseCase
@@ -110,6 +118,46 @@ class AccountFeatureContainer private constructor(val account: Int) {
             pinDialogUseCase = pinDialogUseCase,
             deleteDialogUseCase = deleteDialogUseCase,
             markDialogAsReadUseCase = markDialogAsReadUseCase
+        )
+    }
+
+    private var customChatRepository: ChatRepository? = null
+
+    var chatRepository: ChatRepository
+        get() = customChatRepository ?: LegacyChatRepository(account)
+        set(value) {
+            customChatRepository = value
+        }
+
+    val observeMessagesUseCase: ObserveMessagesUseCase
+        get() = ObserveMessagesUseCase(chatRepository)
+
+    val getMessagesUseCase: GetMessagesUseCase
+        get() = GetMessagesUseCase(chatRepository)
+
+    val loadHistoryUseCase: LoadHistoryUseCase
+        get() = LoadHistoryUseCase(chatRepository)
+
+    val sendMessageUseCase: SendMessageUseCase
+        get() = SendMessageUseCase(chatRepository)
+
+    val deleteMessagesUseCase: DeleteMessagesUseCase
+        get() = DeleteMessagesUseCase(chatRepository)
+
+    private val cachedChatViewModels = ConcurrentHashMap<Long, ChatViewModel>()
+
+    fun getChatViewModel(dialogId: Long): ChatViewModel {
+        return cachedChatViewModels.computeIfAbsent(dialogId) { createChatViewModel(it) }
+    }
+
+    fun createChatViewModel(dialogId: Long): ChatViewModel {
+        return ChatViewModel(
+            account = account,
+            dialogId = dialogId,
+            observeMessagesUseCase = observeMessagesUseCase,
+            loadHistoryUseCase = loadHistoryUseCase,
+            sendMessageUseCase = sendMessageUseCase,
+            deleteMessagesUseCase = deleteMessagesUseCase
         )
     }
 

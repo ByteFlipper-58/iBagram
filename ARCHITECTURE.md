@@ -149,6 +149,31 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── DialogsUiState.kt
             ├── DialogsEvent.kt
             └── DialogsViewModel.kt
+    │
+    └── chat/                              # Chat & Messaging Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── MessageModel.kt
+        │   │   └── MessageDeliveryStatus.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ChatRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveMessagesUseCase.kt
+        │       ├── GetMessagesUseCase.kt
+        │       ├── LoadHistoryUseCase.kt
+        │       ├── SendMessageUseCase.kt
+        │       └── DeleteMessagesUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (MessageObject <-> MessageModel)
+        │   │   └── ChatMessageMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyChatRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ChatUiState.kt
+            ├── ChatEvent.kt
+            └── ChatViewModel.kt
 ```
 
 ### Layer Rules
@@ -204,7 +229,12 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `GetDialogsUseCase`, `LoadMoreDialogsUseCase`, `PinDialogUseCase`, `DeleteDialogUseCase`, `MarkDialogAsReadUseCase`
   - [x] Data layer: `DialogMapper`, `LegacyDialogsRepository` (Main-thread safe, reactive `callbackFlow` bridge for `dialogsNeedReload`)
   - [x] Presentation layer: `DialogsUiState`, `DialogsEvent`, `DialogsViewModel`
-- [ ] Chat & Messaging (`ChatActivity`, `ChatMessageCell`)
+- [x] Chat & Messaging (`feature.chat`)
+  - [x] Domain entities: `MessageModel`, `MessageDeliveryStatus`
+  - [x] Repository contract: `ChatRepository`
+  - [x] Use cases: `ObserveMessagesUseCase`, `GetMessagesUseCase`, `LoadHistoryUseCase`, `SendMessageUseCase`, `DeleteMessagesUseCase`
+  - [x] Data layer: `ChatMessageMapper`, `LegacyChatRepository` (Main-thread safe, hooked into `didReceiveNewMessages`, `messagesDidLoad`, `messagesDeleted`, `messageReceivedByAck`)
+  - [x] Presentation layer: `ChatUiState`, `ChatEvent`, `ChatViewModel`
 - [ ] Profiles & User Info (`ProfileActivity`)
 - [ ] Settings & Preferences
 - [ ] Media & Gallery (`PhotoViewer`, `MediaActivity`)
@@ -214,6 +244,11 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 006: Chat Messaging Boundary and Send Pipeline
+- **Context:** In Telegram, sending messages involves complex queuing, encryption, retry mechanics, and offline synchronization within `SendMessagesHelper`. Re-implementing this would break upstream compatibility and risk message loss.
+- **Decision:** Wrap sending inside `LegacyChatRepository.sendMessage` by delegating to `SendMessagesHelper.sendMessage(SendMessageParams.of(text, dialogId))`, and map cached messages from `MessagesController.dialogMessage` on `Dispatchers.Main` into immutable `MessageModel` domain instances.
+- **Consequences:** Upstream MTProto update protocol and sending pipeline remain completely intact while presentation code is decoupled from legacy singletons.
 
 ### ADR 005: Dialogs List Isolation and Reactive Bridge
 - **Context:** `MessagesController.allDialogs` and `dialogsByFolder` are unsynchronized in-memory collections of Telegram, mutated on `Dispatchers.Main`. Direct background access throws `ConcurrentModificationException`.
