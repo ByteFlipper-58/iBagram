@@ -153,6 +153,21 @@ import org.telegram.messenger.feature.themes.domain.usecase.SetNightModeSettings
 import org.telegram.messenger.feature.themes.domain.usecase.SetNightModeTypeUseCase
 import org.telegram.messenger.feature.themes.domain.usecase.SetThemeAccentUseCase
 import org.telegram.messenger.feature.themes.presentation.ThemeViewModel
+import org.telegram.messenger.feature.stories.data.repository.LegacyStoriesRepository
+import org.telegram.messenger.feature.stories.domain.repository.StoriesRepository
+import org.telegram.messenger.feature.stories.domain.usecase.ActivateStealthModeUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.DeleteStoryUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.GetPeerStoriesUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.GetStoryLimitUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.MarkStoryAsReadUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.ObserveHiddenStoriesUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.ObserveSelfStoriesUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.ObserveStealthModeUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.ObserveStoriesUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.RefreshStoriesUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.ToggleStoryHiddenUseCase
+import org.telegram.messenger.feature.stories.domain.usecase.ToggleStoryPinUseCase
+import org.telegram.messenger.feature.stories.presentation.StoriesViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1061,6 +1076,78 @@ class AccountFeatureContainer private constructor(val account: Int) {
             setThemeAccentUseCase = setThemeAccentUseCase,
             setBubbleRadiusUseCase = setBubbleRadiusUseCase,
             resetAppearanceSettingsUseCase = resetAppearanceSettingsUseCase
+        )
+    }
+
+    private var customStoriesRepository: StoriesRepository? = null
+
+    var storiesRepository: StoriesRepository
+        get() = customStoriesRepository ?: LegacyStoriesRepository(account)
+        set(value) {
+            customStoriesRepository = value
+        }
+
+    val observeStoriesUseCase: ObserveStoriesUseCase
+        get() = ObserveStoriesUseCase(storiesRepository)
+
+    val observeHiddenStoriesUseCase: ObserveHiddenStoriesUseCase
+        get() = ObserveHiddenStoriesUseCase(storiesRepository)
+
+    val observeStealthModeUseCase: ObserveStealthModeUseCase
+        get() = ObserveStealthModeUseCase(storiesRepository)
+
+    val observeSelfStoriesUseCase: ObserveSelfStoriesUseCase
+        get() = ObserveSelfStoriesUseCase(storiesRepository)
+
+    val getPeerStoriesUseCase: GetPeerStoriesUseCase
+        get() = GetPeerStoriesUseCase(storiesRepository)
+
+    val markStoryAsReadUseCase: MarkStoryAsReadUseCase
+        get() = MarkStoryAsReadUseCase(storiesRepository)
+
+    val deleteStoryUseCase: DeleteStoryUseCase
+        get() = DeleteStoryUseCase(storiesRepository)
+
+    val toggleStoryPinUseCase: ToggleStoryPinUseCase
+        get() = ToggleStoryPinUseCase(storiesRepository)
+
+    val toggleStoryHiddenUseCase: ToggleStoryHiddenUseCase
+        get() = ToggleStoryHiddenUseCase(storiesRepository)
+
+    val activateStealthModeUseCase: ActivateStealthModeUseCase
+        get() = ActivateStealthModeUseCase(storiesRepository)
+
+    val getStoryLimitUseCase: GetStoryLimitUseCase
+        get() = GetStoryLimitUseCase(storiesRepository)
+
+    val refreshStoriesUseCase: RefreshStoriesUseCase
+        get() = RefreshStoriesUseCase(storiesRepository)
+
+    private var cachedStoriesViewModel: StoriesViewModel? = null
+
+    val storiesViewModel: StoriesViewModel
+        get() {
+            var vm = cachedStoriesViewModel
+            if (vm == null) {
+                vm = createStoriesViewModel()
+                cachedStoriesViewModel = vm
+            }
+            return vm
+        }
+
+    fun createStoriesViewModel(): StoriesViewModel {
+        return StoriesViewModel(
+            observeStoriesUseCase = observeStoriesUseCase,
+            observeHiddenStoriesUseCase = observeHiddenStoriesUseCase,
+            observeStealthModeUseCase = observeStealthModeUseCase,
+            observeSelfStoriesUseCase = observeSelfStoriesUseCase,
+            markStoryAsReadUseCase = markStoryAsReadUseCase,
+            deleteStoryUseCase = deleteStoryUseCase,
+            toggleStoryPinUseCase = toggleStoryPinUseCase,
+            toggleStoryHiddenUseCase = toggleStoryHiddenUseCase,
+            activateStealthModeUseCase = activateStealthModeUseCase,
+            getStoryLimitUseCase = getStoryLimitUseCase,
+            refreshStoriesUseCase = refreshStoriesUseCase
         )
     }
 

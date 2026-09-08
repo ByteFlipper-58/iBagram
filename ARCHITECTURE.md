@@ -498,6 +498,40 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ThemeUiState.kt
             ├── ThemeEvent.kt
             └── ThemeViewModel.kt
+    │
+    └── stories/                       # Stories, Statuses & Stealth Mode Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── StoryModel.kt
+        │   │   ├── PeerStoriesModel.kt
+        │   │   ├── StealthModeModel.kt
+        │   │   └── StoryLimitModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── StoriesRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveStoriesUseCase.kt
+        │       ├── ObserveHiddenStoriesUseCase.kt
+        │       ├── ObserveStealthModeUseCase.kt
+        │       ├── ObserveSelfStoriesUseCase.kt
+        │       ├── GetPeerStoriesUseCase.kt
+        │       ├── MarkStoryAsReadUseCase.kt
+        │       ├── DeleteStoryUseCase.kt
+        │       ├── ToggleStoryPinUseCase.kt
+        │       ├── ToggleStoryHiddenUseCase.kt
+        │       ├── ActivateStealthModeUseCase.kt
+        │       ├── GetStoryLimitUseCase.kt
+        │       └── RefreshStoriesUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_stories -> Domain)
+        │   │   └── StoryMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyStoriesRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── StoriesUiState.kt
+            ├── StoriesEvent.kt
+            └── StoriesViewModel.kt
 ```
 
 ### Layer Rules
@@ -637,10 +671,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveAppearanceSettingsUseCase`, `GetAppearanceSettingsUseCase`, `ObserveAvailableThemesUseCase`, `GetAvailableThemesUseCase`, `ApplyThemeUseCase`, `ObserveNightModeUseCase`, `SetNightModeTypeUseCase`, `SetNightModeSettingsUseCase`, `SetThemeAccentUseCase`, `SetBubbleRadiusUseCase`, `ResetAppearanceSettingsUseCase`
   - [x] Data layer: `ThemeMapper`, `LegacyThemeRepository` (Main-thread safe, adapting `Theme.java`, `SharedConfig`, and `NotificationCenterFlowBridge` global events)
   - [x] Presentation layer: `ThemeUiState`, `ThemeEvent`, `ThemeViewModel`
+- [x] Stories, Statuses & Stealth Mode (`feature.stories`)
+  - [x] Domain entities: `StoryModel`, `PeerStoriesModel`, `StealthModeModel`, `StoryLimitModel`
+  - [x] Repository contract: `StoriesRepository`
+  - [x] Use cases: `ObserveStoriesUseCase`, `ObserveHiddenStoriesUseCase`, `ObserveStealthModeUseCase`, `ObserveSelfStoriesUseCase`, `GetPeerStoriesUseCase`, `MarkStoryAsReadUseCase`, `DeleteStoryUseCase`, `ToggleStoryPinUseCase`, `ToggleStoryHiddenUseCase`, `ActivateStealthModeUseCase`, `GetStoryLimitUseCase`, `RefreshStoriesUseCase`
+  - [x] Data layer: `StoryMapper`, `LegacyStoriesRepository` (Main-thread safe, adapting `StoriesController` and `NotificationCenterFlowBridge` events)
+  - [x] Presentation layer: `StoriesUiState`, `StoriesEvent`, `StoriesViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 020: Stories, Statuses & Stealth Mode Controller Isolation
+- **Context:** In Telegram Android, stories are managed by `StoriesController.java` (~5270 lines) which handles in-memory peer stories collections (`dialogListStories`, `hiddenListStories`, `currentUserStories`), stealth mode timers, reading state persistence, and upload services. UI components like `PeerStoriesView`, `ProfileStoriesView`, `StoryViewer`, and `DialogStoriesCell` directly read unsynchronized controller arrays and post loose notifications, creating risks of concurrency crashes and tight UI coupling.
+- **Decision:** Introduce pure domain models `StoryModel`, `PeerStoriesModel`, `StealthModeModel`, and `StoryLimitModel`. Define abstract contract `StoriesRepository` and implement `LegacyStoriesRepository` on `Dispatchers.Main` with reactive observation through `NotificationCenterFlowBridge` listening to `storiesUpdated`, `storiesReadUpdated`, and `stealthModeChanged`.
+- **Consequences:** Story observation, read markers, deletion, pin toggling, stealth mode activation, and limit calculations are decoupled behind a clean `StoriesViewModel` and testable domain use cases without touching complex MTProto upload pipelines or breaking upstream compatibility.
 
 ### ADR 019: Themes, Night Mode, Appearance & Wallpaper Controller Isolation
 - **Context:** In Telegram Android, theme customization, day/night auto-switching, bubble radius, accent colors, and chat wallpapers are managed across `Theme.java` (~10150 lines), `SharedConfig` (bubble radius, font size), and `MessagesController.getGlobalMainSettings()`. Global theme states (`selectedAutoNightType`, `autoNightDayStartTime`, `autoNightBrighnessThreshold`, `ThemeInfo`, `ThemeAccent`) are heavily relied upon across hundreds of UI activities and custom views (`ThemeActivity`, `ChatActivity`, `ActionBar`).
