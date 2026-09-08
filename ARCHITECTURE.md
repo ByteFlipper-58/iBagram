@@ -425,6 +425,44 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── NotificationsUiState.kt
             ├── NotificationsEvent.kt
             └── NotificationsViewModel.kt
+    │
+    └── privacy/                       # Privacy, Security, Passcode & 2FA Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── PrivacyRuleType.kt
+        │   │   ├── PrivacyRuleMode.kt
+        │   │   ├── PrivacyRuleModel.kt
+        │   │   ├── BlockedPeerModel.kt
+        │   │   ├── PasscodeSettingsModel.kt
+        │   │   └── TwoStepVerificationModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── PrivacyRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObservePrivacyRulesUseCase.kt
+        │       ├── GetPrivacyRulesUseCase.kt
+        │       ├── SetPrivacyRuleUseCase.kt
+        │       ├── LoadPrivacyRulesUseCase.kt
+        │       ├── ObserveBlockedPeersUseCase.kt
+        │       ├── GetBlockedPeersUseCase.kt
+        │       ├── BlockPrivacyPeerUseCase.kt
+        │       ├── UnblockPrivacyPeerUseCase.kt
+        │       ├── GetPasscodeSettingsUseCase.kt
+        │       ├── SetPasscodeUseCase.kt
+        │       ├── CheckPasscodeUseCase.kt
+        │       ├── ClearPasscodeUseCase.kt
+        │       ├── ObserveTwoStepVerificationUseCase.kt
+        │       └── LoadTwoStepVerificationUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TLRPC/SharedConfig -> Domain)
+        │   │   └── PrivacyMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyPrivacyRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── PrivacyUiState.kt
+            ├── PrivacyEvent.kt
+            └── PrivacyViewModel.kt
 ```
 
 ### Layer Rules
@@ -552,10 +590,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveNotificationSettingsUseCase`, `GetNotificationSettingsUseCase`, `ObserveBadgeUseCase`, `GetBadgeUseCase`, `ObserveBadgeSettingsUseCase`, `GetBadgeSettingsUseCase`, `TogglePeerNotificationsUseCase`, `ToggleInChatSoundUseCase`, `ToggleInAppSoundsUseCase`, `ToggleInAppVibrateUseCase`, `ToggleInAppPreviewUseCase`, `ToggleContactJoinedNotificationsUseCase`, `TogglePinnedMessagesNotificationsUseCase`, `UpdateBadgeSettingsUseCase`, `MuteDialogUseCase`, `IsDialogMutedUseCase`, `RefreshBadgeUseCase`
   - [x] Data layer: `NotificationMapper`, `LegacyNotificationsRepository` (Main-thread safe, adapting `NotificationsController`, `MessagesController`, `SharedPreferences`, and `NotificationCenterFlowBridge`)
   - [x] Presentation layer: `NotificationsUiState`, `NotificationsEvent`, `NotificationsViewModel`
+- [x] Privacy, Security, Passcode & 2FA (`feature.privacy`)
+  - [x] Domain entities: `PrivacyRuleModel`, `PrivacyRuleType`, `PrivacyRuleMode`, `BlockedPeerModel`, `PasscodeSettingsModel`, `TwoStepVerificationModel`
+  - [x] Repository contract: `PrivacyRepository`
+  - [x] Use cases: `ObservePrivacyRulesUseCase`, `GetPrivacyRulesUseCase`, `SetPrivacyRuleUseCase`, `LoadPrivacyRulesUseCase`, `ObserveBlockedPeersUseCase`, `GetBlockedPeersUseCase`, `BlockPrivacyPeerUseCase`, `UnblockPrivacyPeerUseCase`, `GetPasscodeSettingsUseCase`, `SetPasscodeUseCase`, `CheckPasscodeUseCase`, `ClearPasscodeUseCase`, `ObserveTwoStepVerificationUseCase`, `LoadTwoStepVerificationUseCase`
+  - [x] Data layer: `PrivacyMapper`, `LegacyPrivacyRepository` (Main-thread safe, adapting `ContactsController`, `MessagesController`, `SharedConfig`, and `NotificationCenterFlowBridge`)
+  - [x] Presentation layer: `PrivacyUiState`, `PrivacyEvent`, `PrivacyViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 018: Privacy, Security, Passcode & 2FA Controller Isolation
+- **Context:** In Telegram Android, user privacy rules (who sees phone, last seen, photos, forwards, voice messages, bio, birthday, gifts), the blocklist, passcode lock, and two-step verification (2FA) are spread across disparate subsystems: `ContactsController.privacyRules`, `MessagesController.blockePeers`, `SharedConfig.passcodeHash`, `SharedConfig.appLocked`, and `TL_account.getPassword`. UI activities (`PrivacySettingsActivity`, `PrivacyControlActivity`, `PrivacyUsersActivity`, `PasscodeActivity`) directly invoked MTProto requests and manipulated global flags, tightly coupling UI to legacy controllers.
+- **Decision:** Introduce pure domain models `PrivacyRuleModel`, `BlockedPeerModel`, `PasscodeSettingsModel`, and `TwoStepVerificationModel`. Define abstract contract `PrivacyRepository` and implement `LegacyPrivacyRepository` on `Dispatchers.Main`. Changes to privacy rules, blocked lists, and two-step verification passwords are observed via `NotificationCenterFlowBridge` listening to `privacyRulesUpdated`, `blockedUsersDidLoad`, and `didSetOrRemoveTwoStepPassword`.
+- **Consequences:** All privacy configurations, passcode validation, blocklist operations, and 2FA status checks are decoupled behind `PrivacyViewModel` and isolated domain use cases without breaking upstream compatibility or modifying sensitive security internals.
 
 ### ADR 017: Notifications, Push & Badges Controller Isolation
 - **Context:** In Telegram Android, push notifications, launcher badge count, sound/vibration alerts, and Android O+ notification channels are managed inside `NotificationsController` (~6420 lines). Notification preferences are spread across account-specific `SharedPreferences` keys (`EnableAll2`, `EnableGroup2`, `EnableChannel2`, `EnableInChatSound`, `EnableInAppSounds`, `EnableInAppVibrate`, `EnableInAppPreview`, `EnableContactJoined`, `PinnedMessages`, `badgeNumber`, `badgeNumberMuted`, `badgeNumberMessages`). UI components such as `NotificationsSettingsActivity` directly read and mutate these SharedPreferences and controller fields, leading to tight UI-controller coupling.

@@ -122,6 +122,23 @@ import org.telegram.messenger.feature.notifications.domain.usecase.TogglePeerNot
 import org.telegram.messenger.feature.notifications.domain.usecase.TogglePinnedMessagesNotificationsUseCase
 import org.telegram.messenger.feature.notifications.domain.usecase.UpdateBadgeSettingsUseCase
 import org.telegram.messenger.feature.notifications.presentation.NotificationsViewModel
+import org.telegram.messenger.feature.privacy.data.repository.LegacyPrivacyRepository
+import org.telegram.messenger.feature.privacy.domain.repository.PrivacyRepository
+import org.telegram.messenger.feature.privacy.domain.usecase.BlockPrivacyPeerUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.CheckPasscodeUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.ClearPasscodeUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.GetBlockedPeersUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.GetPasscodeSettingsUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.GetPrivacyRulesUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.LoadPrivacyRulesUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.LoadTwoStepVerificationUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.ObserveBlockedPeersUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.ObservePrivacyRulesUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.ObserveTwoStepVerificationUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.SetPasscodeUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.SetPrivacyRuleUseCase
+import org.telegram.messenger.feature.privacy.domain.usecase.UnblockPrivacyPeerUseCase
+import org.telegram.messenger.feature.privacy.presentation.PrivacyViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -886,6 +903,84 @@ class AccountFeatureContainer private constructor(val account: Int) {
             updateBadgeSettingsUseCase = updateBadgeSettingsUseCase,
             muteDialogUseCase = muteDialogUseCase,
             refreshBadgeUseCase = refreshBadgeUseCase
+        )
+    }
+
+    val privacyRepository: PrivacyRepository by lazy {
+        LegacyPrivacyRepository(account)
+    }
+
+    val observePrivacyRulesUseCase: ObservePrivacyRulesUseCase
+        get() = ObservePrivacyRulesUseCase(privacyRepository)
+
+    val getPrivacyRulesUseCase: GetPrivacyRulesUseCase
+        get() = GetPrivacyRulesUseCase(privacyRepository)
+
+    val setPrivacyRuleUseCase: SetPrivacyRuleUseCase
+        get() = SetPrivacyRuleUseCase(privacyRepository)
+
+    val loadPrivacyRulesUseCase: LoadPrivacyRulesUseCase
+        get() = LoadPrivacyRulesUseCase(privacyRepository)
+
+    val observeBlockedPeersUseCase: ObserveBlockedPeersUseCase
+        get() = ObserveBlockedPeersUseCase(privacyRepository)
+
+    val getBlockedPeersUseCase: GetBlockedPeersUseCase
+        get() = GetBlockedPeersUseCase(privacyRepository)
+
+    val blockPrivacyPeerUseCase: BlockPrivacyPeerUseCase
+        get() = BlockPrivacyPeerUseCase(privacyRepository)
+
+    val unblockPrivacyPeerUseCase: UnblockPrivacyPeerUseCase
+        get() = UnblockPrivacyPeerUseCase(privacyRepository)
+
+    val getPasscodeSettingsUseCase: GetPasscodeSettingsUseCase
+        get() = GetPasscodeSettingsUseCase(privacyRepository)
+
+    val setPasscodeUseCase: SetPasscodeUseCase
+        get() = SetPasscodeUseCase(privacyRepository)
+
+    val checkPasscodeUseCase: CheckPasscodeUseCase
+        get() = CheckPasscodeUseCase(privacyRepository)
+
+    val clearPasscodeUseCase: ClearPasscodeUseCase
+        get() = ClearPasscodeUseCase(privacyRepository)
+
+    val observeTwoStepVerificationUseCase: ObserveTwoStepVerificationUseCase
+        get() = ObserveTwoStepVerificationUseCase(privacyRepository)
+
+    val loadTwoStepVerificationUseCase: LoadTwoStepVerificationUseCase
+        get() = LoadTwoStepVerificationUseCase(privacyRepository)
+
+    private var cachedPrivacyViewModel: PrivacyViewModel? = null
+
+    val privacyViewModel: PrivacyViewModel
+        get() {
+            var vm = cachedPrivacyViewModel
+            if (vm == null) {
+                vm = createPrivacyViewModel()
+                cachedPrivacyViewModel = vm
+            }
+            return vm
+        }
+
+    fun createPrivacyViewModel(): PrivacyViewModel {
+        return PrivacyViewModel(
+            privacyRepository = privacyRepository,
+            observePrivacyRulesUseCase = observePrivacyRulesUseCase,
+            getPrivacyRulesUseCase = getPrivacyRulesUseCase,
+            setPrivacyRuleUseCase = setPrivacyRuleUseCase,
+            loadPrivacyRulesUseCase = loadPrivacyRulesUseCase,
+            observeBlockedPeersUseCase = observeBlockedPeersUseCase,
+            getBlockedPeersUseCase = getBlockedPeersUseCase,
+            blockPrivacyPeerUseCase = blockPrivacyPeerUseCase,
+            unblockPrivacyPeerUseCase = unblockPrivacyPeerUseCase,
+            getPasscodeSettingsUseCase = getPasscodeSettingsUseCase,
+            setPasscodeUseCase = setPasscodeUseCase,
+            checkPasscodeUseCase = checkPasscodeUseCase,
+            clearPasscodeUseCase = clearPasscodeUseCase,
+            observeTwoStepVerificationUseCase = observeTwoStepVerificationUseCase,
+            loadTwoStepVerificationUseCase = loadTwoStepVerificationUseCase
         )
     }
 
