@@ -112,8 +112,21 @@ class SavedMessagesViewModel(
     }
 
     fun onDeleteDialog(dialog: SavedDialogModel) {
+        onDeleteDialog(dialog.dialogId)
+    }
+
+    fun onDeleteDialog(dialogId: Long) {
         viewModelScope.launch {
-            val result = deleteSavedDialogUseCase?.invoke(dialog.dialogId)
+            val result = deleteSavedDialogUseCase?.invoke(dialogId)
+            if (result is Result.Failure) {
+                _events.emit(SavedMessagesEvent.ShowError(result.error.message))
+            }
+        }
+    }
+
+    fun onTogglePin(dialogId: Long, pinned: Boolean) {
+        viewModelScope.launch {
+            val result = togglePinSavedDialogUseCase(dialogId, pinned)
             if (result is Result.Failure) {
                 _events.emit(SavedMessagesEvent.ShowError(result.error.message))
             }

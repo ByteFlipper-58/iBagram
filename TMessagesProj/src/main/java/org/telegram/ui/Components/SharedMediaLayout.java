@@ -5273,9 +5273,10 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                     .setTitle(selectedDialogs.size() == 1 ? LocaleController.formatString(firstDialogSelf ? R.string.ClearHistoryMyNotesTitle : R.string.ClearHistoryTitleSingle2, firstDialog) : LocaleController.formatPluralString("ClearHistoryTitleMultiple", selectedDialogs.size()))
                     .setMessage(selectedDialogs.size() == 1 ? LocaleController.formatString(firstDialogSelf ? R.string.ClearHistoryMyNotesMessage : R.string.ClearHistoryMessageSingle, firstDialog) : LocaleController.formatPluralString("ClearHistoryMessageMultiple", selectedDialogs.size()))
                     .setPositiveButton(getString(R.string.Remove), (di, w) -> {
+                        org.telegram.messenger.feature.savedmessages.presentation.SavedMessagesViewModel vm = org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(profileActivity.getCurrentAccount()).getSavedMessagesViewModel();
                         for (int i = 0; i < selectedDialogs.size(); ++i) {
                             final long did = selectedDialogs.get(i);
-                            profileActivity.getMessagesController().deleteSavedDialog(did);
+                            vm.onDeleteDialog(did);
                         }
                         closeActionMode();
                     })
@@ -9670,6 +9671,7 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
     private class SavedDialogsAdapter extends RecyclerListView.SelectionAdapter {
         private final Context mContext;
         private final SavedMessagesController controller;
+        private final org.telegram.messenger.feature.savedmessages.presentation.SavedMessagesViewModel viewModel;
 
         private final ArrayList<SavedMessagesController.SavedDialog> oldDialogs = new ArrayList<>();
         private final ArrayList<SavedMessagesController.SavedDialog> dialogs = new ArrayList<>();
@@ -9764,9 +9766,10 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
         public SavedDialogsAdapter(Context context) {
             mContext = context;
+            viewModel = org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(profileActivity.getCurrentAccount()).getSavedMessagesViewModel();
             controller = profileActivity.getMessagesController().getSavedMessagesController();
             if (includeSavedDialogs()) {
-                controller.loadDialogs(false);
+                viewModel.onRefresh();
             }
             setHasStableIds(true);
             update(false);
@@ -9943,6 +9946,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
             dialogs.clear();
             if (lastReaction == null) {
+                org.telegram.messenger.feature.savedmessages.presentation.SavedMessagesViewModel vm = org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(currentAccount).getSavedMessagesViewModel();
+                vm.onSearch(query);
                 dialogs.addAll(MessagesController.getInstance(currentAccount).getSavedMessagesController().searchDialogs(query));
             }
             for (int a = 0; a < mediaPages.length; a++) {

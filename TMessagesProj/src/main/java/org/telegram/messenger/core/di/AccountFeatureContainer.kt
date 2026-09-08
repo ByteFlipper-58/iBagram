@@ -44,6 +44,14 @@ class AccountFeatureContainer private constructor(val account: Int) {
     val searchSavedDialogsUseCase: SearchSavedDialogsUseCase
         get() = SearchSavedDialogsUseCase(savedMessagesRepository)
 
+    private var cachedSavedMessagesViewModel: SavedMessagesViewModel? = null
+
+    fun getSavedMessagesViewModel(): SavedMessagesViewModel {
+        return cachedSavedMessagesViewModel ?: createSavedMessagesViewModel().also {
+            cachedSavedMessagesViewModel = it
+        }
+    }
+
     fun createSavedMessagesViewModel(): SavedMessagesViewModel {
         return SavedMessagesViewModel(
             account = account,
