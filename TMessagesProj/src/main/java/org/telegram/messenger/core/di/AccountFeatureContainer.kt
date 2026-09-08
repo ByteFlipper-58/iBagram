@@ -298,6 +298,17 @@ import org.telegram.messenger.feature.quickreplies.domain.usecase.RenameQuickRep
 import org.telegram.messenger.feature.quickreplies.domain.usecase.ReorderQuickRepliesUseCase
 import org.telegram.messenger.feature.quickreplies.domain.usecase.SendQuickReplyUseCase
 import org.telegram.messenger.feature.quickreplies.presentation.QuickRepliesViewModel
+import org.telegram.messenger.feature.joinrequests.data.repository.LegacyJoinRequestsRepository
+import org.telegram.messenger.feature.joinrequests.domain.repository.JoinRequestsRepository
+import org.telegram.messenger.feature.joinrequests.domain.usecase.ApproveAllJoinRequestsUseCase
+import org.telegram.messenger.feature.joinrequests.domain.usecase.ApproveJoinRequestUseCase
+import org.telegram.messenger.feature.joinrequests.domain.usecase.DismissAllJoinRequestsUseCase
+import org.telegram.messenger.feature.joinrequests.domain.usecase.DismissJoinRequestUseCase
+import org.telegram.messenger.feature.joinrequests.domain.usecase.GetCachedJoinRequestsUseCase
+import org.telegram.messenger.feature.joinrequests.domain.usecase.GetPendingRequestsCountUseCase
+import org.telegram.messenger.feature.joinrequests.domain.usecase.LoadJoinRequestsUseCase
+import org.telegram.messenger.feature.joinrequests.domain.usecase.ObservePendingRequestsUseCase
+import org.telegram.messenger.feature.joinrequests.presentation.JoinRequestsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1907,6 +1918,62 @@ class AccountFeatureContainer private constructor(val account: Int) {
             reorderQuickRepliesUseCase = reorderQuickRepliesUseCase,
             deleteQuickRepliesUseCase = deleteQuickRepliesUseCase,
             sendQuickReplyUseCase = sendQuickReplyUseCase
+        )
+    }
+
+    private var customJoinRequestsRepository: JoinRequestsRepository? = null
+
+    var joinRequestsRepository: JoinRequestsRepository
+        get() = customJoinRequestsRepository ?: LegacyJoinRequestsRepository(account)
+        set(value) {
+            customJoinRequestsRepository = value
+        }
+
+    val observePendingRequestsUseCase: ObservePendingRequestsUseCase
+        get() = ObservePendingRequestsUseCase(joinRequestsRepository)
+
+    val getPendingRequestsCountUseCase: GetPendingRequestsCountUseCase
+        get() = GetPendingRequestsCountUseCase(joinRequestsRepository)
+
+    val getCachedJoinRequestsUseCase: GetCachedJoinRequestsUseCase
+        get() = GetCachedJoinRequestsUseCase(joinRequestsRepository)
+
+    val loadJoinRequestsUseCase: LoadJoinRequestsUseCase
+        get() = LoadJoinRequestsUseCase(joinRequestsRepository)
+
+    val approveJoinRequestUseCase: ApproveJoinRequestUseCase
+        get() = ApproveJoinRequestUseCase(joinRequestsRepository)
+
+    val dismissJoinRequestUseCase: DismissJoinRequestUseCase
+        get() = DismissJoinRequestUseCase(joinRequestsRepository)
+
+    val approveAllJoinRequestsUseCase: ApproveAllJoinRequestsUseCase
+        get() = ApproveAllJoinRequestsUseCase(joinRequestsRepository)
+
+    val dismissAllJoinRequestsUseCase: DismissAllJoinRequestsUseCase
+        get() = DismissAllJoinRequestsUseCase(joinRequestsRepository)
+
+    private var cachedJoinRequestsViewModel: JoinRequestsViewModel? = null
+
+    val joinRequestsViewModel: JoinRequestsViewModel
+        get() {
+            var vm = cachedJoinRequestsViewModel
+            if (vm == null) {
+                vm = createJoinRequestsViewModel()
+                cachedJoinRequestsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createJoinRequestsViewModel(): JoinRequestsViewModel {
+        return JoinRequestsViewModel(
+            observePendingRequestsUseCase = observePendingRequestsUseCase,
+            getCachedJoinRequestsUseCase = getCachedJoinRequestsUseCase,
+            loadJoinRequestsUseCase = loadJoinRequestsUseCase,
+            approveJoinRequestUseCase = approveJoinRequestUseCase,
+            dismissJoinRequestUseCase = dismissJoinRequestUseCase,
+            approveAllJoinRequestsUseCase = approveAllJoinRequestsUseCase,
+            dismissAllJoinRequestsUseCase = dismissAllJoinRequestsUseCase
         )
     }
 

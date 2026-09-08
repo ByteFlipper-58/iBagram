@@ -830,6 +830,36 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── QuickRepliesUiState.kt
             ├── QuickRepliesEvent.kt
             └── QuickRepliesViewModel.kt
+    │
+    └── joinrequests/                   # Join Requests & Chat Administration Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── JoinRequestUserModel.kt
+        │   │   ├── JoinRequestModel.kt
+        │   │   ├── JoinRequestsListModel.kt
+        │   │   └── ChatPendingRequestsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── JoinRequestsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObservePendingRequestsUseCase.kt
+        │       ├── GetPendingRequestsCountUseCase.kt
+        │       ├── GetCachedJoinRequestsUseCase.kt
+        │       ├── LoadJoinRequestsUseCase.kt
+        │       ├── ApproveJoinRequestUseCase.kt
+        │       ├── DismissJoinRequestUseCase.kt
+        │       ├── ApproveAllJoinRequestsUseCase.kt
+        │       └── DismissAllJoinRequestsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_chatInviteImporter -> Domain)
+        │   │   └── JoinRequestMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyJoinRequestsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── JoinRequestsUiState.kt
+            ├── JoinRequestsEvent.kt
+            └── JoinRequestsViewModel.kt
 ```
 
 ### Layer Rules
@@ -1029,10 +1059,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveQuickRepliesUseCase`, `GetQuickRepliesUseCase`, `LoadQuickRepliesUseCase`, `FindQuickReplyUseCase`, `CheckQuickReplyNameBusyUseCase`, `CanAddNewQuickReplyUseCase`, `RenameQuickReplyUseCase`, `ReorderQuickRepliesUseCase`, `DeleteQuickRepliesUseCase`, `SendQuickReplyUseCase`
   - [x] Data layer: `QuickReplyMapper`, `LegacyQuickRepliesRepository` (Main-thread safe, adapting `QuickRepliesController` and `SendMessagesHelper` with `NotificationCenterFlowBridge` observing `NotificationCenter.quickRepliesUpdated`)
   - [x] Presentation layer: `QuickRepliesUiState`, `QuickRepliesEvent`, `QuickRepliesViewModel`
+- [x] Join Requests & Chat Administration (`feature.joinrequests`)
+  - [x] Domain entities: `JoinRequestUserModel`, `JoinRequestModel`, `JoinRequestsListModel`, `ChatPendingRequestsModel`
+  - [x] Repository contract: `JoinRequestsRepository`
+  - [x] Use cases: `ObservePendingRequestsUseCase`, `GetPendingRequestsCountUseCase`, `GetCachedJoinRequestsUseCase`, `LoadJoinRequestsUseCase`, `ApproveJoinRequestUseCase`, `DismissJoinRequestUseCase`, `ApproveAllJoinRequestsUseCase`, `DismissAllJoinRequestsUseCase`
+  - [x] Data layer: `JoinRequestMapper`, `LegacyJoinRequestsRepository` (Main-thread safe, adapting `MemberRequestsController` and `ConnectionsManager` MTProto requests with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observing `NotificationCenter.chatInfoDidLoad`)
+  - [x] Presentation layer: `JoinRequestsUiState`, `JoinRequestsEvent`, `JoinRequestsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 030: Join Requests & Chat Administration Controller Isolation
+- **Context:** In Telegram Android, managing pending join requests for supergroups and channels was fragmented across `MemberRequestsController.java` (~80 lines), `MemberRequestsDelegate.java` (~1110 lines), `ChatActivityMemberRequestsDelegate.java` (~210 lines), and `MemberRequestsBottomSheet.java` (~160 lines). UI delegates directly called MTProto queries (`TLRPC.TL_messages_getChatInviteImporters`, `TLRPC.TL_messages_hideChatJoinRequest`, `TLRPC.TL_messages_hideAllChatJoinRequests`) with anonymous `RequestDelegate` callbacks, mutating `ChatFull` structures in memory and invoking UI alerts from network callbacks.
+- **Decision:** Introduce pure domain models `JoinRequestUserModel`, `JoinRequestModel`, `JoinRequestsListModel`, and `ChatPendingRequestsModel`. Define abstract contract `JoinRequestsRepository` covering pending requests count observation, cached requests lookup, paginated/filtered requests loading, single request approval/dismissal, and batch approval/dismissal. Implement `LegacyJoinRequestsRepository` operating on `Dispatchers.Main` with coroutine cancellation (`ConnectionsManager.cancelRequest`) and reactive updates via `NotificationCenterFlowBridge` observing `chatInfoDidLoad`. Encapsulate presentation state and MVI events in `JoinRequestsViewModel`.
+- **Consequences:** Member join requests, batch approvals/dismissals, search queries, and chat top-panel pending counters are decoupled behind clean, testable domain interfaces with complete unit test coverage while preserving 100% compatibility with Telegram's MTProto member requests and chat updates protocols.
 
 ### ADR 029: Business Quick Replies & Shortcuts Controller Isolation
 - **Context:** In Telegram Android, Business Quick Replies (canned responses, shortcuts `/name`, greeting/away auto-replies) are managed by `QuickRepliesController.java` (~870 lines). Quick reply shortcuts (`QuickReply`) maintain internal message IDs, message counts, order indices, and local pending flags. UI components like `QuickRepliesActivity.java` (~1400 lines) and `QuickRepliesSelectActivity.java` directly manipulated controller collections (`replies`, `localReplies`), invoked synchronous reordering and deletion, and triggered message sends via `SendMessagesHelper` without lifecycle or state isolation.
