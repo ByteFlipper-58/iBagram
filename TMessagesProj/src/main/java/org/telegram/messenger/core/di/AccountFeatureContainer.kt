@@ -168,6 +168,19 @@ import org.telegram.messenger.feature.stories.domain.usecase.RefreshStoriesUseCa
 import org.telegram.messenger.feature.stories.domain.usecase.ToggleStoryHiddenUseCase
 import org.telegram.messenger.feature.stories.domain.usecase.ToggleStoryPinUseCase
 import org.telegram.messenger.feature.stories.presentation.StoriesViewModel
+import org.telegram.messenger.feature.payments.data.repository.LegacyPaymentsRepository
+import org.telegram.messenger.feature.payments.domain.repository.PaymentsRepository
+import org.telegram.messenger.feature.payments.domain.usecase.GetStarSubscriptionsUseCase
+import org.telegram.messenger.feature.payments.domain.usecase.GetStarTopupOptionsUseCase
+import org.telegram.messenger.feature.payments.domain.usecase.GetStarTransactionsUseCase
+import org.telegram.messenger.feature.payments.domain.usecase.GetStarsBalanceUseCase
+import org.telegram.messenger.feature.payments.domain.usecase.ObserveStarSubscriptionsUseCase
+import org.telegram.messenger.feature.payments.domain.usecase.ObserveStarTransactionsUseCase
+import org.telegram.messenger.feature.payments.domain.usecase.ObserveStarsBalanceUseCase
+import org.telegram.messenger.feature.payments.domain.usecase.RefreshStarSubscriptionsUseCase
+import org.telegram.messenger.feature.payments.domain.usecase.RefreshStarTransactionsUseCase
+import org.telegram.messenger.feature.payments.domain.usecase.RefreshStarsBalanceUseCase
+import org.telegram.messenger.feature.payments.presentation.PaymentsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1148,6 +1161,68 @@ class AccountFeatureContainer private constructor(val account: Int) {
             activateStealthModeUseCase = activateStealthModeUseCase,
             getStoryLimitUseCase = getStoryLimitUseCase,
             refreshStoriesUseCase = refreshStoriesUseCase
+        )
+    }
+
+    private var customPaymentsRepository: PaymentsRepository? = null
+
+    var paymentsRepository: PaymentsRepository
+        get() = customPaymentsRepository ?: LegacyPaymentsRepository(account)
+        set(value) {
+            customPaymentsRepository = value
+        }
+
+    val observeStarsBalanceUseCase: ObserveStarsBalanceUseCase
+        get() = ObserveStarsBalanceUseCase(paymentsRepository)
+
+    val observeStarTransactionsUseCase: ObserveStarTransactionsUseCase
+        get() = ObserveStarTransactionsUseCase(paymentsRepository)
+
+    val observeStarSubscriptionsUseCase: ObserveStarSubscriptionsUseCase
+        get() = ObserveStarSubscriptionsUseCase(paymentsRepository)
+
+    val getStarsBalanceUseCase: GetStarsBalanceUseCase
+        get() = GetStarsBalanceUseCase(paymentsRepository)
+
+    val getStarTransactionsUseCase: GetStarTransactionsUseCase
+        get() = GetStarTransactionsUseCase(paymentsRepository)
+
+    val getStarSubscriptionsUseCase: GetStarSubscriptionsUseCase
+        get() = GetStarSubscriptionsUseCase(paymentsRepository)
+
+    val getStarTopupOptionsUseCase: GetStarTopupOptionsUseCase
+        get() = GetStarTopupOptionsUseCase(paymentsRepository)
+
+    val refreshStarsBalanceUseCase: RefreshStarsBalanceUseCase
+        get() = RefreshStarsBalanceUseCase(paymentsRepository)
+
+    val refreshStarTransactionsUseCase: RefreshStarTransactionsUseCase
+        get() = RefreshStarTransactionsUseCase(paymentsRepository)
+
+    val refreshStarSubscriptionsUseCase: RefreshStarSubscriptionsUseCase
+        get() = RefreshStarSubscriptionsUseCase(paymentsRepository)
+
+    private var cachedPaymentsViewModel: PaymentsViewModel? = null
+
+    val paymentsViewModel: PaymentsViewModel
+        get() {
+            var vm = cachedPaymentsViewModel
+            if (vm == null) {
+                vm = createPaymentsViewModel()
+                cachedPaymentsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createPaymentsViewModel(): PaymentsViewModel {
+        return PaymentsViewModel(
+            observeStarsBalanceUseCase = observeStarsBalanceUseCase,
+            observeStarTransactionsUseCase = observeStarTransactionsUseCase,
+            observeStarSubscriptionsUseCase = observeStarSubscriptionsUseCase,
+            getStarTopupOptionsUseCase = getStarTopupOptionsUseCase,
+            refreshStarsBalanceUseCase = refreshStarsBalanceUseCase,
+            refreshStarTransactionsUseCase = refreshStarTransactionsUseCase,
+            refreshStarSubscriptionsUseCase = refreshStarSubscriptionsUseCase
         )
     }
 

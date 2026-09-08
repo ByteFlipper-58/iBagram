@@ -532,6 +532,38 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── StoriesUiState.kt
             ├── StoriesEvent.kt
             └── StoriesViewModel.kt
+    │
+    └── payments/                      # Payments & Telegram Stars Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── StarsBalanceModel.kt
+        │   │   ├── StarTransactionModel.kt
+        │   │   ├── StarSubscriptionModel.kt
+        │   │   └── StarTopupOptionModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── PaymentsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveStarsBalanceUseCase.kt
+        │       ├── ObserveStarTransactionsUseCase.kt
+        │       ├── ObserveStarSubscriptionsUseCase.kt
+        │       ├── GetStarsBalanceUseCase.kt
+        │       ├── GetStarTransactionsUseCase.kt
+        │       ├── GetStarSubscriptionsUseCase.kt
+        │       ├── GetStarTopupOptionsUseCase.kt
+        │       ├── RefreshStarsBalanceUseCase.kt
+        │       ├── RefreshStarTransactionsUseCase.kt
+        │       └── RefreshStarSubscriptionsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_stars -> Domain)
+        │   │   └── PaymentMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyPaymentsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── PaymentsUiState.kt
+            ├── PaymentsEvent.kt
+            └── PaymentsViewModel.kt
 ```
 
 ### Layer Rules
@@ -677,10 +709,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveStoriesUseCase`, `ObserveHiddenStoriesUseCase`, `ObserveStealthModeUseCase`, `ObserveSelfStoriesUseCase`, `GetPeerStoriesUseCase`, `MarkStoryAsReadUseCase`, `DeleteStoryUseCase`, `ToggleStoryPinUseCase`, `ToggleStoryHiddenUseCase`, `ActivateStealthModeUseCase`, `GetStoryLimitUseCase`, `RefreshStoriesUseCase`
   - [x] Data layer: `StoryMapper`, `LegacyStoriesRepository` (Main-thread safe, adapting `StoriesController` and `NotificationCenterFlowBridge` events)
   - [x] Presentation layer: `StoriesUiState`, `StoriesEvent`, `StoriesViewModel`
+- [x] Payments & Telegram Stars (`feature.payments`)
+  - [x] Domain entities: `StarsBalanceModel`, `StarTransactionModel`, `StarSubscriptionModel`, `StarTopupOptionModel`
+  - [x] Repository contract: `PaymentsRepository`
+  - [x] Use cases: `ObserveStarsBalanceUseCase`, `ObserveStarTransactionsUseCase`, `ObserveStarSubscriptionsUseCase`, `GetStarsBalanceUseCase`, `GetStarTransactionsUseCase`, `GetStarSubscriptionsUseCase`, `GetStarTopupOptionsUseCase`, `RefreshStarsBalanceUseCase`, `RefreshStarTransactionsUseCase`, `RefreshStarSubscriptionsUseCase`
+  - [x] Data layer: `PaymentMapper`, `LegacyPaymentsRepository` (Main-thread safe, adapting `StarsController` and `NotificationCenterFlowBridge` events: `starBalanceUpdated`, `starTransactionsLoaded`, `starSubscriptionsLoaded`)
+  - [x] Presentation layer: `PaymentsUiState`, `PaymentsEvent`, `PaymentsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 021: Payments, Telegram Stars & Subscriptions Controller Isolation
+- **Context:** In Telegram Android, Telegram Stars (in-app virtual currency), balance top-up options, star transactions history, bot subscriptions, and peer transactions are managed by `StarsController.java` (~5120 lines). Complex in-memory collections (`transactions[type]`, `subscriptions`, `options`) and state queries (`getBalance(false)`, `balanceAvailable()`) were directly accessed by UI activities (`StarsIntroActivity`, `StarsTransactionsLayout`, bot purchase dialogs), tightly coupling presentation code to Telegram's billing and transaction internals.
+- **Decision:** Introduce pure domain models `StarsBalanceModel`, `StarTransactionModel`, `StarSubscriptionModel`, and `StarTopupOptionModel`. Define abstract contract `PaymentsRepository` and implement `LegacyPaymentsRepository` executing on `Dispatchers.Main`. Reactive observation is provided through `NotificationCenterFlowBridge` listening to `starBalanceUpdated`, `starTransactionsLoaded`, and `starSubscriptionsLoaded`. Presentation logic is encapsulated in `PaymentsViewModel`.
+- **Consequences:** Balance queries, transactions filtering, active subscription management, and top-up tier selection are decoupled behind testable domain use cases and a reactive ViewModel, preserving full compatibility with upstream Play Store / App Store billing flows without touching monolithic `StarsController.java`.
 
 ### ADR 020: Stories, Statuses & Stealth Mode Controller Isolation
 - **Context:** In Telegram Android, stories are managed by `StoriesController.java` (~5270 lines) which handles in-memory peer stories collections (`dialogListStories`, `hiddenListStories`, `currentUserStories`), stealth mode timers, reading state persistence, and upload services. UI components like `PeerStoriesView`, `ProfileStoriesView`, `StoryViewer`, and `DialogStoriesCell` directly read unsynchronized controller arrays and post loose notifications, creating risks of concurrency crashes and tight UI coupling.
