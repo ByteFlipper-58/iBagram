@@ -174,6 +174,30 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ChatUiState.kt
             ├── ChatEvent.kt
             └── ChatViewModel.kt
+    │
+    └── profile/                           # User & Chat Profile Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   └── ProfileModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ProfileRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveProfileUseCase.kt
+        │       ├── GetProfileUseCase.kt
+        │       ├── LoadFullProfileUseCase.kt
+        │       ├── BlockPeerUseCase.kt
+        │       └── UnblockPeerUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TLRPC.User / TLRPC.Chat <-> ProfileModel)
+        │   │   └── ProfileMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyProfileRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ProfileUiState.kt
+            ├── ProfileEvent.kt
+            └── ProfileViewModel.kt
 ```
 
 ### Layer Rules
@@ -235,7 +259,12 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveMessagesUseCase`, `GetMessagesUseCase`, `LoadHistoryUseCase`, `SendMessageUseCase`, `DeleteMessagesUseCase`
   - [x] Data layer: `ChatMessageMapper`, `LegacyChatRepository` (Main-thread safe, hooked into `didReceiveNewMessages`, `messagesDidLoad`, `messagesDeleted`, `messageReceivedByAck`)
   - [x] Presentation layer: `ChatUiState`, `ChatEvent`, `ChatViewModel`
-- [ ] Profiles & User Info (`ProfileActivity`)
+- [x] Profiles & User Info (`feature.profile`)
+  - [x] Domain entities: `ProfileModel` (unified model for user, chat, channel, bot)
+  - [x] Repository contract: `ProfileRepository`
+  - [x] Use cases: `ObserveProfileUseCase`, `GetProfileUseCase`, `LoadFullProfileUseCase`, `BlockPeerUseCase`, `UnblockPeerUseCase`
+  - [x] Data layer: `ProfileMapper`, `LegacyProfileRepository` (Main-thread safe, hooked into `userInfoDidLoad`, `chatInfoDidLoad`)
+  - [x] Presentation layer: `ProfileUiState`, `ProfileEvent`, `ProfileViewModel`
 - [ ] Settings & Preferences
 - [ ] Media & Gallery (`PhotoViewer`, `MediaActivity`)
 - [ ] Calls & VoIP (`VoIPService`, `VoIPActivity`)
@@ -244,6 +273,11 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 007: Unified Peer Profile Boundary
+- **Context:** In legacy Telegram, peer profiles are split across separate classes: `TLRPC.User`, `TLRPC.Chat`, `TLRPC.UserFull`, and `TLRPC.ChatFull`. Furthermore, user IDs are positive while chat/channel IDs are negative (`-chatId`), and data fetching/blocking uses different methods on `MessagesController`.
+- **Decision:** Introduce a single domain model `ProfileModel` with unified fields (`id`, `title`, `username`, `phone`, `about`, `isUser`, `isChannel`, `isGroup`, `isBot`, `isVerified`, `isScam`, `isFake`, `isBlocked`, etc.) and a unified contract `ProfileRepository`. `LegacyProfileRepository` transparently resolves whether `peerId` is user or chat/channel, dispatches calls to the respective `MessagesController` cache/methods on `Dispatchers.Main`, and emits updates via reactive `callbackFlow` hooked into `userInfoDidLoad` and `chatInfoDidLoad`.
+- **Consequences:** Presentation layer (profile screens, user cards, headers) interacts with a single, consistent model and ViewModel regardless of peer type, completely shielded from legacy TLRPC distinctions.
 
 ### ADR 006: Chat Messaging Boundary and Send Pipeline
 - **Context:** In Telegram, sending messages involves complex queuing, encryption, retry mechanics, and offline synchronization within `SendMessagesHelper`. Re-implementing this would break upstream compatibility and risk message loss.

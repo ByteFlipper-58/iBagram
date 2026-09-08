@@ -2,6 +2,14 @@ package org.telegram.messenger.core.di
 
 import org.telegram.messenger.UserConfig
 import org.telegram.messenger.feature.chat.data.repository.LegacyChatRepository
+import org.telegram.messenger.feature.profile.data.repository.LegacyProfileRepository
+import org.telegram.messenger.feature.profile.domain.repository.ProfileRepository
+import org.telegram.messenger.feature.profile.domain.usecase.BlockPeerUseCase
+import org.telegram.messenger.feature.profile.domain.usecase.GetProfileUseCase
+import org.telegram.messenger.feature.profile.domain.usecase.LoadFullProfileUseCase
+import org.telegram.messenger.feature.profile.domain.usecase.ObserveProfileUseCase
+import org.telegram.messenger.feature.profile.domain.usecase.UnblockPeerUseCase
+import org.telegram.messenger.feature.profile.presentation.ProfileViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -158,6 +166,46 @@ class AccountFeatureContainer private constructor(val account: Int) {
             loadHistoryUseCase = loadHistoryUseCase,
             sendMessageUseCase = sendMessageUseCase,
             deleteMessagesUseCase = deleteMessagesUseCase
+        )
+    }
+
+    private var customProfileRepository: ProfileRepository? = null
+
+    var profileRepository: ProfileRepository
+        get() = customProfileRepository ?: LegacyProfileRepository(account)
+        set(value) {
+            customProfileRepository = value
+        }
+
+    val observeProfileUseCase: ObserveProfileUseCase
+        get() = ObserveProfileUseCase(profileRepository)
+
+    val getProfileUseCase: GetProfileUseCase
+        get() = GetProfileUseCase(profileRepository)
+
+    val loadFullProfileUseCase: LoadFullProfileUseCase
+        get() = LoadFullProfileUseCase(profileRepository)
+
+    val blockPeerUseCase: BlockPeerUseCase
+        get() = BlockPeerUseCase(profileRepository)
+
+    val unblockPeerUseCase: UnblockPeerUseCase
+        get() = UnblockPeerUseCase(profileRepository)
+
+    private val cachedProfileViewModels = ConcurrentHashMap<Long, ProfileViewModel>()
+
+    fun getProfileViewModel(peerId: Long): ProfileViewModel {
+        return cachedProfileViewModels.computeIfAbsent(peerId) { createProfileViewModel(it) }
+    }
+
+    fun createProfileViewModel(peerId: Long): ProfileViewModel {
+        return ProfileViewModel(
+            account = account,
+            peerId = peerId,
+            observeProfileUseCase = observeProfileUseCase,
+            loadFullProfileUseCase = loadFullProfileUseCase,
+            blockPeerUseCase = blockPeerUseCase,
+            unblockPeerUseCase = unblockPeerUseCase
         )
     }
 
