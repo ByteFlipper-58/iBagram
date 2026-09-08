@@ -58,6 +58,17 @@ import org.telegram.messenger.feature.contacts.domain.usecase.GetContactsUseCase
 import org.telegram.messenger.feature.contacts.domain.usecase.ObserveContactsUseCase
 import org.telegram.messenger.feature.contacts.domain.usecase.SearchContactsUseCase
 import org.telegram.messenger.feature.contacts.presentation.ContactsViewModel
+import org.telegram.messenger.feature.folders.data.repository.LegacyFoldersRepository
+import org.telegram.messenger.feature.folders.domain.repository.FoldersRepository
+import org.telegram.messenger.feature.folders.domain.usecase.CreateFolderUseCase
+import org.telegram.messenger.feature.folders.domain.usecase.DeleteFolderUseCase
+import org.telegram.messenger.feature.folders.domain.usecase.GetFolderUseCase
+import org.telegram.messenger.feature.folders.domain.usecase.GetFoldersUseCase
+import org.telegram.messenger.feature.folders.domain.usecase.GetSuggestedFoldersUseCase
+import org.telegram.messenger.feature.folders.domain.usecase.ObserveFoldersUseCase
+import org.telegram.messenger.feature.folders.domain.usecase.ReorderFoldersUseCase
+import org.telegram.messenger.feature.folders.domain.usecase.UpdateFolderUseCase
+import org.telegram.messenger.feature.folders.presentation.FoldersViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -504,6 +515,63 @@ class AccountFeatureContainer private constructor(val account: Int) {
             addContactUseCase = addContactUseCase,
             deleteContactUseCase = deleteContactUseCase,
             searchContactsUseCase = searchContactsUseCase
+        )
+    }
+
+    private var customFoldersRepository: FoldersRepository? = null
+
+    var foldersRepository: FoldersRepository
+        get() = customFoldersRepository ?: LegacyFoldersRepository(account)
+        set(value) {
+            customFoldersRepository = value
+        }
+
+    val observeFoldersUseCase: ObserveFoldersUseCase
+        get() = ObserveFoldersUseCase(foldersRepository)
+
+    val getFoldersUseCase: GetFoldersUseCase
+        get() = GetFoldersUseCase(foldersRepository)
+
+    val getFolderUseCase: GetFolderUseCase
+        get() = GetFolderUseCase(foldersRepository)
+
+    val createFolderUseCase: CreateFolderUseCase
+        get() = CreateFolderUseCase(foldersRepository)
+
+    val updateFolderUseCase: UpdateFolderUseCase
+        get() = UpdateFolderUseCase(foldersRepository)
+
+    val deleteFolderUseCase: DeleteFolderUseCase
+        get() = DeleteFolderUseCase(foldersRepository)
+
+    val reorderFoldersUseCase: ReorderFoldersUseCase
+        get() = ReorderFoldersUseCase(foldersRepository)
+
+    val getSuggestedFoldersUseCase: GetSuggestedFoldersUseCase
+        get() = GetSuggestedFoldersUseCase(foldersRepository)
+
+    private var cachedFoldersViewModel: FoldersViewModel? = null
+
+    val foldersViewModel: FoldersViewModel
+        get() {
+            var vm = cachedFoldersViewModel
+            if (vm == null) {
+                vm = createFoldersViewModel()
+                cachedFoldersViewModel = vm
+            }
+            return vm
+        }
+
+    fun createFoldersViewModel(): FoldersViewModel {
+        return FoldersViewModel(
+            observeFoldersUseCase = observeFoldersUseCase,
+            getFoldersUseCase = getFoldersUseCase,
+            getFolderUseCase = getFolderUseCase,
+            createFolderUseCase = createFolderUseCase,
+            updateFolderUseCase = updateFolderUseCase,
+            deleteFolderUseCase = deleteFolderUseCase,
+            reorderFoldersUseCase = reorderFoldersUseCase,
+            getSuggestedFoldersUseCase = getSuggestedFoldersUseCase
         )
     }
 

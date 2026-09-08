@@ -329,6 +329,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ContactsUiState.kt
             ├── ContactsEvent.kt
             └── ContactsViewModel.kt
+    │
+    └── folders/                         # Folders & Chat Filters Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── FolderModel.kt
+        │   │   └── SuggestedFolderModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── FoldersRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveFoldersUseCase.kt
+        │       ├── GetFoldersUseCase.kt
+        │       ├── GetFolderUseCase.kt
+        │       ├── CreateFolderUseCase.kt
+        │       ├── UpdateFolderUseCase.kt
+        │       ├── DeleteFolderUseCase.kt
+        │       ├── ReorderFoldersUseCase.kt
+        │       └── GetSuggestedFoldersUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (DialogFilter/Suggested -> Domain)
+        │   │   └── FolderMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyFoldersRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── FoldersUiState.kt
+            ├── FoldersEvent.kt
+            └── FoldersViewModel.kt
 ```
 
 ### Layer Rules
@@ -426,10 +454,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveContactsUseCase`, `GetContactsUseCase`, `GetContactUseCase`, `AddContactUseCase`, `DeleteContactUseCase`, `SearchContactsUseCase`
   - [x] Data layer: `ContactMapper`, `LegacyContactsRepository` (Main-thread safe, hooked into `NotificationCenter.contactsDidLoad`, `updateInterfaces`)
   - [x] Presentation layer: `ContactsUiState`, `ContactsEvent`, `ContactsViewModel`
+- [x] Folders & Chat Filters (`feature.folders`)
+  - [x] Domain entities: `FolderModel`, `SuggestedFolderModel` (pure models decoupling from MessagesController.DialogFilter and TLRPC.TL_dialogFilterSuggested)
+  - [x] Repository contract: `FoldersRepository`
+  - [x] Use cases: `ObserveFoldersUseCase`, `GetFoldersUseCase`, `GetFolderUseCase`, `CreateFolderUseCase`, `UpdateFolderUseCase`, `DeleteFolderUseCase`, `ReorderFoldersUseCase`, `GetSuggestedFoldersUseCase`
+  - [x] Data layer: `FolderMapper`, `LegacyFoldersRepository` (Main-thread safe, hooked into `NotificationCenter.dialogFiltersUpdated`, `suggestedFiltersLoaded`)
+  - [x] Presentation layer: `FoldersUiState`, `FoldersEvent`, `FoldersViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 013: Folders & Chat Filters Isolation and Order Management
+- **Context:** In Telegram Android, dialog filter tabs / folders are stored in `MessagesController.dialogFilters` (`ArrayList<DialogFilter>`) and `dialogFiltersById` (`SparseArray<DialogFilter>`). Mutation occurs via UI fragments (`FiltersSetupActivity`, `FilterCreateActivity`) directly mutating the in-memory array, calling `MessagesStorage.saveDialogFilter`, and sending RPCs. These collections are modified on `Dispatchers.Main` and lacked clean encapsulation.
+- **Decision:** Introduce pure domain models `FolderModel` and `SuggestedFolderModel` and repository contract `FoldersRepository`. Implement `LegacyFoldersRepository` that wraps `MessagesController` and `MessagesStorage` mutations (`addFilter`, `onFilterUpdate`, `removeFilter`, `saveDialogFilter`, `deleteDialogFilter`, `saveDialogFiltersOrder`) on `Dispatchers.Main`. Reactive observation is provided through `callbackFlow` listening to `NotificationCenter.dialogFiltersUpdated` and `suggestedFiltersLoaded`.
+- **Consequences:** Folder creation, editing, deletion, reordering, and suggested folder discovery are fully testable and decoupled from Telegram UI fragments and raw `MessagesController.DialogFilter` structures.
 
 ### ADR 012: Contacts Controller Isolation and Synchronization Boundary
 - **Context:** In Telegram Android, `ContactsController` (~3100 lines) manages system contacts synchronization, phonebook hashing, server contacts import, and in-memory lists `contacts` (`ArrayList<TLRPC.TL_contact>`) and `contactsDict` (`HashMap<Long, TLRPC.TL_contact>`). These collections are unsynchronized and modified exclusively on `Dispatchers.Main`. Furthermore, user names, online statuses, and avatars are stored separately in `MessagesController`.
