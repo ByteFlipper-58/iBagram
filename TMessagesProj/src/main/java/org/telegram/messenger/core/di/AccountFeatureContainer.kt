@@ -20,6 +20,13 @@ import org.telegram.messenger.feature.settings.domain.usecase.UpdateSaveToGaller
 import org.telegram.messenger.feature.settings.domain.usecase.UpdateStreamMediaUseCase
 import org.telegram.messenger.feature.settings.domain.usecase.UpdateSyncContactsUseCase
 import org.telegram.messenger.feature.settings.presentation.SettingsViewModel
+import org.telegram.messenger.feature.media.data.repository.LegacyMediaRepository
+import org.telegram.messenger.feature.media.domain.repository.MediaRepository
+import org.telegram.messenger.feature.media.domain.usecase.GetAlbumMediaUseCase
+import org.telegram.messenger.feature.media.domain.usecase.GetAllMediaUseCase
+import org.telegram.messenger.feature.media.domain.usecase.GetMediaAlbumsUseCase
+import org.telegram.messenger.feature.media.domain.usecase.ObserveMediaAlbumsUseCase
+import org.telegram.messenger.feature.media.presentation.MediaViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -269,6 +276,47 @@ class AccountFeatureContainer private constructor(val account: Int) {
             updateSaveToGalleryUseCase = updateSaveToGalleryUseCase,
             updateStreamMediaUseCase = updateStreamMediaUseCase,
             updateSyncContactsUseCase = updateSyncContactsUseCase
+        )
+    }
+
+    private var customMediaRepository: MediaRepository? = null
+
+    var mediaRepository: MediaRepository
+        get() = customMediaRepository ?: LegacyMediaRepository()
+        set(value) {
+            customMediaRepository = value
+        }
+
+    val observeMediaAlbumsUseCase: ObserveMediaAlbumsUseCase
+        get() = ObserveMediaAlbumsUseCase(mediaRepository)
+
+    val getMediaAlbumsUseCase: GetMediaAlbumsUseCase
+        get() = GetMediaAlbumsUseCase(mediaRepository)
+
+    val getAlbumMediaUseCase: GetAlbumMediaUseCase
+        get() = GetAlbumMediaUseCase(mediaRepository)
+
+    val getAllMediaUseCase: GetAllMediaUseCase
+        get() = GetAllMediaUseCase(mediaRepository)
+
+    private var cachedMediaViewModel: MediaViewModel? = null
+
+    val mediaViewModel: MediaViewModel
+        get() {
+            var vm = cachedMediaViewModel
+            if (vm == null) {
+                vm = createMediaViewModel()
+                cachedMediaViewModel = vm
+            }
+            return vm
+        }
+
+    fun createMediaViewModel(): MediaViewModel {
+        return MediaViewModel(
+            observeMediaAlbumsUseCase = observeMediaAlbumsUseCase,
+            getMediaAlbumsUseCase = getMediaAlbumsUseCase,
+            getAlbumMediaUseCase = getAlbumMediaUseCase,
+            getAllMediaUseCase = getAllMediaUseCase
         )
     }
 

@@ -224,6 +224,30 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── SettingsUiState.kt
             ├── SettingsEvent.kt
             └── SettingsViewModel.kt
+    │
+    └── media/                             # Media & Gallery Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── MediaItemModel.kt
+        │   │   └── MediaAlbumModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── MediaRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveMediaAlbumsUseCase.kt
+        │       ├── GetMediaAlbumsUseCase.kt
+        │       ├── GetAlbumMediaUseCase.kt
+        │       └── GetAllMediaUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (MediaController PhotoEntry/AlbumEntry -> Domain)
+        │   │   └── MediaMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyMediaRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── MediaUiState.kt
+            ├── MediaEvent.kt
+            └── MediaViewModel.kt
 ```
 
 ### Layer Rules
@@ -297,13 +321,23 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveSettingsUseCase`, `GetSettingsUseCase`, `UpdateFontSizeUseCase`, `UpdateBubbleRadiusUseCase`, `UpdateSaveToGalleryUseCase`, `UpdateStreamMediaUseCase`, `UpdateSyncContactsUseCase`
   - [x] Data layer: `SettingsMapper`, `LegacySettingsRepository` (Main-thread safe, hooked into `updateInterfaces`, `mainUserInfoChanged`, `notificationsSettingsUpdated`)
   - [x] Presentation layer: `SettingsUiState`, `SettingsEvent`, `SettingsViewModel`
-- [ ] Media & Gallery (`PhotoViewer`, `MediaActivity`)
+- [x] Media & Gallery (`feature.media`)
+  - [x] Domain entities: `MediaItemModel`, `MediaAlbumModel`
+  - [x] Repository contract: `MediaRepository`
+  - [x] Use cases: `ObserveMediaAlbumsUseCase`, `GetMediaAlbumsUseCase`, `GetAlbumMediaUseCase`, `GetAllMediaUseCase`
+  - [x] Data layer: `MediaMapper`, `LegacyMediaRepository` (Main-thread safe, hooked into `MediaController.allMediaAlbums`, `allPhotosAlbumEntry`)
+  - [x] Presentation layer: `MediaUiState`, `MediaEvent`, `MediaViewModel`
 - [ ] Calls & VoIP (`VoIPService`, `VoIPActivity`)
 - [ ] Secret Chats & End-to-End Encryption
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 009: Media and Gallery Abstraction Boundary
+- **Context:** In Telegram Android, `MediaController` is a massive ~7000-line controller handling media playback, recording, audio state, and gallery loading. Gallery models `AlbumEntry` and `PhotoEntry` mix file metadata with complex in-place image editor state and UI flags.
+- **Decision:** Extract gallery and album functionality behind a clean `MediaRepository` contract with pure immutable models `MediaItemModel` and `MediaAlbumModel`. `LegacyMediaRepository` delegates album and media queries to `MediaController.allMediaAlbums` and `allPhotosAlbumEntry` strictly on `Dispatchers.Main`.
+- **Consequences:** Presentation code (gallery pickers, media grids) interacts solely with pure Kotlin data models and `MediaViewModel`, insulated from `MediaController`'s internal mutable state machines.
 
 ### ADR 008: Settings Aggregation and Thread-Safe Persistence
 - **Context:** Telegram stores settings across multiple mutable static singletons: `SharedConfig` (global app-wide preferences like font size, bubble radius, stream media, in-app camera) and `UserConfig` (account-scoped preferences like contact syncing, call tab visibility). Direct access from UI components scattered configuration logic and caused race conditions during persistence.
