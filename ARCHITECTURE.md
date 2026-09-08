@@ -636,6 +636,41 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── TopicsUiState.kt
             ├── TopicsEvent.kt
             └── TopicsViewModel.kt
+    │
+    └── location/                       # Live Locations, GPS & Proximity Alerts Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── GeoPointModel.kt
+        │   │   ├── LiveLocationSharingModel.kt
+        │   │   └── PeerLiveLocationModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── LocationRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveActiveSharingsUseCase.kt
+        │       ├── ObservePeerLocationsUseCase.kt
+        │       ├── ObserveLastKnownLocationUseCase.kt
+        │       ├── GetActiveSharingsUseCase.kt
+        │       ├── IsSharingLocationUseCase.kt
+        │       ├── GetSharingInfoUseCase.kt
+        │       ├── GetLastKnownLocationUseCase.kt
+        │       ├── LoadPeerLiveLocationsUseCase.kt
+        │       ├── StopLocationSharingUseCase.kt
+        │       ├── StopAllLocationSharingsUseCase.kt
+        │       ├── SetProximityAlertUseCase.kt
+        │       ├── SendStaticLocationUseCase.kt
+        │       ├── SendLiveLocationUseCase.kt
+        │       └── MarkLiveLocationsAsReadUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (SharingLocationInfo / Message -> Domain)
+        │   │   └── LocationMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyLocationRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── LocationUiState.kt
+            ├── LocationEvent.kt
+            └── LocationViewModel.kt
 ```
 
 ### Layer Rules
@@ -799,10 +834,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveTopicsUseCase`, `ObserveForumUnreadCountUseCase`, `GetTopicsUseCase`, `GetTopicUseCase`, `LoadTopicsUseCase`, `ReloadTopicsUseCase`, `ToggleCloseTopicUseCase`, `TogglePinTopicUseCase`, `ToggleShowTopicUseCase`, `DeleteTopicsUseCase`, `ReorderPinnedTopicsUseCase`, `MarkTopicReactionsAsReadUseCase`, `GetForumUnreadCountUseCase`
   - [x] Data layer: `TopicMapper`, `LegacyTopicsRepository` (Main-thread safe, adapting `TopicsController` via `MessagesController` and `NotificationCenterFlowBridge` listening to `topicsDidLoaded`)
   - [x] Presentation layer: `TopicsUiState`, `TopicsEvent`, `TopicsViewModel` (filtering by OPEN/CLOSED/PINNED/HIDDEN, title search, unread counter badge observation)
+- [x] Live Locations, GPS & Proximity Alerts (`feature.location`)
+  - [x] Domain entities: `GeoPointModel`, `LiveLocationSharingModel`, `PeerLiveLocationModel`
+  - [x] Repository contract: `LocationRepository`
+  - [x] Use cases: `ObserveActiveSharingsUseCase`, `ObservePeerLocationsUseCase`, `ObserveLastKnownLocationUseCase`, `GetActiveSharingsUseCase`, `IsSharingLocationUseCase`, `GetSharingInfoUseCase`, `GetLastKnownLocationUseCase`, `LoadPeerLiveLocationsUseCase`, `StopLocationSharingUseCase`, `StopAllLocationSharingsUseCase`, `SetProximityAlertUseCase`, `SendStaticLocationUseCase`, `SendLiveLocationUseCase`, `MarkLiveLocationsAsReadUseCase`
+  - [x] Data layer: `LocationMapper`, `LegacyLocationRepository` (Main-thread safe, adapting `LocationController` and `SendMessagesHelper` with `NotificationCenterFlowBridge` observing `liveLocationsChanged`, `liveLocationsCacheChanged`, `newLocationAvailable`)
+  - [x] Presentation layer: `LocationUiState`, `LocationEvent`, `LocationViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 024: Live Locations, GPS Updates & Proximity Alerts Controller Isolation
+- **Context:** In Telegram Android, background and foreground location tracking, live location sharing (`SharingLocationInfo`), peer locations caching (`locationsCache`), and proximity distance alerts are handled by `LocationController.java` (~1420 lines). UI components like `LocationActivity.java` directly inspected internal controller arrays, registered raw `LocationListener` callbacks, and invoked synchronous network updates.
+- **Decision:** Introduce pure domain models `GeoPointModel`, `LiveLocationSharingModel`, and `PeerLiveLocationModel`. Define abstract contract `LocationRepository` and implement `LegacyLocationRepository` executing on `Dispatchers.Main` with reactive Kotlin `Flow`s bound to global `liveLocationsChanged`, `liveLocationsCacheChanged`, and `newLocationAvailable` events. Encapsulate dialog-specific location observation, proximity configuration, and static/live location sending in `LocationViewModel`.
+- **Consequences:** Live location broadcast management, peer location tracking, and proximity alerts are decoupled behind clean, testable domain interfaces while preserving 100% compatibility with Telegram's background location service and MTProto broadcast protocol.
 
 ### ADR 023: Forum Topics, Supergroup Threads & TopicsController Isolation
 - **Context:** In Telegram Android, forum topics for supergroups are managed by `TopicsController.java` (~1390 lines) instantiated per-account on `MessagesController`. Legacy UI components (`TopicsFragment`, `ForumUtilities`, topic dialog headers) directly manipulated sparse collections (`topicsByChatId`, `topicsMapByChatId`), raw bitmasks, and mutable objects without thread safety guarantees or lifecycle isolation.

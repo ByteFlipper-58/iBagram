@@ -1,0 +1,12 @@
+package org.telegram.messenger.feature.location.domain.usecase
+
+import org.telegram.messenger.core.result.Result
+import org.telegram.messenger.feature.location.domain.repository.LocationRepository
+
+class SendStaticLocationUseCase(
+    private val repository: LocationRepository
+) {
+    suspend operator fun invoke(dialogId: Long, latitude: Double, longitude: Double): Result<Unit> {
+        return repository.sendStaticLocation(dialogId, latitude, longitude)
+    }
+}

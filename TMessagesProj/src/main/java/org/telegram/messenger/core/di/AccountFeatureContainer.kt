@@ -214,6 +214,23 @@ import org.telegram.messenger.feature.topics.domain.usecase.ToggleCloseTopicUseC
 import org.telegram.messenger.feature.topics.domain.usecase.TogglePinTopicUseCase
 import org.telegram.messenger.feature.topics.domain.usecase.ToggleShowTopicUseCase
 import org.telegram.messenger.feature.topics.presentation.TopicsViewModel
+import org.telegram.messenger.feature.location.data.repository.LegacyLocationRepository
+import org.telegram.messenger.feature.location.domain.repository.LocationRepository
+import org.telegram.messenger.feature.location.domain.usecase.GetActiveSharingsUseCase
+import org.telegram.messenger.feature.location.domain.usecase.GetLastKnownLocationUseCase
+import org.telegram.messenger.feature.location.domain.usecase.GetSharingInfoUseCase
+import org.telegram.messenger.feature.location.domain.usecase.IsSharingLocationUseCase
+import org.telegram.messenger.feature.location.domain.usecase.LoadPeerLiveLocationsUseCase
+import org.telegram.messenger.feature.location.domain.usecase.MarkLiveLocationsAsReadUseCase
+import org.telegram.messenger.feature.location.domain.usecase.ObserveActiveSharingsUseCase
+import org.telegram.messenger.feature.location.domain.usecase.ObserveLastKnownLocationUseCase
+import org.telegram.messenger.feature.location.domain.usecase.ObservePeerLocationsUseCase
+import org.telegram.messenger.feature.location.domain.usecase.SendLiveLocationUseCase
+import org.telegram.messenger.feature.location.domain.usecase.SendStaticLocationUseCase
+import org.telegram.messenger.feature.location.domain.usecase.SetProximityAlertUseCase
+import org.telegram.messenger.feature.location.domain.usecase.StopAllLocationSharingsUseCase
+import org.telegram.messenger.feature.location.domain.usecase.StopLocationSharingUseCase
+import org.telegram.messenger.feature.location.presentation.LocationViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1414,6 +1431,87 @@ class AccountFeatureContainer private constructor(val account: Int) {
             reorderPinnedTopicsUseCase = reorderPinnedTopicsUseCase,
             markTopicReactionsAsReadUseCase = markTopicReactionsAsReadUseCase,
             getForumUnreadCountUseCase = getForumUnreadCountUseCase
+        )
+    }
+
+    private var customLocationRepository: LocationRepository? = null
+
+    var locationRepository: LocationRepository
+        get() = customLocationRepository ?: LegacyLocationRepository(account)
+        set(value) {
+            customLocationRepository = value
+        }
+
+    val observeActiveSharingsUseCase: ObserveActiveSharingsUseCase
+        get() = ObserveActiveSharingsUseCase(locationRepository)
+
+    val observePeerLocationsUseCase: ObservePeerLocationsUseCase
+        get() = ObservePeerLocationsUseCase(locationRepository)
+
+    val observeLastKnownLocationUseCase: ObserveLastKnownLocationUseCase
+        get() = ObserveLastKnownLocationUseCase(locationRepository)
+
+    val getActiveSharingsUseCase: GetActiveSharingsUseCase
+        get() = GetActiveSharingsUseCase(locationRepository)
+
+    val isSharingLocationUseCase: IsSharingLocationUseCase
+        get() = IsSharingLocationUseCase(locationRepository)
+
+    val getSharingInfoUseCase: GetSharingInfoUseCase
+        get() = GetSharingInfoUseCase(locationRepository)
+
+    val getLastKnownLocationUseCase: GetLastKnownLocationUseCase
+        get() = GetLastKnownLocationUseCase(locationRepository)
+
+    val loadPeerLiveLocationsUseCase: LoadPeerLiveLocationsUseCase
+        get() = LoadPeerLiveLocationsUseCase(locationRepository)
+
+    val stopLocationSharingUseCase: StopLocationSharingUseCase
+        get() = StopLocationSharingUseCase(locationRepository)
+
+    val stopAllLocationSharingsUseCase: StopAllLocationSharingsUseCase
+        get() = StopAllLocationSharingsUseCase(locationRepository)
+
+    val setProximityAlertUseCase: SetProximityAlertUseCase
+        get() = SetProximityAlertUseCase(locationRepository)
+
+    val sendStaticLocationUseCase: SendStaticLocationUseCase
+        get() = SendStaticLocationUseCase(locationRepository)
+
+    val sendLiveLocationUseCase: SendLiveLocationUseCase
+        get() = SendLiveLocationUseCase(locationRepository)
+
+    val markLiveLocationsAsReadUseCase: MarkLiveLocationsAsReadUseCase
+        get() = MarkLiveLocationsAsReadUseCase(locationRepository)
+
+    private var cachedLocationViewModel: LocationViewModel? = null
+
+    val locationViewModel: LocationViewModel
+        get() {
+            var vm = cachedLocationViewModel
+            if (vm == null) {
+                vm = createLocationViewModel()
+                cachedLocationViewModel = vm
+            }
+            return vm
+        }
+
+    fun createLocationViewModel(): LocationViewModel {
+        return LocationViewModel(
+            observeActiveSharingsUseCase = observeActiveSharingsUseCase,
+            observePeerLocationsUseCase = observePeerLocationsUseCase,
+            observeLastKnownLocationUseCase = observeLastKnownLocationUseCase,
+            getActiveSharingsUseCase = getActiveSharingsUseCase,
+            isSharingLocationUseCase = isSharingLocationUseCase,
+            getSharingInfoUseCase = getSharingInfoUseCase,
+            getLastKnownLocationUseCase = getLastKnownLocationUseCase,
+            loadPeerLiveLocationsUseCase = loadPeerLiveLocationsUseCase,
+            stopLocationSharingUseCase = stopLocationSharingUseCase,
+            stopAllLocationSharingsUseCase = stopAllLocationSharingsUseCase,
+            setProximityAlertUseCase = setProximityAlertUseCase,
+            sendStaticLocationUseCase = sendStaticLocationUseCase,
+            sendLiveLocationUseCase = sendLiveLocationUseCase,
+            markLiveLocationsAsReadUseCase = markLiveLocationsAsReadUseCase
         )
     }
 
