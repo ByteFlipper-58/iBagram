@@ -966,6 +966,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── PasskeysUiState.kt
             ├── PasskeysEvent.kt
             └── PasskeysViewModel.kt
+    │
+    └── proxy/                          # Proxy Configuration & Auto-Rotation Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── ProxyType.kt
+        │   │   ├── ProxyModel.kt
+        │   │   └── ProxySettingsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ProxyRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveProxySettingsUseCase.kt
+        │       ├── GetProxySettingsUseCase.kt
+        │       ├── AddProxyUseCase.kt
+        │       ├── DeleteProxyUseCase.kt
+        │       ├── EnableProxyUseCase.kt
+        │       ├── DisableProxyUseCase.kt
+        │       ├── ToggleProxyRotationUseCase.kt
+        │       └── CheckProxyPingUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (SharedConfig.ProxyInfo <-> Domain)
+        │   │   └── ProxyMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyProxyRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ProxyUiState.kt
+            ├── ProxyEvent.kt
+            └── ProxyViewModel.kt
 ```
 
 ### Layer Rules
@@ -1195,10 +1224,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObservePasskeysUseCase`, `GetPasskeysUseCase`, `DeletePasskeyUseCase`, `CheckCanAddPasskeyUseCase`, `IsPasskeysSupportedUseCase`
   - [x] Data layer: `PasskeyMapper`, `LegacyPasskeysRepository` (Main-thread safe, adapting `PasskeysController`, `ConnectionsManager` MTProto `TL_account.getPasskeys`, `TL_account.deletePasskey` with `suspendCancellableCoroutine`)
   - [x] Presentation layer: `PasskeysUiState`, `PasskeysEvent`, `PasskeysViewModel`
+- [x] Proxy Configuration, Server Management & Auto-Rotation (`feature.proxy`)
+  - [x] Domain entities: `ProxyType`, `ProxyModel`, `ProxySettingsModel`
+  - [x] Repository contract: `ProxyRepository`
+  - [x] Use cases: `ObserveProxySettingsUseCase`, `GetProxySettingsUseCase`, `AddProxyUseCase`, `DeleteProxyUseCase`, `EnableProxyUseCase`, `DisableProxyUseCase`, `ToggleProxyRotationUseCase`, `CheckProxyPingUseCase`
+  - [x] Data layer: `ProxyMapper`, `LegacyProxyRepository` (Main-thread safe, adapting `SharedConfig`, `ProxyRotationController`, and `ConnectionsManager.checkProxy` with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observation)
+  - [x] Presentation layer: `ProxyUiState`, `ProxyEvent`, `ProxyViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 035: Proxy Configuration, Server Management & Auto-Rotation Isolation
+- **Context:** In Telegram Android, proxy configuration, server management (Socks5 and MTProto), ping checking, and auto-rotation were managed across `SharedConfig.java` (`proxyList`, `currentProxy`, `isProxyEnabled`, `deleteProxy`, `addProxy`), `ProxyRotationController.java` (`ROTATION_TIMEOUTS`, `switchToAvailable`, ping timeout scheduling), `ConnectionsManager.java` (`setProxySettings`, `checkProxy`), and UI components (`ProxyListActivity.java` ~1128 lines, `ProxySettingsActivity.java`, `AndroidUtilities.showProxyAlert`). State management relied on scattered static fields, raw SharedPreferences (`proxy_ip`, `proxy_port`, `proxy_user`, `proxy_pass`, `proxy_secret`, `proxy_enabled`, `proxyRotationEnabled`, `proxyRotationTimeout`), and global `NotificationCenter` broadcasts (`proxySettingsChanged`, `proxyCheckDone`, `proxyChangedByRotation`).
+- **Decision:** Introduce pure domain models `ProxyType`, `ProxyModel`, and `ProxySettingsModel`. Define abstract contract `ProxyRepository` covering reactive proxy settings observation (`observeProxySettings`), settings snapshot retrieval (`getProxySettings`), adding proxy (`addProxy`), deleting proxy (`deleteProxy`), enabling proxy (`enableProxy`), disabling proxy (`disableProxy`), toggling auto-rotation (`toggleProxyRotation`), and checking proxy ping (`checkProxyPing`). Implement `LegacyProxyRepository` operating safely on `Dispatchers.Main` with `suspendCancellableCoroutine` for asynchronous ping verification (`ConnectionsManager.checkProxy`) and reactive `NotificationCenterFlowBridge` observation. Encapsulate presentation state and MVI events in `ProxyViewModel`.
+- **Consequences:** Proxy server configuration, Socks5/MTProto credential handling, ping measurement, and automatic rotation are cleanly decoupled behind testable domain interfaces with complete unit test coverage while maintaining 100% compatibility with Telegram's core networking layer and SharedPreferences persistence.
 
 ### ADR 034: Passkeys & WebAuthn Authentication Controller Isolation
 - **Context:** In Telegram Android, passkeys and WebAuthn authentication mechanisms were managed across `PasskeysController.java` (~331 lines), `PasskeysActivity.java` (~420 lines), and `LoginActivity.java`. The legacy controller intermixed low-level MTProto calls (`TL_account.initPasskeyRegistration`, `TL_account.registerPasskey`, `TL_account.initPasskeyLogin`, `TL_account.finishPasskeyLogin`), Android `androidx.credentials.CredentialManager` integration, raw JSON manipulation of FIDO2/WebAuthn bundles (`clientDataJSON`, `attestationObject`, `authenticatorData`, `signature`), and direct UI dialog creation (`AlertDialog` with spinner) from within network callbacks. UI activities directly invoked MTProto requests to fetch (`TL_account.getPasskeys`) and delete (`TL_account.deletePasskey`) credentials.

@@ -344,6 +344,17 @@ import org.telegram.messenger.feature.passkeys.domain.usecase.GetPasskeysUseCase
 import org.telegram.messenger.feature.passkeys.domain.usecase.IsPasskeysSupportedUseCase
 import org.telegram.messenger.feature.passkeys.domain.usecase.ObservePasskeysUseCase
 import org.telegram.messenger.feature.passkeys.presentation.PasskeysViewModel
+import org.telegram.messenger.feature.proxy.data.repository.LegacyProxyRepository
+import org.telegram.messenger.feature.proxy.domain.repository.ProxyRepository
+import org.telegram.messenger.feature.proxy.domain.usecase.AddProxyUseCase
+import org.telegram.messenger.feature.proxy.domain.usecase.CheckProxyPingUseCase
+import org.telegram.messenger.feature.proxy.domain.usecase.DeleteProxyUseCase
+import org.telegram.messenger.feature.proxy.domain.usecase.DisableProxyUseCase
+import org.telegram.messenger.feature.proxy.domain.usecase.EnableProxyUseCase
+import org.telegram.messenger.feature.proxy.domain.usecase.GetProxySettingsUseCase
+import org.telegram.messenger.feature.proxy.domain.usecase.ObserveProxySettingsUseCase
+import org.telegram.messenger.feature.proxy.domain.usecase.ToggleProxyRotationUseCase
+import org.telegram.messenger.feature.proxy.presentation.ProxyViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2201,6 +2212,63 @@ class AccountFeatureContainer private constructor(val account: Int) {
             deletePasskeyUseCase = deletePasskeyUseCase,
             checkCanAddPasskeyUseCase = checkCanAddPasskeyUseCase,
             isPasskeysSupportedUseCase = isPasskeysSupportedUseCase
+        )
+    }
+
+    private var customProxyRepository: ProxyRepository? = null
+
+    var proxyRepository: ProxyRepository
+        get() = customProxyRepository ?: LegacyProxyRepository(account)
+        set(value) {
+            customProxyRepository = value
+        }
+
+    val observeProxySettingsUseCase: ObserveProxySettingsUseCase
+        get() = ObserveProxySettingsUseCase(proxyRepository)
+
+    val getProxySettingsUseCase: GetProxySettingsUseCase
+        get() = GetProxySettingsUseCase(proxyRepository)
+
+    val addProxyUseCase: AddProxyUseCase
+        get() = AddProxyUseCase(proxyRepository)
+
+    val deleteProxyUseCase: DeleteProxyUseCase
+        get() = DeleteProxyUseCase(proxyRepository)
+
+    val enableProxyUseCase: EnableProxyUseCase
+        get() = EnableProxyUseCase(proxyRepository)
+
+    val disableProxyUseCase: DisableProxyUseCase
+        get() = DisableProxyUseCase(proxyRepository)
+
+    val toggleProxyRotationUseCase: ToggleProxyRotationUseCase
+        get() = ToggleProxyRotationUseCase(proxyRepository)
+
+    val checkProxyPingUseCase: CheckProxyPingUseCase
+        get() = CheckProxyPingUseCase(proxyRepository)
+
+    private var cachedProxyViewModel: ProxyViewModel? = null
+
+    val proxyViewModel: ProxyViewModel
+        get() {
+            var vm = cachedProxyViewModel
+            if (vm == null) {
+                vm = createProxyViewModel()
+                cachedProxyViewModel = vm
+            }
+            return vm
+        }
+
+    fun createProxyViewModel(): ProxyViewModel {
+        return ProxyViewModel(
+            observeProxySettingsUseCase = observeProxySettingsUseCase,
+            getProxySettingsUseCase = getProxySettingsUseCase,
+            addProxyUseCase = addProxyUseCase,
+            deleteProxyUseCase = deleteProxyUseCase,
+            enableProxyUseCase = enableProxyUseCase,
+            disableProxyUseCase = disableProxyUseCase,
+            toggleProxyRotationUseCase = toggleProxyRotationUseCase,
+            checkProxyPingUseCase = checkProxyPingUseCase
         )
     }
 
