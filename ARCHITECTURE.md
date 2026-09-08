@@ -564,6 +564,44 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── PaymentsUiState.kt
             ├── PaymentsEvent.kt
             └── PaymentsViewModel.kt
+    │
+    └── datastorage/                   # Data, Storage Usage & Cache Control Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── NetworkUsageType.kt
+        │   │   ├── NetworkUsageModel.kt
+        │   │   ├── StorageUsageModel.kt
+        │   │   ├── AutoDownloadNetworkType.kt
+        │   │   ├── AutoDownloadPresetModel.kt
+        │   │   └── KeepMediaSettingsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── DataStorageRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveNetworkUsageUseCase.kt
+        │       ├── ObserveStorageUsageUseCase.kt
+        │       ├── ObserveAutoDownloadPresetUseCase.kt
+        │       ├── ObserveKeepMediaSettingsUseCase.kt
+        │       ├── GetNetworkUsageUseCase.kt
+        │       ├── ResetNetworkUsageUseCase.kt
+        │       ├── GetStorageUsageUseCase.kt
+        │       ├── ClearCacheUseCase.kt
+        │       ├── ClearDatabaseUseCase.kt
+        │       ├── GetAutoDownloadPresetUseCase.kt
+        │       ├── UpdateAutoDownloadPresetUseCase.kt
+        │       ├── GetKeepMediaSettingsUseCase.kt
+        │       ├── UpdateKeepMediaUseCase.kt
+        │       └── RefreshStorageUsageUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (StatsController/DownloadController -> Domain)
+        │   │   └── DataStorageMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyDataStorageRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── DataStorageUiState.kt
+            ├── DataStorageEvent.kt
+            └── DataStorageViewModel.kt
 ```
 
 ### Layer Rules
@@ -715,10 +753,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveStarsBalanceUseCase`, `ObserveStarTransactionsUseCase`, `ObserveStarSubscriptionsUseCase`, `GetStarsBalanceUseCase`, `GetStarTransactionsUseCase`, `GetStarSubscriptionsUseCase`, `GetStarTopupOptionsUseCase`, `RefreshStarsBalanceUseCase`, `RefreshStarTransactionsUseCase`, `RefreshStarSubscriptionsUseCase`
   - [x] Data layer: `PaymentMapper`, `LegacyPaymentsRepository` (Main-thread safe, adapting `StarsController` and `NotificationCenterFlowBridge` events: `starBalanceUpdated`, `starTransactionsLoaded`, `starSubscriptionsLoaded`)
   - [x] Presentation layer: `PaymentsUiState`, `PaymentsEvent`, `PaymentsViewModel`
+- [x] Data & Storage Usage, Cache Control (`feature.datastorage`)
+  - [x] Domain entities: `NetworkUsageType`, `NetworkUsageModel`, `StorageUsageModel`, `AutoDownloadNetworkType`, `AutoDownloadPresetModel`, `KeepMediaSettingsModel`
+  - [x] Repository contract: `DataStorageRepository`
+  - [x] Use cases: `ObserveNetworkUsageUseCase`, `ObserveStorageUsageUseCase`, `ObserveAutoDownloadPresetUseCase`, `ObserveKeepMediaSettingsUseCase`, `GetNetworkUsageUseCase`, `ResetNetworkUsageUseCase`, `GetStorageUsageUseCase`, `ClearCacheUseCase`, `ClearDatabaseUseCase`, `GetAutoDownloadPresetUseCase`, `UpdateAutoDownloadPresetUseCase`, `GetKeepMediaSettingsUseCase`, `UpdateKeepMediaUseCase`, `RefreshStorageUsageUseCase`
+  - [x] Data layer: `DataStorageMapper`, `LegacyDataStorageRepository` (Main/IO thread safe, adapting `StatsController`, `DownloadController`, `CacheByChatsController`, `FileLoader`, `MessagesStorage`)
+  - [x] Presentation layer: `DataStorageUiState`, `DataStorageEvent`, `DataStorageViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 022: Data & Storage Usage, Cache Control & Network Usage Controller Isolation
+- **Context:** In Telegram Android, storage calculation, cache clearing, database compaction, auto-download presets, network traffic statistics, and media retention policies are scattered across `CacheControlActivity.java` (~3140 lines), `DataSettingsActivity.java` (~990 lines), `DataAutoDownloadActivity.java` (~960 lines), `StatsController.java` (~290 lines), `DownloadController.java` (~1810 lines), and `CacheByChatsController.java` (~215 lines). UI components directly executed synchronous file directory walks, mutated global SharedPreferences keys (`mobilePreset`, `wifiPreset`, `roamingPreset`), and performed database reset operations.
+- **Decision:** Introduce pure domain models `NetworkUsageModel`, `StorageUsageModel`, `AutoDownloadPresetModel`, `KeepMediaSettingsModel`, and enums `NetworkUsageType`, `AutoDownloadNetworkType`. Define abstract contract `DataStorageRepository` and implement `LegacyDataStorageRepository` performing IO operations off the UI thread (`Dispatchers.IO`) while keeping legacy controller calls safe on `Dispatchers.Main`. Presentation logic is cleanly isolated in `DataStorageViewModel`.
+- **Consequences:** Cache clearing by category (photos, videos, documents, music, stickers, stories), database clearing, network stats reset, auto-download presets configuration, and media retention policies can now be driven from clean ViewModels and fully verified in unit tests without touching upstream file pipelines.
 
 ### ADR 021: Payments, Telegram Stars & Subscriptions Controller Isolation
 - **Context:** In Telegram Android, Telegram Stars (in-app virtual currency), balance top-up options, star transactions history, bot subscriptions, and peer transactions are managed by `StarsController.java` (~5120 lines). Complex in-memory collections (`transactions[type]`, `subscriptions`, `options`) and state queries (`getBalance(false)`, `balanceAvailable()`) were directly accessed by UI activities (`StarsIntroActivity`, `StarsTransactionsLayout`, bot purchase dialogs), tightly coupling presentation code to Telegram's billing and transaction internals.

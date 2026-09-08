@@ -181,6 +181,23 @@ import org.telegram.messenger.feature.payments.domain.usecase.RefreshStarSubscri
 import org.telegram.messenger.feature.payments.domain.usecase.RefreshStarTransactionsUseCase
 import org.telegram.messenger.feature.payments.domain.usecase.RefreshStarsBalanceUseCase
 import org.telegram.messenger.feature.payments.presentation.PaymentsViewModel
+import org.telegram.messenger.feature.datastorage.data.repository.LegacyDataStorageRepository
+import org.telegram.messenger.feature.datastorage.domain.repository.DataStorageRepository
+import org.telegram.messenger.feature.datastorage.domain.usecase.ClearCacheUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.ClearDatabaseUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.GetAutoDownloadPresetUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.GetKeepMediaSettingsUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.GetNetworkUsageUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.GetStorageUsageUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.ObserveAutoDownloadPresetUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.ObserveKeepMediaSettingsUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.ObserveNetworkUsageUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.ObserveStorageUsageUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.RefreshStorageUsageUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.ResetNetworkUsageUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.UpdateAutoDownloadPresetUseCase
+import org.telegram.messenger.feature.datastorage.domain.usecase.UpdateKeepMediaUseCase
+import org.telegram.messenger.feature.datastorage.presentation.DataStorageViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1223,6 +1240,87 @@ class AccountFeatureContainer private constructor(val account: Int) {
             refreshStarsBalanceUseCase = refreshStarsBalanceUseCase,
             refreshStarTransactionsUseCase = refreshStarTransactionsUseCase,
             refreshStarSubscriptionsUseCase = refreshStarSubscriptionsUseCase
+        )
+    }
+
+    private var customDataStorageRepository: DataStorageRepository? = null
+
+    var dataStorageRepository: DataStorageRepository
+        get() = customDataStorageRepository ?: LegacyDataStorageRepository(account)
+        set(value) {
+            customDataStorageRepository = value
+        }
+
+    val observeNetworkUsageUseCase: ObserveNetworkUsageUseCase
+        get() = ObserveNetworkUsageUseCase(dataStorageRepository)
+
+    val observeStorageUsageUseCase: ObserveStorageUsageUseCase
+        get() = ObserveStorageUsageUseCase(dataStorageRepository)
+
+    val observeAutoDownloadPresetUseCase: ObserveAutoDownloadPresetUseCase
+        get() = ObserveAutoDownloadPresetUseCase(dataStorageRepository)
+
+    val observeKeepMediaSettingsUseCase: ObserveKeepMediaSettingsUseCase
+        get() = ObserveKeepMediaSettingsUseCase(dataStorageRepository)
+
+    val getNetworkUsageUseCase: GetNetworkUsageUseCase
+        get() = GetNetworkUsageUseCase(dataStorageRepository)
+
+    val resetNetworkUsageUseCase: ResetNetworkUsageUseCase
+        get() = ResetNetworkUsageUseCase(dataStorageRepository)
+
+    val getStorageUsageUseCase: GetStorageUsageUseCase
+        get() = GetStorageUsageUseCase(dataStorageRepository)
+
+    val clearCacheUseCase: ClearCacheUseCase
+        get() = ClearCacheUseCase(dataStorageRepository)
+
+    val clearDatabaseUseCase: ClearDatabaseUseCase
+        get() = ClearDatabaseUseCase(dataStorageRepository)
+
+    val getAutoDownloadPresetUseCase: GetAutoDownloadPresetUseCase
+        get() = GetAutoDownloadPresetUseCase(dataStorageRepository)
+
+    val updateAutoDownloadPresetUseCase: UpdateAutoDownloadPresetUseCase
+        get() = UpdateAutoDownloadPresetUseCase(dataStorageRepository)
+
+    val getKeepMediaSettingsUseCase: GetKeepMediaSettingsUseCase
+        get() = GetKeepMediaSettingsUseCase(dataStorageRepository)
+
+    val updateKeepMediaUseCase: UpdateKeepMediaUseCase
+        get() = UpdateKeepMediaUseCase(dataStorageRepository)
+
+    val refreshStorageUsageUseCase: RefreshStorageUsageUseCase
+        get() = RefreshStorageUsageUseCase(dataStorageRepository)
+
+    private var cachedDataStorageViewModel: DataStorageViewModel? = null
+
+    val dataStorageViewModel: DataStorageViewModel
+        get() {
+            var vm = cachedDataStorageViewModel
+            if (vm == null) {
+                vm = createDataStorageViewModel()
+                cachedDataStorageViewModel = vm
+            }
+            return vm
+        }
+
+    fun createDataStorageViewModel(): DataStorageViewModel {
+        return DataStorageViewModel(
+            observeNetworkUsageUseCase = observeNetworkUsageUseCase,
+            observeStorageUsageUseCase = observeStorageUsageUseCase,
+            observeAutoDownloadPresetUseCase = observeAutoDownloadPresetUseCase,
+            observeKeepMediaSettingsUseCase = observeKeepMediaSettingsUseCase,
+            getNetworkUsageUseCase = getNetworkUsageUseCase,
+            resetNetworkUsageUseCase = resetNetworkUsageUseCase,
+            getStorageUsageUseCase = getStorageUsageUseCase,
+            clearCacheUseCase = clearCacheUseCase,
+            clearDatabaseUseCase = clearDatabaseUseCase,
+            getAutoDownloadPresetUseCase = getAutoDownloadPresetUseCase,
+            updateAutoDownloadPresetUseCase = updateAutoDownloadPresetUseCase,
+            getKeepMediaSettingsUseCase = getKeepMediaSettingsUseCase,
+            updateKeepMediaUseCase = updateKeepMediaUseCase,
+            refreshStorageUsageUseCase = refreshStorageUsageUseCase
         )
     }
 
