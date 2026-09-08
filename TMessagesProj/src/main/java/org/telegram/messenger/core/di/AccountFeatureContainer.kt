@@ -91,6 +91,17 @@ import org.telegram.messenger.feature.fileloader.domain.usecase.ObserveTransferU
 import org.telegram.messenger.feature.fileloader.domain.usecase.ObserveTransfersUseCase
 import org.telegram.messenger.feature.fileloader.domain.usecase.UploadFileUseCase
 import org.telegram.messenger.feature.fileloader.presentation.FileLoaderViewModel
+import org.telegram.messenger.feature.search.data.repository.LegacySearchRepository
+import org.telegram.messenger.feature.search.domain.repository.SearchRepository
+import org.telegram.messenger.feature.search.domain.usecase.ClearRecentHashtagsUseCase
+import org.telegram.messenger.feature.search.domain.usecase.ClearRecentSearchesUseCase
+import org.telegram.messenger.feature.search.domain.usecase.GetRecentHashtagsUseCase
+import org.telegram.messenger.feature.search.domain.usecase.GetRecentSearchesUseCase
+import org.telegram.messenger.feature.search.domain.usecase.PutRecentHashtagUseCase
+import org.telegram.messenger.feature.search.domain.usecase.RemoveRecentSearchUseCase
+import org.telegram.messenger.feature.search.domain.usecase.SearchGlobalUseCase
+import org.telegram.messenger.feature.search.domain.usecase.SearchLocalUseCase
+import org.telegram.messenger.feature.search.presentation.SearchViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -705,6 +716,64 @@ class AccountFeatureContainer private constructor(val account: Int) {
             cancelAllDownloadsUseCase = cancelAllDownloadsUseCase,
             uploadFileUseCase = uploadFileUseCase,
             cancelFileUploadUseCase = cancelFileUploadUseCase
+        )
+    }
+
+    // --- Search ---
+    private var customSearchRepository: SearchRepository? = null
+
+    var searchRepository: SearchRepository
+        get() = customSearchRepository ?: LegacySearchRepository(account)
+        set(value) {
+            customSearchRepository = value
+        }
+
+    val searchGlobalUseCase: SearchGlobalUseCase
+        get() = SearchGlobalUseCase(searchRepository)
+
+    val searchLocalUseCase: SearchLocalUseCase
+        get() = SearchLocalUseCase(searchRepository)
+
+    val getRecentSearchesUseCase: GetRecentSearchesUseCase
+        get() = GetRecentSearchesUseCase(searchRepository)
+
+    val clearRecentSearchesUseCase: ClearRecentSearchesUseCase
+        get() = ClearRecentSearchesUseCase(searchRepository)
+
+    val removeRecentSearchUseCase: RemoveRecentSearchUseCase
+        get() = RemoveRecentSearchUseCase(searchRepository)
+
+    val getRecentHashtagsUseCase: GetRecentHashtagsUseCase
+        get() = GetRecentHashtagsUseCase(searchRepository)
+
+    val putRecentHashtagUseCase: PutRecentHashtagUseCase
+        get() = PutRecentHashtagUseCase(searchRepository)
+
+    val clearRecentHashtagsUseCase: ClearRecentHashtagsUseCase
+        get() = ClearRecentHashtagsUseCase(searchRepository)
+
+    private var cachedSearchViewModel: SearchViewModel? = null
+
+    val searchViewModel: SearchViewModel
+        get() {
+            var vm = cachedSearchViewModel
+            if (vm == null) {
+                vm = createSearchViewModel()
+                cachedSearchViewModel = vm
+            }
+            return vm
+        }
+
+    fun createSearchViewModel(): SearchViewModel {
+        return SearchViewModel(
+            searchGlobalUseCase = searchGlobalUseCase,
+            searchLocalUseCase = searchLocalUseCase,
+            getRecentSearchesUseCase = getRecentSearchesUseCase,
+            clearRecentSearchesUseCase = clearRecentSearchesUseCase,
+            removeRecentSearchUseCase = removeRecentSearchUseCase,
+            getRecentHashtagsUseCase = getRecentHashtagsUseCase,
+            putRecentHashtagUseCase = putRecentHashtagUseCase,
+            clearRecentHashtagsUseCase = clearRecentHashtagsUseCase
         )
     }
 
