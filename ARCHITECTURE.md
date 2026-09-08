@@ -671,6 +671,40 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── LocationUiState.kt
             ├── LocationEvent.kt
             └── LocationViewModel.kt
+    │
+    └── sessions/                       # Active Sessions, Devices & QR Login Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── SessionModel.kt
+        │   │   ├── WebSessionModel.kt
+        │   │   └── SessionsListModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── SessionsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveSessionsUseCase.kt
+        │       ├── ObserveWebSessionsUseCase.kt
+        │       ├── GetSessionsUseCase.kt
+        │       ├── LoadSessionsUseCase.kt
+        │       ├── GetWebSessionsUseCase.kt
+        │       ├── LoadWebSessionsUseCase.kt
+        │       ├── TerminateSessionUseCase.kt
+        │       ├── TerminateAllOtherSessionsUseCase.kt
+        │       ├── TerminateWebSessionUseCase.kt
+        │       ├── TerminateAllWebSessionsUseCase.kt
+        │       ├── UpdateSessionSettingsUseCase.kt
+        │       ├── SetSessionsTtlUseCase.kt
+        │       └── AcceptQrLoginUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_authorization / TL_webAuthorization -> Domain)
+        │   │   └── SessionMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacySessionsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── SessionsUiState.kt
+            ├── SessionsEvent.kt
+            └── SessionsViewModel.kt
 ```
 
 ### Layer Rules
@@ -840,10 +874,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveActiveSharingsUseCase`, `ObservePeerLocationsUseCase`, `ObserveLastKnownLocationUseCase`, `GetActiveSharingsUseCase`, `IsSharingLocationUseCase`, `GetSharingInfoUseCase`, `GetLastKnownLocationUseCase`, `LoadPeerLiveLocationsUseCase`, `StopLocationSharingUseCase`, `StopAllLocationSharingsUseCase`, `SetProximityAlertUseCase`, `SendStaticLocationUseCase`, `SendLiveLocationUseCase`, `MarkLiveLocationsAsReadUseCase`
   - [x] Data layer: `LocationMapper`, `LegacyLocationRepository` (Main-thread safe, adapting `LocationController` and `SendMessagesHelper` with `NotificationCenterFlowBridge` observing `liveLocationsChanged`, `liveLocationsCacheChanged`, `newLocationAvailable`)
   - [x] Presentation layer: `LocationUiState`, `LocationEvent`, `LocationViewModel`
+- [x] Active Sessions, Devices & QR Login (`feature.sessions`)
+  - [x] Domain entities: `SessionModel`, `WebSessionModel`, `SessionsListModel`
+  - [x] Repository contract: `SessionsRepository`
+  - [x] Use cases: `ObserveSessionsUseCase`, `ObserveWebSessionsUseCase`, `GetSessionsUseCase`, `LoadSessionsUseCase`, `GetWebSessionsUseCase`, `LoadWebSessionsUseCase`, `TerminateSessionUseCase`, `TerminateAllOtherSessionsUseCase`, `TerminateWebSessionUseCase`, `TerminateAllWebSessionsUseCase`, `UpdateSessionSettingsUseCase`, `SetSessionsTtlUseCase`, `AcceptQrLoginUseCase`
+  - [x] Data layer: `SessionMapper`, `LegacySessionsRepository` (Main-thread safe, adapting MTProto account requests with `cancelRequest` cancellation and `NotificationCenterFlowBridge` observing `NotificationCenter.newSessionReceived`)
+  - [x] Presentation layer: `SessionsUiState`, `SessionsEvent`, `SessionsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 025: Active Sessions, Connected Devices & QR Login Controller Isolation
+- **Context:** In Telegram Android, managing logged-in devices, active web authorizations, inactive session TTL self-destruct timers, and QR code login approvals was handled directly by monolithic UI classes like `SessionsActivity.java` (~1380 lines) and `SessionBottomSheet.java` (~460 lines). These UI classes manually sent raw MTProto requests (`TL_account.getAuthorizations`, `TL_account.resetAuthorization`, `TLRPC.TL_auth_resetAuthorizations`, `TL_account.setAuthorizationTTL`, `TLRPC.TL_auth_acceptLoginToken`), parsed Base64 tokens from deep links, and manipulated raw push registration flags across user accounts.
+- **Decision:** Introduce pure domain models `SessionModel`, `WebSessionModel`, and `SessionsListModel`. Define abstract contract `SessionsRepository` with reactive flows for sessions and web authorizations. Implement `LegacySessionsRepository` leveraging `suspendCancellableCoroutine` with MTProto request cancellation (`ConnectionsManager.cancelRequest`), reactive synchronization via `NotificationCenter.newSessionReceived`, and clean Base64 QR token parsing. Encapsulate all presentation state and termination/TTL/QR events in `SessionsViewModel`.
+- **Consequences:** Device authorizations, web sessions, session-specific permission toggles (accepting secret chats and calls), inactive session TTL destruction, and QR code login flows are isolated behind clean, testable boundaries with complete unit test coverage while preserving 100% compatibility with Telegram MTProto session protocol and push notification token synchronization.
 
 ### ADR 024: Live Locations, GPS Updates & Proximity Alerts Controller Isolation
 - **Context:** In Telegram Android, background and foreground location tracking, live location sharing (`SharingLocationInfo`), peer locations caching (`locationsCache`), and proximity distance alerts are handled by `LocationController.java` (~1420 lines). UI components like `LocationActivity.java` directly inspected internal controller arrays, registered raw `LocationListener` callbacks, and invoked synchronous network updates.

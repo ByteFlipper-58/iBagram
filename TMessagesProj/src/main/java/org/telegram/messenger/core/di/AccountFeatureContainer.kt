@@ -231,6 +231,22 @@ import org.telegram.messenger.feature.location.domain.usecase.SetProximityAlertU
 import org.telegram.messenger.feature.location.domain.usecase.StopAllLocationSharingsUseCase
 import org.telegram.messenger.feature.location.domain.usecase.StopLocationSharingUseCase
 import org.telegram.messenger.feature.location.presentation.LocationViewModel
+import org.telegram.messenger.feature.sessions.data.repository.LegacySessionsRepository
+import org.telegram.messenger.feature.sessions.domain.repository.SessionsRepository
+import org.telegram.messenger.feature.sessions.domain.usecase.AcceptQrLoginUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.GetSessionsUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.GetWebSessionsUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.LoadSessionsUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.LoadWebSessionsUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.ObserveSessionsUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.ObserveWebSessionsUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.SetSessionsTtlUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.TerminateAllOtherSessionsUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.TerminateAllWebSessionsUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.TerminateSessionUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.TerminateWebSessionUseCase
+import org.telegram.messenger.feature.sessions.domain.usecase.UpdateSessionSettingsUseCase
+import org.telegram.messenger.feature.sessions.presentation.SessionsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1512,6 +1528,81 @@ class AccountFeatureContainer private constructor(val account: Int) {
             sendStaticLocationUseCase = sendStaticLocationUseCase,
             sendLiveLocationUseCase = sendLiveLocationUseCase,
             markLiveLocationsAsReadUseCase = markLiveLocationsAsReadUseCase
+        )
+    }
+
+    private var customSessionsRepository: SessionsRepository? = null
+
+    var sessionsRepository: SessionsRepository
+        get() = customSessionsRepository ?: LegacySessionsRepository(account)
+        set(value) {
+            customSessionsRepository = value
+        }
+
+    val observeSessionsUseCase: ObserveSessionsUseCase
+        get() = ObserveSessionsUseCase(sessionsRepository)
+
+    val observeWebSessionsUseCase: ObserveWebSessionsUseCase
+        get() = ObserveWebSessionsUseCase(sessionsRepository)
+
+    val getSessionsUseCase: GetSessionsUseCase
+        get() = GetSessionsUseCase(sessionsRepository)
+
+    val loadSessionsUseCase: LoadSessionsUseCase
+        get() = LoadSessionsUseCase(sessionsRepository)
+
+    val getWebSessionsUseCase: GetWebSessionsUseCase
+        get() = GetWebSessionsUseCase(sessionsRepository)
+
+    val loadWebSessionsUseCase: LoadWebSessionsUseCase
+        get() = LoadWebSessionsUseCase(sessionsRepository)
+
+    val terminateSessionUseCase: TerminateSessionUseCase
+        get() = TerminateSessionUseCase(sessionsRepository)
+
+    val terminateAllOtherSessionsUseCase: TerminateAllOtherSessionsUseCase
+        get() = TerminateAllOtherSessionsUseCase(sessionsRepository)
+
+    val terminateWebSessionUseCase: TerminateWebSessionUseCase
+        get() = TerminateWebSessionUseCase(sessionsRepository)
+
+    val terminateAllWebSessionsUseCase: TerminateAllWebSessionsUseCase
+        get() = TerminateAllWebSessionsUseCase(sessionsRepository)
+
+    val updateSessionSettingsUseCase: UpdateSessionSettingsUseCase
+        get() = UpdateSessionSettingsUseCase(sessionsRepository)
+
+    val setSessionsTtlUseCase: SetSessionsTtlUseCase
+        get() = SetSessionsTtlUseCase(sessionsRepository)
+
+    val acceptQrLoginUseCase: AcceptQrLoginUseCase
+        get() = AcceptQrLoginUseCase(sessionsRepository)
+
+    private var cachedSessionsViewModel: SessionsViewModel? = null
+
+    val sessionsViewModel: SessionsViewModel
+        get() {
+            var vm = cachedSessionsViewModel
+            if (vm == null) {
+                vm = createSessionsViewModel()
+                cachedSessionsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createSessionsViewModel(): SessionsViewModel {
+        return SessionsViewModel(
+            observeSessionsUseCase = observeSessionsUseCase,
+            observeWebSessionsUseCase = observeWebSessionsUseCase,
+            loadSessionsUseCase = loadSessionsUseCase,
+            loadWebSessionsUseCase = loadWebSessionsUseCase,
+            terminateSessionUseCase = terminateSessionUseCase,
+            terminateAllOtherSessionsUseCase = terminateAllOtherSessionsUseCase,
+            terminateWebSessionUseCase = terminateWebSessionUseCase,
+            terminateAllWebSessionsUseCase = terminateAllWebSessionsUseCase,
+            updateSessionSettingsUseCase = updateSessionSettingsUseCase,
+            setSessionsTtlUseCase = setSessionsTtlUseCase,
+            acceptQrLoginUseCase = acceptQrLoginUseCase
         )
     }
 
