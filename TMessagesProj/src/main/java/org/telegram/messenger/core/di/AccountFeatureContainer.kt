@@ -336,6 +336,14 @@ import org.telegram.messenger.feature.chattheme.domain.usecase.ResetDialogThemeU
 import org.telegram.messenger.feature.chattheme.domain.usecase.SaveChatWallpaperUseCase
 import org.telegram.messenger.feature.chattheme.domain.usecase.SetDialogThemeUseCase
 import org.telegram.messenger.feature.chattheme.presentation.ChatThemeViewModel
+import org.telegram.messenger.feature.passkeys.data.repository.LegacyPasskeysRepository
+import org.telegram.messenger.feature.passkeys.domain.repository.PasskeysRepository
+import org.telegram.messenger.feature.passkeys.domain.usecase.CheckCanAddPasskeyUseCase
+import org.telegram.messenger.feature.passkeys.domain.usecase.DeletePasskeyUseCase
+import org.telegram.messenger.feature.passkeys.domain.usecase.GetPasskeysUseCase
+import org.telegram.messenger.feature.passkeys.domain.usecase.IsPasskeysSupportedUseCase
+import org.telegram.messenger.feature.passkeys.domain.usecase.ObservePasskeysUseCase
+import org.telegram.messenger.feature.passkeys.presentation.PasskeysViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2148,6 +2156,51 @@ class AccountFeatureContainer private constructor(val account: Int) {
             setDialogThemeUseCase = setDialogThemeUseCase,
             resetDialogThemeUseCase = resetDialogThemeUseCase,
             saveChatWallpaperUseCase = saveChatWallpaperUseCase
+        )
+    }
+
+    private var customPasskeysRepository: PasskeysRepository? = null
+
+    var passkeysRepository: PasskeysRepository
+        get() = customPasskeysRepository ?: LegacyPasskeysRepository(account)
+        set(value) {
+            customPasskeysRepository = value
+        }
+
+    val observePasskeysUseCase: ObservePasskeysUseCase
+        get() = ObservePasskeysUseCase(passkeysRepository)
+
+    val getPasskeysUseCase: GetPasskeysUseCase
+        get() = GetPasskeysUseCase(passkeysRepository)
+
+    val deletePasskeyUseCase: DeletePasskeyUseCase
+        get() = DeletePasskeyUseCase(passkeysRepository)
+
+    val checkCanAddPasskeyUseCase: CheckCanAddPasskeyUseCase
+        get() = CheckCanAddPasskeyUseCase(passkeysRepository)
+
+    val isPasskeysSupportedUseCase: IsPasskeysSupportedUseCase
+        get() = IsPasskeysSupportedUseCase(passkeysRepository)
+
+    private var cachedPasskeysViewModel: PasskeysViewModel? = null
+
+    val passkeysViewModel: PasskeysViewModel
+        get() {
+            var vm = cachedPasskeysViewModel
+            if (vm == null) {
+                vm = createPasskeysViewModel()
+                cachedPasskeysViewModel = vm
+            }
+            return vm
+        }
+
+    fun createPasskeysViewModel(): PasskeysViewModel {
+        return PasskeysViewModel(
+            observePasskeysUseCase = observePasskeysUseCase,
+            getPasskeysUseCase = getPasskeysUseCase,
+            deletePasskeyUseCase = deletePasskeyUseCase,
+            checkCanAddPasskeyUseCase = checkCanAddPasskeyUseCase,
+            isPasskeysSupportedUseCase = isPasskeysSupportedUseCase
         )
     }
 

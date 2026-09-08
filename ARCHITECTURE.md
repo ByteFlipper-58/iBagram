@@ -941,6 +941,31 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ChatThemeUiState.kt
             ├── ChatThemeEvent.kt
             └── ChatThemeViewModel.kt
+    │
+    └── passkeys/                       # Passkeys & WebAuthn Authentication Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── PasskeyModel.kt
+        │   │   └── PasskeysStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── PasskeysRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObservePasskeysUseCase.kt
+        │       ├── GetPasskeysUseCase.kt
+        │       ├── DeletePasskeyUseCase.kt
+        │       ├── CheckCanAddPasskeyUseCase.kt
+        │       └── IsPasskeysSupportedUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_account.Passkey -> Domain)
+        │   │   └── PasskeyMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyPasskeysRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── PasskeysUiState.kt
+            ├── PasskeysEvent.kt
+            └── PasskeysViewModel.kt
 ```
 
 ### Layer Rules
@@ -1164,10 +1189,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveDialogThemeUseCase`, `GetDialogThemeStateUseCase`, `GetAvailableChatThemesUseCase`, `SetDialogThemeUseCase`, `ResetDialogThemeUseCase`, `SaveChatWallpaperUseCase`
   - [x] Data layer: `ChatThemeMapper`, `LegacyChatThemeRepository` (Main-thread safe, adapting `ChatThemeController` with `suspendCancellableCoroutine` for theme loading and `NotificationCenterFlowBridge` observing dialog updates)
   - [x] Presentation layer: `ChatThemeUiState`, `ChatThemeEvent`, `ChatThemeViewModel`
+- [x] Passkeys & WebAuthn Authentication (`feature.passkeys`)
+  - [x] Domain entities: `PasskeyModel`, `PasskeysStateModel`
+  - [x] Repository contract: `PasskeysRepository`
+  - [x] Use cases: `ObservePasskeysUseCase`, `GetPasskeysUseCase`, `DeletePasskeyUseCase`, `CheckCanAddPasskeyUseCase`, `IsPasskeysSupportedUseCase`
+  - [x] Data layer: `PasskeyMapper`, `LegacyPasskeysRepository` (Main-thread safe, adapting `PasskeysController`, `ConnectionsManager` MTProto `TL_account.getPasskeys`, `TL_account.deletePasskey` with `suspendCancellableCoroutine`)
+  - [x] Presentation layer: `PasskeysUiState`, `PasskeysEvent`, `PasskeysViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 034: Passkeys & WebAuthn Authentication Controller Isolation
+- **Context:** In Telegram Android, passkeys and WebAuthn authentication mechanisms were managed across `PasskeysController.java` (~331 lines), `PasskeysActivity.java` (~420 lines), and `LoginActivity.java`. The legacy controller intermixed low-level MTProto calls (`TL_account.initPasskeyRegistration`, `TL_account.registerPasskey`, `TL_account.initPasskeyLogin`, `TL_account.finishPasskeyLogin`), Android `androidx.credentials.CredentialManager` integration, raw JSON manipulation of FIDO2/WebAuthn bundles (`clientDataJSON`, `attestationObject`, `authenticatorData`, `signature`), and direct UI dialog creation (`AlertDialog` with spinner) from within network callbacks. UI activities directly invoked MTProto requests to fetch (`TL_account.getPasskeys`) and delete (`TL_account.deletePasskey`) credentials.
+- **Decision:** Introduce pure domain models `PasskeyModel` and `PasskeysStateModel`. Define abstract contract `PasskeysRepository` covering reactive passkeys observation (`observePasskeys`), passkey listing (`getPasskeys`), passkey deletion (`deletePasskey`), passkey capability/platform support check (`isSupported`), and maximum allowed passkeys query (`getMaxPasskeys`). Implement `LegacyPasskeysRepository` operating on `Dispatchers.Main` with coroutine cancellation support (`ConnectionsManager.cancelRequest`). Encapsulate presentation state and MVI events in `PasskeysViewModel`.
+- **Consequences:** Passkey management, credential lifecycle, account limits, and MTProto queries are cleanly decoupled behind testable domain interfaces with full unit test coverage while maintaining 100% compatibility with Telegram's WebAuthn protocol and Android Credential Manager integration.
 
 ### ADR 033: Chat Themes, Custom Wallpapers & Dialog Styling Controller Isolation
 - **Context:** In Telegram Android, dialog-specific emoji themes, gift themes, custom wallpapers, and colors were managed by `ChatThemeController.java` (~1016 lines). The controller directly handled raw SharedPreferences persistence (`chatthemeconfig_` and `chatthemeconfig_emoji`), SQLite database caching (`MessagesStorage.loadGiftChatTheme`), MTProto network requests (`TL_account.getChatThemes`, `TLRPC.TL_messages_setChatTheme`), disk caching of theme bitmaps (`chatThemeQueue`), and mutated in-memory caches (`dialogEmoticonsMap`, `allChatGiftThemes`, `themeIdWallpaperThumbMap`). Presentation components (`ChatActivity`, `ChatThemeBottomSheet`, `EmojiThemes`) directly invoked static controller singletons, manual callbacks, and raw TL object operations without lifecycle or state management.
