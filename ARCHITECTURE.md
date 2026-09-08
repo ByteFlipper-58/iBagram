@@ -705,6 +705,42 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── SessionsUiState.kt
             ├── SessionsEvent.kt
             └── SessionsViewModel.kt
+    │
+    └── translate/                      # In-App Translation & Language Settings Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── LanguageModel.kt
+        │   │   ├── TranslateSettingsModel.kt
+        │   │   ├── DialogTranslationStateModel.kt
+        │   │   └── TranslationResultModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── TranslationRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveTranslateSettingsUseCase.kt
+        │       ├── GetTranslateSettingsUseCase.kt
+        │       ├── SetChatTranslateEnabledUseCase.kt
+        │       ├── SetContextTranslateEnabledUseCase.kt
+        │       ├── SetDoNotTranslateLanguagesUseCase.kt
+        │       ├── AddDoNotTranslateLanguageUseCase.kt
+        │       ├── RemoveDoNotTranslateLanguageUseCase.kt
+        │       ├── ObserveDialogTranslationStateUseCase.kt
+        │       ├── GetDialogTranslationStateUseCase.kt
+        │       ├── ToggleDialogTranslatingUseCase.kt
+        │       ├── SetDialogTargetLanguageUseCase.kt
+        │       ├── TranslateTextUseCase.kt
+        │       ├── GetAvailableLanguagesUseCase.kt
+        │       └── ApplyAppLanguageUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_messages_translateResult / LocaleInfo -> Domain)
+        │   │   └── TranslationMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyTranslationRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── TranslateUiState.kt
+            ├── TranslateEvent.kt
+            └── TranslateViewModel.kt
 ```
 
 ### Layer Rules
@@ -880,10 +916,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveSessionsUseCase`, `ObserveWebSessionsUseCase`, `GetSessionsUseCase`, `LoadSessionsUseCase`, `GetWebSessionsUseCase`, `LoadWebSessionsUseCase`, `TerminateSessionUseCase`, `TerminateAllOtherSessionsUseCase`, `TerminateWebSessionUseCase`, `TerminateAllWebSessionsUseCase`, `UpdateSessionSettingsUseCase`, `SetSessionsTtlUseCase`, `AcceptQrLoginUseCase`
   - [x] Data layer: `SessionMapper`, `LegacySessionsRepository` (Main-thread safe, adapting MTProto account requests with `cancelRequest` cancellation and `NotificationCenterFlowBridge` observing `NotificationCenter.newSessionReceived`)
   - [x] Presentation layer: `SessionsUiState`, `SessionsEvent`, `SessionsViewModel`
+- [x] In-App Translation, Auto-Translate & Language Preferences (`feature.translate`)
+  - [x] Domain entities: `LanguageModel`, `TranslateSettingsModel`, `DialogTranslationStateModel`, `TranslationResultModel`
+  - [x] Repository contract: `TranslationRepository`
+  - [x] Use cases: `ObserveTranslateSettingsUseCase`, `GetTranslateSettingsUseCase`, `SetChatTranslateEnabledUseCase`, `SetContextTranslateEnabledUseCase`, `SetDoNotTranslateLanguagesUseCase`, `AddDoNotTranslateLanguageUseCase`, `RemoveDoNotTranslateLanguageUseCase`, `ObserveDialogTranslationStateUseCase`, `GetDialogTranslationStateUseCase`, `ToggleDialogTranslatingUseCase`, `SetDialogTargetLanguageUseCase`, `TranslateTextUseCase`, `GetAvailableLanguagesUseCase`, `ApplyAppLanguageUseCase`
+  - [x] Data layer: `TranslationMapper`, `LegacyTranslationRepository` (Main-thread safe, adapting `TranslateController`, `LocaleController`, `RestrictedLanguagesSelectActivity`, and MTProto `TLRPC.TL_messages_translateText` with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observing `dialogTranslate` and `suggestedLangpack`)
+  - [x] Presentation layer: `TranslateUiState`, `TranslateEvent`, `TranslateViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 026: In-App Translation, Auto-Translate & Language Preferences Isolation
+- **Context:** In Telegram Android, message and chat translation was fragmented across `TranslateController.java` (~1190 lines), `LocaleController.java` (~2000 lines), and UI activities such as `LanguageSelectActivity.java` and `RestrictedLanguagesSelectActivity.java`. UI views directly queried raw `TLRPC.TL_messages_translateText`, manipulated static `RestrictedLanguagesSelectActivity.getRestrictedLanguages()` sets, and triggered global `NotificationCenter` broadcasts without reactive state modeling or structured error handling.
+- **Decision:** Introduce pure domain models `LanguageModel`, `TranslateSettingsModel`, `DialogTranslationStateModel`, and `TranslationResultModel`. Define abstract contract `TranslationRepository` covering chat translation toggle, context menu translation, do-not-translate language exception management, dialog-specific translation state and target language, raw text translation via MTProto, and application language switching. Implement `LegacyTranslationRepository` safely executing on `Dispatchers.Main` with reactive Kotlin `Flow`s observing `NotificationCenter.dialogTranslate` and `NotificationCenter.suggestedLangpack`. Encapsulate all translation UI state and events in `TranslateViewModel`.
+- **Consequences:** Translation operations and language preferences are decoupled from legacy controller singletons, enabling clean unit testing with fakes and reactive Compose/View UI binding while preserving 100% compatibility with Telegram MTProto translation protocols and language pack mechanisms.
 
 ### ADR 025: Active Sessions, Connected Devices & QR Login Controller Isolation
 - **Context:** In Telegram Android, managing logged-in devices, active web authorizations, inactive session TTL self-destruct timers, and QR code login approvals was handled directly by monolithic UI classes like `SessionsActivity.java` (~1380 lines) and `SessionBottomSheet.java` (~460 lines). These UI classes manually sent raw MTProto requests (`TL_account.getAuthorizations`, `TL_account.resetAuthorization`, `TLRPC.TL_auth_resetAuthorizations`, `TL_account.setAuthorizationTTL`, `TLRPC.TL_auth_acceptLoginToken`), parsed Base64 tokens from deep links, and manipulated raw push registration flags across user accounts.

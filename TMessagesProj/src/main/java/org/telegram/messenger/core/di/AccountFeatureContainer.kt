@@ -247,6 +247,23 @@ import org.telegram.messenger.feature.sessions.domain.usecase.TerminateSessionUs
 import org.telegram.messenger.feature.sessions.domain.usecase.TerminateWebSessionUseCase
 import org.telegram.messenger.feature.sessions.domain.usecase.UpdateSessionSettingsUseCase
 import org.telegram.messenger.feature.sessions.presentation.SessionsViewModel
+import org.telegram.messenger.feature.translate.data.repository.LegacyTranslationRepository
+import org.telegram.messenger.feature.translate.domain.repository.TranslationRepository
+import org.telegram.messenger.feature.translate.domain.usecase.AddDoNotTranslateLanguageUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.ApplyAppLanguageUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.GetAvailableLanguagesUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.GetDialogTranslationStateUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.GetTranslateSettingsUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.ObserveDialogTranslationStateUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.ObserveTranslateSettingsUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.RemoveDoNotTranslateLanguageUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.SetChatTranslateEnabledUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.SetContextTranslateEnabledUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.SetDialogTargetLanguageUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.SetDoNotTranslateLanguagesUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.ToggleDialogTranslatingUseCase
+import org.telegram.messenger.feature.translate.domain.usecase.TranslateTextUseCase
+import org.telegram.messenger.feature.translate.presentation.TranslateViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1603,6 +1620,87 @@ class AccountFeatureContainer private constructor(val account: Int) {
             updateSessionSettingsUseCase = updateSessionSettingsUseCase,
             setSessionsTtlUseCase = setSessionsTtlUseCase,
             acceptQrLoginUseCase = acceptQrLoginUseCase
+        )
+    }
+
+    private var customTranslationRepository: TranslationRepository? = null
+
+    var translationRepository: TranslationRepository
+        get() = customTranslationRepository ?: LegacyTranslationRepository(account)
+        set(value) {
+            customTranslationRepository = value
+        }
+
+    val observeTranslateSettingsUseCase: ObserveTranslateSettingsUseCase
+        get() = ObserveTranslateSettingsUseCase(translationRepository)
+
+    val getTranslateSettingsUseCase: GetTranslateSettingsUseCase
+        get() = GetTranslateSettingsUseCase(translationRepository)
+
+    val setChatTranslateEnabledUseCase: SetChatTranslateEnabledUseCase
+        get() = SetChatTranslateEnabledUseCase(translationRepository)
+
+    val setContextTranslateEnabledUseCase: SetContextTranslateEnabledUseCase
+        get() = SetContextTranslateEnabledUseCase(translationRepository)
+
+    val setDoNotTranslateLanguagesUseCase: SetDoNotTranslateLanguagesUseCase
+        get() = SetDoNotTranslateLanguagesUseCase(translationRepository)
+
+    val addDoNotTranslateLanguageUseCase: AddDoNotTranslateLanguageUseCase
+        get() = AddDoNotTranslateLanguageUseCase(translationRepository)
+
+    val removeDoNotTranslateLanguageUseCase: RemoveDoNotTranslateLanguageUseCase
+        get() = RemoveDoNotTranslateLanguageUseCase(translationRepository)
+
+    val observeDialogTranslationStateUseCase: ObserveDialogTranslationStateUseCase
+        get() = ObserveDialogTranslationStateUseCase(translationRepository)
+
+    val getDialogTranslationStateUseCase: GetDialogTranslationStateUseCase
+        get() = GetDialogTranslationStateUseCase(translationRepository)
+
+    val toggleDialogTranslatingUseCase: ToggleDialogTranslatingUseCase
+        get() = ToggleDialogTranslatingUseCase(translationRepository)
+
+    val setDialogTargetLanguageUseCase: SetDialogTargetLanguageUseCase
+        get() = SetDialogTargetLanguageUseCase(translationRepository)
+
+    val translateTextUseCase: TranslateTextUseCase
+        get() = TranslateTextUseCase(translationRepository)
+
+    val getAvailableLanguagesUseCase: GetAvailableLanguagesUseCase
+        get() = GetAvailableLanguagesUseCase(translationRepository)
+
+    val applyAppLanguageUseCase: ApplyAppLanguageUseCase
+        get() = ApplyAppLanguageUseCase(translationRepository)
+
+    private var cachedTranslateViewModel: TranslateViewModel? = null
+
+    val translateViewModel: TranslateViewModel
+        get() {
+            var vm = cachedTranslateViewModel
+            if (vm == null) {
+                vm = createTranslateViewModel()
+                cachedTranslateViewModel = vm
+            }
+            return vm
+        }
+
+    fun createTranslateViewModel(): TranslateViewModel {
+        return TranslateViewModel(
+            observeTranslateSettingsUseCase = observeTranslateSettingsUseCase,
+            getTranslateSettingsUseCase = getTranslateSettingsUseCase,
+            setChatTranslateEnabledUseCase = setChatTranslateEnabledUseCase,
+            setContextTranslateEnabledUseCase = setContextTranslateEnabledUseCase,
+            setDoNotTranslateLanguagesUseCase = setDoNotTranslateLanguagesUseCase,
+            addDoNotTranslateLanguageUseCase = addDoNotTranslateLanguageUseCase,
+            removeDoNotTranslateLanguageUseCase = removeDoNotTranslateLanguageUseCase,
+            observeDialogTranslationStateUseCase = observeDialogTranslationStateUseCase,
+            getDialogTranslationStateUseCase = getDialogTranslationStateUseCase,
+            toggleDialogTranslatingUseCase = toggleDialogTranslatingUseCase,
+            setDialogTargetLanguageUseCase = setDialogTargetLanguageUseCase,
+            translateTextUseCase = translateTextUseCase,
+            getAvailableLanguagesUseCase = getAvailableLanguagesUseCase,
+            applyAppLanguageUseCase = applyAppLanguageUseCase
         )
     }
 
