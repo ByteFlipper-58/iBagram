@@ -38,6 +38,17 @@ import org.telegram.messenger.feature.voip.domain.usecase.StartCallUseCase
 import org.telegram.messenger.feature.voip.domain.usecase.ToggleMuteUseCase
 import org.telegram.messenger.feature.voip.domain.usecase.ToggleSpeakerphoneUseCase
 import org.telegram.messenger.feature.voip.presentation.CallViewModel
+import org.telegram.messenger.feature.secretchat.data.repository.LegacySecretChatRepository
+import org.telegram.messenger.feature.secretchat.domain.repository.SecretChatRepository
+import org.telegram.messenger.feature.secretchat.domain.usecase.AcceptSecretChatUseCase
+import org.telegram.messenger.feature.secretchat.domain.usecase.DeclineSecretChatUseCase
+import org.telegram.messenger.feature.secretchat.domain.usecase.GetSecretChatUseCase
+import org.telegram.messenger.feature.secretchat.domain.usecase.ObserveSecretChatUseCase
+import org.telegram.messenger.feature.secretchat.domain.usecase.ObserveSecretChatsUseCase
+import org.telegram.messenger.feature.secretchat.domain.usecase.SendScreenshotNotificationUseCase
+import org.telegram.messenger.feature.secretchat.domain.usecase.SetSecretChatTtlUseCase
+import org.telegram.messenger.feature.secretchat.domain.usecase.StartSecretChatUseCase
+import org.telegram.messenger.feature.secretchat.presentation.SecretChatViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -385,6 +396,56 @@ class AccountFeatureContainer private constructor(val account: Int) {
             hangUpCallUseCase = hangUpCallUseCase,
             toggleMuteUseCase = toggleMuteUseCase,
             toggleSpeakerphoneUseCase = toggleSpeakerphoneUseCase
+        )
+    }
+
+    private var customSecretChatRepository: SecretChatRepository? = null
+
+    var secretChatRepository: SecretChatRepository
+        get() = customSecretChatRepository ?: LegacySecretChatRepository(account)
+        set(value) {
+            customSecretChatRepository = value
+        }
+
+    val observeSecretChatUseCase: ObserveSecretChatUseCase
+        get() = ObserveSecretChatUseCase(secretChatRepository)
+
+    val observeSecretChatsUseCase: ObserveSecretChatsUseCase
+        get() = ObserveSecretChatsUseCase(secretChatRepository)
+
+    val getSecretChatUseCase: GetSecretChatUseCase
+        get() = GetSecretChatUseCase(secretChatRepository)
+
+    val startSecretChatUseCase: StartSecretChatUseCase
+        get() = StartSecretChatUseCase(secretChatRepository)
+
+    val acceptSecretChatUseCase: AcceptSecretChatUseCase
+        get() = AcceptSecretChatUseCase(secretChatRepository)
+
+    val declineSecretChatUseCase: DeclineSecretChatUseCase
+        get() = DeclineSecretChatUseCase(secretChatRepository)
+
+    val setSecretChatTtlUseCase: SetSecretChatTtlUseCase
+        get() = SetSecretChatTtlUseCase(secretChatRepository)
+
+    val sendScreenshotNotificationUseCase: SendScreenshotNotificationUseCase
+        get() = SendScreenshotNotificationUseCase(secretChatRepository)
+
+    private val cachedSecretChatViewModels = ConcurrentHashMap<Int, SecretChatViewModel>()
+
+    fun getSecretChatViewModel(chatId: Int): SecretChatViewModel {
+        return cachedSecretChatViewModels.computeIfAbsent(chatId) { createSecretChatViewModel(it) }
+    }
+
+    fun createSecretChatViewModel(chatId: Int): SecretChatViewModel {
+        return SecretChatViewModel(
+            chatId = chatId,
+            observeSecretChatUseCase = observeSecretChatUseCase,
+            getSecretChatUseCase = getSecretChatUseCase,
+            acceptSecretChatUseCase = acceptSecretChatUseCase,
+            declineSecretChatUseCase = declineSecretChatUseCase,
+            setSecretChatTtlUseCase = setSecretChatTtlUseCase,
+            sendScreenshotNotificationUseCase = sendScreenshotNotificationUseCase
         )
     }
 

@@ -276,6 +276,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── CallUiState.kt
             ├── CallEvent.kt
             └── CallViewModel.kt
+    │
+    └── secretchat/                        # Secret Chats & E2E Encryption Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── SecretChatModel.kt
+        │   │   └── SecretChatState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── SecretChatRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveSecretChatUseCase.kt
+        │       ├── ObserveSecretChatsUseCase.kt
+        │       ├── GetSecretChatUseCase.kt
+        │       ├── StartSecretChatUseCase.kt
+        │       ├── AcceptSecretChatUseCase.kt
+        │       ├── DeclineSecretChatUseCase.kt
+        │       ├── SetSecretChatTtlUseCase.kt
+        │       └── SendScreenshotNotificationUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TLRPC.EncryptedChat -> SecretChatModel)
+        │   │   └── SecretChatMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacySecretChatRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── SecretChatUiState.kt
+            ├── SecretChatEvent.kt
+            └── SecretChatViewModel.kt
 ```
 
 ### Layer Rules
@@ -361,11 +389,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveCurrentCallUseCase`, `GetCurrentCallUseCase`, `StartCallUseCase`, `AcceptCallUseCase`, `DeclineCallUseCase`, `HangUpCallUseCase`, `ToggleMuteUseCase`, `ToggleSpeakerphoneUseCase`
   - [x] Data layer: `CallMapper`, `LegacyVoIPRepository` (Main-thread safe, hooked into `VoIPService.StateListener` and `NotificationCenter.didStartedCall`/`didEndCall`)
   - [x] Presentation layer: `CallUiState`, `CallEvent`, `CallViewModel`
-- [ ] Secret Chats & End-to-End Encryption
+- [x] Secret Chats & End-to-End Encryption (`feature.secretchat`)
+  - [x] Domain entities: `SecretChatModel`, `SecretChatState` (typed enum replacing TLRPC polymorphic subtypes)
+  - [x] Repository contract: `SecretChatRepository`
+  - [x] Use cases: `ObserveSecretChatUseCase`, `ObserveSecretChatsUseCase`, `GetSecretChatUseCase`, `StartSecretChatUseCase`, `AcceptSecretChatUseCase`, `DeclineSecretChatUseCase`, `SetSecretChatTtlUseCase`, `SendScreenshotNotificationUseCase`
+  - [x] Data layer: `SecretChatMapper`, `LegacySecretChatRepository` (Main-thread safe, hooked into `NotificationCenter.encryptedChatUpdated`, `encryptedChatCreated`, `dialogsNeedReload`)
+  - [x] Presentation layer: `SecretChatUiState`, `SecretChatEvent`, `SecretChatViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 011: Secret Chats End-to-End Encryption and DH State Machine Isolation
+- **Context:** Telegram Secret Chats use client-to-client Diffie-Hellman key exchange and custom MTProto encrypted layers orchestrated by `SecretChatHelper` (~2050 lines). Encrypted chat models in legacy code are polymorphic subclasses of `TLRPC.EncryptedChat` (`TL_encryptedChatWaiting`, `TL_encryptedChatRequested`, `TL_encryptedChat`, `TL_encryptedChatDiscarded`) with separate integer chat IDs mapped to 64-bit dialog IDs (`DialogObject.makeEncryptedDialogId`). Direct UI access to `SecretChatHelper` leaked crypto state and raw network requests into View layers.
+- **Decision:** Introduce a typed enum `SecretChatState` and immutable domain model `SecretChatModel`. Define `SecretChatRepository` and implement `LegacySecretChatRepository` that adapts `SecretChatHelper` operations (`startSecretChat`, `acceptSecretChat`, `declineSecretChat`, `sendTTLMessage`, `sendScreenshotMessage`) on `Dispatchers.Main`. Reactive observation is provided through `callbackFlow` hooked into `NotificationCenter.encryptedChatUpdated`, `encryptedChatCreated`, and `dialogsNeedReload`.
+- **Consequences:** End-to-end encryption primitives, key generation, and DH exchanges remain safely inside Telegram's battle-tested crypto layer without risking upstream divergence, while the presentation layer is isolated behind a clean, testable `SecretChatViewModel`.
 
 ### ADR 010: VoIP Call State Isolation and Strangler Fig Boundary
 - **Context:** In Telegram Android, VoIP calls are managed by `VoIPService` (~5800 lines) which acts as an Android Service, audio router, WebRTC controller, and state machine using raw integer constants (`STATE_WAITING_INCOMING`, `STATE_ESTABLISHED`, etc.). UI components like `VoIPFragment` directly bind to `VoIPService.getSharedInstance()` and implement `VoIPService.StateListener`.
