@@ -278,6 +278,13 @@ import org.telegram.messenger.feature.reactions.domain.usecase.SendReactionUseCa
 import org.telegram.messenger.feature.reactions.domain.usecase.SendVoteUseCase
 import org.telegram.messenger.feature.reactions.domain.usecase.SetDoubleTapReactionUseCase
 import org.telegram.messenger.feature.reactions.presentation.ReactionsViewModel
+import org.telegram.messenger.feature.boosts.data.repository.LegacyBoostsRepository
+import org.telegram.messenger.feature.boosts.domain.repository.BoostsRepository
+import org.telegram.messenger.feature.boosts.domain.usecase.ApplyBoostUseCase
+import org.telegram.messenger.feature.boosts.domain.usecase.CheckCanApplyBoostUseCase
+import org.telegram.messenger.feature.boosts.domain.usecase.GetBoostsStatusUseCase
+import org.telegram.messenger.feature.boosts.domain.usecase.GetMyBoostsUseCase
+import org.telegram.messenger.feature.boosts.presentation.BoostsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1784,6 +1791,47 @@ class AccountFeatureContainer private constructor(val account: Int) {
             sendReactionUseCase = sendReactionUseCase,
             clearReactionsUseCase = clearReactionsUseCase,
             sendVoteUseCase = sendVoteUseCase
+        )
+    }
+
+    private var customBoostsRepository: BoostsRepository? = null
+
+    var boostsRepository: BoostsRepository
+        get() = customBoostsRepository ?: LegacyBoostsRepository(account)
+        set(value) {
+            customBoostsRepository = value
+        }
+
+    val getBoostsStatusUseCase: GetBoostsStatusUseCase
+        get() = GetBoostsStatusUseCase(boostsRepository)
+
+    val getMyBoostsUseCase: GetMyBoostsUseCase
+        get() = GetMyBoostsUseCase(boostsRepository)
+
+    val checkCanApplyBoostUseCase: CheckCanApplyBoostUseCase
+        get() = CheckCanApplyBoostUseCase(boostsRepository)
+
+    val applyBoostUseCase: ApplyBoostUseCase
+        get() = ApplyBoostUseCase(boostsRepository)
+
+    private var cachedBoostsViewModel: BoostsViewModel? = null
+
+    val boostsViewModel: BoostsViewModel
+        get() {
+            var vm = cachedBoostsViewModel
+            if (vm == null) {
+                vm = createBoostsViewModel()
+                cachedBoostsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBoostsViewModel(): BoostsViewModel {
+        return BoostsViewModel(
+            getBoostsStatusUseCase = getBoostsStatusUseCase,
+            getMyBoostsUseCase = getMyBoostsUseCase,
+            checkCanApplyBoostUseCase = checkCanApplyBoostUseCase,
+            applyBoostUseCase = applyBoostUseCase
         )
     }
 

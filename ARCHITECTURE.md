@@ -774,6 +774,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ReactionsUiState.kt
             ├── ReactionsEvent.kt
             └── ReactionsViewModel.kt
+    │
+    └── boosts/                         # Channel Boosts, Status, Slots & Perks Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── BoostStatusModel.kt
+        │   │   ├── BoostSlotModel.kt
+        │   │   ├── MyBoostsModel.kt
+        │   │   └── CanApplyBoostModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BoostsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── GetBoostsStatusUseCase.kt
+        │       ├── GetMyBoostsUseCase.kt
+        │       ├── CheckCanApplyBoostUseCase.kt
+        │       └── ApplyBoostUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_stories / CanApplyBoost -> Domain)
+        │   │   └── BoostMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBoostsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BoostsUiState.kt
+            ├── BoostsEvent.kt
+            └── BoostsViewModel.kt
 ```
 
 ### Layer Rules
@@ -961,10 +987,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveAvailableReactionsUseCase`, `GetAvailableReactionsUseCase`, `LoadAvailableReactionsUseCase`, `ObserveRecentReactionsUseCase`, `GetRecentReactionsUseCase`, `GetReactionsSettingsUseCase`, `GetDoubleTapReactionUseCase`, `SetDoubleTapReactionUseCase`, `SendReactionUseCase`, `ClearReactionsUseCase`, `SendVoteUseCase`
   - [x] Data layer: `ReactionMapper`, `LegacyReactionsRepository` (Main-thread safe, adapting `MediaDataController`, `SendMessagesHelper`, `MessagesController`, and MTProto `TL_messages_sendReaction` / `TL_messages_sendVote` with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observing `NotificationCenter.reactionsDidLoad`)
   - [x] Presentation layer: `ReactionsUiState`, `ReactionsEvent`, `ReactionsViewModel`
+- [x] Channel Boosts, Status, Slots & Perks (`feature.boosts`)
+  - [x] Domain entities: `BoostStatusModel`, `BoostSlotModel`, `MyBoostsModel`, `CanApplyBoostModel`
+  - [x] Repository contract: `BoostsRepository`
+  - [x] Use cases: `GetBoostsStatusUseCase`, `GetMyBoostsUseCase`, `CheckCanApplyBoostUseCase`, `ApplyBoostUseCase`
+  - [x] Data layer: `BoostMapper`, `LegacyBoostsRepository` (Main/IO thread safe, adapting `ChannelBoostsController`, `MessagesController`, MTProto `TL_stories.TL_premium_getBoostsStatus`, `TL_stories.TL_premium_getMyBoosts`, and `TL_stories.TL_premium_applyBoost` with `suspendCancellableCoroutine`)
+  - [x] Presentation layer: `BoostsUiState`, `BoostsEvent`, `BoostsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 028: Channel Boosts, Status, Slots & Perks Controller Isolation
+- **Context:** In Telegram Android, channel boosts, boost level calculation, available perks, and user boost slots (`myBoosts`) were scattered across `ChannelBoostsController.java` (~190 lines), `BoostRepository.java` (~910 lines), and UI activities (`BoostsActivity.java`, `ChannelBoostLayout.java`, `ReassignBoostBottomSheet.java`). Methods inside `ChannelBoostsController` directly posted alerts (`AlertDialog`, `BulletinFactory`) from inside callback methods when handling errors like `CHANNEL_PRIVATE` or network failures, violating layer separation and making background queries and headless testing impossible.
+- **Decision:** Introduce pure domain models `BoostStatusModel`, `BoostSlotModel`, `MyBoostsModel`, and `CanApplyBoostModel`. Define abstract contract `BoostsRepository` covering boost status retrieval, user boost slot querying, boost eligibility checks (`checkCanApplyBoost`), and boost application/reassignment. Implement `LegacyBoostsRepository` decoupling network queries from UI dialogs and executing MTProto requests via `suspendCancellableCoroutine` with request cancellation support and `MessagesController` cache updates. Encapsulate all boost presentation state and MVI events in `BoostsViewModel`.
+- **Consequences:** Channel boost management, slot assignment, eligibility validation, and perk levels are decoupled behind clean, testable domain interfaces with complete unit test coverage while preserving 100% compatibility with Telegram's MTProto stories/premium boost protocols.
 
 ### ADR 027: Message Reactions, Quick Double-Tap & Poll Voting Controller Isolation
 - **Context:** In Telegram Android, message reactions and poll voting were split between `MediaDataController.java` (~10000 lines), `SendMessagesHelper.java` (~12300 lines), and UI components (`ChatActivity.java`, `ReactionsLayoutInBubble.java`). Reaction configurations were loaded into mutable lists (`reactionsList`, `recentReactions`, `topReactions`), while double-tap quick reaction was queried via raw SharedPreferences. Sending reactions and submitting poll votes required complex MTProto TL constructions (`TLRPC.TL_messages_sendReaction`, `TLRPC.TL_messages_sendVote`) executed directly inside helper classes with runnables and UI thread callbacks.
