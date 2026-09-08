@@ -887,6 +887,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── FactCheckUiState.kt
             ├── FactCheckEvent.kt
             └── FactCheckViewModel.kt
+    │
+    └── birthdays/                      # User Birthdays, Contacts' Birthdays & Birthday Wishes Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── BirthdayDateModel.kt
+        │   │   ├── BirthdayUserModel.kt
+        │   │   ├── ContactBirthdayModel.kt
+        │   │   └── BirthdayStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BirthdaysRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveBirthdaysUseCase.kt
+        │       ├── GetBirthdaysStateUseCase.kt
+        │       ├── CheckBirthdaysUseCase.kt
+        │       ├── HideTodayBirthdaysUseCase.kt
+        │       ├── IsBirthdayTodayUseCase.kt
+        │       └── HasBirthdaysTodayUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_account.contactBirthdays / BirthdayState -> Domain)
+        │   │   └── BirthdayMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBirthdaysRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BirthdaysUiState.kt
+            ├── BirthdaysEvent.kt
+            └── BirthdaysViewModel.kt
 ```
 
 ### Layer Rules
@@ -1098,10 +1126,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveFactCheckLoadedUseCase`, `GetFactCheckUseCase`, `LoadFactCheckUseCase`, `ApplyFactCheckUseCase`, `DeleteFactCheckUseCase`, `GetFactCheckLimitUseCase`
   - [x] Data layer: `FactCheckMapper`, `LegacyFactCheckRepository` (Main-thread safe, adapting `FactCheckController`, `MessagesController`, and `ConnectionsManager` MTProto `TL_getFactCheck`, `TL_editFactCheck`, `TL_deleteFactCheck` with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observing `NotificationCenter.factCheckLoaded`)
   - [x] Presentation layer: `FactCheckUiState`, `FactCheckEvent`, `FactCheckViewModel`
+- [x] User Birthdays, Contacts' Birthdays & Birthday Wishes (`feature.birthdays`)
+  - [x] Domain entities: `BirthdayDateModel`, `BirthdayUserModel`, `ContactBirthdayModel`, `BirthdayStateModel`
+  - [x] Repository contract: `BirthdaysRepository`
+  - [x] Use cases: `ObserveBirthdaysUseCase`, `GetBirthdaysStateUseCase`, `CheckBirthdaysUseCase`, `HideTodayBirthdaysUseCase`, `IsBirthdayTodayUseCase`, `HasBirthdaysTodayUseCase`
+  - [x] Data layer: `BirthdayMapper`, `LegacyBirthdaysRepository` (Main-thread safe, adapting `BirthdayController` with `NotificationCenterFlowBridge` observing `NotificationCenter.premiumPromoUpdated`)
+  - [x] Presentation layer: `BirthdaysUiState`, `BirthdaysEvent`, `BirthdaysViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 032: User Birthdays & Contacts' Celebrations Controller Isolation
+- **Context:** In Telegram Android, user birthdays, contacts' birthdays (`TL_account.contactBirthdays`), and celebration banners were coupled inside `BirthdayController.java` (~310 lines). The controller managed in-memory mutable arrays of users (`yesterday`, `today`, `tomorrow`), custom TL serialization (`TL_birthdays`), SharedPreferences persistence (`bday_check`, `bday_contacts`, `bday_hidden`), and directly triggered `premiumPromoUpdated` events on `NotificationCenter`. UI components (`DialogsActivity`, `ChatActivityEnterView`, `ProfileBirthdayEffect`, `UserSelectorBottomSheet`) queried static methods and raw state objects with direct SharedPreferences mutations.
+- **Decision:** Introduce pure domain models `BirthdayDateModel`, `BirthdayUserModel`, `ContactBirthdayModel`, and `BirthdayStateModel`. Define abstract contract `BirthdaysRepository` covering reactive birthday state observation (`observeBirthdays`), cached state retrieval, periodic/forced checking (`checkBirthdays`), daily banner dismissal (`hideTodayBirthdays`), and single user/overall birthday detection (`isBirthdayToday`, `hasBirthdaysToday`). Implement `LegacyBirthdaysRepository` operating safely on `Dispatchers.Main` with reactive `NotificationCenterFlowBridge` bridging for `premiumPromoUpdated`. Encapsulate presentation state and MVI events in `BirthdaysViewModel`.
+- **Consequences:** Birthday querying, contacts' celebration discovery, banner dismissal, and profile celebration effects are decoupled behind clean, testable domain interfaces with complete unit test coverage while maintaining 100% compatibility with Telegram's MTProto birthday sync and SharedPreferences storage.
 
 ### ADR 031: Message Fact-Checks & Community Annotations Controller Isolation
 - **Context:** In Telegram Android, message fact-checks and community verification annotations (`TLRPC.TL_factCheck`) were managed by `FactCheckController.java` (~596 lines). The controller intermixed low-level SQLite database caching (`saveToDatabase`, `getFromDatabase`, SQL queries on `fact_checks` table), MTProto batch loading (`TLRPC.TL_getFactCheck`), and heavy Android UI dialog construction (`openFactCheckEditor` with `AlertDialog`, custom `EditTextCaption`, spans, haptics, and bulletin messages). UI components like `ChatMessageCell.java` and `ChatActivity.java` directly invoked `FactCheckController.getInstance(account).getFactCheck(messageObject)` and `openFactCheckEditor`.

@@ -318,6 +318,15 @@ import org.telegram.messenger.feature.factcheck.domain.usecase.GetFactCheckUseCa
 import org.telegram.messenger.feature.factcheck.domain.usecase.LoadFactCheckUseCase
 import org.telegram.messenger.feature.factcheck.domain.usecase.ObserveFactCheckLoadedUseCase
 import org.telegram.messenger.feature.factcheck.presentation.FactCheckViewModel
+import org.telegram.messenger.feature.birthdays.data.repository.LegacyBirthdaysRepository
+import org.telegram.messenger.feature.birthdays.domain.repository.BirthdaysRepository
+import org.telegram.messenger.feature.birthdays.domain.usecase.CheckBirthdaysUseCase
+import org.telegram.messenger.feature.birthdays.domain.usecase.GetBirthdaysStateUseCase
+import org.telegram.messenger.feature.birthdays.domain.usecase.HasBirthdaysTodayUseCase
+import org.telegram.messenger.feature.birthdays.domain.usecase.HideTodayBirthdaysUseCase
+import org.telegram.messenger.feature.birthdays.domain.usecase.IsBirthdayTodayUseCase
+import org.telegram.messenger.feature.birthdays.domain.usecase.ObserveBirthdaysUseCase
+import org.telegram.messenger.feature.birthdays.presentation.BirthdaysViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2032,6 +2041,55 @@ class AccountFeatureContainer private constructor(val account: Int) {
             applyFactCheckUseCase = applyFactCheckUseCase,
             deleteFactCheckUseCase = deleteFactCheckUseCase,
             getFactCheckLimitUseCase = getFactCheckLimitUseCase
+        )
+    }
+
+    private var customBirthdaysRepository: BirthdaysRepository? = null
+
+    var birthdaysRepository: BirthdaysRepository
+        get() = customBirthdaysRepository ?: LegacyBirthdaysRepository(account)
+        set(value) {
+            customBirthdaysRepository = value
+        }
+
+    val observeBirthdaysUseCase: ObserveBirthdaysUseCase
+        get() = ObserveBirthdaysUseCase(birthdaysRepository)
+
+    val getBirthdaysStateUseCase: GetBirthdaysStateUseCase
+        get() = GetBirthdaysStateUseCase(birthdaysRepository)
+
+    val checkBirthdaysUseCase: CheckBirthdaysUseCase
+        get() = CheckBirthdaysUseCase(birthdaysRepository)
+
+    val hideTodayBirthdaysUseCase: HideTodayBirthdaysUseCase
+        get() = HideTodayBirthdaysUseCase(birthdaysRepository)
+
+    val isBirthdayTodayUseCase: IsBirthdayTodayUseCase
+        get() = IsBirthdayTodayUseCase(birthdaysRepository)
+
+    val hasBirthdaysTodayUseCase: HasBirthdaysTodayUseCase
+        get() = HasBirthdaysTodayUseCase(birthdaysRepository)
+
+    private var cachedBirthdaysViewModel: BirthdaysViewModel? = null
+
+    val birthdaysViewModel: BirthdaysViewModel
+        get() {
+            var vm = cachedBirthdaysViewModel
+            if (vm == null) {
+                vm = createBirthdaysViewModel()
+                cachedBirthdaysViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBirthdaysViewModel(): BirthdaysViewModel {
+        return BirthdaysViewModel(
+            observeBirthdaysUseCase = observeBirthdaysUseCase,
+            getBirthdaysStateUseCase = getBirthdaysStateUseCase,
+            checkBirthdaysUseCase = checkBirthdaysUseCase,
+            hideTodayBirthdaysUseCase = hideTodayBirthdaysUseCase,
+            isBirthdayTodayUseCase = isBirthdayTodayUseCase,
+            hasBirthdaysTodayUseCase = hasBirthdaysTodayUseCase
         )
     }
 
