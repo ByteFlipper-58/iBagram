@@ -27,6 +27,17 @@ import org.telegram.messenger.feature.media.domain.usecase.GetAllMediaUseCase
 import org.telegram.messenger.feature.media.domain.usecase.GetMediaAlbumsUseCase
 import org.telegram.messenger.feature.media.domain.usecase.ObserveMediaAlbumsUseCase
 import org.telegram.messenger.feature.media.presentation.MediaViewModel
+import org.telegram.messenger.feature.voip.data.repository.LegacyVoIPRepository
+import org.telegram.messenger.feature.voip.domain.repository.VoIPRepository
+import org.telegram.messenger.feature.voip.domain.usecase.AcceptCallUseCase
+import org.telegram.messenger.feature.voip.domain.usecase.DeclineCallUseCase
+import org.telegram.messenger.feature.voip.domain.usecase.GetCurrentCallUseCase
+import org.telegram.messenger.feature.voip.domain.usecase.HangUpCallUseCase
+import org.telegram.messenger.feature.voip.domain.usecase.ObserveCurrentCallUseCase
+import org.telegram.messenger.feature.voip.domain.usecase.StartCallUseCase
+import org.telegram.messenger.feature.voip.domain.usecase.ToggleMuteUseCase
+import org.telegram.messenger.feature.voip.domain.usecase.ToggleSpeakerphoneUseCase
+import org.telegram.messenger.feature.voip.presentation.CallViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -317,6 +328,63 @@ class AccountFeatureContainer private constructor(val account: Int) {
             getMediaAlbumsUseCase = getMediaAlbumsUseCase,
             getAlbumMediaUseCase = getAlbumMediaUseCase,
             getAllMediaUseCase = getAllMediaUseCase
+        )
+    }
+
+    private var customVoIPRepository: VoIPRepository? = null
+
+    var voipRepository: VoIPRepository
+        get() = customVoIPRepository ?: LegacyVoIPRepository(account)
+        set(value) {
+            customVoIPRepository = value
+        }
+
+    val observeCurrentCallUseCase: ObserveCurrentCallUseCase
+        get() = ObserveCurrentCallUseCase(voipRepository)
+
+    val getCurrentCallUseCase: GetCurrentCallUseCase
+        get() = GetCurrentCallUseCase(voipRepository)
+
+    val startCallUseCase: StartCallUseCase
+        get() = StartCallUseCase(voipRepository)
+
+    val acceptCallUseCase: AcceptCallUseCase
+        get() = AcceptCallUseCase(voipRepository)
+
+    val declineCallUseCase: DeclineCallUseCase
+        get() = DeclineCallUseCase(voipRepository)
+
+    val hangUpCallUseCase: HangUpCallUseCase
+        get() = HangUpCallUseCase(voipRepository)
+
+    val toggleMuteUseCase: ToggleMuteUseCase
+        get() = ToggleMuteUseCase(voipRepository)
+
+    val toggleSpeakerphoneUseCase: ToggleSpeakerphoneUseCase
+        get() = ToggleSpeakerphoneUseCase(voipRepository)
+
+    private var cachedCallViewModel: CallViewModel? = null
+
+    val callViewModel: CallViewModel
+        get() {
+            var vm = cachedCallViewModel
+            if (vm == null) {
+                vm = createCallViewModel()
+                cachedCallViewModel = vm
+            }
+            return vm
+        }
+
+    fun createCallViewModel(): CallViewModel {
+        return CallViewModel(
+            observeCurrentCallUseCase = observeCurrentCallUseCase,
+            getCurrentCallUseCase = getCurrentCallUseCase,
+            startCallUseCase = startCallUseCase,
+            acceptCallUseCase = acceptCallUseCase,
+            declineCallUseCase = declineCallUseCase,
+            hangUpCallUseCase = hangUpCallUseCase,
+            toggleMuteUseCase = toggleMuteUseCase,
+            toggleSpeakerphoneUseCase = toggleSpeakerphoneUseCase
         )
     }
 

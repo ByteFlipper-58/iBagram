@@ -248,6 +248,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── MediaUiState.kt
             ├── MediaEvent.kt
             └── MediaViewModel.kt
+    │
+    └── voip/                              # Calls & VoIP Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── CallModel.kt
+        │   │   └── CallState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── VoIPRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveCurrentCallUseCase.kt
+        │       ├── GetCurrentCallUseCase.kt
+        │       ├── StartCallUseCase.kt
+        │       ├── AcceptCallUseCase.kt
+        │       ├── DeclineCallUseCase.kt
+        │       ├── HangUpCallUseCase.kt
+        │       ├── ToggleMuteUseCase.kt
+        │       └── ToggleSpeakerphoneUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (VoIPService state & models -> Domain)
+        │   │   └── CallMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyVoIPRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── CallUiState.kt
+            ├── CallEvent.kt
+            └── CallViewModel.kt
 ```
 
 ### Layer Rules
@@ -327,12 +355,22 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveMediaAlbumsUseCase`, `GetMediaAlbumsUseCase`, `GetAlbumMediaUseCase`, `GetAllMediaUseCase`
   - [x] Data layer: `MediaMapper`, `LegacyMediaRepository` (Main-thread safe, hooked into `MediaController.allMediaAlbums`, `allPhotosAlbumEntry`)
   - [x] Presentation layer: `MediaUiState`, `MediaEvent`, `MediaViewModel`
-- [ ] Calls & VoIP (`VoIPService`, `VoIPActivity`)
+- [x] Calls & VoIP (`feature.voip`)
+  - [x] Domain entities: `CallModel`, `CallState` (typed enum replacing legacy state ints)
+  - [x] Repository contract: `VoIPRepository`
+  - [x] Use cases: `ObserveCurrentCallUseCase`, `GetCurrentCallUseCase`, `StartCallUseCase`, `AcceptCallUseCase`, `DeclineCallUseCase`, `HangUpCallUseCase`, `ToggleMuteUseCase`, `ToggleSpeakerphoneUseCase`
+  - [x] Data layer: `CallMapper`, `LegacyVoIPRepository` (Main-thread safe, hooked into `VoIPService.StateListener` and `NotificationCenter.didStartedCall`/`didEndCall`)
+  - [x] Presentation layer: `CallUiState`, `CallEvent`, `CallViewModel`
 - [ ] Secret Chats & End-to-End Encryption
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 010: VoIP Call State Isolation and Strangler Fig Boundary
+- **Context:** In Telegram Android, VoIP calls are managed by `VoIPService` (~5800 lines) which acts as an Android Service, audio router, WebRTC controller, and state machine using raw integer constants (`STATE_WAITING_INCOMING`, `STATE_ESTABLISHED`, etc.). UI components like `VoIPFragment` directly bind to `VoIPService.getSharedInstance()` and implement `VoIPService.StateListener`.
+- **Decision:** Introduce a typed enum `CallState` and immutable domain model `CallModel`. Define `VoIPRepository` and implement `LegacyVoIPRepository` adapting `VoIPService` operations (`acceptIncomingCall`, `declineIncomingCall`, `hangUp`, `setMicMute`, `toggleSpeakerphoneOrShowRouteSheet`) and observing call state through `callbackFlow` hooked into both `NotificationCenter` lifecycle events (`didStartedCall`, `didEndCall`) and `VoIPService.StateListener`.
+- **Consequences:** VoIP calling logic and UI can now be controlled via clean, testable `CallViewModel` and use cases without coupling to Android Service lifecycle or WebRTC internals.
 
 ### ADR 009: Media and Gallery Abstraction Boundary
 - **Context:** In Telegram Android, `MediaController` is a massive ~7000-line controller handling media playback, recording, audio state, and gallery loading. Gallery models `AlbumEntry` and `PhotoEntry` mix file metadata with complex in-place image editor state and UI flags.
