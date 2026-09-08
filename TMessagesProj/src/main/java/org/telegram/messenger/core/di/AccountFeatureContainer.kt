@@ -10,6 +10,16 @@ import org.telegram.messenger.feature.profile.domain.usecase.LoadFullProfileUseC
 import org.telegram.messenger.feature.profile.domain.usecase.ObserveProfileUseCase
 import org.telegram.messenger.feature.profile.domain.usecase.UnblockPeerUseCase
 import org.telegram.messenger.feature.profile.presentation.ProfileViewModel
+import org.telegram.messenger.feature.settings.data.repository.LegacySettingsRepository
+import org.telegram.messenger.feature.settings.domain.repository.SettingsRepository
+import org.telegram.messenger.feature.settings.domain.usecase.GetSettingsUseCase
+import org.telegram.messenger.feature.settings.domain.usecase.ObserveSettingsUseCase
+import org.telegram.messenger.feature.settings.domain.usecase.UpdateBubbleRadiusUseCase
+import org.telegram.messenger.feature.settings.domain.usecase.UpdateFontSizeUseCase
+import org.telegram.messenger.feature.settings.domain.usecase.UpdateSaveToGalleryUseCase
+import org.telegram.messenger.feature.settings.domain.usecase.UpdateStreamMediaUseCase
+import org.telegram.messenger.feature.settings.domain.usecase.UpdateSyncContactsUseCase
+import org.telegram.messenger.feature.settings.presentation.SettingsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -206,6 +216,59 @@ class AccountFeatureContainer private constructor(val account: Int) {
             loadFullProfileUseCase = loadFullProfileUseCase,
             blockPeerUseCase = blockPeerUseCase,
             unblockPeerUseCase = unblockPeerUseCase
+        )
+    }
+
+    private var customSettingsRepository: SettingsRepository? = null
+
+    var settingsRepository: SettingsRepository
+        get() = customSettingsRepository ?: LegacySettingsRepository(account)
+        set(value) {
+            customSettingsRepository = value
+        }
+
+    val observeSettingsUseCase: ObserveSettingsUseCase
+        get() = ObserveSettingsUseCase(settingsRepository)
+
+    val getSettingsUseCase: GetSettingsUseCase
+        get() = GetSettingsUseCase(settingsRepository)
+
+    val updateFontSizeUseCase: UpdateFontSizeUseCase
+        get() = UpdateFontSizeUseCase(settingsRepository)
+
+    val updateBubbleRadiusUseCase: UpdateBubbleRadiusUseCase
+        get() = UpdateBubbleRadiusUseCase(settingsRepository)
+
+    val updateSaveToGalleryUseCase: UpdateSaveToGalleryUseCase
+        get() = UpdateSaveToGalleryUseCase(settingsRepository)
+
+    val updateStreamMediaUseCase: UpdateStreamMediaUseCase
+        get() = UpdateStreamMediaUseCase(settingsRepository)
+
+    val updateSyncContactsUseCase: UpdateSyncContactsUseCase
+        get() = UpdateSyncContactsUseCase(settingsRepository)
+
+    private var cachedSettingsViewModel: SettingsViewModel? = null
+
+    val settingsViewModel: SettingsViewModel
+        get() {
+            var vm = cachedSettingsViewModel
+            if (vm == null) {
+                vm = createSettingsViewModel()
+                cachedSettingsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createSettingsViewModel(): SettingsViewModel {
+        return SettingsViewModel(
+            observeSettingsUseCase = observeSettingsUseCase,
+            getSettingsUseCase = getSettingsUseCase,
+            updateFontSizeUseCase = updateFontSizeUseCase,
+            updateBubbleRadiusUseCase = updateBubbleRadiusUseCase,
+            updateSaveToGalleryUseCase = updateSaveToGalleryUseCase,
+            updateStreamMediaUseCase = updateStreamMediaUseCase,
+            updateSyncContactsUseCase = updateSyncContactsUseCase
         )
     }
 

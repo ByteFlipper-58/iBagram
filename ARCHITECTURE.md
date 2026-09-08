@@ -198,6 +198,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ProfileUiState.kt
             ├── ProfileEvent.kt
             └── ProfileViewModel.kt
+    │
+    └── settings/                          # Settings & Preferences Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   └── SettingsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── SettingsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveSettingsUseCase.kt
+        │       ├── GetSettingsUseCase.kt
+        │       ├── UpdateFontSizeUseCase.kt
+        │       ├── UpdateBubbleRadiusUseCase.kt
+        │       ├── UpdateSaveToGalleryUseCase.kt
+        │       ├── UpdateStreamMediaUseCase.kt
+        │       └── UpdateSyncContactsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (SharedConfig / UserConfig -> SettingsModel)
+        │   │   └── SettingsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacySettingsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── SettingsUiState.kt
+            ├── SettingsEvent.kt
+            └── SettingsViewModel.kt
 ```
 
 ### Layer Rules
@@ -265,7 +291,12 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveProfileUseCase`, `GetProfileUseCase`, `LoadFullProfileUseCase`, `BlockPeerUseCase`, `UnblockPeerUseCase`
   - [x] Data layer: `ProfileMapper`, `LegacyProfileRepository` (Main-thread safe, hooked into `userInfoDidLoad`, `chatInfoDidLoad`)
   - [x] Presentation layer: `ProfileUiState`, `ProfileEvent`, `ProfileViewModel`
-- [ ] Settings & Preferences
+- [x] Settings & Preferences (`feature.settings`)
+  - [x] Domain entities: `SettingsModel` (pure model decoupling from SharedConfig and UserConfig)
+  - [x] Repository contract: `SettingsRepository`
+  - [x] Use cases: `ObserveSettingsUseCase`, `GetSettingsUseCase`, `UpdateFontSizeUseCase`, `UpdateBubbleRadiusUseCase`, `UpdateSaveToGalleryUseCase`, `UpdateStreamMediaUseCase`, `UpdateSyncContactsUseCase`
+  - [x] Data layer: `SettingsMapper`, `LegacySettingsRepository` (Main-thread safe, hooked into `updateInterfaces`, `mainUserInfoChanged`, `notificationsSettingsUpdated`)
+  - [x] Presentation layer: `SettingsUiState`, `SettingsEvent`, `SettingsViewModel`
 - [ ] Media & Gallery (`PhotoViewer`, `MediaActivity`)
 - [ ] Calls & VoIP (`VoIPService`, `VoIPActivity`)
 - [ ] Secret Chats & End-to-End Encryption
@@ -273,6 +304,11 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 008: Settings Aggregation and Thread-Safe Persistence
+- **Context:** Telegram stores settings across multiple mutable static singletons: `SharedConfig` (global app-wide preferences like font size, bubble radius, stream media, in-app camera) and `UserConfig` (account-scoped preferences like contact syncing, call tab visibility). Direct access from UI components scattered configuration logic and caused race conditions during persistence.
+- **Decision:** Introduce an aggregated, immutable domain model `SettingsModel` and `SettingsRepository`. `LegacySettingsRepository` encapsulates interactions with `SharedConfig` and `UserConfig(currentAccount)`, enforcing execution on `Dispatchers.Main` and immediate persistence calls (`saveConfig`). Changes are observed reactively through a combination of `NotificationCenter` event hooks and repository state flows.
+- **Consequences:** Presentation layer observes and updates settings via a clean, unified ViewModel without knowing how settings are split across SharedPreferences or account databases.
 
 ### ADR 007: Unified Peer Profile Boundary
 - **Context:** In legacy Telegram, peer profiles are split across separate classes: `TLRPC.User`, `TLRPC.Chat`, `TLRPC.UserFull`, and `TLRPC.ChatFull`. Furthermore, user IDs are positive while chat/channel IDs are negative (`-chatId`), and data fetching/blocking uses different methods on `MessagesController`.
