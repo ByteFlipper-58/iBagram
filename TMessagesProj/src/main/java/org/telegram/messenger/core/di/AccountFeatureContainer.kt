@@ -79,6 +79,18 @@ import org.telegram.messenger.feature.stickers.domain.usecase.ObserveStickerSets
 import org.telegram.messenger.feature.stickers.domain.usecase.ToggleStickerSetArchivedUseCase
 import org.telegram.messenger.feature.stickers.domain.usecase.ToggleStickerSetInstalledUseCase
 import org.telegram.messenger.feature.stickers.presentation.StickersViewModel
+import org.telegram.messenger.feature.fileloader.data.repository.LegacyFileLoaderRepository
+import org.telegram.messenger.feature.fileloader.domain.repository.FileLoaderRepository
+import org.telegram.messenger.feature.fileloader.domain.usecase.CancelAllDownloadsUseCase
+import org.telegram.messenger.feature.fileloader.domain.usecase.CancelFileUploadUseCase
+import org.telegram.messenger.feature.fileloader.domain.usecase.CancelLoadFileUseCase
+import org.telegram.messenger.feature.fileloader.domain.usecase.GetActiveDownloadsUseCase
+import org.telegram.messenger.feature.fileloader.domain.usecase.GetRecentDownloadsUseCase
+import org.telegram.messenger.feature.fileloader.domain.usecase.LoadFileUseCase
+import org.telegram.messenger.feature.fileloader.domain.usecase.ObserveTransferUseCase
+import org.telegram.messenger.feature.fileloader.domain.usecase.ObserveTransfersUseCase
+import org.telegram.messenger.feature.fileloader.domain.usecase.UploadFileUseCase
+import org.telegram.messenger.feature.fileloader.presentation.FileLoaderViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -633,6 +645,66 @@ class AccountFeatureContainer private constructor(val account: Int) {
             toggleStickerSetInstalledUseCase = toggleStickerSetInstalledUseCase,
             toggleStickerSetArchivedUseCase = toggleStickerSetArchivedUseCase,
             stickerType = type
+        )
+    }
+
+    private var customFileLoaderRepository: FileLoaderRepository? = null
+
+    var fileLoaderRepository: FileLoaderRepository
+        get() = customFileLoaderRepository ?: LegacyFileLoaderRepository(account)
+        set(value) {
+            customFileLoaderRepository = value
+        }
+
+    val observeTransfersUseCase: ObserveTransfersUseCase
+        get() = ObserveTransfersUseCase(fileLoaderRepository)
+
+    val observeTransferUseCase: ObserveTransferUseCase
+        get() = ObserveTransferUseCase(fileLoaderRepository)
+
+    val getActiveDownloadsUseCase: GetActiveDownloadsUseCase
+        get() = GetActiveDownloadsUseCase(fileLoaderRepository)
+
+    val getRecentDownloadsUseCase: GetRecentDownloadsUseCase
+        get() = GetRecentDownloadsUseCase(fileLoaderRepository)
+
+    val loadFileUseCase: LoadFileUseCase
+        get() = LoadFileUseCase(fileLoaderRepository)
+
+    val cancelLoadFileUseCase: CancelLoadFileUseCase
+        get() = CancelLoadFileUseCase(fileLoaderRepository)
+
+    val cancelAllDownloadsUseCase: CancelAllDownloadsUseCase
+        get() = CancelAllDownloadsUseCase(fileLoaderRepository)
+
+    val uploadFileUseCase: UploadFileUseCase
+        get() = UploadFileUseCase(fileLoaderRepository)
+
+    val cancelFileUploadUseCase: CancelFileUploadUseCase
+        get() = CancelFileUploadUseCase(fileLoaderRepository)
+
+    private var cachedFileLoaderViewModel: FileLoaderViewModel? = null
+
+    val fileLoaderViewModel: FileLoaderViewModel
+        get() {
+            var vm = cachedFileLoaderViewModel
+            if (vm == null) {
+                vm = createFileLoaderViewModel()
+                cachedFileLoaderViewModel = vm
+            }
+            return vm
+        }
+
+    fun createFileLoaderViewModel(): FileLoaderViewModel {
+        return FileLoaderViewModel(
+            observeTransfersUseCase = observeTransfersUseCase,
+            getActiveDownloadsUseCase = getActiveDownloadsUseCase,
+            getRecentDownloadsUseCase = getRecentDownloadsUseCase,
+            loadFileUseCase = loadFileUseCase,
+            cancelLoadFileUseCase = cancelLoadFileUseCase,
+            cancelAllDownloadsUseCase = cancelAllDownloadsUseCase,
+            uploadFileUseCase = uploadFileUseCase,
+            cancelFileUploadUseCase = cancelFileUploadUseCase
         )
     }
 
