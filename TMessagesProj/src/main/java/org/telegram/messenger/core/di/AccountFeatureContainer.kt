@@ -1,6 +1,14 @@
 package org.telegram.messenger.core.di
 
 import org.telegram.messenger.UserConfig
+import org.telegram.messenger.feature.dialogs.data.repository.LegacyDialogsRepository
+import org.telegram.messenger.feature.dialogs.domain.repository.DialogsRepository
+import org.telegram.messenger.feature.dialogs.domain.usecase.DeleteDialogUseCase
+import org.telegram.messenger.feature.dialogs.domain.usecase.GetDialogsUseCase
+import org.telegram.messenger.feature.dialogs.domain.usecase.LoadMoreDialogsUseCase
+import org.telegram.messenger.feature.dialogs.domain.usecase.MarkDialogAsReadUseCase
+import org.telegram.messenger.feature.dialogs.domain.usecase.PinDialogUseCase
+import org.telegram.messenger.feature.dialogs.presentation.DialogsViewModel
 import org.telegram.messenger.feature.savedmessages.data.repository.LegacySavedMessagesRepository
 import org.telegram.messenger.feature.savedmessages.domain.repository.SavedMessagesRepository
 import org.telegram.messenger.feature.savedmessages.domain.usecase.DeleteSavedDialogUseCase
@@ -60,6 +68,48 @@ class AccountFeatureContainer private constructor(val account: Int) {
             deleteSavedDialogUseCase = deleteSavedDialogUseCase,
             getSavedTagsUseCase = getSavedTagsUseCase,
             searchSavedDialogsUseCase = searchSavedDialogsUseCase
+        )
+    }
+
+    private var customDialogsRepository: DialogsRepository? = null
+
+    var dialogsRepository: DialogsRepository
+        get() = customDialogsRepository ?: LegacyDialogsRepository(account)
+        set(value) {
+            customDialogsRepository = value
+        }
+
+    val getDialogsUseCase: GetDialogsUseCase
+        get() = GetDialogsUseCase(dialogsRepository)
+
+    val loadMoreDialogsUseCase: LoadMoreDialogsUseCase
+        get() = LoadMoreDialogsUseCase(dialogsRepository)
+
+    val pinDialogUseCase: PinDialogUseCase
+        get() = PinDialogUseCase(dialogsRepository)
+
+    val deleteDialogUseCase: DeleteDialogUseCase
+        get() = DeleteDialogUseCase(dialogsRepository)
+
+    val markDialogAsReadUseCase: MarkDialogAsReadUseCase
+        get() = MarkDialogAsReadUseCase(dialogsRepository)
+
+    private var cachedDialogsViewModel: DialogsViewModel? = null
+
+    fun getDialogsViewModel(): DialogsViewModel {
+        return cachedDialogsViewModel ?: createDialogsViewModel().also {
+            cachedDialogsViewModel = it
+        }
+    }
+
+    fun createDialogsViewModel(): DialogsViewModel {
+        return DialogsViewModel(
+            account = account,
+            getDialogsUseCase = getDialogsUseCase,
+            loadMoreDialogsUseCase = loadMoreDialogsUseCase,
+            pinDialogUseCase = pinDialogUseCase,
+            deleteDialogUseCase = deleteDialogUseCase,
+            markDialogAsReadUseCase = markDialogAsReadUseCase
         )
     }
 

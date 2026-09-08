@@ -125,6 +125,30 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── SavedMessagesUiState.kt
             ├── SavedMessagesEvent.kt
             └── SavedMessagesViewModel.kt
+    │
+    └── dialogs/                           # Main Chat List Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   └── DialogModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── DialogsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── GetDialogsUseCase.kt
+        │       ├── LoadMoreDialogsUseCase.kt
+        │       ├── PinDialogUseCase.kt
+        │       ├── DeleteDialogUseCase.kt
+        │       └── MarkDialogAsReadUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TLRPC.Dialog <-> DialogModel)
+        │   │   └── DialogMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyDialogsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── DialogsUiState.kt
+            ├── DialogsEvent.kt
+            └── DialogsViewModel.kt
 ```
 
 ### Layer Rules
@@ -174,7 +198,12 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Data layer: `SavedMessagesMapper` (dialog and tag mapping), `LegacySavedMessagesRepository` (Main-thread safe)
   - [x] Presentation layer: `SavedMessagesUiState` (with query/results/tags), `SavedMessagesEvent`, `SavedMessagesViewModel` (search, delete, pin, tags, state preservation)
   - [x] UI Integration: Connected `SavedMessagesViewModel` to `SharedMediaLayout.java`
-- [ ] Dialogs list (`DialogsActivity`, `DialogsAdapter`)
+- [x] Dialogs list (`feature.dialogs`)
+  - [x] Domain entities: `DialogModel`
+  - [x] Repository contract: `DialogsRepository`
+  - [x] Use cases: `GetDialogsUseCase`, `LoadMoreDialogsUseCase`, `PinDialogUseCase`, `DeleteDialogUseCase`, `MarkDialogAsReadUseCase`
+  - [x] Data layer: `DialogMapper`, `LegacyDialogsRepository` (Main-thread safe, reactive `callbackFlow` bridge for `dialogsNeedReload`)
+  - [x] Presentation layer: `DialogsUiState`, `DialogsEvent`, `DialogsViewModel`
 - [ ] Chat & Messaging (`ChatActivity`, `ChatMessageCell`)
 - [ ] Profiles & User Info (`ProfileActivity`)
 - [ ] Settings & Preferences
@@ -185,6 +214,11 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 005: Dialogs List Isolation and Reactive Bridge
+- **Context:** `MessagesController.allDialogs` and `dialogsByFolder` are unsynchronized in-memory collections of Telegram, mutated on `Dispatchers.Main`. Direct background access throws `ConcurrentModificationException`.
+- **Decision:** Wrap `MessagesController.getDialogs(folderId)` inside `LegacyDialogsRepository` using `callbackFlow` hooked into `NotificationCenter.dialogsNeedReload`, `updateInterfaces`, and `dialogDeleted`. All collection reads occur on `Dispatchers.Main`.
+- **Consequences:** UI and presentation layers consume a clean, reactive `Flow<List<DialogModel>>` without knowing about `TLRPC.Dialog` or `MessagesController`.
 
 ### ADR 001: Strangler Fig Pattern for Migration
 - **Context:** Telegram Android is a 10+ year old monolithic codebase with millions of lines of code. A full rewrite would take years and fail upstream compatibility.
