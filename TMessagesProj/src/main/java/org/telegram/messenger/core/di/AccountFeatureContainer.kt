@@ -139,6 +139,20 @@ import org.telegram.messenger.feature.privacy.domain.usecase.SetPasscodeUseCase
 import org.telegram.messenger.feature.privacy.domain.usecase.SetPrivacyRuleUseCase
 import org.telegram.messenger.feature.privacy.domain.usecase.UnblockPrivacyPeerUseCase
 import org.telegram.messenger.feature.privacy.presentation.PrivacyViewModel
+import org.telegram.messenger.feature.themes.data.repository.LegacyThemeRepository
+import org.telegram.messenger.feature.themes.domain.repository.ThemeRepository
+import org.telegram.messenger.feature.themes.domain.usecase.ApplyThemeUseCase
+import org.telegram.messenger.feature.themes.domain.usecase.GetAppearanceSettingsUseCase
+import org.telegram.messenger.feature.themes.domain.usecase.GetAvailableThemesUseCase
+import org.telegram.messenger.feature.themes.domain.usecase.ObserveAppearanceSettingsUseCase
+import org.telegram.messenger.feature.themes.domain.usecase.ObserveAvailableThemesUseCase
+import org.telegram.messenger.feature.themes.domain.usecase.ObserveNightModeUseCase
+import org.telegram.messenger.feature.themes.domain.usecase.ResetAppearanceSettingsUseCase
+import org.telegram.messenger.feature.themes.domain.usecase.SetBubbleRadiusUseCase
+import org.telegram.messenger.feature.themes.domain.usecase.SetNightModeSettingsUseCase
+import org.telegram.messenger.feature.themes.domain.usecase.SetNightModeTypeUseCase
+import org.telegram.messenger.feature.themes.domain.usecase.SetThemeAccentUseCase
+import org.telegram.messenger.feature.themes.presentation.ThemeViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -981,6 +995,72 @@ class AccountFeatureContainer private constructor(val account: Int) {
             clearPasscodeUseCase = clearPasscodeUseCase,
             observeTwoStepVerificationUseCase = observeTwoStepVerificationUseCase,
             loadTwoStepVerificationUseCase = loadTwoStepVerificationUseCase
+        )
+    }
+
+    val themeRepository: ThemeRepository by lazy {
+        LegacyThemeRepository(account)
+    }
+
+    val observeAppearanceSettingsUseCase: ObserveAppearanceSettingsUseCase
+        get() = ObserveAppearanceSettingsUseCase(themeRepository)
+
+    val getAppearanceSettingsUseCase: GetAppearanceSettingsUseCase
+        get() = GetAppearanceSettingsUseCase(themeRepository)
+
+    val observeAvailableThemesUseCase: ObserveAvailableThemesUseCase
+        get() = ObserveAvailableThemesUseCase(themeRepository)
+
+    val getAvailableThemesUseCase: GetAvailableThemesUseCase
+        get() = GetAvailableThemesUseCase(themeRepository)
+
+    val applyThemeUseCase: ApplyThemeUseCase
+        get() = ApplyThemeUseCase(themeRepository)
+
+    val observeNightModeUseCase: ObserveNightModeUseCase
+        get() = ObserveNightModeUseCase(themeRepository)
+
+    val setNightModeTypeUseCase: SetNightModeTypeUseCase
+        get() = SetNightModeTypeUseCase(themeRepository)
+
+    val setNightModeSettingsUseCase: SetNightModeSettingsUseCase
+        get() = SetNightModeSettingsUseCase(themeRepository)
+
+    val setThemeAccentUseCase: SetThemeAccentUseCase
+        get() = SetThemeAccentUseCase(themeRepository)
+
+    val setBubbleRadiusUseCase: SetBubbleRadiusUseCase
+        get() = SetBubbleRadiusUseCase(themeRepository)
+
+    val resetAppearanceSettingsUseCase: ResetAppearanceSettingsUseCase
+        get() = ResetAppearanceSettingsUseCase(themeRepository)
+
+    private var cachedThemeViewModel: ThemeViewModel? = null
+
+    val themeViewModel: ThemeViewModel
+        get() {
+            var vm = cachedThemeViewModel
+            if (vm == null) {
+                vm = createThemeViewModel()
+                cachedThemeViewModel = vm
+            }
+            return vm
+        }
+
+    fun createThemeViewModel(): ThemeViewModel {
+        return ThemeViewModel(
+            themeRepository = themeRepository,
+            observeAppearanceSettingsUseCase = observeAppearanceSettingsUseCase,
+            getAppearanceSettingsUseCase = getAppearanceSettingsUseCase,
+            observeAvailableThemesUseCase = observeAvailableThemesUseCase,
+            getAvailableThemesUseCase = getAvailableThemesUseCase,
+            applyThemeUseCase = applyThemeUseCase,
+            observeNightModeUseCase = observeNightModeUseCase,
+            setNightModeTypeUseCase = setNightModeTypeUseCase,
+            setNightModeSettingsUseCase = setNightModeSettingsUseCase,
+            setThemeAccentUseCase = setThemeAccentUseCase,
+            setBubbleRadiusUseCase = setBubbleRadiusUseCase,
+            resetAppearanceSettingsUseCase = resetAppearanceSettingsUseCase
         )
     }
 

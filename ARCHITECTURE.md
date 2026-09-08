@@ -463,6 +463,41 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── PrivacyUiState.kt
             ├── PrivacyEvent.kt
             └── PrivacyViewModel.kt
+    │
+    └── themes/                        # Themes, Night Mode, Appearance & Wallpaper Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── NightModeType.kt
+        │   │   ├── ThemeAccentModel.kt
+        │   │   ├── ThemeModel.kt
+        │   │   ├── NightModeSettingsModel.kt
+        │   │   ├── WallpaperModel.kt
+        │   │   └── AppearanceSettingsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ThemeRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveAppearanceSettingsUseCase.kt
+        │       ├── GetAppearanceSettingsUseCase.kt
+        │       ├── ObserveAvailableThemesUseCase.kt
+        │       ├── GetAvailableThemesUseCase.kt
+        │       ├── ApplyThemeUseCase.kt
+        │       ├── ObserveNightModeUseCase.kt
+        │       ├── SetNightModeTypeUseCase.kt
+        │       ├── SetNightModeSettingsUseCase.kt
+        │       ├── SetThemeAccentUseCase.kt
+        │       ├── SetBubbleRadiusUseCase.kt
+        │       └── ResetAppearanceSettingsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (ThemeInfo/SharedConfig -> Domain)
+        │   │   └── ThemeMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyThemeRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ThemeUiState.kt
+            ├── ThemeEvent.kt
+            └── ThemeViewModel.kt
 ```
 
 ### Layer Rules
@@ -596,10 +631,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObservePrivacyRulesUseCase`, `GetPrivacyRulesUseCase`, `SetPrivacyRuleUseCase`, `LoadPrivacyRulesUseCase`, `ObserveBlockedPeersUseCase`, `GetBlockedPeersUseCase`, `BlockPrivacyPeerUseCase`, `UnblockPrivacyPeerUseCase`, `GetPasscodeSettingsUseCase`, `SetPasscodeUseCase`, `CheckPasscodeUseCase`, `ClearPasscodeUseCase`, `ObserveTwoStepVerificationUseCase`, `LoadTwoStepVerificationUseCase`
   - [x] Data layer: `PrivacyMapper`, `LegacyPrivacyRepository` (Main-thread safe, adapting `ContactsController`, `MessagesController`, `SharedConfig`, and `NotificationCenterFlowBridge`)
   - [x] Presentation layer: `PrivacyUiState`, `PrivacyEvent`, `PrivacyViewModel`
+- [x] Themes, Night Mode, Appearance & Wallpaper (`feature.themes`)
+  - [x] Domain entities: `NightModeType`, `ThemeAccentModel`, `ThemeModel`, `NightModeSettingsModel`, `WallpaperModel`, `AppearanceSettingsModel`
+  - [x] Repository contract: `ThemeRepository`
+  - [x] Use cases: `ObserveAppearanceSettingsUseCase`, `GetAppearanceSettingsUseCase`, `ObserveAvailableThemesUseCase`, `GetAvailableThemesUseCase`, `ApplyThemeUseCase`, `ObserveNightModeUseCase`, `SetNightModeTypeUseCase`, `SetNightModeSettingsUseCase`, `SetThemeAccentUseCase`, `SetBubbleRadiusUseCase`, `ResetAppearanceSettingsUseCase`
+  - [x] Data layer: `ThemeMapper`, `LegacyThemeRepository` (Main-thread safe, adapting `Theme.java`, `SharedConfig`, and `NotificationCenterFlowBridge` global events)
+  - [x] Presentation layer: `ThemeUiState`, `ThemeEvent`, `ThemeViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 019: Themes, Night Mode, Appearance & Wallpaper Controller Isolation
+- **Context:** In Telegram Android, theme customization, day/night auto-switching, bubble radius, accent colors, and chat wallpapers are managed across `Theme.java` (~10150 lines), `SharedConfig` (bubble radius, font size), and `MessagesController.getGlobalMainSettings()`. Global theme states (`selectedAutoNightType`, `autoNightDayStartTime`, `autoNightBrighnessThreshold`, `ThemeInfo`, `ThemeAccent`) are heavily relied upon across hundreds of UI activities and custom views (`ThemeActivity`, `ChatActivity`, `ActionBar`).
+- **Decision:** Introduce pure domain models `ThemeModel`, `ThemeAccentModel`, `NightModeSettingsModel`, `WallpaperModel`, `AppearanceSettingsModel`, and enum `NightModeType`. Define abstract contract `ThemeRepository` and implement `LegacyThemeRepository` executing on `Dispatchers.Main` with reactive observation through `NotificationCenterFlowBridge.observeGlobalEvent` hooked into global lifecycle events (`didSetNewTheme`, `themeListUpdated`, `didApplyNewTheme`, `themeAccentListUpdated`, `needSetDayNightTheme`, `didSetNewWallpapper`).
+- **Consequences:** All theme switching, night mode scheduling, bubble radius manipulation, and wallpaper settings are decoupled behind a clean, reactive `ThemeViewModel` and testable domain use cases without breaking upstream compatibility or modifying monolithic `Theme.java`.
 
 ### ADR 018: Privacy, Security, Passcode & 2FA Controller Isolation
 - **Context:** In Telegram Android, user privacy rules (who sees phone, last seen, photos, forwards, voice messages, bio, birthday, gifts), the blocklist, passcode lock, and two-step verification (2FA) are spread across disparate subsystems: `ContactsController.privacyRules`, `MessagesController.blockePeers`, `SharedConfig.passcodeHash`, `SharedConfig.appLocked`, and `TL_account.getPassword`. UI activities (`PrivacySettingsActivity`, `PrivacyControlActivity`, `PrivacyUsersActivity`, `PasscodeActivity`) directly invoked MTProto requests and manipulated global flags, tightly coupling UI to legacy controllers.
