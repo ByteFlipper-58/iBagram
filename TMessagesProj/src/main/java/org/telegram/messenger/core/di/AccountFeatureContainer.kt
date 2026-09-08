@@ -309,6 +309,15 @@ import org.telegram.messenger.feature.joinrequests.domain.usecase.GetPendingRequ
 import org.telegram.messenger.feature.joinrequests.domain.usecase.LoadJoinRequestsUseCase
 import org.telegram.messenger.feature.joinrequests.domain.usecase.ObservePendingRequestsUseCase
 import org.telegram.messenger.feature.joinrequests.presentation.JoinRequestsViewModel
+import org.telegram.messenger.feature.factcheck.data.repository.LegacyFactCheckRepository
+import org.telegram.messenger.feature.factcheck.domain.repository.FactCheckRepository
+import org.telegram.messenger.feature.factcheck.domain.usecase.ApplyFactCheckUseCase
+import org.telegram.messenger.feature.factcheck.domain.usecase.DeleteFactCheckUseCase
+import org.telegram.messenger.feature.factcheck.domain.usecase.GetFactCheckLimitUseCase
+import org.telegram.messenger.feature.factcheck.domain.usecase.GetFactCheckUseCase
+import org.telegram.messenger.feature.factcheck.domain.usecase.LoadFactCheckUseCase
+import org.telegram.messenger.feature.factcheck.domain.usecase.ObserveFactCheckLoadedUseCase
+import org.telegram.messenger.feature.factcheck.presentation.FactCheckViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -1974,6 +1983,55 @@ class AccountFeatureContainer private constructor(val account: Int) {
             dismissJoinRequestUseCase = dismissJoinRequestUseCase,
             approveAllJoinRequestsUseCase = approveAllJoinRequestsUseCase,
             dismissAllJoinRequestsUseCase = dismissAllJoinRequestsUseCase
+        )
+    }
+
+    private var customFactCheckRepository: FactCheckRepository? = null
+
+    var factCheckRepository: FactCheckRepository
+        get() = customFactCheckRepository ?: LegacyFactCheckRepository(account)
+        set(value) {
+            customFactCheckRepository = value
+        }
+
+    val observeFactCheckLoadedUseCase: ObserveFactCheckLoadedUseCase
+        get() = ObserveFactCheckLoadedUseCase(factCheckRepository)
+
+    val getFactCheckUseCase: GetFactCheckUseCase
+        get() = GetFactCheckUseCase(factCheckRepository)
+
+    val loadFactCheckUseCase: LoadFactCheckUseCase
+        get() = LoadFactCheckUseCase(factCheckRepository)
+
+    val applyFactCheckUseCase: ApplyFactCheckUseCase
+        get() = ApplyFactCheckUseCase(factCheckRepository)
+
+    val deleteFactCheckUseCase: DeleteFactCheckUseCase
+        get() = DeleteFactCheckUseCase(factCheckRepository)
+
+    val getFactCheckLimitUseCase: GetFactCheckLimitUseCase
+        get() = GetFactCheckLimitUseCase(factCheckRepository)
+
+    private var cachedFactCheckViewModel: FactCheckViewModel? = null
+
+    val factCheckViewModel: FactCheckViewModel
+        get() {
+            var vm = cachedFactCheckViewModel
+            if (vm == null) {
+                vm = createFactCheckViewModel()
+                cachedFactCheckViewModel = vm
+            }
+            return vm
+        }
+
+    fun createFactCheckViewModel(): FactCheckViewModel {
+        return FactCheckViewModel(
+            observeFactCheckLoadedUseCase = observeFactCheckLoadedUseCase,
+            getFactCheckUseCase = getFactCheckUseCase,
+            loadFactCheckUseCase = loadFactCheckUseCase,
+            applyFactCheckUseCase = applyFactCheckUseCase,
+            deleteFactCheckUseCase = deleteFactCheckUseCase,
+            getFactCheckLimitUseCase = getFactCheckLimitUseCase
         )
     }
 

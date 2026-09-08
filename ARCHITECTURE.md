@@ -860,6 +860,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── JoinRequestsUiState.kt
             ├── JoinRequestsEvent.kt
             └── JoinRequestsViewModel.kt
+    │
+    └── factcheck/                      # Message Fact-Checks & Verification Annotations Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── FactCheckEntityModel.kt
+        │   │   ├── FactCheckModel.kt
+        │   │   └── FactCheckLimitsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── FactCheckRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveFactCheckLoadedUseCase.kt
+        │       ├── GetFactCheckUseCase.kt
+        │       ├── LoadFactCheckUseCase.kt
+        │       ├── ApplyFactCheckUseCase.kt
+        │       ├── DeleteFactCheckUseCase.kt
+        │       └── GetFactCheckLimitUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_factCheck -> Domain)
+        │   │   └── FactCheckMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyFactCheckRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── FactCheckUiState.kt
+            ├── FactCheckEvent.kt
+            └── FactCheckViewModel.kt
 ```
 
 ### Layer Rules
@@ -1065,10 +1092,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObservePendingRequestsUseCase`, `GetPendingRequestsCountUseCase`, `GetCachedJoinRequestsUseCase`, `LoadJoinRequestsUseCase`, `ApproveJoinRequestUseCase`, `DismissJoinRequestUseCase`, `ApproveAllJoinRequestsUseCase`, `DismissAllJoinRequestsUseCase`
   - [x] Data layer: `JoinRequestMapper`, `LegacyJoinRequestsRepository` (Main-thread safe, adapting `MemberRequestsController` and `ConnectionsManager` MTProto requests with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observing `NotificationCenter.chatInfoDidLoad`)
   - [x] Presentation layer: `JoinRequestsUiState`, `JoinRequestsEvent`, `JoinRequestsViewModel`
+- [x] Message Fact-Checks & Verification Annotations (`feature.factcheck`)
+  - [x] Domain entities: `FactCheckEntityModel`, `FactCheckModel`, `FactCheckLimitsModel`
+  - [x] Repository contract: `FactCheckRepository`
+  - [x] Use cases: `ObserveFactCheckLoadedUseCase`, `GetFactCheckUseCase`, `LoadFactCheckUseCase`, `ApplyFactCheckUseCase`, `DeleteFactCheckUseCase`, `GetFactCheckLimitUseCase`
+  - [x] Data layer: `FactCheckMapper`, `LegacyFactCheckRepository` (Main-thread safe, adapting `FactCheckController`, `MessagesController`, and `ConnectionsManager` MTProto `TL_getFactCheck`, `TL_editFactCheck`, `TL_deleteFactCheck` with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observing `NotificationCenter.factCheckLoaded`)
+  - [x] Presentation layer: `FactCheckUiState`, `FactCheckEvent`, `FactCheckViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 031: Message Fact-Checks & Community Annotations Controller Isolation
+- **Context:** In Telegram Android, message fact-checks and community verification annotations (`TLRPC.TL_factCheck`) were managed by `FactCheckController.java` (~596 lines). The controller intermixed low-level SQLite database caching (`saveToDatabase`, `getFromDatabase`, SQL queries on `fact_checks` table), MTProto batch loading (`TLRPC.TL_getFactCheck`), and heavy Android UI dialog construction (`openFactCheckEditor` with `AlertDialog`, custom `EditTextCaption`, spans, haptics, and bulletin messages). UI components like `ChatMessageCell.java` and `ChatActivity.java` directly invoked `FactCheckController.getInstance(account).getFactCheck(messageObject)` and `openFactCheckEditor`.
+- **Decision:** Introduce pure domain models `FactCheckEntityModel`, `FactCheckModel`, and `FactCheckLimitsModel`. Define abstract contract `FactCheckRepository` covering reactive fact-check updates observation (`observeFactCheckLoaded`), cached lookup, network loading (`loadFactCheck`), fact-check application/editing (`applyFactCheck`), deletion (`deleteFactCheck`), and character length limit querying (`getFactCheckLimit`). Implement `LegacyFactCheckRepository` operating on `Dispatchers.Main` with coroutine cancellation (`ConnectionsManager.cancelRequest`), `MessagesController.processUpdates` synchronization, and reactive `NotificationCenterFlowBridge` event bridging for `factCheckLoaded`. Encapsulate presentation state and MVI events in `FactCheckViewModel`.
+- **Consequences:** Fact-check editing, viewing, character length enforcement, and MTProto synchronization are decoupled behind clean, testable domain interfaces with complete unit test coverage while preserving 100% compatibility with Telegram's MTProto fact-check protocol and update processing pipeline.
 
 ### ADR 030: Join Requests & Chat Administration Controller Isolation
 - **Context:** In Telegram Android, managing pending join requests for supergroups and channels was fragmented across `MemberRequestsController.java` (~80 lines), `MemberRequestsDelegate.java` (~1110 lines), `ChatActivityMemberRequestsDelegate.java` (~210 lines), and `MemberRequestsBottomSheet.java` (~160 lines). UI delegates directly called MTProto queries (`TLRPC.TL_messages_getChatInviteImporters`, `TLRPC.TL_messages_hideChatJoinRequest`, `TLRPC.TL_messages_hideAllChatJoinRequests`) with anonymous `RequestDelegate` callbacks, mutating `ChatFull` structures in memory and invoking UI alerts from network callbacks.
