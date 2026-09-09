@@ -631,6 +631,15 @@ import org.telegram.messenger.feature.draftmeasure.domain.usecase.SetDraftMeasur
 import org.telegram.messenger.feature.draftmeasure.domain.usecase.SetPreviousMessageHeightUseCase
 import org.telegram.messenger.feature.draftmeasure.presentation.DraftMeasureViewModel
 import org.telegram.ui.Components.chat.ChatActivityDraftMessageMeasureController
+import org.telegram.messenger.feature.bottomviews.data.repository.LegacyBottomViewsVisibilityRepository
+import org.telegram.messenger.feature.bottomviews.domain.repository.BottomViewsVisibilityRepository
+import org.telegram.messenger.feature.bottomviews.domain.usecase.GetBottomViewVisibilityUseCase
+import org.telegram.messenger.feature.bottomviews.domain.usecase.GetBottomViewsStateUseCase
+import org.telegram.messenger.feature.bottomviews.domain.usecase.GetPriorityBottomContainerUseCase
+import org.telegram.messenger.feature.bottomviews.domain.usecase.ObserveBottomViewsVisibilityUseCase
+import org.telegram.messenger.feature.bottomviews.domain.usecase.SetBottomViewVisibleUseCase
+import org.telegram.messenger.feature.bottomviews.presentation.BottomViewsViewModel
+import org.telegram.ui.Components.chat.ChatActivityBottomViewsVisibilityController
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3989,6 +3998,50 @@ class AccountFeatureContainer private constructor(val account: Int) {
             resetTargetUseCase = ResetDraftMeasureTargetUseCase(repo),
             observeConfigUseCase = ObserveDraftMeasureConfigUseCase(repo),
             getConfigUseCase = GetDraftMeasureConfigUseCase(repo)
+        )
+    }
+
+    fun createBottomViewsRepository(legacyController: ChatActivityBottomViewsVisibilityController? = null): BottomViewsVisibilityRepository {
+        return LegacyBottomViewsVisibilityRepository(legacyController)
+    }
+
+    val bottomViewsRepository: BottomViewsVisibilityRepository by lazy {
+        LegacyBottomViewsVisibilityRepository()
+    }
+
+    val getBottomViewVisibilityUseCase: GetBottomViewVisibilityUseCase
+        get() = GetBottomViewVisibilityUseCase(bottomViewsRepository)
+
+    val setBottomViewVisibleUseCase: SetBottomViewVisibleUseCase
+        get() = SetBottomViewVisibleUseCase(bottomViewsRepository)
+
+    val getPriorityBottomContainerUseCase: GetPriorityBottomContainerUseCase
+        get() = GetPriorityBottomContainerUseCase(bottomViewsRepository)
+
+    val getBottomViewsStateUseCase: GetBottomViewsStateUseCase
+        get() = GetBottomViewsStateUseCase(bottomViewsRepository)
+
+    val observeBottomViewsVisibilityUseCase: ObserveBottomViewsVisibilityUseCase
+        get() = ObserveBottomViewsVisibilityUseCase(bottomViewsRepository)
+
+    private var cachedBottomViewsViewModel: BottomViewsViewModel? = null
+
+    val bottomViewsViewModel: BottomViewsViewModel
+        get() {
+            var vm = cachedBottomViewsViewModel
+            if (vm == null) {
+                vm = createBottomViewsViewModel()
+                cachedBottomViewsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBottomViewsViewModel(legacyController: ChatActivityBottomViewsVisibilityController? = null): BottomViewsViewModel {
+        val repo = if (legacyController != null) createBottomViewsRepository(legacyController) else bottomViewsRepository
+        return BottomViewsViewModel(
+            observeBottomViewsVisibilityUseCase = ObserveBottomViewsVisibilityUseCase(repo),
+            getBottomViewsStateUseCase = GetBottomViewsStateUseCase(repo),
+            setBottomViewVisibleUseCase = SetBottomViewVisibleUseCase(repo)
         )
     }
 

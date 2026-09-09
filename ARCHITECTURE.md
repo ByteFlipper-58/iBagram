@@ -1768,6 +1768,31 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── DraftMeasureUiState.kt
             ├── DraftMeasureEvent.kt
             └── DraftMeasureViewModel.kt
+    │
+    └── bottomviews/                       # Chat Bottom Views Visibility Arbitration Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (BottomContainerType, BottomViewsVisibilityState)
+        │   │   ├── BottomContainerType.kt
+        │   │   └── BottomViewsVisibilityState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BottomViewsVisibilityRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── GetBottomViewVisibilityUseCase.kt
+        │       ├── SetBottomViewVisibleUseCase.kt
+        │       ├── GetPriorityBottomContainerUseCase.kt
+        │       ├── GetBottomViewsStateUseCase.kt
+        │       └── ObserveBottomViewsVisibilityUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Bitwise priority calculation <-> Domain state)
+        │   │   └── BottomViewsVisibilityMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBottomViewsVisibilityRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BottomViewsUiState.kt
+            ├── BottomViewsEvent.kt
+            └── BottomViewsViewModel.kt
 ```
 
 ### Layer Rules
@@ -2165,10 +2190,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `CalculateDraftMeasureOverrideUseCase`, `SetDraftMeasureTargetUseCase`, `OnDraftMessageIdChangedUseCase`, `SetPreviousMessageHeightUseCase`, `ResetDraftMeasureTargetUseCase`, `ObserveDraftMeasureConfigUseCase`, `GetDraftMeasureConfigUseCase`
   - [x] Data layer: `DraftMeasureMapper`, `LegacyDraftMeasureRepository` (thread safe, adapting `ChatActivityDraftMessageMeasureController`, viewport measurement constraints, headless in-memory fallback)
   - [x] Presentation layer: `DraftMeasureUiState`, `DraftMeasureEvent`, `DraftMeasureViewModel`
+- [x] Chat Bottom Views Visibility Arbitration (`feature.bottomviews`)
+  - [x] Domain entities: `BottomContainerType`, `BottomViewsVisibilityState`
+  - [x] Repository contract: `BottomViewsVisibilityRepository`
+  - [x] Use cases: `GetBottomViewVisibilityUseCase`, `SetBottomViewVisibleUseCase`, `GetPriorityBottomContainerUseCase`, `GetBottomViewsStateUseCase`, `ObserveBottomViewsVisibilityUseCase`
+  - [x] Data layer: `BottomViewsVisibilityMapper`, `LegacyBottomViewsVisibilityRepository` (thread safe, adapting `ChatActivityBottomViewsVisibilityController`, bitwise priority calculation, headless in-memory fallback)
+  - [x] Presentation layer: `BottomViewsUiState`, `BottomViewsEvent`, `BottomViewsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 063: Isolation of Chat Bottom Views Visibility Arbitration into feature.bottomviews
+- **Context:** In Telegram Android, mutual exclusion and visibility transitions between bottom chat components (message input field, audio/video recording panel, media attachments, search bar, message actions/selection bar, join channel bar, bot overlays) were arbitrated by `ChatActivityBottomViewsVisibilityController.java` (~63 lines) located in `org.telegram.ui.Components.chat`. The controller coupled bitwise container flags (`visibilityFlags`, `1 << containerId`), highest-bit priority selection (`31 - Integer.numberOfLeadingZeros(flags)`), custom UI animator callbacks (`ReplaceAnimator.Callback`), float array visibility weights (`float[32]`), and `ChatActivity` view hierarchy updates (`checkBottomViewVisibility`, `actionsButtonsLayout`, `chatActivityEnterView`).
+- **Decision:** Introduce pure domain models `BottomContainerType` (DEFAULT, MESSAGE_INPUT, BOTTOM_OVERLAY_TEXT, BOTTOM_OVERLAY_CHAT, MESSAGE_SEARCH, MESSAGE_ACTION) and `BottomViewsVisibilityState` (with bitwise visibility queries and container alpha lookups). Define abstract contract `BottomViewsVisibilityRepository` covering container visibility queries (`getVisibility`), visibility mutation (`setViewVisible`), priority identification (`getCurrentPriorityContainerId`), snapshot retrieval (`getState`), and reactive observation (`observeState`). Implement `LegacyBottomViewsVisibilityRepository` adapting `ChatActivityBottomViewsVisibilityController` while maintaining a standalone in-memory bitwise arbitration state for headless JVM unit testing. Encapsulate presentation state and MVI events in `BottomViewsViewModel`.
+- **Consequences:** All bottom bar arbitration, priority resolution, mutual exclusivity rules, and container visibility transitions are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `ChatActivityBottomViewsVisibilityController` and animations.
 
 ### ADR 062: Isolation of Chat Draft Message Measure & Height Override into feature.draftmeasure
 - **Context:** In Telegram Android, dynamic height calculations and vertical space overrides for message cells when expanding or sending drafts were handled by `ChatActivityDraftMessageMeasureController.java` (~109 lines) in `org.telegram.ui.Components.chat`. The controller directly coupled Android `RecyclerView` measurements (`getHeight()`, `getPaddingTop()`, `getPaddingBottom()`), `ChatMessageCell`, `ChatActionCell`, internal `MessageObject` ID/group ID tracking, and mutable layout override flags (`hasAdditionalHeight`, `previousMessageHeight`). UI components in `ChatActivity.java` and `ChatMessageCell.java` had direct references to `ChatActivityDraftMessageMeasureController`.
