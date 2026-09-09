@@ -995,6 +995,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ProxyUiState.kt
             ├── ProxyEvent.kt
             └── ProxyViewModel.kt
+    │
+    └── autodelete/                     # Auto-Delete Messages & Global History TTL Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── AutoDeleteTtlModel.kt
+        │   │   ├── GlobalAutoDeleteStateModel.kt
+        │   │   └── ChatAutoDeleteStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── AutoDeleteRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveGlobalAutoDeleteUseCase.kt
+        │       ├── GetGlobalAutoDeleteUseCase.kt
+        │       ├── SetGlobalAutoDeleteUseCase.kt
+        │       ├── GetChatAutoDeleteUseCase.kt
+        │       ├── SetChatAutoDeleteUseCase.kt
+        │       └── SetChatsAutoDeleteBatchUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TLRPC TTL <-> Domain)
+        │   │   └── AutoDeleteMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyAutoDeleteRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── AutoDeleteUiState.kt
+            ├── AutoDeleteEvent.kt
+            └── AutoDeleteViewModel.kt
 ```
 
 ### Layer Rules
@@ -1230,10 +1257,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveProxySettingsUseCase`, `GetProxySettingsUseCase`, `AddProxyUseCase`, `DeleteProxyUseCase`, `EnableProxyUseCase`, `DisableProxyUseCase`, `ToggleProxyRotationUseCase`, `CheckProxyPingUseCase`
   - [x] Data layer: `ProxyMapper`, `LegacyProxyRepository` (Main-thread safe, adapting `SharedConfig`, `ProxyRotationController`, and `ConnectionsManager.checkProxy` with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observation)
   - [x] Presentation layer: `ProxyUiState`, `ProxyEvent`, `ProxyViewModel`
+- [x] Auto-Delete Messages, Global History TTL & Chat Lifetime (`feature.autodelete`)
+  - [x] Domain entities: `AutoDeleteTtlModel`, `GlobalAutoDeleteStateModel`, `ChatAutoDeleteStateModel`
+  - [x] Repository contract: `AutoDeleteRepository`
+  - [x] Use cases: `ObserveGlobalAutoDeleteUseCase`, `GetGlobalAutoDeleteUseCase`, `SetGlobalAutoDeleteUseCase`, `GetChatAutoDeleteUseCase`, `SetChatAutoDeleteUseCase`, `SetChatsAutoDeleteBatchUseCase`
+  - [x] Data layer: `AutoDeleteMapper`, `LegacyAutoDeleteRepository` (Main-thread safe, adapting `UserConfig.getGlobalTTl`, `MessagesController.setDialogHistoryTTL`, `TL_messages_setDefaultHistoryTTL` with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observation)
+  - [x] Presentation layer: `AutoDeleteUiState`, `AutoDeleteEvent`, `AutoDeleteViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 036: Auto-Delete Messages & Global History TTL Isolation
+- **Context:** In Telegram Android, message auto-delete and self-destruct timers operate on two distinct levels: global account-level default TTL for new chats (`TLRPC.TL_messages_setDefaultHistoryTTL`, `UserConfig.getGlobalTTl()`, `NotificationCenter.didUpdateGlobalAutoDeleteTimer`), and per-dialog TTL periods (`MessagesController.setDialogHistoryTTL`, `TLRPC.TL_messages_setHistoryTTL`, `dialog.ttl_period`). Presentation logic inside `AutoDeleteMessagesActivity.java` (~337 lines) directly handled raw MTProto request dispatching, manual seconds/minutes conversions, direct `UserConfig` mutations, and custom UI transitions mixed with networking callbacks.
+- **Decision:** Introduce pure domain models `AutoDeleteTtlModel` (with standard intervals OFF, 1 day, 1 week, 1 month, and custom periods), `GlobalAutoDeleteStateModel`, and `ChatAutoDeleteStateModel`. Define abstract contract `AutoDeleteRepository` covering reactive global TTL observation (`observeGlobalAutoDelete`), global TTL retrieval/setting (`getGlobalAutoDelete`, `setGlobalAutoDelete`), chat-specific TTL retrieval/setting (`getChatAutoDelete`, `setChatAutoDelete`), and batch application across multiple dialogs (`setChatsAutoDeleteBatch`). Implement `LegacyAutoDeleteRepository` operating safely on `Dispatchers.Main` with `suspendCancellableCoroutine` for asynchronous MTProto network synchronization and reactive `NotificationCenterFlowBridge` observation. Encapsulate presentation state and MVI events in `AutoDeleteViewModel`.
+- **Consequences:** Auto-delete timers, global history TTL configuration, and chat-level lifetime rules are cleanly decoupled behind testable domain interfaces with complete unit test coverage while maintaining 100% compatibility with Telegram's core networking layer and MTProto history TTL protocol.
 
 ### ADR 035: Proxy Configuration, Server Management & Auto-Rotation Isolation
 - **Context:** In Telegram Android, proxy configuration, server management (Socks5 and MTProto), ping checking, and auto-rotation were managed across `SharedConfig.java` (`proxyList`, `currentProxy`, `isProxyEnabled`, `deleteProxy`, `addProxy`), `ProxyRotationController.java` (`ROTATION_TIMEOUTS`, `switchToAvailable`, ping timeout scheduling), `ConnectionsManager.java` (`setProxySettings`, `checkProxy`), and UI components (`ProxyListActivity.java` ~1128 lines, `ProxySettingsActivity.java`, `AndroidUtilities.showProxyAlert`). State management relied on scattered static fields, raw SharedPreferences (`proxy_ip`, `proxy_port`, `proxy_user`, `proxy_pass`, `proxy_secret`, `proxy_enabled`, `proxyRotationEnabled`, `proxyRotationTimeout`), and global `NotificationCenter` broadcasts (`proxySettingsChanged`, `proxyCheckDone`, `proxyChangedByRotation`).

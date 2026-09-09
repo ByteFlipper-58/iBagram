@@ -355,6 +355,15 @@ import org.telegram.messenger.feature.proxy.domain.usecase.GetProxySettingsUseCa
 import org.telegram.messenger.feature.proxy.domain.usecase.ObserveProxySettingsUseCase
 import org.telegram.messenger.feature.proxy.domain.usecase.ToggleProxyRotationUseCase
 import org.telegram.messenger.feature.proxy.presentation.ProxyViewModel
+import org.telegram.messenger.feature.autodelete.data.repository.LegacyAutoDeleteRepository
+import org.telegram.messenger.feature.autodelete.domain.repository.AutoDeleteRepository
+import org.telegram.messenger.feature.autodelete.domain.usecase.GetChatAutoDeleteUseCase
+import org.telegram.messenger.feature.autodelete.domain.usecase.GetGlobalAutoDeleteUseCase
+import org.telegram.messenger.feature.autodelete.domain.usecase.ObserveGlobalAutoDeleteUseCase
+import org.telegram.messenger.feature.autodelete.domain.usecase.SetChatAutoDeleteUseCase
+import org.telegram.messenger.feature.autodelete.domain.usecase.SetChatsAutoDeleteBatchUseCase
+import org.telegram.messenger.feature.autodelete.domain.usecase.SetGlobalAutoDeleteUseCase
+import org.telegram.messenger.feature.autodelete.presentation.AutoDeleteViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2269,6 +2278,55 @@ class AccountFeatureContainer private constructor(val account: Int) {
             disableProxyUseCase = disableProxyUseCase,
             toggleProxyRotationUseCase = toggleProxyRotationUseCase,
             checkProxyPingUseCase = checkProxyPingUseCase
+        )
+    }
+
+    private var customAutoDeleteRepository: AutoDeleteRepository? = null
+
+    var autoDeleteRepository: AutoDeleteRepository
+        get() = customAutoDeleteRepository ?: LegacyAutoDeleteRepository(account)
+        set(value) {
+            customAutoDeleteRepository = value
+        }
+
+    val observeGlobalAutoDeleteUseCase: ObserveGlobalAutoDeleteUseCase
+        get() = ObserveGlobalAutoDeleteUseCase(autoDeleteRepository)
+
+    val getGlobalAutoDeleteUseCase: GetGlobalAutoDeleteUseCase
+        get() = GetGlobalAutoDeleteUseCase(autoDeleteRepository)
+
+    val setGlobalAutoDeleteUseCase: SetGlobalAutoDeleteUseCase
+        get() = SetGlobalAutoDeleteUseCase(autoDeleteRepository)
+
+    val getChatAutoDeleteUseCase: GetChatAutoDeleteUseCase
+        get() = GetChatAutoDeleteUseCase(autoDeleteRepository)
+
+    val setChatAutoDeleteUseCase: SetChatAutoDeleteUseCase
+        get() = SetChatAutoDeleteUseCase(autoDeleteRepository)
+
+    val setChatsAutoDeleteBatchUseCase: SetChatsAutoDeleteBatchUseCase
+        get() = SetChatsAutoDeleteBatchUseCase(autoDeleteRepository)
+
+    private var cachedAutoDeleteViewModel: AutoDeleteViewModel? = null
+
+    val autoDeleteViewModel: AutoDeleteViewModel
+        get() {
+            var vm = cachedAutoDeleteViewModel
+            if (vm == null) {
+                vm = createAutoDeleteViewModel()
+                cachedAutoDeleteViewModel = vm
+            }
+            return vm
+        }
+
+    fun createAutoDeleteViewModel(): AutoDeleteViewModel {
+        return AutoDeleteViewModel(
+            observeGlobalAutoDeleteUseCase = observeGlobalAutoDeleteUseCase,
+            getGlobalAutoDeleteUseCase = getGlobalAutoDeleteUseCase,
+            setGlobalAutoDeleteUseCase = setGlobalAutoDeleteUseCase,
+            getChatAutoDeleteUseCase = getChatAutoDeleteUseCase,
+            setChatAutoDeleteUseCase = setChatAutoDeleteUseCase,
+            setChatsAutoDeleteBatchUseCase = setChatsAutoDeleteBatchUseCase
         )
     }
 
