@@ -1188,6 +1188,36 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BiometricsUiState.kt
             ├── BiometricsEvent.kt
             └── BiometricsViewModel.kt
+    │
+    └── giftauctions/                     # Telegram Star Gift Auctions & Real-Time Bidding Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & status enums
+        │   │   ├── GiftAuctionStatus.kt
+        │   │   ├── GiftAuctionModel.kt
+        │   │   ├── GiftAuctionBidParamsModel.kt
+        │   │   └── GiftAuctionAcquiredGiftModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── GiftAuctionsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveActiveAuctionsUseCase.kt
+        │       ├── ObserveAuctionUseCase.kt
+        │       ├── GetActiveAuctionsUseCase.kt
+        │       ├── GetAuctionByIdUseCase.kt
+        │       ├── GetAuctionBySlugUseCase.kt
+        │       ├── SendAuctionBidUseCase.kt
+        │       ├── LoadAuctionAcquiredGiftsUseCase.kt
+        │       └── RefreshActiveAuctionsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_stars <-> Domain, bid params)
+        │   │   └── GiftAuctionMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyGiftAuctionsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── GiftAuctionsUiState.kt
+            ├── GiftAuctionsEvent.kt
+            └── GiftAuctionsViewModel.kt
 ```
 
 ### Layer Rules
@@ -1465,10 +1495,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveBiometricKeyStateUseCase`, `GetBiometricKeyStateUseCase`, `CheckBiometricKeyReadyUseCase`, `DeleteInvalidBiometricKeyUseCase`, `IsBiometricKeyReadyUseCase`, `HasDeviceBiometricsChangedUseCase`
   - [x] Data layer: `BiometricMapper`, `LegacyBiometricsRepository` (Safe across Android versions M+, adapts `FingerprintController`, `NotificationCenter.didGenerateFingerprintKeyPair`)
   - [x] Presentation layer: `BiometricsUiState`, `BiometricsEvent`, `BiometricsViewModel`
+- [x] Telegram Star Gift Auctions & Real-Time Bidding (`feature.giftauctions`)
+  - [x] Domain entities: `GiftAuctionStatus`, `GiftAuctionModel`, `GiftAuctionBidParamsModel`, `GiftAuctionAcquiredGiftModel`
+  - [x] Repository contract: `GiftAuctionsRepository`
+  - [x] Use cases: `ObserveActiveAuctionsUseCase`, `ObserveAuctionUseCase`, `GetActiveAuctionsUseCase`, `GetAuctionByIdUseCase`, `GetAuctionBySlugUseCase`, `SendAuctionBidUseCase`, `LoadAuctionAcquiredGiftsUseCase`, `RefreshActiveAuctionsUseCase`
+  - [x] Data layer: `GiftAuctionMapper`, `LegacyGiftAuctionsRepository` (Main-thread safe, adapting `GiftAuctionController`, `OnAuctionUpdateListener`, `OnActiveAuctionsUpdateListeners`, and MTProto Star Gift auction protocols)
+  - [x] Presentation layer: `GiftAuctionsUiState`, `GiftAuctionsEvent`, `GiftAuctionsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 043: Telegram Star Gift Auctions & Real-Time Bidding Isolation
+- **Context:** In Telegram Android, competitive bidding and real-time auctions for limited-edition Telegram Star Gifts were managed by `GiftAuctionController.java` (~780 lines). The controller directly handled in-memory auction caches (`LongSparseArray<AuctionInternal>`), active auctions list, subscriber listeners (`ReferenceMap<Long, OnAuctionUpdateListener>`), dynamic timer resubscriptions based on server `timeout`, payment invoice requests (`TLRPC.TL_payments_getPaymentForm`, `TL_stars.TL_payments_sendStarsForm`), hash calculation for active auctions (`MediaDataController.calcHash`), and acquired gifts queries (`TL_payments.TL_getStarGiftAuctionAcquiredGifts`). UI sheets like `AuctionBidSheet.java` (~1027 lines) and `AcquiredGiftsSheet.java` directly invoked `GiftAuctionController.getInstance(account)`.
+- **Decision:** Introduce pure domain models `GiftAuctionStatus` (ACTIVE, FINISHED, UNKNOWN), `GiftAuctionModel`, `GiftAuctionBidParamsModel`, and `GiftAuctionAcquiredGiftModel`. Define abstract contract `GiftAuctionsRepository` covering reactive active auctions observation (`observeActiveAuctions`), per-gift real-time observation (`observeAuction`), snapshot retrieval (`getActiveAuctions`, `getAuctionById`, `getAuctionBySlug`), bidding (`sendBid`), acquired gifts loading (`loadAcquiredGifts`), and active auctions refresh (`refreshActiveAuctions`). Implement `LegacyGiftAuctionsRepository` operating safely on `Dispatchers.Main` with `callbackFlow` converting `OnAuctionUpdateListener` and `OnActiveAuctionsUpdateListeners` into cold Kotlin Flow streams, and `suspendCancellableCoroutine` for bidding and requests. Encapsulate presentation state and MVI events in `GiftAuctionsViewModel`.
+- **Consequences:** Star gift auctions, real-time bidding, acquired gifts tracking, and timer updates are cleanly decoupled behind testable domain interfaces with full unit test coverage while maintaining 100% compatibility with Telegram's core auction controller and MTProto star payments protocols.
 
 ### ADR 042: Biometrics, Hardware Keystore & Passcode Authentication Isolation
 - **Context:** In Telegram Android, hardware-backed biometric security and cryptographic key pair generation for passcode authentication was managed by `FingerprintController.java` (~145 lines). The controller directly coupled AndroidKeyStore RSA-OAEP key pair generation (`KEY_ALIAS = "tmessages_passcode"`), device locale switching hacks to circumvent AndroidKeyStore bugs in RTL languages, KeyPermanentlyInvalidatedException detection for changed device biometrics, and untyped global broadcasts (`NotificationCenter.didGenerateFingerprintKeyPair`). UI components like `PasscodeView.java` and `LaunchActivity.java` directly queried static methods (`FingerprintController.checkKeyReady()`, `FingerprintController.isKeyReady()`, `FingerprintController.checkDeviceFingerprintsChanged()`) without state isolation or testability.

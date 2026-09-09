@@ -423,6 +423,17 @@ import org.telegram.messenger.feature.biometrics.domain.usecase.HasDeviceBiometr
 import org.telegram.messenger.feature.biometrics.domain.usecase.IsBiometricKeyReadyUseCase
 import org.telegram.messenger.feature.biometrics.domain.usecase.ObserveBiometricKeyStateUseCase
 import org.telegram.messenger.feature.biometrics.presentation.BiometricsViewModel
+import org.telegram.messenger.feature.giftauctions.data.repository.LegacyGiftAuctionsRepository
+import org.telegram.messenger.feature.giftauctions.domain.repository.GiftAuctionsRepository
+import org.telegram.messenger.feature.giftauctions.domain.usecase.GetActiveAuctionsUseCase
+import org.telegram.messenger.feature.giftauctions.domain.usecase.GetAuctionByIdUseCase
+import org.telegram.messenger.feature.giftauctions.domain.usecase.GetAuctionBySlugUseCase
+import org.telegram.messenger.feature.giftauctions.domain.usecase.LoadAuctionAcquiredGiftsUseCase
+import org.telegram.messenger.feature.giftauctions.domain.usecase.ObserveActiveAuctionsUseCase
+import org.telegram.messenger.feature.giftauctions.domain.usecase.ObserveAuctionUseCase
+import org.telegram.messenger.feature.giftauctions.domain.usecase.RefreshActiveAuctionsUseCase
+import org.telegram.messenger.feature.giftauctions.domain.usecase.SendAuctionBidUseCase
+import org.telegram.messenger.feature.giftauctions.presentation.GiftAuctionsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2700,6 +2711,63 @@ class AccountFeatureContainer private constructor(val account: Int) {
             deleteInvalidBiometricKeyUseCase = deleteInvalidBiometricKeyUseCase,
             isBiometricKeyReadyUseCase = isBiometricKeyReadyUseCase,
             hasDeviceBiometricsChangedUseCase = hasDeviceBiometricsChangedUseCase
+        )
+    }
+
+    private var customGiftAuctionsRepository: GiftAuctionsRepository? = null
+
+    var giftAuctionsRepository: GiftAuctionsRepository
+        get() = customGiftAuctionsRepository ?: LegacyGiftAuctionsRepository(account)
+        set(value) {
+            customGiftAuctionsRepository = value
+        }
+
+    val observeActiveAuctionsUseCase: ObserveActiveAuctionsUseCase
+        get() = ObserveActiveAuctionsUseCase(giftAuctionsRepository)
+
+    val observeAuctionUseCase: ObserveAuctionUseCase
+        get() = ObserveAuctionUseCase(giftAuctionsRepository)
+
+    val getActiveAuctionsUseCase: GetActiveAuctionsUseCase
+        get() = GetActiveAuctionsUseCase(giftAuctionsRepository)
+
+    val getAuctionByIdUseCase: GetAuctionByIdUseCase
+        get() = GetAuctionByIdUseCase(giftAuctionsRepository)
+
+    val getAuctionBySlugUseCase: GetAuctionBySlugUseCase
+        get() = GetAuctionBySlugUseCase(giftAuctionsRepository)
+
+    val sendAuctionBidUseCase: SendAuctionBidUseCase
+        get() = SendAuctionBidUseCase(giftAuctionsRepository)
+
+    val loadAuctionAcquiredGiftsUseCase: LoadAuctionAcquiredGiftsUseCase
+        get() = LoadAuctionAcquiredGiftsUseCase(giftAuctionsRepository)
+
+    val refreshActiveAuctionsUseCase: RefreshActiveAuctionsUseCase
+        get() = RefreshActiveAuctionsUseCase(giftAuctionsRepository)
+
+    private var cachedGiftAuctionsViewModel: GiftAuctionsViewModel? = null
+
+    val giftAuctionsViewModel: GiftAuctionsViewModel
+        get() {
+            var vm = cachedGiftAuctionsViewModel
+            if (vm == null) {
+                vm = createGiftAuctionsViewModel()
+                cachedGiftAuctionsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createGiftAuctionsViewModel(): GiftAuctionsViewModel {
+        return GiftAuctionsViewModel(
+            observeActiveAuctionsUseCase = observeActiveAuctionsUseCase,
+            observeAuctionUseCase = observeAuctionUseCase,
+            getActiveAuctionsUseCase = getActiveAuctionsUseCase,
+            getAuctionByIdUseCase = getAuctionByIdUseCase,
+            getAuctionBySlugUseCase = getAuctionBySlugUseCase,
+            sendAuctionBidUseCase = sendAuctionBidUseCase,
+            loadAuctionAcquiredGiftsUseCase = loadAuctionAcquiredGiftsUseCase,
+            refreshActiveAuctionsUseCase = refreshActiveAuctionsUseCase
         )
     }
 
