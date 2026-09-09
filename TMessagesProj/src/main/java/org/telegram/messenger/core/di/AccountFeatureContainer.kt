@@ -590,6 +590,15 @@ import org.telegram.messenger.feature.drafts.domain.usecase.LoadDraftsUseCase
 import org.telegram.messenger.feature.drafts.domain.usecase.ObserveDraftsStateUseCase
 import org.telegram.messenger.feature.drafts.domain.usecase.SaveDraftUseCase
 import org.telegram.messenger.feature.drafts.presentation.DraftsViewModel
+import org.telegram.messenger.feature.fileref.data.repository.LegacyFileRefRepository
+import org.telegram.messenger.feature.fileref.domain.repository.FileRefRepository
+import org.telegram.messenger.feature.fileref.domain.usecase.CancelFileRefRequestUseCase
+import org.telegram.messenger.feature.fileref.domain.usecase.ClearFileRefCacheUseCase
+import org.telegram.messenger.feature.fileref.domain.usecase.GetFileRefStatsUseCase
+import org.telegram.messenger.feature.fileref.domain.usecase.NotifyReferenceRenewedUseCase
+import org.telegram.messenger.feature.fileref.domain.usecase.ObserveFileRefStatsUseCase
+import org.telegram.messenger.feature.fileref.domain.usecase.RequestReferenceRenewalUseCase
+import org.telegram.messenger.feature.fileref.presentation.FileRefViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3729,6 +3738,57 @@ class AccountFeatureContainer private constructor(val account: Int) {
             deleteForEditUseCase = deleteForEditUseCase,
             getDraftForEditUseCase = getDraftForEditUseCase,
             cleanupExpiredDraftsUseCase = cleanupExpiredDraftsUseCase
+        )
+    }
+
+    // ==========================================
+    // Feature: FileRef (MTProto File Reference Renewal)
+    // ==========================================
+
+    private var customFileRefRepository: FileRefRepository? = null
+
+    var fileRefRepository: FileRefRepository
+        get() = customFileRefRepository ?: LegacyFileRefRepository(account)
+        set(value) { customFileRefRepository = value }
+
+    val observeFileRefStatsUseCase: ObserveFileRefStatsUseCase
+        get() = ObserveFileRefStatsUseCase(fileRefRepository)
+
+    val getFileRefStatsUseCase: GetFileRefStatsUseCase
+        get() = GetFileRefStatsUseCase(fileRefRepository)
+
+    val requestReferenceRenewalUseCase: RequestReferenceRenewalUseCase
+        get() = RequestReferenceRenewalUseCase(fileRefRepository)
+
+    val notifyReferenceRenewedUseCase: NotifyReferenceRenewedUseCase
+        get() = NotifyReferenceRenewedUseCase(fileRefRepository)
+
+    val cancelFileRefRequestUseCase: CancelFileRefRequestUseCase
+        get() = CancelFileRefRequestUseCase(fileRefRepository)
+
+    val clearFileRefCacheUseCase: ClearFileRefCacheUseCase
+        get() = ClearFileRefCacheUseCase(fileRefRepository)
+
+    private var cachedFileRefViewModel: FileRefViewModel? = null
+
+    val fileRefViewModel: FileRefViewModel
+        get() {
+            var vm = cachedFileRefViewModel
+            if (vm == null) {
+                vm = createFileRefViewModel()
+                cachedFileRefViewModel = vm
+            }
+            return vm
+        }
+
+    fun createFileRefViewModel(): FileRefViewModel {
+        return FileRefViewModel(
+            observeFileRefStatsUseCase = observeFileRefStatsUseCase,
+            getFileRefStatsUseCase = getFileRefStatsUseCase,
+            requestReferenceRenewalUseCase = requestReferenceRenewalUseCase,
+            notifyReferenceRenewedUseCase = notifyReferenceRenewedUseCase,
+            cancelFileRefRequestUseCase = cancelFileRefRequestUseCase,
+            clearFileRefCacheUseCase = clearFileRefCacheUseCase
         )
     }
 

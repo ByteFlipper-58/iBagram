@@ -1653,6 +1653,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── DraftsUiState.kt
             ├── DraftsEvent.kt
             └── DraftsViewModel.kt
+    │
+    └── fileref/                           # MTProto File Reference Renewal & Parent Cache Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── FileRefParentType.kt
+        │   │   ├── FileRefRequestItem.kt
+        │   │   ├── FileRefCacheEntry.kt
+        │   │   └── FileRefStatsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── FileRefRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveFileRefStatsUseCase.kt
+        │       ├── GetFileRefStatsUseCase.kt
+        │       ├── RequestReferenceRenewalUseCase.kt
+        │       ├── NotifyReferenceRenewedUseCase.kt
+        │       ├── CancelFileRefRequestUseCase.kt
+        │       └── ClearFileRefCacheUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Legacy objects <-> Domain)
+        │   │   └── FileRefMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyFileRefRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── FileRefUiState.kt
+            ├── FileRefEvent.kt
+            └── FileRefViewModel.kt
 ```
 
 ### Layer Rules
@@ -2026,10 +2054,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveDraftsStateUseCase`, `GetDraftsStateUseCase`, `LoadDraftsUseCase`, `SaveDraftUseCase`, `DeleteDraftUseCase`, `DeleteForEditUseCase`, `GetDraftForEditUseCase`, `CleanupExpiredDraftsUseCase`
   - [x] Data layer: `DraftsMapper`, `LegacyDraftsRepository` (Main-thread safe, adapting `DraftsController`, `MessagesStorage` SQLite persistence, and 7-day expiration cleanup)
   - [x] Presentation layer: `DraftsUiState`, `DraftsEvent`, `DraftsViewModel`
+- [x] MTProto File Reference Renewal & Parent Cache (`feature.fileref`)
+  - [x] Domain entities: `FileRefParentType`, `FileRefRequestItem`, `FileRefCacheEntry`, `FileRefStatsModel`
+  - [x] Repository contract: `FileRefRepository`
+  - [x] Use cases: `ObserveFileRefStatsUseCase`, `GetFileRefStatsUseCase`, `RequestReferenceRenewalUseCase`, `NotifyReferenceRenewedUseCase`, `CancelFileRefRequestUseCase`, `ClearFileRefCacheUseCase`
+  - [x] Data layer: `FileRefMapper`, `LegacyFileRefRepository` (Main/thread safe, adapting `FileRefController`, 60-second parent response caching, request deduplication by location and parent keys)
+  - [x] Presentation layer: `FileRefUiState`, `FileRefEvent`, `FileRefViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 059: MTProto File Reference Renewal & Parent Cache Controller Isolation
+- **Context:** In Telegram Android, automatic renewal of expired MTProto file references (`FILE_REFERENCE_EXPIRED`) was handled by `FileRefController.java` (~2347 lines) located in `org.telegram.messenger`. Whenever media files (photos, videos, documents, wallpapers, avatars, stickers) fail to download due to an expired file reference token, the download engine delegates reference renewal to `FileRefController`. The controller coupled multiple complex responsibilities: grouping pending requests by file location key (`locationKey`), deduplicating network RPC queries by parent object (`parentKey`), maintaining an in-memory 60-second response cache (`responseCache` with `CachedResult`), and dispatching MTProto RPC calls (`TL_messages_getMessages`, `TL_channels_getMessages`, `TL_users_getUsers`, `TL_stories_getStoriesByID`, `TL_wallpapers_getWallpapers`, etc.) via `ConnectionsManager`.
+- **Decision:** Introduce pure domain models `FileRefParentType` (MESSAGE, USER, CHAT, CHANNEL, WALLPAPER, SAVED_GIF, REACTION, STICKER_SET, STORY, PEER_COLOR), `FileRefRequestItem`, `FileRefCacheEntry` (with 60s TTL expiration logic), and `FileRefStatsModel`. Define abstract contract `FileRefRepository` covering reactive stats observation (`observeStats`), stats snapshot retrieval (`getStats`), renewal requests (`requestReferenceRenewal` with instant cache hit resolution), renewed notification (`notifyReferenceRenewed`), request cancellation (`cancelPendingRequest`), and cache clearing (`clearCache`). Implement `LegacyFileRefRepository` operating safely across threads with parent response caching and headless in-memory fallback. Encapsulate presentation state and MVI events in `FileRefViewModel`.
+- **Consequences:** All MTProto file reference renewal scheduling, parent object caching, deduplication queues, and renewal statistics are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `FileRefController` and `FileLoader` download pipeline.
 
 ### ADR 058: Story & Media Creation Drafts Controller Isolation
 - **Context:** In Telegram Android, story drafts and in-progress multimedia creations were managed by `DraftsController.java` (~1077 lines) located in `org.telegram.ui.Stories.recorder`. The controller directly coupled SQLite database queries (`story_drafts` table, `REPLACE INTO`, `DELETE FROM`, `NativeByteBuffer` serialization), raw file system manipulation (copying to `cache/drafts`, unlinking expired media files), 7-day expiration checks (`EXPIRATION_PERIOD = 7 days`), and untyped global notifications on `NotificationCenter.storiesDraftsUpdated`. Presentation components like `StoryRecorder.java`, `RecordControl.java`, and `GalleryListView.java` directly queried and manipulated `MessagesController.getInstance(account).getStoriesController().getDraftsController().drafts` and invoked synchronous operations on the Main thread.
