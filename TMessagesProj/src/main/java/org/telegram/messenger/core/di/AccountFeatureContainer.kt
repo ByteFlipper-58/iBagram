@@ -515,6 +515,17 @@ import org.telegram.messenger.feature.chromecast.domain.usecase.ObserveChromecas
 import org.telegram.messenger.feature.chromecast.domain.usecase.SetCastCoverFileUseCase
 import org.telegram.messenger.feature.chromecast.domain.usecase.StopCastingUseCase
 import org.telegram.messenger.feature.chromecast.presentation.ChromecastViewModel
+import org.telegram.messenger.feature.hints.data.repository.LegacyHintsRepository
+import org.telegram.messenger.feature.hints.domain.repository.HintsRepository
+import org.telegram.messenger.feature.hints.domain.usecase.DoNotShowAgainHintUseCase
+import org.telegram.messenger.feature.hints.domain.usecase.GetHintUseCase
+import org.telegram.messenger.feature.hints.domain.usecase.GetHintsStateUseCase
+import org.telegram.messenger.feature.hints.domain.usecase.IncrementHintUseCase
+import org.telegram.messenger.feature.hints.domain.usecase.ObserveHintsUseCase
+import org.telegram.messenger.feature.hints.domain.usecase.ResetAllHintsUseCase
+import org.telegram.messenger.feature.hints.domain.usecase.ResetHintUseCase
+import org.telegram.messenger.feature.hints.domain.usecase.ShouldShowHintUseCase
+import org.telegram.messenger.feature.hints.presentation.HintsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3271,6 +3282,62 @@ class AccountFeatureContainer private constructor(val account: Int) {
             castMediaUseCase = castMediaUseCase,
             stopCastingUseCase = stopCastingUseCase,
             setCastCoverFileUseCase = setCastCoverFileUseCase
+        )
+    }
+
+    private var customHintsRepository: HintsRepository? = null
+
+    var hintsRepository: HintsRepository
+        get() = customHintsRepository ?: LegacyHintsRepository()
+        set(value) {
+            customHintsRepository = value
+        }
+
+    val observeHintsUseCase: ObserveHintsUseCase
+        get() = ObserveHintsUseCase(hintsRepository)
+
+    val getHintsStateUseCase: GetHintsStateUseCase
+        get() = GetHintsStateUseCase(hintsRepository)
+
+    val getHintUseCase: GetHintUseCase
+        get() = GetHintUseCase(hintsRepository)
+
+    val shouldShowHintUseCase: ShouldShowHintUseCase
+        get() = ShouldShowHintUseCase(hintsRepository)
+
+    val incrementHintUseCase: IncrementHintUseCase
+        get() = IncrementHintUseCase(hintsRepository)
+
+    val doNotShowAgainHintUseCase: DoNotShowAgainHintUseCase
+        get() = DoNotShowAgainHintUseCase(hintsRepository)
+
+    val resetHintUseCase: ResetHintUseCase
+        get() = ResetHintUseCase(hintsRepository)
+
+    val resetAllHintsUseCase: ResetAllHintsUseCase
+        get() = ResetAllHintsUseCase(hintsRepository)
+
+    private var cachedHintsViewModel: HintsViewModel? = null
+
+    val hintsViewModel: HintsViewModel
+        get() {
+            var vm = cachedHintsViewModel
+            if (vm == null) {
+                vm = createHintsViewModel()
+                cachedHintsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createHintsViewModel(): HintsViewModel {
+        return HintsViewModel(
+            observeHintsUseCase = observeHintsUseCase,
+            getHintsStateUseCase = getHintsStateUseCase,
+            shouldShowHintUseCase = shouldShowHintUseCase,
+            incrementHintUseCase = incrementHintUseCase,
+            doNotShowAgainHintUseCase = doNotShowAgainHintUseCase,
+            resetHintUseCase = resetHintUseCase,
+            resetAllHintsUseCase = resetAllHintsUseCase
         )
     }
 

@@ -1449,6 +1449,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ChromecastUiState.kt
             ├── ChromecastEvent.kt
             └── ChromecastViewModel.kt
+    │
+    └── hints/                            # In-App Hints, Tips & Feature Discovery Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── HintType.kt
+        │   │   ├── HintModel.kt
+        │   │   └── HintsStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── HintsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveHintsUseCase.kt
+        │       ├── GetHintsStateUseCase.kt
+        │       ├── GetHintUseCase.kt
+        │       ├── ShouldShowHintUseCase.kt
+        │       ├── IncrementHintUseCase.kt
+        │       ├── DoNotShowAgainHintUseCase.kt
+        │       ├── ResetHintUseCase.kt
+        │       └── ResetAllHintsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Legacy HintsController.Hint <-> Domain)
+        │   │   └── HintMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyHintsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── HintsUiState.kt
+            ├── HintsEvent.kt
+            └── HintsViewModel.kt
 ```
 
 ### Layer Rules
@@ -1780,10 +1809,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveChromecastStateUseCase`, `GetChromecastStateUseCase`, `IsCastingUseCase`, `IsMediaPlayingOnCastUseCase`, `CastMediaUseCase`, `StopCastingUseCase`, `SetCastCoverFileUseCase`
   - [x] Data layer: `ChromecastMapper`, `LegacyChromecastRepository` (Main-thread safe, adapting `ChromecastController`, `CastContext`, `SessionManager`, and `RemoteMediaClient`)
   - [x] Presentation layer: `ChromecastUiState`, `ChromecastEvent`, `ChromecastViewModel`
+- [x] In-App Hints, Tips & Feature Discovery (`feature.hints`)
+  - [x] Domain entities: `HintType`, `HintModel`, `HintsStateModel`
+  - [x] Repository contract: `HintsRepository`
+  - [x] Use cases: `ObserveHintsUseCase`, `GetHintsStateUseCase`, `GetHintUseCase`, `ShouldShowHintUseCase`, `IncrementHintUseCase`, `DoNotShowAgainHintUseCase`, `ResetHintUseCase`, `ResetAllHintsUseCase`
+  - [x] Data layer: `HintMapper`, `LegacyHintsRepository` (Main/IO thread safe, adapting `HintsController`, `MessagesController.getGlobalMainSettings()`, and in-memory test fallback)
+  - [x] Presentation layer: `HintsUiState`, `HintsEvent`, `HintsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 052: In-App Hints, Tips & Feature Discovery Controller Isolation
+- **Context:** In Telegram Android, user tips, feature discovery prompts, and UI guidance (round video messages, channel gift tips, group custom emoji pack hints, account switching suggestions, and guest bot privacy alerts) were controlled via `HintsController.java` (~78 lines) located in `org.telegram.ui.Components`. The controller directly coupled Android `SharedPreferences` (`MessagesController.getGlobalMainSettings()`), fast random number generation (`Utilities.fastRandom.nextFloat()`), and hardcoded limits/probabilities inside enum values. UI components like `ChatActivity.java` (~28000 lines), `MainTabsActivity.java`, `SettingsActivity.java`, and `ProfileActivity.java` directly invoked static enum methods (`Hint.show()`, `Hint.increment()`, `Hint.doNotShowAgain()`, `HintsController.resetAll()`).
+- **Decision:** Introduce pure domain models `HintType` (enum with preference keys, limits, and probabilities), `HintModel` (with display count, limit validation, and probabilistic evaluation `canShow`), and `HintsStateModel`. Define abstract contract `HintsRepository` covering reactive state observation (`observeHints`), snapshot retrieval (`getHintsState`, `getHint`), display eligibility check (`shouldShowHint`), counter increment (`incrementHint`), dismiss forever (`doNotShowAgain`), and counter resets (`resetHint`, `resetAllHints`). Implement `LegacyHintsRepository` operating safely on Main/IO dispatchers with headless fallback, adapting `HintsController.Hint` and SharedPreferences. Encapsulate presentation state and MVI events in `HintsViewModel`.
+- **Consequences:** All in-app hints, tips frequency limits, and discovery prompts are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `ChatActivity`, `SettingsActivity`, and SharedPreferences storage.
 
 ### ADR 051: Google Cast, Remote Media Client & Media Streaming Controller Isolation
 - **Context:** In Telegram Android, casting photos and videos to Google Cast-enabled external displays and TVs was handled by `ChromecastController.java` (~315 lines) located in `org.telegram.messenger`. The controller directly coupled Google Play Services Cast SDK (`CastContext`, `SessionManager`, `CastSession`, `RemoteMediaClient`), local HTTP media streaming (`ChromecastFileServer` on port 8080), media metadata construction (`MediaInfo`, `MediaMetadata`), and global event dispatching via `NotificationCenter.castSessionStarted`, `castSessionEnded`, and `castMediaProgressChanged`. UI classes such as `PhotoViewer.java` directly invoked `ChromecastController.getInstance()` and called `startCastingMedia(photoEntry)`.
