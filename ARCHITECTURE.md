@@ -1218,6 +1218,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── GiftAuctionsUiState.kt
             ├── GiftAuctionsEvent.kt
             └── GiftAuctionsViewModel.kt
+    │
+    └── businesslinks/                    # Telegram Business Chat Links & Shortcuts Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models
+        │   │   ├── BusinessLinkModel.kt
+        │   │   ├── BusinessLinkInputModel.kt
+        │   │   └── BusinessLinksStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BusinessLinksRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveBusinessLinksUseCase.kt
+        │       ├── GetBusinessLinksUseCase.kt
+        │       ├── LoadBusinessLinksUseCase.kt
+        │       ├── CreateBusinessLinkUseCase.kt
+        │       ├── EditBusinessLinkUseCase.kt
+        │       ├── DeleteBusinessLinkUseCase.kt
+        │       ├── FindBusinessLinkUseCase.kt
+        │       └── CanAddNewBusinessLinkUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_account <-> Domain)
+        │   │   └── BusinessLinkMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBusinessLinksRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BusinessLinksUiState.kt
+            ├── BusinessLinksEvent.kt
+            └── BusinessLinksViewModel.kt
 ```
 
 ### Layer Rules
@@ -1501,10 +1530,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveActiveAuctionsUseCase`, `ObserveAuctionUseCase`, `GetActiveAuctionsUseCase`, `GetAuctionByIdUseCase`, `GetAuctionBySlugUseCase`, `SendAuctionBidUseCase`, `LoadAuctionAcquiredGiftsUseCase`, `RefreshActiveAuctionsUseCase`
   - [x] Data layer: `GiftAuctionMapper`, `LegacyGiftAuctionsRepository` (Main-thread safe, adapting `GiftAuctionController`, `OnAuctionUpdateListener`, `OnActiveAuctionsUpdateListeners`, and MTProto Star Gift auction protocols)
   - [x] Presentation layer: `GiftAuctionsUiState`, `GiftAuctionsEvent`, `GiftAuctionsViewModel`
+- [x] Telegram Business Chat Links & Shortcuts (`feature.businesslinks`)
+  - [x] Domain entities: `BusinessLinkModel`, `BusinessLinkInputModel`, `BusinessLinksStateModel`
+  - [x] Repository contract: `BusinessLinksRepository`
+  - [x] Use cases: `ObserveBusinessLinksUseCase`, `GetBusinessLinksUseCase`, `LoadBusinessLinksUseCase`, `CreateBusinessLinkUseCase`, `EditBusinessLinkUseCase`, `DeleteBusinessLinkUseCase`, `FindBusinessLinkUseCase`, `CanAddNewBusinessLinkUseCase`
+  - [x] Data layer: `BusinessLinkMapper`, `LegacyBusinessLinksRepository` (Main-thread safe, adapting `BusinessLinksController`, `NotificationCenter.businessLinksUpdated`, and MTProto business chat links protocol)
+  - [x] Presentation layer: `BusinessLinksUiState`, `BusinessLinksEvent`, `BusinessLinksViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 044: Telegram Business Chat Links & Shortcuts Controller Isolation
+- **Context:** In Telegram Android, pre-configured chat links (`https://t.me/m/...`) with preset greeting messages and view tracking for Telegram Business accounts were managed by `BusinessLinksController.java` (~320 lines). The controller coupled in-memory link collections (`ArrayList<TL_account.TL_businessChatLink> links`), loading state flags, account limits from `MessagesController.businessChatLinksLimit`, raw MTProto request dispatching (`TL_account.getBusinessChatLinks`, `TL_account.createBusinessChatLink`, `TL_account.editBusinessChatLink`, `TL_account.deleteBusinessChatLink`), and untyped global broadcasts on `NotificationCenter.businessLinksUpdated`. UI activities like `BusinessLinksActivity.java` (~1200 lines) directly mutated the controller's internal collections and handled raw RPC error responses.
+- **Decision:** Introduce pure domain models `BusinessLinkModel` (with slug extraction, formatted url, and view count), `BusinessLinkInputModel`, and `BusinessLinksStateModel`. Define abstract contract `BusinessLinksRepository` covering reactive links observation (`observeBusinessLinks`), snapshot retrieval (`getBusinessLinks`), loading (`loadBusinessLinks`), link creation (`createLink`), editing (`editLink`), deletion (`deleteLink`), slug lookup (`findLink`), and creation limit validation (`canAddNew`). Implement `LegacyBusinessLinksRepository` operating safely on `Dispatchers.Main` with `NotificationCenterFlowBridge` observation on `NotificationCenter.businessLinksUpdated`, and `suspendCancellableCoroutine` for MTProto request cancellation. Encapsulate presentation state and MVI events in `BusinessLinksViewModel`.
+- **Consequences:** Business chat links, preset greetings, view statistics, and creation limits are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% compatibility with Telegram's core business links controller and MTProto business protocol.
 
 ### ADR 043: Telegram Star Gift Auctions & Real-Time Bidding Isolation
 - **Context:** In Telegram Android, competitive bidding and real-time auctions for limited-edition Telegram Star Gifts were managed by `GiftAuctionController.java` (~780 lines). The controller directly handled in-memory auction caches (`LongSparseArray<AuctionInternal>`), active auctions list, subscriber listeners (`ReferenceMap<Long, OnAuctionUpdateListener>`), dynamic timer resubscriptions based on server `timeout`, payment invoice requests (`TLRPC.TL_payments_getPaymentForm`, `TL_stars.TL_payments_sendStarsForm`), hash calculation for active auctions (`MediaDataController.calcHash`), and acquired gifts queries (`TL_payments.TL_getStarGiftAuctionAcquiredGifts`). UI sheets like `AuctionBidSheet.java` (~1027 lines) and `AcquiredGiftsSheet.java` directly invoked `GiftAuctionController.getInstance(account)`.

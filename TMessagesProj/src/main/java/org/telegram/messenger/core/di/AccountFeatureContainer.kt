@@ -434,6 +434,17 @@ import org.telegram.messenger.feature.giftauctions.domain.usecase.ObserveAuction
 import org.telegram.messenger.feature.giftauctions.domain.usecase.RefreshActiveAuctionsUseCase
 import org.telegram.messenger.feature.giftauctions.domain.usecase.SendAuctionBidUseCase
 import org.telegram.messenger.feature.giftauctions.presentation.GiftAuctionsViewModel
+import org.telegram.messenger.feature.businesslinks.data.repository.LegacyBusinessLinksRepository
+import org.telegram.messenger.feature.businesslinks.domain.repository.BusinessLinksRepository
+import org.telegram.messenger.feature.businesslinks.domain.usecase.CanAddNewBusinessLinkUseCase
+import org.telegram.messenger.feature.businesslinks.domain.usecase.CreateBusinessLinkUseCase
+import org.telegram.messenger.feature.businesslinks.domain.usecase.DeleteBusinessLinkUseCase
+import org.telegram.messenger.feature.businesslinks.domain.usecase.EditBusinessLinkUseCase
+import org.telegram.messenger.feature.businesslinks.domain.usecase.FindBusinessLinkUseCase
+import org.telegram.messenger.feature.businesslinks.domain.usecase.GetBusinessLinksUseCase
+import org.telegram.messenger.feature.businesslinks.domain.usecase.LoadBusinessLinksUseCase
+import org.telegram.messenger.feature.businesslinks.domain.usecase.ObserveBusinessLinksUseCase
+import org.telegram.messenger.feature.businesslinks.presentation.BusinessLinksViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2768,6 +2779,61 @@ class AccountFeatureContainer private constructor(val account: Int) {
             sendAuctionBidUseCase = sendAuctionBidUseCase,
             loadAuctionAcquiredGiftsUseCase = loadAuctionAcquiredGiftsUseCase,
             refreshActiveAuctionsUseCase = refreshActiveAuctionsUseCase
+        )
+    }
+
+    private var customBusinessLinksRepository: BusinessLinksRepository? = null
+
+    var businessLinksRepository: BusinessLinksRepository
+        get() = customBusinessLinksRepository ?: LegacyBusinessLinksRepository(account)
+        set(value) {
+            customBusinessLinksRepository = value
+        }
+
+    val observeBusinessLinksUseCase: ObserveBusinessLinksUseCase
+        get() = ObserveBusinessLinksUseCase(businessLinksRepository)
+
+    val getBusinessLinksUseCase: GetBusinessLinksUseCase
+        get() = GetBusinessLinksUseCase(businessLinksRepository)
+
+    val loadBusinessLinksUseCase: LoadBusinessLinksUseCase
+        get() = LoadBusinessLinksUseCase(businessLinksRepository)
+
+    val createBusinessLinkUseCase: CreateBusinessLinkUseCase
+        get() = CreateBusinessLinkUseCase(businessLinksRepository)
+
+    val editBusinessLinkUseCase: EditBusinessLinkUseCase
+        get() = EditBusinessLinkUseCase(businessLinksRepository)
+
+    val deleteBusinessLinkUseCase: DeleteBusinessLinkUseCase
+        get() = DeleteBusinessLinkUseCase(businessLinksRepository)
+
+    val findBusinessLinkUseCase: FindBusinessLinkUseCase
+        get() = FindBusinessLinkUseCase(businessLinksRepository)
+
+    val canAddNewBusinessLinkUseCase: CanAddNewBusinessLinkUseCase
+        get() = CanAddNewBusinessLinkUseCase(businessLinksRepository)
+
+    private var cachedBusinessLinksViewModel: BusinessLinksViewModel? = null
+
+    val businessLinksViewModel: BusinessLinksViewModel
+        get() {
+            var vm = cachedBusinessLinksViewModel
+            if (vm == null) {
+                vm = createBusinessLinksViewModel()
+                cachedBusinessLinksViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBusinessLinksViewModel(): BusinessLinksViewModel {
+        return BusinessLinksViewModel(
+            observeBusinessLinksUseCase = observeBusinessLinksUseCase,
+            loadBusinessLinksUseCase = loadBusinessLinksUseCase,
+            createBusinessLinkUseCase = createBusinessLinkUseCase,
+            editBusinessLinkUseCase = editBusinessLinkUseCase,
+            deleteBusinessLinkUseCase = deleteBusinessLinkUseCase,
+            canAddNewBusinessLinkUseCase = canAddNewBusinessLinkUseCase
         )
     }
 
