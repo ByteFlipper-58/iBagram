@@ -1478,6 +1478,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── HintsUiState.kt
             ├── HintsEvent.kt
             └── HintsViewModel.kt
+    │
+    └── groupcallmsg/                     # Group Call & Conference In-Call Messages Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── GroupCallMessageSendStatus.kt
+        │   │   ├── GroupCallMessageModel.kt
+        │   │   └── GroupCallMessagesStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── GroupCallMessagesRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveGroupCallMessagesUseCase.kt
+        │       ├── GetGroupCallMessagesUseCase.kt
+        │       ├── SendGroupCallMessageUseCase.kt
+        │       ├── PopGroupCallMessageUseCase.kt
+        │       └── ClearGroupCallMessagesUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Legacy GroupCallMessage <-> Domain)
+        │   │   └── GroupCallMessageMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyGroupCallMessagesRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── GroupCallMessagesUiState.kt
+            ├── GroupCallMessagesEvent.kt
+            └── GroupCallMessagesViewModel.kt
 ```
 
 ### Layer Rules
@@ -1815,10 +1841,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveHintsUseCase`, `GetHintsStateUseCase`, `GetHintUseCase`, `ShouldShowHintUseCase`, `IncrementHintUseCase`, `DoNotShowAgainHintUseCase`, `ResetHintUseCase`, `ResetAllHintsUseCase`
   - [x] Data layer: `HintMapper`, `LegacyHintsRepository` (Main/IO thread safe, adapting `HintsController`, `MessagesController.getGlobalMainSettings()`, and in-memory test fallback)
   - [x] Presentation layer: `HintsUiState`, `HintsEvent`, `HintsViewModel`
+- [x] Group Call & Conference In-Call Messages (`feature.groupcallmsg`)
+  - [x] Domain entities: `GroupCallMessageSendStatus`, `GroupCallMessageModel`, `GroupCallMessagesStateModel`
+  - [x] Repository contract: `GroupCallMessagesRepository`
+  - [x] Use cases: `ObserveGroupCallMessagesUseCase`, `GetGroupCallMessagesUseCase`, `SendGroupCallMessageUseCase`, `PopGroupCallMessageUseCase`, `ClearGroupCallMessagesUseCase`
+  - [x] Data layer: `GroupCallMessageMapper`, `LegacyGroupCallMessagesRepository` (adapting `GroupCallMessagesController`, `VoIPService`, and in-memory test fallback)
+  - [x] Presentation layer: `GroupCallMessagesUiState`, `GroupCallMessagesEvent`, `GroupCallMessagesViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 053: Group Call & Conference In-Call Ephemeral Messages Controller Isolation
+- **Context:** In Telegram Android, ephemeral in-call text messages and reactions during group audio/video calls and conferences were handled by `GroupCallMessagesController.java` (~313 lines) and `GroupCallMessage.java` (~109 lines) located in `org.telegram.messenger.voip`. The controller directly coupled VoIP service state (`VoIPService.getSharedInstance()`), raw MTProto request dispatching (`TL_phone.sendGroupCallMessage`, `TL_phone.sendGroupCallEncryptedMessage`), JSON message deserialization (`TLJsonParser`, `TLJsonBuilder`), in-call message listeners (`CallMessageListener`), TTL timers, and UI main-thread dispatches. UI components like `GroupCallActivity.java`, `GroupCallMessagesAdapter.java`, and `FragmentContextView.java` directly invoked `GroupCallMessagesController.getInstance(account)` and managed listeners.
+- **Decision:** Introduce pure domain models `GroupCallMessageSendStatus` (SENDING, DELAYED, CONFIRMED, ERROR), `GroupCallMessageModel` (with randomId, fromId, text, reaction emoji, and delivery flags), and `GroupCallMessagesStateModel`. Define abstract contract `GroupCallMessagesRepository` covering reactive call messages observation (`observeCallMessages`), snapshot retrieval (`getCallMessages`), sending (`sendCallMessage`), message pop (`popMessage`), and cache clearing (`clearCallMessages`). Implement `LegacyGroupCallMessagesRepository` adapting `GroupCallMessagesController` via `callbackFlow` with safe fallback when VoIP service is inactive. Encapsulate presentation state and MVI events in `GroupCallMessagesViewModel`.
+- **Consequences:** Group call in-call messages, delivery statuses, reactions, and auto-expiration TTL lifecycles are decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's VoIP calling infrastructure and UI adapters.
 
 ### ADR 052: In-App Hints, Tips & Feature Discovery Controller Isolation
 - **Context:** In Telegram Android, user tips, feature discovery prompts, and UI guidance (round video messages, channel gift tips, group custom emoji pack hints, account switching suggestions, and guest bot privacy alerts) were controlled via `HintsController.java` (~78 lines) located in `org.telegram.ui.Components`. The controller directly coupled Android `SharedPreferences` (`MessagesController.getGlobalMainSettings()`), fast random number generation (`Utilities.fastRandom.nextFloat()`), and hardcoded limits/probabilities inside enum values. UI components like `ChatActivity.java` (~28000 lines), `MainTabsActivity.java`, `SettingsActivity.java`, and `ProfileActivity.java` directly invoked static enum methods (`Hint.show()`, `Hint.increment()`, `Hint.doNotShowAgain()`, `HintsController.resetAll()`).

@@ -526,6 +526,14 @@ import org.telegram.messenger.feature.hints.domain.usecase.ResetAllHintsUseCase
 import org.telegram.messenger.feature.hints.domain.usecase.ResetHintUseCase
 import org.telegram.messenger.feature.hints.domain.usecase.ShouldShowHintUseCase
 import org.telegram.messenger.feature.hints.presentation.HintsViewModel
+import org.telegram.messenger.feature.groupcallmsg.data.repository.LegacyGroupCallMessagesRepository
+import org.telegram.messenger.feature.groupcallmsg.domain.repository.GroupCallMessagesRepository
+import org.telegram.messenger.feature.groupcallmsg.domain.usecase.ClearGroupCallMessagesUseCase
+import org.telegram.messenger.feature.groupcallmsg.domain.usecase.GetGroupCallMessagesUseCase
+import org.telegram.messenger.feature.groupcallmsg.domain.usecase.ObserveGroupCallMessagesUseCase
+import org.telegram.messenger.feature.groupcallmsg.domain.usecase.PopGroupCallMessageUseCase
+import org.telegram.messenger.feature.groupcallmsg.domain.usecase.SendGroupCallMessageUseCase
+import org.telegram.messenger.feature.groupcallmsg.presentation.GroupCallMessagesViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3338,6 +3346,46 @@ class AccountFeatureContainer private constructor(val account: Int) {
             doNotShowAgainHintUseCase = doNotShowAgainHintUseCase,
             resetHintUseCase = resetHintUseCase,
             resetAllHintsUseCase = resetAllHintsUseCase
+        )
+    }
+
+    private var customGroupCallMessagesRepository: GroupCallMessagesRepository? = null
+
+    var groupCallMessagesRepository: GroupCallMessagesRepository
+        get() = customGroupCallMessagesRepository ?: LegacyGroupCallMessagesRepository(account)
+        set(value) {
+            customGroupCallMessagesRepository = value
+        }
+
+    val observeGroupCallMessagesUseCase: ObserveGroupCallMessagesUseCase
+        get() = ObserveGroupCallMessagesUseCase(groupCallMessagesRepository)
+
+    val getGroupCallMessagesUseCase: GetGroupCallMessagesUseCase
+        get() = GetGroupCallMessagesUseCase(groupCallMessagesRepository)
+
+    val sendGroupCallMessageUseCase: SendGroupCallMessageUseCase
+        get() = SendGroupCallMessageUseCase(groupCallMessagesRepository)
+
+    val popGroupCallMessageUseCase: PopGroupCallMessageUseCase
+        get() = PopGroupCallMessageUseCase(groupCallMessagesRepository)
+
+    val clearGroupCallMessagesUseCase: ClearGroupCallMessagesUseCase
+        get() = ClearGroupCallMessagesUseCase(groupCallMessagesRepository)
+
+    private val cachedGroupCallMessagesViewModels = ConcurrentHashMap<Long, GroupCallMessagesViewModel>()
+
+    fun getGroupCallMessagesViewModel(callId: Long = 0L): GroupCallMessagesViewModel {
+        return cachedGroupCallMessagesViewModels.computeIfAbsent(callId) { createGroupCallMessagesViewModel(it) }
+    }
+
+    fun createGroupCallMessagesViewModel(callId: Long = 0L): GroupCallMessagesViewModel {
+        return GroupCallMessagesViewModel(
+            observeGroupCallMessagesUseCase = observeGroupCallMessagesUseCase,
+            getGroupCallMessagesUseCase = getGroupCallMessagesUseCase,
+            sendGroupCallMessageUseCase = sendGroupCallMessageUseCase,
+            popGroupCallMessageUseCase = popGroupCallMessageUseCase,
+            clearGroupCallMessagesUseCase = clearGroupCallMessagesUseCase,
+            initialCallId = callId
         )
     }
 
