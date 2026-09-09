@@ -1504,6 +1504,38 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── GroupCallMessagesUiState.kt
             ├── GroupCallMessagesEvent.kt
             └── GroupCallMessagesViewModel.kt
+    │
+    └── gallerysave/                      # Auto-Save to Gallery Settings & Exceptions Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── GallerySavePeerType.kt
+        │   │   ├── GallerySaveTargetSettingsModel.kt
+        │   │   ├── GallerySaveDialogExceptionModel.kt
+        │   │   └── GallerySaveConfigModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── GallerySaveRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveGallerySaveConfigUseCase.kt
+        │       ├── GetGallerySaveConfigUseCase.kt
+        │       ├── GetGallerySaveSettingsUseCase.kt
+        │       ├── UpdateGallerySaveSettingsUseCase.kt
+        │       ├── ToggleGallerySavePeerTypeUseCase.kt
+        │       ├── SetGallerySaveVideoLimitUseCase.kt
+        │       ├── GetGallerySaveExceptionsUseCase.kt
+        │       ├── SetGallerySaveExceptionUseCase.kt
+        │       ├── RemoveGallerySaveExceptionUseCase.kt
+        │       └── RemoveAllGallerySaveExceptionsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (SaveToGallerySettingsHelper <-> Domain)
+        │   │   └── GallerySaveMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyGallerySaveRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── GallerySaveUiState.kt
+            ├── GallerySaveEvent.kt
+            └── GallerySaveViewModel.kt
 ```
 
 ### Layer Rules
@@ -1847,10 +1879,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveGroupCallMessagesUseCase`, `GetGroupCallMessagesUseCase`, `SendGroupCallMessageUseCase`, `PopGroupCallMessageUseCase`, `ClearGroupCallMessagesUseCase`
   - [x] Data layer: `GroupCallMessageMapper`, `LegacyGroupCallMessagesRepository` (adapting `GroupCallMessagesController`, `VoIPService`, and in-memory test fallback)
   - [x] Presentation layer: `GroupCallMessagesUiState`, `GroupCallMessagesEvent`, `GroupCallMessagesViewModel`
+- [x] Auto-Save to Gallery Settings, Video Limits & Dialog Exceptions (`feature.gallerysave`)
+  - [x] Domain entities: `GallerySavePeerType`, `GallerySaveTargetSettingsModel`, `GallerySaveDialogExceptionModel`, `GallerySaveConfigModel`
+  - [x] Repository contract: `GallerySaveRepository`
+  - [x] Use cases: `ObserveGallerySaveConfigUseCase`, `GetGallerySaveConfigUseCase`, `GetGallerySaveSettingsUseCase`, `UpdateGallerySaveSettingsUseCase`, `ToggleGallerySavePeerTypeUseCase`, `SetGallerySaveVideoLimitUseCase`, `GetGallerySaveExceptionsUseCase`, `SetGallerySaveExceptionUseCase`, `RemoveGallerySaveExceptionUseCase`, `RemoveAllGallerySaveExceptionsUseCase`
+  - [x] Data layer: `GallerySaveMapper`, `LegacyGallerySaveRepository` (Main-thread safe, adapting `SaveToGallerySettingsHelper`, `UserConfig.getSaveGalleryExceptions()`, and in-memory fallback)
+  - [x] Presentation layer: `GallerySaveUiState`, `GallerySaveEvent`, `GallerySaveViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 054: Auto-Save to Gallery Settings & Exceptions Controller Isolation
+- **Context:** In Telegram Android, automatic photo and video saving to device gallery and per-dialog exception rules were managed by `SaveToGallerySettingsHelper.java` (~259 lines) located in `org.telegram.messenger`. The helper directly coupled Android `SharedPreferences` keys (`savegallery_users`, `savegallery_groups`, `savegallery_channels`), video file size limits (`savegallery_limit_users`, etc. up to 4 GB), and per-dialog custom exceptions stored in `UserConfig.getSaveGalleryExceptions()`. UI components like `SaveToGallerySettingsActivity.java`, `ChatActivity.java`, and `MediaController.java` directly invoked static helper methods (`SaveToGallerySettingsHelper.load()`, `save()`, `getSettings()`, `needSave()`).
+- **Decision:** Introduce pure domain models `GallerySavePeerType` (USERS, GROUPS, CHANNELS), `GallerySaveTargetSettingsModel` (enabled, photos, videos, max video limit), `GallerySaveDialogExceptionModel`, and `GallerySaveConfigModel`. Define abstract contract `GallerySaveRepository` covering reactive configuration observation (`observeConfig`), snapshot retrieval (`getConfig`, `getSettings`), settings updates (`updateSettings`), peer toggling (`togglePeerType`), video limits (`setVideoLimit`), exceptions management (`getExceptions`, `setException`, `removeException`, `removeAllExceptions`). Implement `LegacyGallerySaveRepository` operating safely on `Dispatchers.Main` with in-memory fallback for headless tests. Encapsulate presentation state and MVI events in `GallerySaveViewModel`.
+- **Consequences:** All gallery auto-save rules, video file size thresholds, and custom per-chat exceptions are cleanly decoupled behind testable domain interfaces with full unit test coverage while preserving 100% backward compatibility with Telegram's `SaveToGallerySettingsActivity` and file download pipelines.
 
 ### ADR 053: Group Call & Conference In-Call Ephemeral Messages Controller Isolation
 - **Context:** In Telegram Android, ephemeral in-call text messages and reactions during group audio/video calls and conferences were handled by `GroupCallMessagesController.java` (~313 lines) and `GroupCallMessage.java` (~109 lines) located in `org.telegram.messenger.voip`. The controller directly coupled VoIP service state (`VoIPService.getSharedInstance()`), raw MTProto request dispatching (`TL_phone.sendGroupCallMessage`, `TL_phone.sendGroupCallEncryptedMessage`), JSON message deserialization (`TLJsonParser`, `TLJsonBuilder`), in-call message listeners (`CallMessageListener`), TTL timers, and UI main-thread dispatches. UI components like `GroupCallActivity.java`, `GroupCallMessagesAdapter.java`, and `FragmentContextView.java` directly invoked `GroupCallMessagesController.getInstance(account)` and managed listeners.

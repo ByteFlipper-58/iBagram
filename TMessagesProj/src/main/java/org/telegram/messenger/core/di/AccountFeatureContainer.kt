@@ -534,6 +534,19 @@ import org.telegram.messenger.feature.groupcallmsg.domain.usecase.ObserveGroupCa
 import org.telegram.messenger.feature.groupcallmsg.domain.usecase.PopGroupCallMessageUseCase
 import org.telegram.messenger.feature.groupcallmsg.domain.usecase.SendGroupCallMessageUseCase
 import org.telegram.messenger.feature.groupcallmsg.presentation.GroupCallMessagesViewModel
+import org.telegram.messenger.feature.gallerysave.data.repository.LegacyGallerySaveRepository
+import org.telegram.messenger.feature.gallerysave.domain.repository.GallerySaveRepository
+import org.telegram.messenger.feature.gallerysave.domain.usecase.GetGallerySaveConfigUseCase
+import org.telegram.messenger.feature.gallerysave.domain.usecase.GetGallerySaveExceptionsUseCase
+import org.telegram.messenger.feature.gallerysave.domain.usecase.GetGallerySaveSettingsUseCase
+import org.telegram.messenger.feature.gallerysave.domain.usecase.ObserveGallerySaveConfigUseCase
+import org.telegram.messenger.feature.gallerysave.domain.usecase.RemoveAllGallerySaveExceptionsUseCase
+import org.telegram.messenger.feature.gallerysave.domain.usecase.RemoveGallerySaveExceptionUseCase
+import org.telegram.messenger.feature.gallerysave.domain.usecase.SetGallerySaveExceptionUseCase
+import org.telegram.messenger.feature.gallerysave.domain.usecase.SetGallerySaveVideoLimitUseCase
+import org.telegram.messenger.feature.gallerysave.domain.usecase.ToggleGallerySavePeerTypeUseCase
+import org.telegram.messenger.feature.gallerysave.domain.usecase.UpdateGallerySaveSettingsUseCase
+import org.telegram.messenger.feature.gallerysave.presentation.GallerySaveViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3386,6 +3399,70 @@ class AccountFeatureContainer private constructor(val account: Int) {
             popGroupCallMessageUseCase = popGroupCallMessageUseCase,
             clearGroupCallMessagesUseCase = clearGroupCallMessagesUseCase,
             initialCallId = callId
+        )
+    }
+
+    private var customGallerySaveRepository: GallerySaveRepository? = null
+
+    var gallerySaveRepository: GallerySaveRepository
+        get() = customGallerySaveRepository ?: LegacyGallerySaveRepository(account)
+        set(value) {
+            customGallerySaveRepository = value
+        }
+
+    val observeGallerySaveConfigUseCase: ObserveGallerySaveConfigUseCase
+        get() = ObserveGallerySaveConfigUseCase(gallerySaveRepository)
+
+    val getGallerySaveConfigUseCase: GetGallerySaveConfigUseCase
+        get() = GetGallerySaveConfigUseCase(gallerySaveRepository)
+
+    val getGallerySaveSettingsUseCase: GetGallerySaveSettingsUseCase
+        get() = GetGallerySaveSettingsUseCase(gallerySaveRepository)
+
+    val updateGallerySaveSettingsUseCase: UpdateGallerySaveSettingsUseCase
+        get() = UpdateGallerySaveSettingsUseCase(gallerySaveRepository)
+
+    val toggleGallerySavePeerTypeUseCase: ToggleGallerySavePeerTypeUseCase
+        get() = ToggleGallerySavePeerTypeUseCase(gallerySaveRepository)
+
+    val setGallerySaveVideoLimitUseCase: SetGallerySaveVideoLimitUseCase
+        get() = SetGallerySaveVideoLimitUseCase(gallerySaveRepository)
+
+    val getGallerySaveExceptionsUseCase: GetGallerySaveExceptionsUseCase
+        get() = GetGallerySaveExceptionsUseCase(gallerySaveRepository)
+
+    val setGallerySaveExceptionUseCase: SetGallerySaveExceptionUseCase
+        get() = SetGallerySaveExceptionUseCase(gallerySaveRepository)
+
+    val removeGallerySaveExceptionUseCase: RemoveGallerySaveExceptionUseCase
+        get() = RemoveGallerySaveExceptionUseCase(gallerySaveRepository)
+
+    val removeAllGallerySaveExceptionsUseCase: RemoveAllGallerySaveExceptionsUseCase
+        get() = RemoveAllGallerySaveExceptionsUseCase(gallerySaveRepository)
+
+    private var cachedGallerySaveViewModel: GallerySaveViewModel? = null
+
+    val gallerySaveViewModel: GallerySaveViewModel
+        get() {
+            var vm = cachedGallerySaveViewModel
+            if (vm == null) {
+                vm = createGallerySaveViewModel()
+                cachedGallerySaveViewModel = vm
+            }
+            return vm
+        }
+
+    fun createGallerySaveViewModel(): GallerySaveViewModel {
+        return GallerySaveViewModel(
+            observeGallerySaveConfigUseCase = observeGallerySaveConfigUseCase,
+            getGallerySaveConfigUseCase = getGallerySaveConfigUseCase,
+            getGallerySaveSettingsUseCase = getGallerySaveSettingsUseCase,
+            updateGallerySaveSettingsUseCase = updateGallerySaveSettingsUseCase,
+            toggleGallerySavePeerTypeUseCase = toggleGallerySavePeerTypeUseCase,
+            setGallerySaveVideoLimitUseCase = setGallerySaveVideoLimitUseCase,
+            setGallerySaveExceptionUseCase = setGallerySaveExceptionUseCase,
+            removeGallerySaveExceptionUseCase = removeGallerySaveExceptionUseCase,
+            removeAllGallerySaveExceptionsUseCase = removeAllGallerySaveExceptionsUseCase
         )
     }
 
