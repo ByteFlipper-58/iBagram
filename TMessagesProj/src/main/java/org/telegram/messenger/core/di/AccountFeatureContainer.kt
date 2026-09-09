@@ -374,6 +374,16 @@ import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.DenyAuthUse
 import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.GetUnconfirmedAuthsUseCase
 import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.ObserveUnconfirmedAuthsUseCase
 import org.telegram.messenger.feature.unconfirmedauth.presentation.UnconfirmedAuthViewModel
+import org.telegram.messenger.feature.stargifts.data.repository.LegacyStarGiftsRepository
+import org.telegram.messenger.feature.stargifts.domain.repository.StarGiftsRepository
+import org.telegram.messenger.feature.stargifts.domain.usecase.GetStarGiftByIdUseCase
+import org.telegram.messenger.feature.stargifts.domain.usecase.GetStarGiftsCatalogUseCase
+import org.telegram.messenger.feature.stargifts.domain.usecase.LoadProfileGiftsUseCase
+import org.telegram.messenger.feature.stargifts.domain.usecase.ObserveProfileGiftsUseCase
+import org.telegram.messenger.feature.stargifts.domain.usecase.ObserveStarGiftsCatalogUseCase
+import org.telegram.messenger.feature.stargifts.domain.usecase.ToggleHideProfileGiftUseCase
+import org.telegram.messenger.feature.stargifts.domain.usecase.TogglePinProfileGiftUseCase
+import org.telegram.messenger.feature.stargifts.presentation.StarGiftsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2390,6 +2400,59 @@ class AccountFeatureContainer private constructor(val account: Int) {
             confirmAllAuthsUseCase = confirmAllAuthsUseCase,
             denyAllAuthsUseCase = denyAllAuthsUseCase,
             clearUnconfirmedAuthsUseCase = clearUnconfirmedAuthsUseCase
+        )
+    }
+
+    private var customStarGiftsRepository: StarGiftsRepository? = null
+
+    var starGiftsRepository: StarGiftsRepository
+        get() = customStarGiftsRepository ?: LegacyStarGiftsRepository(account)
+        set(value) {
+            customStarGiftsRepository = value
+        }
+
+    val observeStarGiftsCatalogUseCase: ObserveStarGiftsCatalogUseCase
+        get() = ObserveStarGiftsCatalogUseCase(starGiftsRepository)
+
+    val getStarGiftsCatalogUseCase: GetStarGiftsCatalogUseCase
+        get() = GetStarGiftsCatalogUseCase(starGiftsRepository)
+
+    val getStarGiftByIdUseCase: GetStarGiftByIdUseCase
+        get() = GetStarGiftByIdUseCase(starGiftsRepository)
+
+    val observeProfileGiftsUseCase: ObserveProfileGiftsUseCase
+        get() = ObserveProfileGiftsUseCase(starGiftsRepository)
+
+    val loadProfileGiftsUseCase: LoadProfileGiftsUseCase
+        get() = LoadProfileGiftsUseCase(starGiftsRepository)
+
+    val togglePinProfileGiftUseCase: TogglePinProfileGiftUseCase
+        get() = TogglePinProfileGiftUseCase(starGiftsRepository)
+
+    val toggleHideProfileGiftUseCase: ToggleHideProfileGiftUseCase
+        get() = ToggleHideProfileGiftUseCase(starGiftsRepository)
+
+    private var cachedStarGiftsViewModel: StarGiftsViewModel? = null
+
+    val starGiftsViewModel: StarGiftsViewModel
+        get() {
+            var vm = cachedStarGiftsViewModel
+            if (vm == null) {
+                vm = createStarGiftsViewModel()
+                cachedStarGiftsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createStarGiftsViewModel(): StarGiftsViewModel {
+        return StarGiftsViewModel(
+            observeStarGiftsCatalogUseCase = observeStarGiftsCatalogUseCase,
+            getStarGiftsCatalogUseCase = getStarGiftsCatalogUseCase,
+            getStarGiftByIdUseCase = getStarGiftByIdUseCase,
+            observeProfileGiftsUseCase = observeProfileGiftsUseCase,
+            loadProfileGiftsUseCase = loadProfileGiftsUseCase,
+            togglePinProfileGiftUseCase = togglePinProfileGiftUseCase,
+            toggleHideProfileGiftUseCase = toggleHideProfileGiftUseCase
         )
     }
 

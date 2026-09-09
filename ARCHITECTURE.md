@@ -1049,6 +1049,36 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── UnconfirmedAuthUiState.kt
             ├── UnconfirmedAuthEvent.kt
             └── UnconfirmedAuthViewModel.kt
+    │
+    └── stargifts/                        # Telegram Star Gifts Catalog & Profile Saved Gifts
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── StarGiftModel.kt
+        │   │   ├── SavedStarGiftModel.kt
+        │   │   ├── StarGiftsCatalogModel.kt
+        │   │   ├── StarGiftFilter.kt
+        │   │   └── ProfileGiftsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── StarGiftsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveStarGiftsCatalogUseCase.kt
+        │       ├── GetStarGiftsCatalogUseCase.kt
+        │       ├── GetStarGiftByIdUseCase.kt
+        │       ├── ObserveProfileGiftsUseCase.kt
+        │       ├── LoadProfileGiftsUseCase.kt
+        │       ├── TogglePinProfileGiftUseCase.kt
+        │       └── ToggleHideProfileGiftUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_stars.StarGift / SavedStarGift <-> Domain)
+        │   │   └── StarGiftMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyStarGiftsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── StarGiftsUiState.kt
+            ├── StarGiftsEvent.kt
+            └── StarGiftsViewModel.kt
 ```
 
 ### Layer Rules
@@ -1296,10 +1326,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveUnconfirmedAuthsUseCase`, `GetUnconfirmedAuthsUseCase`, `ConfirmAuthUseCase`, `DenyAuthUseCase`, `ConfirmAllAuthsUseCase`, `DenyAllAuthsUseCase`, `ClearUnconfirmedAuthsUseCase`
   - [x] Data layer: `UnconfirmedAuthMapper`, `LegacyUnconfirmedAuthRepository` (Main-thread safe, adapting `UnconfirmedAuthController`, `MessagesController.getUnconfirmedAuthController()`, `confirm` and `deny` with `suspendCancellableCoroutine`, and `NotificationCenterFlowBridge` observing `NotificationCenter.unconfirmedAuthUpdate`)
   - [x] Presentation layer: `UnconfirmedAuthUiState`, `UnconfirmedAuthEvent`, `UnconfirmedAuthViewModel`
+- [x] Telegram Star Gifts, Catalog & Profile Saved Gifts (`feature.stargifts`)
+  - [x] Domain entities: `StarGiftModel`, `SavedStarGiftModel`, `StarGiftsCatalogModel`, `StarGiftFilter`, `ProfileGiftsModel`
+  - [x] Repository contract: `StarGiftsRepository`
+  - [x] Use cases: `ObserveStarGiftsCatalogUseCase`, `GetStarGiftsCatalogUseCase`, `GetStarGiftByIdUseCase`, `ObserveProfileGiftsUseCase`, `LoadProfileGiftsUseCase`, `TogglePinProfileGiftUseCase`, `ToggleHideProfileGiftUseCase`
+  - [x] Data layer: `StarGiftMapper`, `LegacyStarGiftsRepository` (Main-thread safe, adapting `StarsController` and `NotificationCenterFlowBridge` observing `NotificationCenter.starGiftsLoaded`)
+  - [x] Presentation layer: `StarGiftsUiState`, `StarGiftsEvent`, `StarGiftsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 038: Telegram Star Gifts, Catalog & Profile Saved Gifts Isolation
+- **Context:** In Telegram Android, user/channel gifts and the star gifts catalog are managed by `StarsController.java` (`getGiftsList()`, `getProfileGiftsList(dialogId)`). The gifts data model spans raw MTProto TL types `TL_stars.StarGift`, `TL_stars.SavedStarGift`, `TL_stars.TL_payments_getSavedStarGifts`, and `TL_stars.TL_payments_saveStarGift`. UI components like `StarGiftSheet.java` (~1100 lines) and profile tabs directly invoked `StarsController` methods, performed direct list mutations, and relied on untyped `NotificationCenter` broadcasts without lifecycle safety or clean separation between catalog viewing and profile-pinned gifts.
+- **Decision:** Introduce pure domain models `StarGiftModel`, `SavedStarGiftModel`, `StarGiftsCatalogModel`, `ProfileGiftsModel`, and typed filter enum `StarGiftFilter` (ALL, LIMITED, BIRTHDAY). Define abstract contract `StarGiftsRepository` covering reactive catalog observation (`observeCatalog`), catalog loading (`loadCatalog`), gift lookup (`getGiftById`), reactive profile gifts observation (`observeProfileGifts`), profile gifts loading (`loadProfileGifts`), pin toggling (`togglePinProfileGift`), and hide/show toggling (`toggleHideProfileGift`). Implement `LegacyStarGiftsRepository` operating safely on `Dispatchers.Main` with reactive `NotificationCenterFlowBridge` observation for `NotificationCenter.starGiftsLoaded`. Encapsulate presentation state, filtering, and MVI events in `StarGiftsViewModel`.
+- **Consequences:** Gifts catalog browsing, profile gift collection management, pinned/hidden states, and upgrade badges are decoupled behind testable domain interfaces with full unit test coverage while maintaining 100% compatibility with Telegram's core `StarsController` and MTProto payments protocols.
 
 ### ADR 037: Unconfirmed Auth Sessions & Login Approvals Controller Isolation
 - **Context:** In Telegram Android, login approvals on new devices, web authorizations awaiting confirmation, and connected bot session approvals are governed by `UnconfirmedAuthController.java` (~414 lines) instantiated on `MessagesController`. The controller directly handles local SQLite storage queries on `unconfirmed_auth`, MTProto requests (`TL_account.changeAuthorizationSettings`, `TL_account.resetAuthorization`, `TL_account.confirmBotConnection`, `TL_account.updateConnectedBot`), in-memory cached session lists (`auths`), and expiration checking runnables. UI components like `UnconfirmedAuthHintCell.java` (~370 lines) directly queried unsynchronized controller arrays and executed direct callback methods without lifecycle safety.
