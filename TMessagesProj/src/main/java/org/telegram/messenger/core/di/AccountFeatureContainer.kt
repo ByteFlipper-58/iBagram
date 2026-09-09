@@ -496,6 +496,15 @@ import org.telegram.messenger.feature.launchericon.domain.usecase.IsLauncherIcon
 import org.telegram.messenger.feature.launchericon.domain.usecase.ObserveLauncherIconsUseCase
 import org.telegram.messenger.feature.launchericon.domain.usecase.SetLauncherIconUseCase
 import org.telegram.messenger.feature.launchericon.presentation.LauncherIconViewModel
+import org.telegram.messenger.feature.push.data.repository.LegacyPushRepository
+import org.telegram.messenger.feature.push.domain.repository.PushRepository
+import org.telegram.messenger.feature.push.domain.usecase.GetPushStatusUseCase
+import org.telegram.messenger.feature.push.domain.usecase.IsPushAvailableUseCase
+import org.telegram.messenger.feature.push.domain.usecase.ObservePushStatusUseCase
+import org.telegram.messenger.feature.push.domain.usecase.RegisterPushTokenUseCase
+import org.telegram.messenger.feature.push.domain.usecase.RequestPushTokenUseCase
+import org.telegram.messenger.feature.push.domain.usecase.ResetPushTokenUseCase
+import org.telegram.messenger.feature.push.presentation.PushViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3150,6 +3159,55 @@ class AccountFeatureContainer private constructor(val account: Int) {
             getActiveLauncherIconUseCase = getActiveLauncherIconUseCase,
             setLauncherIconUseCase = setLauncherIconUseCase,
             fixLauncherIconIfNeededUseCase = fixLauncherIconIfNeededUseCase
+        )
+    }
+
+    private var customPushRepository: PushRepository? = null
+
+    var pushRepository: PushRepository
+        get() = customPushRepository ?: LegacyPushRepository(account)
+        set(value) {
+            customPushRepository = value
+        }
+
+    val observePushStatusUseCase: ObservePushStatusUseCase
+        get() = ObservePushStatusUseCase(pushRepository)
+
+    val getPushStatusUseCase: GetPushStatusUseCase
+        get() = GetPushStatusUseCase(pushRepository)
+
+    val isPushAvailableUseCase: IsPushAvailableUseCase
+        get() = IsPushAvailableUseCase(pushRepository)
+
+    val requestPushTokenUseCase: RequestPushTokenUseCase
+        get() = RequestPushTokenUseCase(pushRepository)
+
+    val registerPushTokenUseCase: RegisterPushTokenUseCase
+        get() = RegisterPushTokenUseCase(pushRepository)
+
+    val resetPushTokenUseCase: ResetPushTokenUseCase
+        get() = ResetPushTokenUseCase(pushRepository)
+
+    private var cachedPushViewModel: PushViewModel? = null
+
+    val pushViewModel: PushViewModel
+        get() {
+            var vm = cachedPushViewModel
+            if (vm == null) {
+                vm = createPushViewModel()
+                cachedPushViewModel = vm
+            }
+            return vm
+        }
+
+    fun createPushViewModel(): PushViewModel {
+        return PushViewModel(
+            observePushStatusUseCase = observePushStatusUseCase,
+            getPushStatusUseCase = getPushStatusUseCase,
+            isPushAvailableUseCase = isPushAvailableUseCase,
+            requestPushTokenUseCase = requestPushTokenUseCase,
+            registerPushTokenUseCase = registerPushTokenUseCase,
+            resetPushTokenUseCase = resetPushTokenUseCase
         )
     }
 

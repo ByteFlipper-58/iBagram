@@ -1395,6 +1395,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── LauncherIconUiState.kt
             ├── LauncherIconEvent.kt
             └── LauncherIconViewModel.kt
+    │
+    └── push/                             # Push Notifications, FCM/HMS Registration & Device Tokens Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── PushServiceType.kt
+        │   │   ├── PushStatusModel.kt
+        │   │   └── PushRegistrationResult.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── PushRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObservePushStatusUseCase.kt
+        │       ├── GetPushStatusUseCase.kt
+        │       ├── IsPushAvailableUseCase.kt
+        │       ├── RequestPushTokenUseCase.kt
+        │       ├── RegisterPushTokenUseCase.kt
+        │       └── ResetPushTokenUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Legacy PushType <-> Domain)
+        │   │   └── PushMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyPushRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── PushUiState.kt
+            ├── PushEvent.kt
+            └── PushViewModel.kt
 ```
 
 ### Layer Rules
@@ -1714,10 +1741,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveLauncherIconsUseCase`, `GetLauncherIconsUseCase`, `GetActiveLauncherIconUseCase`, `IsLauncherIconEnabledUseCase`, `SetLauncherIconUseCase`, `FixLauncherIconIfNeededUseCase`
   - [x] Data layer: `LauncherIconMapper`, `LegacyLauncherIconRepository` (Main-thread safe, adapting `LauncherIconController` and Android `PackageManager.setComponentEnabledSetting`)
   - [x] Presentation layer: `LauncherIconUiState`, `LauncherIconEvent`, `LauncherIconViewModel`
+- [x] Push Notifications, FCM/HMS Registration & Device Tokens (`feature.push`)
+  - [x] Domain entities: `PushServiceType`, `PushStatusModel`, `PushRegistrationResult`
+  - [x] Repository contract: `PushRepository`
+  - [x] Use cases: `ObservePushStatusUseCase`, `GetPushStatusUseCase`, `IsPushAvailableUseCase`, `RequestPushTokenUseCase`, `RegisterPushTokenUseCase`, `ResetPushTokenUseCase`
+  - [x] Data layer: `PushMapper`, `LegacyPushRepository` (Main/IO thread safe, adapting `PushListenerController`, `ApplicationLoader.getPushProvider()`, `SharedConfig`, `UserConfig`, and `ConnectionsManager`)
+  - [x] Presentation layer: `PushUiState`, `PushEvent`, `PushViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 050: Push Notifications, FCM/HMS Registration & Device Tokens Controller Isolation
+- **Context:** In Telegram Android, push notification services (Google Firebase Cloud Messaging / FCM, Huawei Mobile Services / HMS), push device registration (`ConnectionsManager.setRegId`, `registerForPush`), push string tokens (`SharedConfig.pushString`, `SharedConfig.pushType`, `SharedConfig.pushStringStatus`), and remote push payload dispatching were managed via `PushListenerController.java` (~1735 lines). UI components and activity classes (such as `PassportActivity.java`, `LoginActivity.java`, `LaunchActivity.java`, and `GcmPushListenerService.java`) directly queried `PushListenerController.GooglePushListenerServiceProvider.INSTANCE.hasServices()`, triggered static token delivery (`PushListenerController.sendRegistrationToServer`), and manually coordinated registration state across all active accounts (`UserConfig.registeredForPush`).
+- **Decision:** Introduce pure domain models `PushServiceType` (FIREBASE, HUAWEI, UNKNOWN), `PushStatusModel` (with token validity rules, provider title, account registration state, and availability flags), and `PushRegistrationResult` (Success, Failure). Define abstract contract `PushRepository` covering reactive push status observation (`observePushStatus`), current status retrieval (`getPushStatus`), service availability checks (`isPushServiceAvailable`), push token requests (`requestPushToken`), multi-account registration dispatching (`registerPushToken`), and token reset (`resetPushToken`). Implement `LegacyPushRepository` operating safely on IO/Main dispatchers, guarding against missing Android Context during headless testing, and bridging to `ApplicationLoader.getPushProvider()`, `PushListenerController`, and `SharedConfig`. Encapsulate presentation state and MVI events in `PushViewModel`.
+- **Consequences:** Push notifications provider abstractions, FCM/HCM device token lifecycles, and server registration dispatches are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's push listener services and MTProto push registration mechanisms.
 
 ### ADR 049: App Dynamic Launcher Icons & Premium Badging Controller Isolation
 - **Context:** In Telegram Android, dynamic application launcher icons (Default, Vintage, Aqua, and Telegram Premium icons: Premium, Turbo, Nox) were managed via `LauncherIconController.java` (~72 lines) located in `org.telegram.ui`. The controller directly manipulated Android `PackageManager` component states (`PackageManager.setComponentEnabledSetting`, `PackageManager.DONT_KILL_APP`) across Android activity-alias components (`org.telegram.messenger.<key>`), and performed automatic fallback healing (`tryFixLauncherIconIfNeeded`). UI components like `AppIconsSelectorCell.java`, `PremiumAppIconsPreviewView.java`, and `LaunchActivity.java` directly queried and modified static controller methods without architectural abstraction.
