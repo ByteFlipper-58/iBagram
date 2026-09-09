@@ -402,6 +402,18 @@ import org.telegram.messenger.feature.captcha.domain.usecase.ObserveActiveCaptch
 import org.telegram.messenger.feature.captcha.domain.usecase.SubmitCaptchaResultUseCase
 import org.telegram.messenger.feature.captcha.domain.usecase.VerifyCaptchaUseCase
 import org.telegram.messenger.feature.captcha.presentation.CaptchaViewModel
+import org.telegram.messenger.feature.hashtagsearch.data.repository.LegacyHashtagSearchRepository
+import org.telegram.messenger.feature.hashtagsearch.domain.repository.HashtagSearchRepository
+import org.telegram.messenger.feature.hashtagsearch.domain.usecase.AddHashtagToHistoryUseCase
+import org.telegram.messenger.feature.hashtagsearch.domain.usecase.ClearHashtagHistoryUseCase
+import org.telegram.messenger.feature.hashtagsearch.domain.usecase.ClearHashtagSearchResultsUseCase
+import org.telegram.messenger.feature.hashtagsearch.domain.usecase.GetHashtagHistoryUseCase
+import org.telegram.messenger.feature.hashtagsearch.domain.usecase.JumpToHashtagMessageUseCase
+import org.telegram.messenger.feature.hashtagsearch.domain.usecase.ObserveHashtagHistoryUseCase
+import org.telegram.messenger.feature.hashtagsearch.domain.usecase.ObserveHashtagSearchResultUseCase
+import org.telegram.messenger.feature.hashtagsearch.domain.usecase.RemoveHashtagFromHistoryUseCase
+import org.telegram.messenger.feature.hashtagsearch.domain.usecase.SearchHashtagUseCase
+import org.telegram.messenger.feature.hashtagsearch.presentation.HashtagSearchViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2569,6 +2581,67 @@ class AccountFeatureContainer private constructor(val account: Int) {
             verifyCaptchaUseCase = verifyCaptchaUseCase,
             submitCaptchaResultUseCase = submitCaptchaResultUseCase,
             cancelCaptchaUseCase = cancelCaptchaUseCase
+        )
+    }
+
+    private var customHashtagSearchRepository: HashtagSearchRepository? = null
+
+    var hashtagSearchRepository: HashtagSearchRepository
+        get() = customHashtagSearchRepository ?: LegacyHashtagSearchRepository(account)
+        set(value) {
+            customHashtagSearchRepository = value
+        }
+
+    val observeHashtagHistoryUseCase: ObserveHashtagHistoryUseCase
+        get() = ObserveHashtagHistoryUseCase(hashtagSearchRepository)
+
+    val getHashtagHistoryUseCase: GetHashtagHistoryUseCase
+        get() = GetHashtagHistoryUseCase(hashtagSearchRepository)
+
+    val addHashtagToHistoryUseCase: AddHashtagToHistoryUseCase
+        get() = AddHashtagToHistoryUseCase(hashtagSearchRepository)
+
+    val removeHashtagFromHistoryUseCase: RemoveHashtagFromHistoryUseCase
+        get() = RemoveHashtagFromHistoryUseCase(hashtagSearchRepository)
+
+    val clearHashtagHistoryUseCase: ClearHashtagHistoryUseCase
+        get() = ClearHashtagHistoryUseCase(hashtagSearchRepository)
+
+    val observeHashtagSearchResultUseCase: ObserveHashtagSearchResultUseCase
+        get() = ObserveHashtagSearchResultUseCase(hashtagSearchRepository)
+
+    val searchHashtagUseCase: SearchHashtagUseCase
+        get() = SearchHashtagUseCase(hashtagSearchRepository)
+
+    val jumpToHashtagMessageUseCase: JumpToHashtagMessageUseCase
+        get() = JumpToHashtagMessageUseCase(hashtagSearchRepository)
+
+    val clearHashtagSearchResultsUseCase: ClearHashtagSearchResultsUseCase
+        get() = ClearHashtagSearchResultsUseCase(hashtagSearchRepository)
+
+    private var cachedHashtagSearchViewModel: HashtagSearchViewModel? = null
+
+    val hashtagSearchViewModel: HashtagSearchViewModel
+        get() {
+            var vm = cachedHashtagSearchViewModel
+            if (vm == null) {
+                vm = createHashtagSearchViewModel()
+                cachedHashtagSearchViewModel = vm
+            }
+            return vm
+        }
+
+    fun createHashtagSearchViewModel(): HashtagSearchViewModel {
+        return HashtagSearchViewModel(
+            observeHashtagHistoryUseCase = observeHashtagHistoryUseCase,
+            getHashtagHistoryUseCase = getHashtagHistoryUseCase,
+            addHashtagToHistoryUseCase = addHashtagToHistoryUseCase,
+            removeHashtagFromHistoryUseCase = removeHashtagFromHistoryUseCase,
+            clearHashtagHistoryUseCase = clearHashtagHistoryUseCase,
+            observeHashtagSearchResultUseCase = observeHashtagSearchResultUseCase,
+            searchHashtagUseCase = searchHashtagUseCase,
+            jumpToHashtagMessageUseCase = jumpToHashtagMessageUseCase,
+            clearHashtagSearchResultsUseCase = clearHashtagSearchResultsUseCase
         )
     }
 

@@ -1132,6 +1132,36 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── CaptchaUiState.kt
             ├── CaptchaEvent.kt
             └── CaptchaViewModel.kt
+    │
+    └── hashtagsearch/                    # Hashtag Search & History Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── HashtagSearchType.kt
+        │   │   ├── HashtagMessageModel.kt
+        │   │   └── HashtagSearchResultModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── HashtagSearchRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveHashtagHistoryUseCase.kt
+        │       ├── GetHashtagHistoryUseCase.kt
+        │       ├── AddHashtagToHistoryUseCase.kt
+        │       ├── RemoveHashtagFromHistoryUseCase.kt
+        │       ├── ClearHashtagHistoryUseCase.kt
+        │       ├── ObserveHashtagSearchResultUseCase.kt
+        │       ├── SearchHashtagUseCase.kt
+        │       ├── JumpToHashtagMessageUseCase.kt
+        │       └── ClearHashtagSearchResultsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (HashtagSearchType <-> Int, MessageObject <-> Domain)
+        │   │   └── HashtagMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyHashtagSearchRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── HashtagSearchUiState.kt
+            ├── HashtagSearchEvent.kt
+            └── HashtagSearchViewModel.kt
 ```
 
 ### Layer Rules
@@ -1397,10 +1427,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveActiveCaptchaRequestsUseCase`, `GetActiveCaptchaRequestsUseCase`, `VerifyCaptchaUseCase`, `SubmitCaptchaResultUseCase`, `CancelCaptchaUseCase`
   - [x] Data layer: `CaptchaMapper`, `LegacyCaptchaRepository` (Main-thread safe, adapting Google Play Services reCAPTCHA Enterprise Tasks API and MTProto `ConnectionsManager.native_receivedCaptchaResult`)
   - [x] Presentation layer: `CaptchaUiState`, `CaptchaEvent`, `CaptchaViewModel`
+- [x] Hashtag Search & Search History (`feature.hashtagsearch`)
+  - [x] Domain entities: `HashtagSearchType`, `HashtagMessageModel`, `HashtagSearchResultModel`
+  - [x] Repository contract: `HashtagSearchRepository`
+  - [x] Use cases: `ObserveHashtagHistoryUseCase`, `GetHashtagHistoryUseCase`, `AddHashtagToHistoryUseCase`, `RemoveHashtagFromHistoryUseCase`, `ClearHashtagHistoryUseCase`, `ObserveHashtagSearchResultUseCase`, `SearchHashtagUseCase`, `JumpToHashtagMessageUseCase`, `ClearHashtagSearchResultsUseCase`
+  - [x] Data layer: `HashtagMapper`, `LegacyHashtagSearchRepository` (Main-thread safe, adapting `HashtagSearchController`, SharedPreferences history, and MTProto global/channel search)
+  - [x] Presentation layer: `HashtagSearchUiState`, `HashtagSearchEvent`, `HashtagSearchViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 041: Hashtag Search & History Controller Isolation
+- **Context:** In Telegram Android, search for messages containing hashtags and cashtags across personal chats, public channels, and current channels was managed by `HashtagSearchController.java` (~389 lines). The controller directly managed volatile static instances per account (`Instance[UserConfig.MAX_ACCOUNT_COUNT]`), raw SharedPreferences persistence (`hashtag_search_history<currentAccount>`), manual capacity trimming (100 items), low-level MTProto search requests (`TLRPC.TL_messages_searchGlobal`, `TLRPC.TL_channels_searchPosts`, `TLRPC.TL_messages_search`), synthetic ID generation (`generatedIds`), and direct broadcasts on `NotificationCenter.hashtagSearchUpdated` and `messagesDidLoad`.
+- **Decision:** Introduce pure domain models `HashtagSearchType` (MY_MESSAGES, PUBLIC_POSTS, CHANNEL_POSTS), `HashtagMessageModel`, and `HashtagSearchResultModel` with pagination and navigation capabilities. Define abstract contract `HashtagSearchRepository` covering reactive history observation (`observeHistory`), snapshot retrieval (`getHistory`), adding (`addHashtagToHistory`), removing (`removeHashtagFromHistory`), clearing history (`clearHistory`), reactive search result observation (`observeSearchResult`), search execution (`searchHashtag`), message navigation (`jumpToMessage`), and result clearing (`clearSearchResults`). Implement `LegacyHashtagSearchRepository` operating safely on `Dispatchers.Main` with reactive StateFlows. Encapsulate presentation state and MVI events in `HashtagSearchViewModel`.
+- **Consequences:** Hashtag and cashtag searching, recent hashtag history, search pagination, and message jumping are decoupled behind clean, testable domain interfaces with complete unit test coverage while maintaining 100% compatibility with Telegram's core search controller and MTProto search protocols.
 
 ### ADR 040: reCAPTCHA Enterprise Verification Controller Isolation
 - **Context:** In Telegram Android, reCAPTCHA Enterprise challenge verification during registration, login, and sensitive MTProto actions was managed by `CaptchaController.java` (~115 lines). The legacy controller directly coupled global mutable static state (`public static HashMap<Integer, Request> currentRequests`), direct Android `Activity` extraction via `AndroidUtilities.getActivity()`, Google Play Services reCAPTCHA Enterprise Tasks API callbacks, and immediate invocation of MTProto native JNI methods (`ConnectionsManager.native_receivedCaptchaResult`). Native code in `TgNetWrapper.cpp` triggered `ConnectionsManager.onCaptchaCheck(currentAccount, requestToken, action, key_id)` directly into `CaptchaController.request`.
