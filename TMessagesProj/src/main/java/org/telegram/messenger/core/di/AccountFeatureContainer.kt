@@ -547,6 +547,18 @@ import org.telegram.messenger.feature.gallerysave.domain.usecase.SetGallerySaveV
 import org.telegram.messenger.feature.gallerysave.domain.usecase.ToggleGallerySavePeerTypeUseCase
 import org.telegram.messenger.feature.gallerysave.domain.usecase.UpdateGallerySaveSettingsUseCase
 import org.telegram.messenger.feature.gallerysave.presentation.GallerySaveViewModel
+import org.telegram.messenger.feature.refreshrate.data.repository.LegacyRefreshRateRepository
+import org.telegram.messenger.feature.refreshrate.domain.repository.RefreshRateRepository
+import org.telegram.messenger.feature.refreshrate.domain.usecase.GetDisplayRefreshModesUseCase
+import org.telegram.messenger.feature.refreshrate.domain.usecase.GetRefreshRateStateUseCase
+import org.telegram.messenger.feature.refreshrate.domain.usecase.ObserveRefreshRateStateUseCase
+import org.telegram.messenger.feature.refreshrate.domain.usecase.RecordFrameMetricUseCase
+import org.telegram.messenger.feature.refreshrate.domain.usecase.ResetRefreshRateStatsUseCase
+import org.telegram.messenger.feature.refreshrate.domain.usecase.SetPreferredRefreshRateModeUseCase
+import org.telegram.messenger.feature.refreshrate.domain.usecase.StartRefreshRateTrackingUseCase
+import org.telegram.messenger.feature.refreshrate.domain.usecase.StopRefreshRateTrackingUseCase
+import org.telegram.messenger.feature.refreshrate.domain.usecase.ToggleAdaptiveRefreshRateUseCase
+import org.telegram.messenger.feature.refreshrate.presentation.RefreshRateViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3463,6 +3475,66 @@ class AccountFeatureContainer private constructor(val account: Int) {
             setGallerySaveExceptionUseCase = setGallerySaveExceptionUseCase,
             removeGallerySaveExceptionUseCase = removeGallerySaveExceptionUseCase,
             removeAllGallerySaveExceptionsUseCase = removeAllGallerySaveExceptionsUseCase
+        )
+    }
+
+    private var customRefreshRateRepository: RefreshRateRepository? = null
+
+    var refreshRateRepository: RefreshRateRepository
+        get() = customRefreshRateRepository ?: LegacyRefreshRateRepository()
+        set(value) {
+            customRefreshRateRepository = value
+        }
+
+    val observeRefreshRateStateUseCase: ObserveRefreshRateStateUseCase
+        get() = ObserveRefreshRateStateUseCase(refreshRateRepository)
+
+    val getRefreshRateStateUseCase: GetRefreshRateStateUseCase
+        get() = GetRefreshRateStateUseCase(refreshRateRepository)
+
+    val startRefreshRateTrackingUseCase: StartRefreshRateTrackingUseCase
+        get() = StartRefreshRateTrackingUseCase(refreshRateRepository)
+
+    val stopRefreshRateTrackingUseCase: StopRefreshRateTrackingUseCase
+        get() = StopRefreshRateTrackingUseCase(refreshRateRepository)
+
+    val toggleAdaptiveRefreshRateUseCase: ToggleAdaptiveRefreshRateUseCase
+        get() = ToggleAdaptiveRefreshRateUseCase(refreshRateRepository)
+
+    val setPreferredRefreshRateModeUseCase: SetPreferredRefreshRateModeUseCase
+        get() = SetPreferredRefreshRateModeUseCase(refreshRateRepository)
+
+    val recordFrameMetricUseCase: RecordFrameMetricUseCase
+        get() = RecordFrameMetricUseCase(refreshRateRepository)
+
+    val resetRefreshRateStatsUseCase: ResetRefreshRateStatsUseCase
+        get() = ResetRefreshRateStatsUseCase(refreshRateRepository)
+
+    val getDisplayRefreshModesUseCase: GetDisplayRefreshModesUseCase
+        get() = GetDisplayRefreshModesUseCase(refreshRateRepository)
+
+    private var cachedRefreshRateViewModel: RefreshRateViewModel? = null
+
+    val refreshRateViewModel: RefreshRateViewModel
+        get() {
+            var vm = cachedRefreshRateViewModel
+            if (vm == null) {
+                vm = createRefreshRateViewModel()
+                cachedRefreshRateViewModel = vm
+            }
+            return vm
+        }
+
+    fun createRefreshRateViewModel(): RefreshRateViewModel {
+        return RefreshRateViewModel(
+            observeRefreshRateStateUseCase = observeRefreshRateStateUseCase,
+            getRefreshRateStateUseCase = getRefreshRateStateUseCase,
+            startRefreshRateTrackingUseCase = startRefreshRateTrackingUseCase,
+            stopRefreshRateTrackingUseCase = stopRefreshRateTrackingUseCase,
+            toggleAdaptiveRefreshRateUseCase = toggleAdaptiveRefreshRateUseCase,
+            setPreferredRefreshRateModeUseCase = setPreferredRefreshRateModeUseCase,
+            recordFrameMetricUseCase = recordFrameMetricUseCase,
+            resetRefreshRateStatsUseCase = resetRefreshRateStatsUseCase
         )
     }
 

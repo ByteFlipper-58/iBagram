@@ -1536,6 +1536,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── GallerySaveUiState.kt
             ├── GallerySaveEvent.kt
             └── GallerySaveViewModel.kt
+    │
+    └── refreshrate/                      # Adaptive Display Refresh Rate & FPS Metrics Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models
+        │   │   ├── DisplayRefreshModeModel.kt
+        │   │   ├── RefreshRateDirection.kt
+        │   │   ├── RefreshRateHysteresisConfig.kt
+        │   │   └── RefreshRateStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── RefreshRateRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveRefreshRateStateUseCase.kt
+        │       ├── GetRefreshRateStateUseCase.kt
+        │       ├── StartRefreshRateTrackingUseCase.kt
+        │       ├── StopRefreshRateTrackingUseCase.kt
+        │       ├── ToggleAdaptiveRefreshRateUseCase.kt
+        │       ├── SetPreferredRefreshRateModeUseCase.kt
+        │       ├── RecordFrameMetricUseCase.kt
+        │       ├── ResetRefreshRateStatsUseCase.kt
+        │       └── GetDisplayRefreshModesUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Display.Mode <-> Domain)
+        │   │   └── RefreshRateMapper.kt
+        │   └── repository/                # Adapter implementing repository with hysteresis
+        │       └── LegacyRefreshRateRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── RefreshRateUiState.kt
+            ├── RefreshRateEvent.kt
+            └── RefreshRateViewModel.kt
 ```
 
 ### Layer Rules
@@ -1885,10 +1916,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveGallerySaveConfigUseCase`, `GetGallerySaveConfigUseCase`, `GetGallerySaveSettingsUseCase`, `UpdateGallerySaveSettingsUseCase`, `ToggleGallerySavePeerTypeUseCase`, `SetGallerySaveVideoLimitUseCase`, `GetGallerySaveExceptionsUseCase`, `SetGallerySaveExceptionUseCase`, `RemoveGallerySaveExceptionUseCase`, `RemoveAllGallerySaveExceptionsUseCase`
   - [x] Data layer: `GallerySaveMapper`, `LegacyGallerySaveRepository` (Main-thread safe, adapting `SaveToGallerySettingsHelper`, `UserConfig.getSaveGalleryExceptions()`, and in-memory fallback)
   - [x] Presentation layer: `GallerySaveUiState`, `GallerySaveEvent`, `GallerySaveViewModel`
+- [x] Adaptive Display Refresh Rate & FPS Metrics (`feature.refreshrate`)
+  - [x] Domain entities: `DisplayRefreshModeModel`, `RefreshRateDirection`, `RefreshRateHysteresisConfig`, `RefreshRateStateModel`
+  - [x] Repository contract: `RefreshRateRepository`
+  - [x] Use cases: `ObserveRefreshRateStateUseCase`, `GetRefreshRateStateUseCase`, `StartRefreshRateTrackingUseCase`, `StopRefreshRateTrackingUseCase`, `ToggleAdaptiveRefreshRateUseCase`, `SetPreferredRefreshRateModeUseCase`, `RecordFrameMetricUseCase`, `ResetRefreshRateStatsUseCase`, `GetDisplayRefreshModesUseCase`
+  - [x] Data layer: `RefreshRateMapper`, `LegacyRefreshRateRepository` (Main-thread safe, adapting `RefreshRateController` logic, ring buffer FPS calculations, and hysteresis control)
+  - [x] Presentation layer: `RefreshRateUiState`, `RefreshRateEvent`, `RefreshRateViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 055: Adaptive Display Refresh Rate & FPS Metrics Controller Isolation
+- **Context:** In Telegram Android, dynamic switching of display refresh rates (60 Hz vs 90/120 Hz) based on rendering performance was managed by `RefreshRateController.java` (~307 lines) located in `org.telegram.messenger.utils`. The controller directly coupled Android `Window.OnFrameMetricsAvailableListener`, `FrameMetrics.TOTAL_DURATION`, Android `Display.Mode` querying, and custom ring-buffer nanosecond running sums with hardcoded thresholds (`DOWN_FPS = 55.0f`, `UP_FPS = 58.5f`, `STABLE_WINDOW_MS = 1800ms`, `MIN_SWITCH_INTERVAL_MS = 3000ms`). UI activities like `LaunchActivity.java` had tightly coupled references to this component.
+- **Decision:** Introduce pure domain models `DisplayRefreshModeModel` (with `isApproximately60Hz` and `isHighRefreshRate`), `RefreshRateDirection` (UP, DOWN, NONE), `RefreshRateHysteresisConfig`, and `RefreshRateStateModel`. Define abstract contract `RefreshRateRepository` covering reactive state observation (`observeState`), snapshot retrieval (`getState`), tracking lifecycle (`startTracking`, `stopTracking`), toggling adaptive switching (`setAdaptiveEnabled`), preferred mode selection (`setPreferredMode`), recording frame durations (`recordFrameDuration`), and stats reset (`resetStats`). Implement `LegacyRefreshRateRepository` operating with full hysteresis calculations, running average FPS logic, and safe fallback modes during headless testing. Encapsulate presentation state and MVI events in `RefreshRateViewModel`.
+- **Consequences:** All display refresh rate switching, FPS performance tracking, and hysteresis stabilization rules are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `RefreshRateController` and `AndroidUtilities.setPreferredMaxRefreshRate`.
 
 ### ADR 054: Auto-Save to Gallery Settings & Exceptions Controller Isolation
 - **Context:** In Telegram Android, automatic photo and video saving to device gallery and per-dialog exception rules were managed by `SaveToGallerySettingsHelper.java` (~259 lines) located in `org.telegram.messenger`. The helper directly coupled Android `SharedPreferences` keys (`savegallery_users`, `savegallery_groups`, `savegallery_channels`), video file size limits (`savegallery_limit_users`, etc. up to 4 GB), and per-dialog custom exceptions stored in `UserConfig.getSaveGalleryExceptions()`. UI components like `SaveToGallerySettingsActivity.java`, `ChatActivity.java`, and `MediaController.java` directly invoked static helper methods (`SaveToGallerySettingsHelper.load()`, `save()`, `getSettings()`, `needSave()`).
