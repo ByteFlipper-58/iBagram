@@ -1368,6 +1368,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BillingUiState.kt
             ├── BillingEvent.kt
             └── BillingViewModel.kt
+    │
+    └── launchericon/                     # App Dynamic Launcher Icons & Premium Badging Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── LauncherIconType.kt
+        │   │   ├── LauncherIconModel.kt
+        │   │   └── LauncherIconsStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── LauncherIconRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveLauncherIconsUseCase.kt
+        │       ├── GetLauncherIconsUseCase.kt
+        │       ├── GetActiveLauncherIconUseCase.kt
+        │       ├── IsLauncherIconEnabledUseCase.kt
+        │       ├── SetLauncherIconUseCase.kt
+        │       └── FixLauncherIconIfNeededUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (LauncherIconController.LauncherIcon <-> Domain)
+        │   │   └── LauncherIconMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyLauncherIconRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── LauncherIconUiState.kt
+            ├── LauncherIconEvent.kt
+            └── LauncherIconViewModel.kt
 ```
 
 ### Layer Rules
@@ -1681,10 +1708,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveBillingStateUseCase`, `GetBillingStateUseCase`, `StartBillingConnectionUseCase`, `GetPremiumProductUseCase`, `FormatCurrencyUseCase`, `GetCurrencyExpUseCase`, `QueryBillingPurchasesUseCase`, `ManageSubscriptionUseCase`
   - [x] Data layer: `BillingMapper`, `LegacyBillingRepository` (Main-thread safe, adapting `BillingController`, `NotificationCenter.billingProductDetailsUpdated`, `billingConfirmPurchaseError`, and Google Play BillingClient query/consume APIs)
   - [x] Presentation layer: `BillingUiState`, `BillingEvent`, `BillingViewModel`
+- [x] App Dynamic Launcher Icons & Premium Badging (`feature.launchericon`)
+  - [x] Domain entities: `LauncherIconType`, `LauncherIconModel`, `LauncherIconsStateModel`
+  - [x] Repository contract: `LauncherIconRepository`
+  - [x] Use cases: `ObserveLauncherIconsUseCase`, `GetLauncherIconsUseCase`, `GetActiveLauncherIconUseCase`, `IsLauncherIconEnabledUseCase`, `SetLauncherIconUseCase`, `FixLauncherIconIfNeededUseCase`
+  - [x] Data layer: `LauncherIconMapper`, `LegacyLauncherIconRepository` (Main-thread safe, adapting `LauncherIconController` and Android `PackageManager.setComponentEnabledSetting`)
+  - [x] Presentation layer: `LauncherIconUiState`, `LauncherIconEvent`, `LauncherIconViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 049: App Dynamic Launcher Icons & Premium Badging Controller Isolation
+- **Context:** In Telegram Android, dynamic application launcher icons (Default, Vintage, Aqua, and Telegram Premium icons: Premium, Turbo, Nox) were managed via `LauncherIconController.java` (~72 lines) located in `org.telegram.ui`. The controller directly manipulated Android `PackageManager` component states (`PackageManager.setComponentEnabledSetting`, `PackageManager.DONT_KILL_APP`) across Android activity-alias components (`org.telegram.messenger.<key>`), and performed automatic fallback healing (`tryFixLauncherIconIfNeeded`). UI components like `AppIconsSelectorCell.java`, `PremiumAppIconsPreviewView.java`, and `LaunchActivity.java` directly queried and modified static controller methods without architectural abstraction.
+- **Decision:** Introduce pure domain models `LauncherIconType` (DEFAULT, VINTAGE, AQUA, PREMIUM, TURBO, NOX), `LauncherIconModel` (with resource IDs, premium flag, and active state), and `LauncherIconsStateModel`. Define abstract contract `LauncherIconRepository` covering reactive state observation (`observeLauncherIcons`), icon list retrieval (`getLauncherIcons`), active icon lookup (`getActiveIcon`), enabled check (`isIconEnabled`), dynamic switching (`setIcon`), and auto-healing (`fixLauncherIconIfNeeded`). Implement `LegacyLauncherIconRepository` operating safely on `Dispatchers.Main` with fallback defaults when Android Context is unavailable (preventing test crashes). Encapsulate presentation state and MVI events in `LauncherIconViewModel`.
+- **Consequences:** Launcher app icons, Premium icon selection, and component enable toggling are cleanly decoupled behind testable domain interfaces with complete unit test coverage while maintaining 100% compatibility with Telegram's Android manifest activity-alias configurations and settings screens.
 
 ### ADR 048: Google Play Billing, Subscriptions & Currency Formatting Controller Isolation
 - **Context:** In Telegram Android, Google Play in-app purchases, Telegram Premium subscription product details (`PREMIUM_PRODUCT_ID = "telegram_premium"`), purchase consumption (gifts, stars top-ups, giveaways, auth codes), Play Store subscription deep links, and multi-currency formatting (`formatCurrency` with special rules for TON, XTR, and fiat currencies) were managed by `BillingController.java` (~574 lines). The controller directly handled Google Play `BillingClient` callbacks (`PurchasesUpdatedListener`, `BillingClientStateListener`), maintained transaction hashes and tokens (`lastPremiumTransaction`, `lastPremiumToken`), managed fallback to invoice mode (`billingClientEmpty`), and coordinated MTProto assignment requests (`TL_payments_assignPlayMarketTransaction`) with UI progress dialogs and notifications on `NotificationCenter.billingProductDetailsUpdated` and `billingConfirmPurchaseError`. UI classes like `PremiumPreviewFragment.java`, `PaymentFormActivity.java`, and Stars dialogs directly accessed `BillingController.getInstance()`.

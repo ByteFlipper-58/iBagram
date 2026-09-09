@@ -487,6 +487,15 @@ import org.telegram.messenger.feature.billing.domain.usecase.ObserveBillingState
 import org.telegram.messenger.feature.billing.domain.usecase.QueryBillingPurchasesUseCase
 import org.telegram.messenger.feature.billing.domain.usecase.StartBillingConnectionUseCase
 import org.telegram.messenger.feature.billing.presentation.BillingViewModel
+import org.telegram.messenger.feature.launchericon.data.repository.LegacyLauncherIconRepository
+import org.telegram.messenger.feature.launchericon.domain.repository.LauncherIconRepository
+import org.telegram.messenger.feature.launchericon.domain.usecase.FixLauncherIconIfNeededUseCase
+import org.telegram.messenger.feature.launchericon.domain.usecase.GetActiveLauncherIconUseCase
+import org.telegram.messenger.feature.launchericon.domain.usecase.GetLauncherIconsUseCase
+import org.telegram.messenger.feature.launchericon.domain.usecase.IsLauncherIconEnabledUseCase
+import org.telegram.messenger.feature.launchericon.domain.usecase.ObserveLauncherIconsUseCase
+import org.telegram.messenger.feature.launchericon.domain.usecase.SetLauncherIconUseCase
+import org.telegram.messenger.feature.launchericon.presentation.LauncherIconViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3093,6 +3102,54 @@ class AccountFeatureContainer private constructor(val account: Int) {
             startBillingConnectionUseCase = startBillingConnectionUseCase,
             queryBillingPurchasesUseCase = queryBillingPurchasesUseCase,
             manageSubscriptionUseCase = manageSubscriptionUseCase
+        )
+    }
+
+    private var customLauncherIconRepository: LauncherIconRepository? = null
+
+    var launcherIconRepository: LauncherIconRepository
+        get() = customLauncherIconRepository ?: LegacyLauncherIconRepository()
+        set(value) {
+            customLauncherIconRepository = value
+        }
+
+    val observeLauncherIconsUseCase: ObserveLauncherIconsUseCase
+        get() = ObserveLauncherIconsUseCase(launcherIconRepository)
+
+    val getLauncherIconsUseCase: GetLauncherIconsUseCase
+        get() = GetLauncherIconsUseCase(launcherIconRepository)
+
+    val getActiveLauncherIconUseCase: GetActiveLauncherIconUseCase
+        get() = GetActiveLauncherIconUseCase(launcherIconRepository)
+
+    val isLauncherIconEnabledUseCase: IsLauncherIconEnabledUseCase
+        get() = IsLauncherIconEnabledUseCase(launcherIconRepository)
+
+    val setLauncherIconUseCase: SetLauncherIconUseCase
+        get() = SetLauncherIconUseCase(launcherIconRepository)
+
+    val fixLauncherIconIfNeededUseCase: FixLauncherIconIfNeededUseCase
+        get() = FixLauncherIconIfNeededUseCase(launcherIconRepository)
+
+    private var cachedLauncherIconViewModel: LauncherIconViewModel? = null
+
+    val launcherIconViewModel: LauncherIconViewModel
+        get() {
+            var vm = cachedLauncherIconViewModel
+            if (vm == null) {
+                vm = createLauncherIconViewModel()
+                cachedLauncherIconViewModel = vm
+            }
+            return vm
+        }
+
+    fun createLauncherIconViewModel(): LauncherIconViewModel {
+        return LauncherIconViewModel(
+            observeLauncherIconsUseCase = observeLauncherIconsUseCase,
+            getLauncherIconsUseCase = getLauncherIconsUseCase,
+            getActiveLauncherIconUseCase = getActiveLauncherIconUseCase,
+            setLauncherIconUseCase = setLauncherIconUseCase,
+            fixLauncherIconIfNeededUseCase = fixLauncherIconIfNeededUseCase
         )
     }
 
