@@ -1681,6 +1681,39 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── FileRefUiState.kt
             ├── FileRefEvent.kt
             └── FileRefViewModel.kt
+    │
+    └── camera/                            # Hardware Camera & Video Recording Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── CameraFacing.kt
+        │   │   ├── CameraResolutionModel.kt
+        │   │   ├── CameraFlashMode.kt
+        │   │   ├── CameraRecordingState.kt
+        │   │   ├── CameraDeviceModel.kt
+        │   │   └── CameraStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── CameraRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveCameraStateUseCase.kt
+        │       ├── GetCameraStateUseCase.kt
+        │       ├── InitCamerasUseCase.kt
+        │       ├── SelectCameraUseCase.kt
+        │       ├── SwitchCameraUseCase.kt
+        │       ├── SetCameraFlashModeUseCase.kt
+        │       ├── ToggleMirrorFrontCameraUseCase.kt
+        │       ├── ChooseOptimalResolutionUseCase.kt
+        │       └── NotifyCameraRecordingUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Legacy CameraInfo/Size <-> Domain)
+        │   │   └── CameraMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyCameraRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── CameraUiState.kt
+            ├── CameraEvent.kt
+            └── CameraViewModel.kt
 ```
 
 ### Layer Rules
@@ -2060,10 +2093,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveFileRefStatsUseCase`, `GetFileRefStatsUseCase`, `RequestReferenceRenewalUseCase`, `NotifyReferenceRenewedUseCase`, `CancelFileRefRequestUseCase`, `ClearFileRefCacheUseCase`
   - [x] Data layer: `FileRefMapper`, `LegacyFileRefRepository` (Main/thread safe, adapting `FileRefController`, 60-second parent response caching, request deduplication by location and parent keys)
   - [x] Presentation layer: `FileRefUiState`, `FileRefEvent`, `FileRefViewModel`
+- [x] Hardware Camera & Video Recording (`feature.camera`)
+  - [x] Domain entities: `CameraFacing`, `CameraResolutionModel`, `CameraFlashMode`, `CameraRecordingState`, `CameraDeviceModel`, `CameraStateModel`
+  - [x] Repository contract: `CameraRepository`
+  - [x] Use cases: `ObserveCameraStateUseCase`, `GetCameraStateUseCase`, `InitCamerasUseCase`, `SelectCameraUseCase`, `SwitchCameraUseCase`, `SetCameraFlashModeUseCase`, `ToggleMirrorFrontCameraUseCase`, `ChooseOptimalResolutionUseCase`, `NotifyCameraRecordingUseCase`
+  - [x] Data layer: `CameraMapper`, `LegacyCameraRepository` (thread safe, adapting `CameraController`, resolution selection heuristics, headless fallback)
+  - [x] Presentation layer: `CameraUiState`, `CameraEvent`, `CameraViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 060: Hardware Camera & Video Recording Controller Isolation
+- **Context:** In Telegram Android, camera hardware initialization, device enumeration, preview and picture resolution selection, flash mode management, front camera mirroring, and video recording lifecycle were managed by `CameraController.java` (~975 lines) located in `org.telegram.messenger.camera`. The controller directly coupled legacy Android `Camera` and `Camera2` APIs, thread pools (`ThreadPoolExecutor`), SharedPreferences (`cameraCache` Base64 serialization), `MediaRecorder`, `MediaMetadataRetriever`, thumbnail generation (`SendMessagesHelper.createVideoThumbnail`), and global notifications on `NotificationCenter.cameraInitied`. Camera UI components (`CameraView.java`, `ChatActivity.java`, `StoryRecorder.java`) had tightly coupled dependencies on singleton `CameraController.getInstance()`.
+- **Decision:** Introduce pure domain models `CameraFacing` (BACK, FRONT), `CameraResolutionModel` (with aspect ratio and area computations), `CameraFlashMode` (OFF, ON, AUTO, TORCH), `CameraRecordingState` (IDLE, RECORDING, FINISHED, FAILED), `CameraDeviceModel`, and `CameraStateModel`. Define abstract contract `CameraRepository` covering reactive state observation (`observeCameraState`), snapshot retrieval (`getCameraState`), camera initialization (`initCameras`), camera selection and cycling (`selectCamera`, `switchCamera`), flash mode control (`setFlashMode`), front-facing mirroring (`toggleMirrorFrontCamera`), aspect ratio matching resolution selection (`chooseOptimalResolution`), and recording lifecycle notifications (`notifyRecordingStarted`, `notifyRecordingFinished`, `notifyRecordingFailed`). Implement `LegacyCameraRepository` operating safely across threads with pure optimal size heuristics and headless unit testing fallback. Encapsulate presentation state and MVI events in `CameraViewModel`.
+- **Consequences:** Camera device enumeration, resolution calculations, flash/mirroring preferences, and recording lifecycle state are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `CameraController` and `CameraView`.
 
 ### ADR 059: MTProto File Reference Renewal & Parent Cache Controller Isolation
 - **Context:** In Telegram Android, automatic renewal of expired MTProto file references (`FILE_REFERENCE_EXPIRED`) was handled by `FileRefController.java` (~2347 lines) located in `org.telegram.messenger`. Whenever media files (photos, videos, documents, wallpapers, avatars, stickers) fail to download due to an expired file reference token, the download engine delegates reference renewal to `FileRefController`. The controller coupled multiple complex responsibilities: grouping pending requests by file location key (`locationKey`), deduplicating network RPC queries by parent object (`parentKey`), maintaining an in-memory 60-second response cache (`responseCache` with `CachedResult`), and dispatching MTProto RPC calls (`TL_messages_getMessages`, `TL_channels_getMessages`, `TL_users_getUsers`, `TL_stories_getStoriesByID`, `TL_wallpapers_getWallpapers`, etc.) via `ConnectionsManager`.

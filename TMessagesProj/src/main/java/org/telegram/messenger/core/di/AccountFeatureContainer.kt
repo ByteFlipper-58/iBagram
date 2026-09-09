@@ -599,6 +599,18 @@ import org.telegram.messenger.feature.fileref.domain.usecase.NotifyReferenceRene
 import org.telegram.messenger.feature.fileref.domain.usecase.ObserveFileRefStatsUseCase
 import org.telegram.messenger.feature.fileref.domain.usecase.RequestReferenceRenewalUseCase
 import org.telegram.messenger.feature.fileref.presentation.FileRefViewModel
+import org.telegram.messenger.feature.camera.data.repository.LegacyCameraRepository
+import org.telegram.messenger.feature.camera.domain.repository.CameraRepository
+import org.telegram.messenger.feature.camera.domain.usecase.ChooseOptimalResolutionUseCase
+import org.telegram.messenger.feature.camera.domain.usecase.GetCameraStateUseCase
+import org.telegram.messenger.feature.camera.domain.usecase.InitCamerasUseCase
+import org.telegram.messenger.feature.camera.domain.usecase.NotifyCameraRecordingUseCase
+import org.telegram.messenger.feature.camera.domain.usecase.ObserveCameraStateUseCase
+import org.telegram.messenger.feature.camera.domain.usecase.SelectCameraUseCase
+import org.telegram.messenger.feature.camera.domain.usecase.SetCameraFlashModeUseCase
+import org.telegram.messenger.feature.camera.domain.usecase.SwitchCameraUseCase
+import org.telegram.messenger.feature.camera.domain.usecase.ToggleMirrorFrontCameraUseCase
+import org.telegram.messenger.feature.camera.presentation.CameraViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3789,6 +3801,69 @@ class AccountFeatureContainer private constructor(val account: Int) {
             notifyReferenceRenewedUseCase = notifyReferenceRenewedUseCase,
             cancelFileRefRequestUseCase = cancelFileRefRequestUseCase,
             clearFileRefCacheUseCase = clearFileRefCacheUseCase
+        )
+    }
+
+    // ==========================================
+    // Feature: Camera (Hardware Camera & Video Recording)
+    // ==========================================
+
+    private var customCameraRepository: CameraRepository? = null
+
+    var cameraRepository: CameraRepository
+        get() = customCameraRepository ?: LegacyCameraRepository()
+        set(value) { customCameraRepository = value }
+
+    val observeCameraStateUseCase: ObserveCameraStateUseCase
+        get() = ObserveCameraStateUseCase(cameraRepository)
+
+    val getCameraStateUseCase: GetCameraStateUseCase
+        get() = GetCameraStateUseCase(cameraRepository)
+
+    val initCamerasUseCase: InitCamerasUseCase
+        get() = InitCamerasUseCase(cameraRepository)
+
+    val selectCameraUseCase: SelectCameraUseCase
+        get() = SelectCameraUseCase(cameraRepository)
+
+    val switchCameraUseCase: SwitchCameraUseCase
+        get() = SwitchCameraUseCase(cameraRepository)
+
+    val setCameraFlashModeUseCase: SetCameraFlashModeUseCase
+        get() = SetCameraFlashModeUseCase(cameraRepository)
+
+    val toggleMirrorFrontCameraUseCase: ToggleMirrorFrontCameraUseCase
+        get() = ToggleMirrorFrontCameraUseCase(cameraRepository)
+
+    val chooseOptimalResolutionUseCase: ChooseOptimalResolutionUseCase
+        get() = ChooseOptimalResolutionUseCase(cameraRepository)
+
+    val notifyCameraRecordingUseCase: NotifyCameraRecordingUseCase
+        get() = NotifyCameraRecordingUseCase(cameraRepository)
+
+    private var cachedCameraViewModel: CameraViewModel? = null
+
+    val cameraViewModel: CameraViewModel
+        get() {
+            var vm = cachedCameraViewModel
+            if (vm == null) {
+                vm = createCameraViewModel()
+                cachedCameraViewModel = vm
+            }
+            return vm
+        }
+
+    fun createCameraViewModel(): CameraViewModel {
+        return CameraViewModel(
+            observeCameraStateUseCase = observeCameraStateUseCase,
+            getCameraStateUseCase = getCameraStateUseCase,
+            initCamerasUseCase = initCamerasUseCase,
+            selectCameraUseCase = selectCameraUseCase,
+            switchCameraUseCase = switchCameraUseCase,
+            setCameraFlashModeUseCase = setCameraFlashModeUseCase,
+            toggleMirrorFrontCameraUseCase = toggleMirrorFrontCameraUseCase,
+            chooseOptimalResolutionUseCase = chooseOptimalResolutionUseCase,
+            notifyCameraRecordingUseCase = notifyCameraRecordingUseCase
         )
     }
 
