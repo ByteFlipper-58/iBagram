@@ -662,6 +662,17 @@ import org.telegram.messenger.feature.keyboardinsets.domain.usecase.ResetInAppKe
 import org.telegram.messenger.feature.keyboardinsets.domain.usecase.UpdateSystemInsetsUseCase
 import org.telegram.messenger.feature.keyboardinsets.presentation.KeyboardInsetsViewModel
 import org.telegram.ui.Components.inset.WindowInsetsInAppController
+import org.telegram.messenger.feature.maintabs.data.repository.LegacyMainTabsRepository
+import org.telegram.messenger.feature.maintabs.domain.repository.MainTabsRepository
+import org.telegram.messenger.feature.maintabs.domain.usecase.GetMainTabsConfigUseCase
+import org.telegram.messenger.feature.maintabs.domain.usecase.ObserveMainTabsConfigUseCase
+import org.telegram.messenger.feature.maintabs.domain.usecase.SelectMainTabUseCase
+import org.telegram.messenger.feature.maintabs.domain.usecase.SetContactsPermissionWarningUseCase
+import org.telegram.messenger.feature.maintabs.domain.usecase.SetMainTabsVisibleUseCase
+import org.telegram.messenger.feature.maintabs.domain.usecase.SetShowCallsTabUseCase
+import org.telegram.messenger.feature.maintabs.domain.usecase.UpdateChatsUnreadCountUseCase
+import org.telegram.messenger.feature.maintabs.presentation.MainTabsViewModel
+import org.telegram.ui.MainTabsActivityController
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4170,6 +4181,60 @@ class AccountFeatureContainer private constructor(val account: Int) {
             resetInAppKeyboardHeightUseCase = ResetInAppKeyboardHeightUseCase(repo),
             requestInAppKeyboardHeightWithNavbarUseCase = RequestInAppKeyboardHeightWithNavbarUseCase(repo),
             updateSystemInsetsUseCase = UpdateSystemInsetsUseCase(repo)
+        )
+    }
+
+    fun createMainTabsRepository(controller: MainTabsActivityController? = null): MainTabsRepository {
+        return LegacyMainTabsRepository(account, controller)
+    }
+
+    val mainTabsRepository: MainTabsRepository by lazy {
+        LegacyMainTabsRepository(account)
+    }
+
+    val observeMainTabsConfigUseCase: ObserveMainTabsConfigUseCase
+        get() = ObserveMainTabsConfigUseCase(mainTabsRepository)
+
+    val getMainTabsConfigUseCase: GetMainTabsConfigUseCase
+        get() = GetMainTabsConfigUseCase(mainTabsRepository)
+
+    val setMainTabsVisibleUseCase: SetMainTabsVisibleUseCase
+        get() = SetMainTabsVisibleUseCase(mainTabsRepository)
+
+    val selectMainTabUseCase: SelectMainTabUseCase
+        get() = SelectMainTabUseCase(mainTabsRepository)
+
+    val setShowCallsTabUseCase: SetShowCallsTabUseCase
+        get() = SetShowCallsTabUseCase(mainTabsRepository)
+
+    val updateChatsUnreadCountUseCase: UpdateChatsUnreadCountUseCase
+        get() = UpdateChatsUnreadCountUseCase(mainTabsRepository)
+
+    val setContactsPermissionWarningUseCase: SetContactsPermissionWarningUseCase
+        get() = SetContactsPermissionWarningUseCase(mainTabsRepository)
+
+    private var cachedMainTabsViewModel: MainTabsViewModel? = null
+
+    val mainTabsViewModel: MainTabsViewModel
+        get() {
+            var vm = cachedMainTabsViewModel
+            if (vm == null) {
+                vm = createMainTabsViewModel()
+                cachedMainTabsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createMainTabsViewModel(controller: MainTabsActivityController? = null): MainTabsViewModel {
+        val repo = if (controller != null) createMainTabsRepository(controller) else mainTabsRepository
+        return MainTabsViewModel(
+            observeConfigUseCase = ObserveMainTabsConfigUseCase(repo),
+            getConfigUseCase = GetMainTabsConfigUseCase(repo),
+            setTabsVisibleUseCase = SetMainTabsVisibleUseCase(repo),
+            selectMainTabUseCase = SelectMainTabUseCase(repo),
+            setShowCallsTabUseCase = SetShowCallsTabUseCase(repo),
+            updateChatsUnreadCountUseCase = UpdateChatsUnreadCountUseCase(repo),
+            setContactsPermissionWarningUseCase = SetContactsPermissionWarningUseCase(repo)
         )
     }
 

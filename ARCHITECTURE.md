@@ -1845,6 +1845,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── KeyboardInsetsUiState.kt
             ├── KeyboardInsetsEvent.kt
             └── KeyboardInsetsViewModel.kt
+    │
+    └── maintabs/                          # Main Navigation Tabs Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (MainTabType, MainTabBadgeModel, MainTabsConfigModel)
+        │   │   └── MainTabsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── MainTabsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveMainTabsConfigUseCase.kt
+        │       ├── GetMainTabsConfigUseCase.kt
+        │       ├── SetMainTabsVisibleUseCase.kt
+        │       ├── SelectMainTabUseCase.kt
+        │       ├── SetShowCallsTabUseCase.kt
+        │       ├── UpdateChatsUnreadCountUseCase.kt
+        │       └── SetContactsPermissionWarningUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Legacy tab positions <-> Domain)
+        │   │   └── MainTabsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyMainTabsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── MainTabsUiState.kt
+            ├── MainTabsEvent.kt
+            └── MainTabsViewModel.kt
 ```
 
 ### Layer Rules
@@ -2260,10 +2286,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `RequestInAppKeyboardHeightUseCase`, `ResetInAppKeyboardHeightUseCase`, `RequestInAppKeyboardHeightWithNavbarUseCase`, `UpdateSystemInsetsUseCase`, `GetKeyboardInsetsUseCase`, `ObserveKeyboardInsetsUseCase`
   - [x] Data layer: `KeyboardInsetsMapper`, `LegacyKeyboardInsetsRepository` (thread safe, adapting `WindowInsetsInAppController`, effective bottom inset calculation, headless in-memory fallback)
   - [x] Presentation layer: `KeyboardInsetsUiState`, `KeyboardInsetsEvent`, `KeyboardInsetsViewModel`
+- [x] Main Navigation Tabs (`feature.maintabs`)
+  - [x] Domain entities: `MainTabType`, `MainTabBadgeModel`, `MainTabsConfigModel`
+  - [x] Repository contract: `MainTabsRepository`
+  - [x] Use cases: `ObserveMainTabsConfigUseCase`, `GetMainTabsConfigUseCase`, `SetMainTabsVisibleUseCase`, `SelectMainTabUseCase`, `SetShowCallsTabUseCase`, `UpdateChatsUnreadCountUseCase`, `SetContactsPermissionWarningUseCase`
+  - [x] Data layer: `MainTabsMapper`, `LegacyMainTabsRepository` (thread safe, adapting `MainTabsActivityController`, tab positioning, showCallsTab arbitration, badges, headless in-memory fallback)
+  - [x] Presentation layer: `MainTabsUiState`, `MainTabsEvent`, `MainTabsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 066: Isolation of Main Navigation Tabs into feature.maintabs
+- **Context:** In Telegram Android, the bottom navigation bar and tab arbitration across primary top-level screens (Chats, Contacts, Settings or Calls, and Profile) was managed by `MainTabsActivity.java` (~1244 lines) with tab visibility controlled via the single-method interface `MainTabsActivityController.java` (`setTabsVisible(boolean visible)`). UI components like `DialogsActivity.java` (~14436 lines) directly held `MainTabsActivityController` instances and called `setTabsVisible(!searching && blurredView == null)` during search mode or dialog overlays. In addition, tab positions, calls/settings tab mutual exclusion (`UserConfig.showCallsTab`), and badge counts (unread dialogs and contacts permission warnings) were tightly bound to legacy view hierarchies.
+- **Decision:** Introduce pure domain models `MainTabType` (CHATS, CONTACTS, SETTINGS, CALLS, PROFILE), `MainTabBadgeModel`, and `MainTabsConfigModel`. Define abstract contract `MainTabsRepository` covering tab visibility mutations (`setTabsVisible`), tab selection (`selectTab`, `selectPosition`), calls tab arbitration (`setShowCallsTab`), unread counters (`updateChatsUnreadCount`), and permission warning states (`setContactsPermissionWarning`). Implement `LegacyMainTabsRepository` providing thread-safe adapter functionality to `MainTabsActivityController` and `UserConfig` with standalone in-memory headless capability for JVM testing. Encapsulate presentation state and MVI events in `MainTabsViewModel`.
+- **Consequences:** Bottom navigation tab arbitration, visibility transitions, calls-vs-settings switching, and badge indications are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `MainTabsActivity` and `MainTabsActivityController`.
 
 ### ADR 065: Isolation of Window Insets & In-App Keyboard Offsets into feature.keyboardinsets
 - **Context:** In Telegram Android, managing virtual in-app keyboard heights (such as custom emoji, sticker, and media panels), system window insets (IME, navigation bars, status bars), and navigation bar compensation during keyboard animations was handled by `WindowInsetsInAppController.java` (~165 lines) and helper state holders in `org.telegram.ui.Components.inset`. The controller directly coupled Android `WindowInsets`, system view hierarchies, `ValueAnimator` animations, and mutable height tracking (`inAppKeyboardHeight`, `inAppKeyboardHeightWithNavbar`, `hasNavbar`). UI components like `ChatActivity.java`, `LaunchActivity.java`, `SizeNotifierFrameLayout.java`, and chat input panels directly manipulated these controllers.
