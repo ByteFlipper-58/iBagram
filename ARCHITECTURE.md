@@ -1275,6 +1275,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BusinessBotsUiState.kt
             ├── BusinessBotsEvent.kt
             └── BusinessBotsViewModel.kt
+    │
+    └── timezones/                        # Telegram Timezones & Business Hours Offset Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models
+        │   │   ├── TimezoneModel.kt
+        │   │   └── TimezonesStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── TimezonesRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveTimezonesUseCase.kt
+        │       ├── GetTimezonesUseCase.kt
+        │       ├── LoadTimezonesUseCase.kt
+        │       ├── FindTimezoneUseCase.kt
+        │       ├── GetSystemTimezoneIdUseCase.kt
+        │       └── GetTimezoneNameUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TLRPC.TL_timezone <-> Domain)
+        │   │   └── TimezoneMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyTimezonesRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── TimezonesUiState.kt
+            ├── TimezonesEvent.kt
+            └── TimezonesViewModel.kt
 ```
 
 ### Layer Rules
@@ -1570,10 +1596,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveConnectedBotsUseCase`, `GetConnectedBotsUseCase`, `LoadConnectedBotsUseCase`, `UpdateConnectedBotUseCase`, `DeleteConnectedBotUseCase`, `FindConnectedBotUseCase`
   - [x] Data layer: `BusinessBotMapper`, `LegacyBusinessBotsRepository` (Main-thread safe, adapting `BusinessChatbotController`, `NotificationCenter.updatedChatbot`, and MTProto connected bots protocol)
   - [x] Presentation layer: `BusinessBotsUiState`, `BusinessBotsEvent`, `BusinessBotsViewModel`
+- [x] Telegram Timezones & Business Hours Offset (`feature.timezones`)
+  - [x] Domain entities: `TimezoneModel` (with formatted UTC offset and display name), `TimezonesStateModel`
+  - [x] Repository contract: `TimezonesRepository`
+  - [x] Use cases: `ObserveTimezonesUseCase`, `GetTimezonesUseCase`, `LoadTimezonesUseCase`, `FindTimezoneUseCase`, `GetSystemTimezoneIdUseCase`, `GetTimezoneNameUseCase`
+  - [x] Data layer: `TimezoneMapper`, `LegacyTimezonesRepository` (Main-thread safe, adapting `TimezonesController`, `mainSettings` cache, and `NotificationCenter.timezonesUpdated`)
+  - [x] Presentation layer: `TimezonesUiState`, `TimezonesEvent`, `TimezonesViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 046: Telegram Timezones & Business Hours Offset Controller Isolation
+- **Context:** In Telegram Android, timezones selection and timezone offset calculation (used across Telegram Business opening hours, profile hours, scheduled messages, and premium features) was managed by `TimezonesController.java` (~183 lines) located in `org.telegram.ui.Business`. The controller directly coupled local SharedPreferences hex deserialization (`mainSettings.getString("timezones", null)`), raw MTProto requests (`TLRPC.TL_help_getTimezonesList`), untyped global notifications on `NotificationCenter.timezonesUpdated`, and Android/Java 8 `java.time.ZoneId` system timezone resolution with fallback heuristics. UI classes like `TimezoneSelector.java`, `OpeningHoursActivity.java`, `ProfileHoursCell.java`, and `AlertsCreator.java` directly invoked `TimezonesController.getInstance(account)`.
+- **Decision:** Introduce pure domain models `TimezoneModel` (with calculated formatted UTC offset such as `GMT+03:00` and `displayName`) and `TimezonesStateModel`. Define abstract contract `TimezonesRepository` covering reactive timezones observation (`observeTimezones`), snapshot retrieval (`getTimezones`), remote/cache loading (`loadTimezones`), lookup by identifier (`findTimezone`), system timezone resolution (`getSystemTimezoneId`), and localized/offset formatting (`getTimezoneName`). Implement `LegacyTimezonesRepository` operating safely on `Dispatchers.Main` with `NotificationCenterFlowBridge` observation on `NotificationCenter.timezonesUpdated` and `suspendCancellableCoroutine` for request coordination. Encapsulate presentation state, search filtering (by name, ID, or offset), and MVI events in `TimezonesViewModel`.
+- **Consequences:** Timezones listing, search, system timezone fallback detection, and GMT offset formatting are decoupled behind testable domain interfaces with complete unit test coverage while maintaining 100% compatibility with Telegram's core timezones controller and MTProto timezones protocol.
 
 ### ADR 045: Telegram Business Chatbots & Connected Bots Controller Isolation
 - **Context:** In Telegram Android, connected AI and third-party chatbots for Telegram Business accounts were managed by `BusinessChatbotController.java` (~88 lines) and configured across `ChatbotsActivity.java` (~854 lines) and `ChatbotSheet.java` (~332 lines). The controller managed in-memory cached responses (`TL_account.connectedBots`), throttle timeouts (1 minute expiration), raw callback lists, and untyped global notifications on `NotificationCenter.updatedChatbot`. Disconnecting bots or modifying permissions (replying, reading messages, deleting sent/received messages, editing profile/bio/name/username, managing stories, transferring stars) and audience exclusions/inclusions (`TL_account.updateConnectedBot`) directly relied on raw MTProto calls mixed with UI dialogs and manual invalidate triggers.

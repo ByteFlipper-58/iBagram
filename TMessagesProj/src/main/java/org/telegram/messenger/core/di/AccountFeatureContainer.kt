@@ -454,6 +454,15 @@ import org.telegram.messenger.feature.businessbots.domain.usecase.LoadConnectedB
 import org.telegram.messenger.feature.businessbots.domain.usecase.ObserveConnectedBotsUseCase
 import org.telegram.messenger.feature.businessbots.domain.usecase.UpdateConnectedBotUseCase
 import org.telegram.messenger.feature.businessbots.presentation.BusinessBotsViewModel
+import org.telegram.messenger.feature.timezones.data.repository.LegacyTimezonesRepository
+import org.telegram.messenger.feature.timezones.domain.repository.TimezonesRepository
+import org.telegram.messenger.feature.timezones.domain.usecase.FindTimezoneUseCase
+import org.telegram.messenger.feature.timezones.domain.usecase.GetSystemTimezoneIdUseCase
+import org.telegram.messenger.feature.timezones.domain.usecase.GetTimezoneNameUseCase
+import org.telegram.messenger.feature.timezones.domain.usecase.GetTimezonesUseCase
+import org.telegram.messenger.feature.timezones.domain.usecase.LoadTimezonesUseCase
+import org.telegram.messenger.feature.timezones.domain.usecase.ObserveTimezonesUseCase
+import org.telegram.messenger.feature.timezones.presentation.TimezonesViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2890,6 +2899,56 @@ class AccountFeatureContainer private constructor(val account: Int) {
             loadConnectedBotsUseCase = loadConnectedBotsUseCase,
             updateConnectedBotUseCase = updateConnectedBotUseCase,
             deleteConnectedBotUseCase = deleteConnectedBotUseCase
+        )
+    }
+
+    // --- Timezones ---
+    private var customTimezonesRepository: TimezonesRepository? = null
+
+    var timezonesRepository: TimezonesRepository
+        get() = customTimezonesRepository ?: LegacyTimezonesRepository(account)
+        set(value) {
+            customTimezonesRepository = value
+        }
+
+    val observeTimezonesUseCase: ObserveTimezonesUseCase
+        get() = ObserveTimezonesUseCase(timezonesRepository)
+
+    val getTimezonesUseCase: GetTimezonesUseCase
+        get() = GetTimezonesUseCase(timezonesRepository)
+
+    val loadTimezonesUseCase: LoadTimezonesUseCase
+        get() = LoadTimezonesUseCase(timezonesRepository)
+
+    val findTimezoneUseCase: FindTimezoneUseCase
+        get() = FindTimezoneUseCase(timezonesRepository)
+
+    val getSystemTimezoneIdUseCase: GetSystemTimezoneIdUseCase
+        get() = GetSystemTimezoneIdUseCase(timezonesRepository)
+
+    val getTimezoneNameUseCase: GetTimezoneNameUseCase
+        get() = GetTimezoneNameUseCase(timezonesRepository)
+
+    private var cachedTimezonesViewModel: TimezonesViewModel? = null
+
+    val timezonesViewModel: TimezonesViewModel
+        get() {
+            var vm = cachedTimezonesViewModel
+            if (vm == null) {
+                vm = createTimezonesViewModel()
+                cachedTimezonesViewModel = vm
+            }
+            return vm
+        }
+
+    fun createTimezonesViewModel(): TimezonesViewModel {
+        return TimezonesViewModel(
+            observeTimezonesUseCase = observeTimezonesUseCase,
+            getTimezonesUseCase = getTimezonesUseCase,
+            loadTimezonesUseCase = loadTimezonesUseCase,
+            findTimezoneUseCase = findTimezoneUseCase,
+            getSystemTimezoneIdUseCase = getSystemTimezoneIdUseCase,
+            getTimezoneNameUseCase = getTimezoneNameUseCase
         )
     }
 
