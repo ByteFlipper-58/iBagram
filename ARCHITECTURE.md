@@ -1422,6 +1422,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── PushUiState.kt
             ├── PushEvent.kt
             └── PushViewModel.kt
+    │
+    └── chromecast/                       # Google Cast, Remote Media Client & Media Streaming Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models
+        │   │   ├── ChromecastMediaModel.kt
+        │   │   └── ChromecastStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ChromecastRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveChromecastStateUseCase.kt
+        │       ├── GetChromecastStateUseCase.kt
+        │       ├── IsCastingUseCase.kt
+        │       ├── IsMediaPlayingOnCastUseCase.kt
+        │       ├── CastMediaUseCase.kt
+        │       ├── StopCastingUseCase.kt
+        │       └── SetCastCoverFileUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (ChromecastMedia <-> Domain)
+        │   │   └── ChromecastMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyChromecastRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ChromecastUiState.kt
+            ├── ChromecastEvent.kt
+            └── ChromecastViewModel.kt
 ```
 
 ### Layer Rules
@@ -1747,10 +1774,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObservePushStatusUseCase`, `GetPushStatusUseCase`, `IsPushAvailableUseCase`, `RequestPushTokenUseCase`, `RegisterPushTokenUseCase`, `ResetPushTokenUseCase`
   - [x] Data layer: `PushMapper`, `LegacyPushRepository` (Main/IO thread safe, adapting `PushListenerController`, `ApplicationLoader.getPushProvider()`, `SharedConfig`, `UserConfig`, and `ConnectionsManager`)
   - [x] Presentation layer: `PushUiState`, `PushEvent`, `PushViewModel`
+- [x] Google Cast, Remote Media Client & Media Streaming (`feature.chromecast`)
+  - [x] Domain entities: `ChromecastMediaModel`, `ChromecastStateModel`
+  - [x] Repository contract: `ChromecastRepository`
+  - [x] Use cases: `ObserveChromecastStateUseCase`, `GetChromecastStateUseCase`, `IsCastingUseCase`, `IsMediaPlayingOnCastUseCase`, `CastMediaUseCase`, `StopCastingUseCase`, `SetCastCoverFileUseCase`
+  - [x] Data layer: `ChromecastMapper`, `LegacyChromecastRepository` (Main-thread safe, adapting `ChromecastController`, `CastContext`, `SessionManager`, and `RemoteMediaClient`)
+  - [x] Presentation layer: `ChromecastUiState`, `ChromecastEvent`, `ChromecastViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 051: Google Cast, Remote Media Client & Media Streaming Controller Isolation
+- **Context:** In Telegram Android, casting photos and videos to Google Cast-enabled external displays and TVs was handled by `ChromecastController.java` (~315 lines) located in `org.telegram.messenger`. The controller directly coupled Google Play Services Cast SDK (`CastContext`, `SessionManager`, `CastSession`, `RemoteMediaClient`), local HTTP media streaming (`ChromecastFileServer` on port 8080), media metadata construction (`MediaInfo`, `MediaMetadata`), and global event dispatching via `NotificationCenter.castSessionStarted`, `castSessionEnded`, and `castMediaProgressChanged`. UI classes such as `PhotoViewer.java` directly invoked `ChromecastController.getInstance()` and called `startCastingMedia(photoEntry)`.
+- **Decision:** Introduce pure domain models `ChromecastMediaModel` (with title, MIME type, direct streaming URL, and optional cover URL) and `ChromecastStateModel` (with casting status, media playing status, current media item, position, and duration). Define abstract contract `ChromecastRepository` covering reactive state observation (`observeChromecastState`), snapshot retrieval (`getChromecastState`), connection status checks (`isCasting`, `isMediaPlayingOnCast`), cast actions (`castMedia`, `stopCasting`), and local cover file setup (`setCastCoverFile`). Implement `LegacyChromecastRepository` operating safely on `Dispatchers.Main` with `NotificationCenterFlowBridge` observation, guarding against uninitialized Google Cast SDK during headless unit testing. Encapsulate presentation state and MVI events in `ChromecastViewModel`.
+- **Consequences:** Google Cast connection state, remote media streaming, and media progress are cleanly decoupled behind testable domain interfaces with complete unit test coverage while maintaining 100% backward compatibility with Telegram's `PhotoViewer` and local HTTP streaming infrastructure.
 
 ### ADR 050: Push Notifications, FCM/HMS Registration & Device Tokens Controller Isolation
 - **Context:** In Telegram Android, push notification services (Google Firebase Cloud Messaging / FCM, Huawei Mobile Services / HMS), push device registration (`ConnectionsManager.setRegId`, `registerForPush`), push string tokens (`SharedConfig.pushString`, `SharedConfig.pushType`, `SharedConfig.pushStringStatus`), and remote push payload dispatching were managed via `PushListenerController.java` (~1735 lines). UI components and activity classes (such as `PassportActivity.java`, `LoginActivity.java`, `LaunchActivity.java`, and `GcmPushListenerService.java`) directly queried `PushListenerController.GooglePushListenerServiceProvider.INSTANCE.hasServices()`, triggered static token delivery (`PushListenerController.sendRegistrationToServer`), and manually coordinated registration state across all active accounts (`UserConfig.registeredForPush`).

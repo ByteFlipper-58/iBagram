@@ -505,6 +505,16 @@ import org.telegram.messenger.feature.push.domain.usecase.RegisterPushTokenUseCa
 import org.telegram.messenger.feature.push.domain.usecase.RequestPushTokenUseCase
 import org.telegram.messenger.feature.push.domain.usecase.ResetPushTokenUseCase
 import org.telegram.messenger.feature.push.presentation.PushViewModel
+import org.telegram.messenger.feature.chromecast.data.repository.LegacyChromecastRepository
+import org.telegram.messenger.feature.chromecast.domain.repository.ChromecastRepository
+import org.telegram.messenger.feature.chromecast.domain.usecase.CastMediaUseCase
+import org.telegram.messenger.feature.chromecast.domain.usecase.GetChromecastStateUseCase
+import org.telegram.messenger.feature.chromecast.domain.usecase.IsCastingUseCase
+import org.telegram.messenger.feature.chromecast.domain.usecase.IsMediaPlayingOnCastUseCase
+import org.telegram.messenger.feature.chromecast.domain.usecase.ObserveChromecastStateUseCase
+import org.telegram.messenger.feature.chromecast.domain.usecase.SetCastCoverFileUseCase
+import org.telegram.messenger.feature.chromecast.domain.usecase.StopCastingUseCase
+import org.telegram.messenger.feature.chromecast.presentation.ChromecastViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3208,6 +3218,59 @@ class AccountFeatureContainer private constructor(val account: Int) {
             requestPushTokenUseCase = requestPushTokenUseCase,
             registerPushTokenUseCase = registerPushTokenUseCase,
             resetPushTokenUseCase = resetPushTokenUseCase
+        )
+    }
+
+    private var customChromecastRepository: ChromecastRepository? = null
+
+    var chromecastRepository: ChromecastRepository
+        get() = customChromecastRepository ?: LegacyChromecastRepository()
+        set(value) {
+            customChromecastRepository = value
+        }
+
+    val observeChromecastStateUseCase: ObserveChromecastStateUseCase
+        get() = ObserveChromecastStateUseCase(chromecastRepository)
+
+    val getChromecastStateUseCase: GetChromecastStateUseCase
+        get() = GetChromecastStateUseCase(chromecastRepository)
+
+    val isCastingUseCase: IsCastingUseCase
+        get() = IsCastingUseCase(chromecastRepository)
+
+    val isMediaPlayingOnCastUseCase: IsMediaPlayingOnCastUseCase
+        get() = IsMediaPlayingOnCastUseCase(chromecastRepository)
+
+    val castMediaUseCase: CastMediaUseCase
+        get() = CastMediaUseCase(chromecastRepository)
+
+    val stopCastingUseCase: StopCastingUseCase
+        get() = StopCastingUseCase(chromecastRepository)
+
+    val setCastCoverFileUseCase: SetCastCoverFileUseCase
+        get() = SetCastCoverFileUseCase(chromecastRepository)
+
+    private var cachedChromecastViewModel: ChromecastViewModel? = null
+
+    val chromecastViewModel: ChromecastViewModel
+        get() {
+            var vm = cachedChromecastViewModel
+            if (vm == null) {
+                vm = createChromecastViewModel()
+                cachedChromecastViewModel = vm
+            }
+            return vm
+        }
+
+    fun createChromecastViewModel(): ChromecastViewModel {
+        return ChromecastViewModel(
+            observeChromecastStateUseCase = observeChromecastStateUseCase,
+            getChromecastStateUseCase = getChromecastStateUseCase,
+            isCastingUseCase = isCastingUseCase,
+            isMediaPlayingOnCastUseCase = isMediaPlayingOnCastUseCase,
+            castMediaUseCase = castMediaUseCase,
+            stopCastingUseCase = stopCastingUseCase,
+            setCastCoverFileUseCase = setCastCoverFileUseCase
         )
     }
 
