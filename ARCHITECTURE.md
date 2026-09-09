@@ -1247,6 +1247,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BusinessLinksUiState.kt
             ├── BusinessLinksEvent.kt
             └── BusinessLinksViewModel.kt
+    │
+    └── businessbots/                     # Telegram Business Chatbots & Connected Bots Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models
+        │   │   ├── BusinessBotRightsModel.kt
+        │   │   ├── BusinessBotRecipientsModel.kt
+        │   │   ├── ConnectedBotModel.kt
+        │   │   └── BusinessBotsStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BusinessBotsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveConnectedBotsUseCase.kt
+        │       ├── GetConnectedBotsUseCase.kt
+        │       ├── LoadConnectedBotsUseCase.kt
+        │       ├── UpdateConnectedBotUseCase.kt
+        │       ├── DeleteConnectedBotUseCase.kt
+        │       └── FindConnectedBotUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_account <-> Domain)
+        │   │   └── BusinessBotMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBusinessBotsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BusinessBotsUiState.kt
+            ├── BusinessBotsEvent.kt
+            └── BusinessBotsViewModel.kt
 ```
 
 ### Layer Rules
@@ -1536,10 +1564,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveBusinessLinksUseCase`, `GetBusinessLinksUseCase`, `LoadBusinessLinksUseCase`, `CreateBusinessLinkUseCase`, `EditBusinessLinkUseCase`, `DeleteBusinessLinkUseCase`, `FindBusinessLinkUseCase`, `CanAddNewBusinessLinkUseCase`
   - [x] Data layer: `BusinessLinkMapper`, `LegacyBusinessLinksRepository` (Main-thread safe, adapting `BusinessLinksController`, `NotificationCenter.businessLinksUpdated`, and MTProto business chat links protocol)
   - [x] Presentation layer: `BusinessLinksUiState`, `BusinessLinksEvent`, `BusinessLinksViewModel`
+- [x] Telegram Business Chatbots & Connected Bots (`feature.businessbots`)
+  - [x] Domain entities: `BusinessBotRightsModel`, `BusinessBotRecipientsModel`, `ConnectedBotModel`, `BusinessBotsStateModel`
+  - [x] Repository contract: `BusinessBotsRepository`
+  - [x] Use cases: `ObserveConnectedBotsUseCase`, `GetConnectedBotsUseCase`, `LoadConnectedBotsUseCase`, `UpdateConnectedBotUseCase`, `DeleteConnectedBotUseCase`, `FindConnectedBotUseCase`
+  - [x] Data layer: `BusinessBotMapper`, `LegacyBusinessBotsRepository` (Main-thread safe, adapting `BusinessChatbotController`, `NotificationCenter.updatedChatbot`, and MTProto connected bots protocol)
+  - [x] Presentation layer: `BusinessBotsUiState`, `BusinessBotsEvent`, `BusinessBotsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 045: Telegram Business Chatbots & Connected Bots Controller Isolation
+- **Context:** In Telegram Android, connected AI and third-party chatbots for Telegram Business accounts were managed by `BusinessChatbotController.java` (~88 lines) and configured across `ChatbotsActivity.java` (~854 lines) and `ChatbotSheet.java` (~332 lines). The controller managed in-memory cached responses (`TL_account.connectedBots`), throttle timeouts (1 minute expiration), raw callback lists, and untyped global notifications on `NotificationCenter.updatedChatbot`. Disconnecting bots or modifying permissions (replying, reading messages, deleting sent/received messages, editing profile/bio/name/username, managing stories, transferring stars) and audience exclusions/inclusions (`TL_account.updateConnectedBot`) directly relied on raw MTProto calls mixed with UI dialogs and manual invalidate triggers.
+- **Decision:** Introduce pure domain models `BusinessBotRightsModel` (with default and full rights factories), `BusinessBotRecipientsModel` (with audience filter flags), `ConnectedBotModel` (with connection date, device, location metadata), and `BusinessBotsStateModel`. Define abstract contract `BusinessBotsRepository` covering reactive connected bots observation (`observeConnectedBots`), snapshot retrieval (`getConnectedBots`), loading (`loadConnectedBots`), bot update/permissions modification (`updateConnectedBot`), bot termination/disconnection (`deleteConnectedBot`), and bot lookup by ID (`findConnectedBot`). Implement `LegacyBusinessBotsRepository` operating safely on `Dispatchers.Main` with `NotificationCenterFlowBridge` observation on `NotificationCenter.updatedChatbot`, and `suspendCancellableCoroutine` for MTProto update and termination requests. Encapsulate presentation state and MVI events in `BusinessBotsViewModel`.
+- **Consequences:** Business chatbots, permissions administration, recipient exceptions, and session termination are cleanly decoupled behind testable domain interfaces with full unit test coverage while preserving 100% compatibility with Telegram's core chatbot controller and MTProto business bots protocol.
 
 ### ADR 044: Telegram Business Chat Links & Shortcuts Controller Isolation
 - **Context:** In Telegram Android, pre-configured chat links (`https://t.me/m/...`) with preset greeting messages and view tracking for Telegram Business accounts were managed by `BusinessLinksController.java` (~320 lines). The controller coupled in-memory link collections (`ArrayList<TL_account.TL_businessChatLink> links`), loading state flags, account limits from `MessagesController.businessChatLinksLimit`, raw MTProto request dispatching (`TL_account.getBusinessChatLinks`, `TL_account.createBusinessChatLink`, `TL_account.editBusinessChatLink`, `TL_account.deleteBusinessChatLink`), and untyped global broadcasts on `NotificationCenter.businessLinksUpdated`. UI activities like `BusinessLinksActivity.java` (~1200 lines) directly mutated the controller's internal collections and handled raw RPC error responses.

@@ -445,6 +445,15 @@ import org.telegram.messenger.feature.businesslinks.domain.usecase.GetBusinessLi
 import org.telegram.messenger.feature.businesslinks.domain.usecase.LoadBusinessLinksUseCase
 import org.telegram.messenger.feature.businesslinks.domain.usecase.ObserveBusinessLinksUseCase
 import org.telegram.messenger.feature.businesslinks.presentation.BusinessLinksViewModel
+import org.telegram.messenger.feature.businessbots.data.repository.LegacyBusinessBotsRepository
+import org.telegram.messenger.feature.businessbots.domain.repository.BusinessBotsRepository
+import org.telegram.messenger.feature.businessbots.domain.usecase.DeleteConnectedBotUseCase
+import org.telegram.messenger.feature.businessbots.domain.usecase.FindConnectedBotUseCase
+import org.telegram.messenger.feature.businessbots.domain.usecase.GetConnectedBotsUseCase
+import org.telegram.messenger.feature.businessbots.domain.usecase.LoadConnectedBotsUseCase
+import org.telegram.messenger.feature.businessbots.domain.usecase.ObserveConnectedBotsUseCase
+import org.telegram.messenger.feature.businessbots.domain.usecase.UpdateConnectedBotUseCase
+import org.telegram.messenger.feature.businessbots.presentation.BusinessBotsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2834,6 +2843,53 @@ class AccountFeatureContainer private constructor(val account: Int) {
             editBusinessLinkUseCase = editBusinessLinkUseCase,
             deleteBusinessLinkUseCase = deleteBusinessLinkUseCase,
             canAddNewBusinessLinkUseCase = canAddNewBusinessLinkUseCase
+        )
+    }
+
+    private var customBusinessBotsRepository: BusinessBotsRepository? = null
+
+    var businessBotsRepository: BusinessBotsRepository
+        get() = customBusinessBotsRepository ?: LegacyBusinessBotsRepository(account)
+        set(value) {
+            customBusinessBotsRepository = value
+        }
+
+    val observeConnectedBotsUseCase: ObserveConnectedBotsUseCase
+        get() = ObserveConnectedBotsUseCase(businessBotsRepository)
+
+    val getConnectedBotsUseCase: GetConnectedBotsUseCase
+        get() = GetConnectedBotsUseCase(businessBotsRepository)
+
+    val loadConnectedBotsUseCase: LoadConnectedBotsUseCase
+        get() = LoadConnectedBotsUseCase(businessBotsRepository)
+
+    val updateConnectedBotUseCase: UpdateConnectedBotUseCase
+        get() = UpdateConnectedBotUseCase(businessBotsRepository)
+
+    val deleteConnectedBotUseCase: DeleteConnectedBotUseCase
+        get() = DeleteConnectedBotUseCase(businessBotsRepository)
+
+    val findConnectedBotUseCase: FindConnectedBotUseCase
+        get() = FindConnectedBotUseCase(businessBotsRepository)
+
+    private var cachedBusinessBotsViewModel: BusinessBotsViewModel? = null
+
+    val businessBotsViewModel: BusinessBotsViewModel
+        get() {
+            var vm = cachedBusinessBotsViewModel
+            if (vm == null) {
+                vm = createBusinessBotsViewModel()
+                cachedBusinessBotsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBusinessBotsViewModel(): BusinessBotsViewModel {
+        return BusinessBotsViewModel(
+            observeConnectedBotsUseCase = observeConnectedBotsUseCase,
+            loadConnectedBotsUseCase = loadConnectedBotsUseCase,
+            updateConnectedBotUseCase = updateConnectedBotUseCase,
+            deleteConnectedBotUseCase = deleteConnectedBotUseCase
         )
     }
 
