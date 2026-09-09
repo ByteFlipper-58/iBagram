@@ -568,6 +568,17 @@ import org.telegram.messenger.feature.chatmeta.domain.usecase.LoadMessagesExtend
 import org.telegram.messenger.feature.chatmeta.domain.usecase.LoadMessagesReactionsUseCase
 import org.telegram.messenger.feature.chatmeta.domain.usecase.ObserveChatMetadataStatsUseCase
 import org.telegram.messenger.feature.chatmeta.presentation.ChatMetadataViewModel
+import org.telegram.messenger.feature.pip.data.repository.LegacyPipRepository
+import org.telegram.messenger.feature.pip.domain.repository.PipRepository
+import org.telegram.messenger.feature.pip.domain.usecase.DispatchPipStateUseCase
+import org.telegram.messenger.feature.pip.domain.usecase.EvaluatePipEligibilityUseCase
+import org.telegram.messenger.feature.pip.domain.usecase.GetPipSessionUseCase
+import org.telegram.messenger.feature.pip.domain.usecase.ObservePipSessionUseCase
+import org.telegram.messenger.feature.pip.domain.usecase.RegisterPipSourceUseCase
+import org.telegram.messenger.feature.pip.domain.usecase.TriggerPipActionUseCase
+import org.telegram.messenger.feature.pip.domain.usecase.UnregisterPipSourceUseCase
+import org.telegram.messenger.feature.pip.domain.usecase.UpdatePipSourceStateUseCase
+import org.telegram.messenger.feature.pip.presentation.PipViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3593,6 +3604,63 @@ class AccountFeatureContainer private constructor(val account: Int) {
             loadMessagesReactionsUseCase = loadMessagesReactionsUseCase,
             loadMessagesExtendedMediaUseCase = loadMessagesExtendedMediaUseCase,
             cancelPendingMetadataRequestsUseCase = cancelPendingMetadataRequestsUseCase
+        )
+    }
+
+    private var customPipRepository: PipRepository? = null
+
+    var pipRepository: PipRepository
+        get() = customPipRepository ?: LegacyPipRepository()
+        set(value) {
+            customPipRepository = value
+        }
+
+    val observePipSessionUseCase: ObservePipSessionUseCase
+        get() = ObservePipSessionUseCase(pipRepository)
+
+    val getPipSessionUseCase: GetPipSessionUseCase
+        get() = GetPipSessionUseCase(pipRepository)
+
+    val registerPipSourceUseCase: RegisterPipSourceUseCase
+        get() = RegisterPipSourceUseCase(pipRepository)
+
+    val unregisterPipSourceUseCase: UnregisterPipSourceUseCase
+        get() = UnregisterPipSourceUseCase(pipRepository)
+
+    val updatePipSourceStateUseCase: UpdatePipSourceStateUseCase
+        get() = UpdatePipSourceStateUseCase(pipRepository)
+
+    val dispatchPipStateUseCase: DispatchPipStateUseCase
+        get() = DispatchPipStateUseCase(pipRepository)
+
+    val triggerPipActionUseCase: TriggerPipActionUseCase
+        get() = TriggerPipActionUseCase(pipRepository)
+
+    val evaluatePipEligibilityUseCase: EvaluatePipEligibilityUseCase
+        get() = EvaluatePipEligibilityUseCase(pipRepository)
+
+    private var cachedPipViewModel: PipViewModel? = null
+
+    val pipViewModel: PipViewModel
+        get() {
+            var vm = cachedPipViewModel
+            if (vm == null) {
+                vm = createPipViewModel()
+                cachedPipViewModel = vm
+            }
+            return vm
+        }
+
+    fun createPipViewModel(): PipViewModel {
+        return PipViewModel(
+            observePipSessionUseCase = observePipSessionUseCase,
+            getPipSessionUseCase = getPipSessionUseCase,
+            registerPipSourceUseCase = registerPipSourceUseCase,
+            unregisterPipSourceUseCase = unregisterPipSourceUseCase,
+            updatePipSourceStateUseCase = updatePipSourceStateUseCase,
+            dispatchPipStateUseCase = dispatchPipStateUseCase,
+            triggerPipActionUseCase = triggerPipActionUseCase,
+            evaluatePipEligibilityUseCase = evaluatePipEligibilityUseCase
         )
     }
 

@@ -1595,6 +1595,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ChatMetadataUiState.kt
             ├── ChatMetadataEvent.kt
             └── ChatMetadataViewModel.kt
+    │
+    └── pip/                               # Picture-in-Picture & Video Window Session Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── PipState.kt
+        │   │   ├── PipSourceModel.kt
+        │   │   └── PipSessionInfo.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── PipRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObservePipSessionUseCase.kt
+        │       ├── GetPipSessionUseCase.kt
+        │       ├── RegisterPipSourceUseCase.kt
+        │       ├── UnregisterPipSourceUseCase.kt
+        │       ├── UpdatePipSourceStateUseCase.kt
+        │       ├── DispatchPipStateUseCase.kt
+        │       ├── TriggerPipActionUseCase.kt
+        │       └── EvaluatePipEligibilityUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (PipSource <-> Domain)
+        │   │   └── PipMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyPipRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── PipUiState.kt
+            ├── PipEvent.kt
+            └── PipViewModel.kt
 ```
 
 ### Layer Rules
@@ -1956,10 +1985,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveChatMetadataStatsUseCase`, `GetChatMetadataStatsUseCase`, `CheckMessagesMetadataUseCase`, `LoadMessagesReactionsUseCase`, `LoadMessagesExtendedMediaUseCase`, `CancelPendingMetadataRequestsUseCase`
   - [x] Data layer: `ChatMetadataMapper`, `LegacyChatMessagesMetadataRepository` (Main-thread safe, adapting `ChatMessagesMetadataController`, `ConnectionsManager` batching, and request cancellation)
   - [x] Presentation layer: `ChatMetadataUiState`, `ChatMetadataEvent`, `ChatMetadataViewModel`
+- [x] Picture-in-Picture & Video Window Session (`feature.pip`)
+  - [x] Domain entities: `PipState`, `PipSourceModel`, `PipSessionInfo`
+  - [x] Repository contract: `PipRepository`
+  - [x] Use cases: `ObservePipSessionUseCase`, `GetPipSessionUseCase`, `RegisterPipSourceUseCase`, `UnregisterPipSourceUseCase`, `UpdatePipSourceStateUseCase`, `DispatchPipStateUseCase`, `TriggerPipActionUseCase`, `EvaluatePipEligibilityUseCase`
+  - [x] Data layer: `PipMapper`, `LegacyPipRepository` (Main-thread safe, adapting `PipActivityController`, source priority arbitration, MediaSession management, and remote actions)
+  - [x] Presentation layer: `PipUiState`, `PipEvent`, `PipViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 057: Picture-in-Picture & Video Window Session Controller Isolation
+- **Context:** In Telegram Android, Picture-in-Picture (PiP) mode coordination across video playback, live streams, stories, and VoIP video calls was handled by `PipActivityController.java` (~261 lines) and `PipActivityHandler.java` (~401 lines) located in `org.telegram.messenger.pip`. The controller coupled registered sources (`HashMap<String, PipSource>`), priority arbitration (`source.priority > newSource.priority`), media session lifecycle (`MediaSessionCompat`, `MediaSessionConnector`), aspect ratio parameters (`PipSourceParams`), and system broadcast actions (`PipActions.ACTION`). UI activities like `LaunchActivity.java` directly instantiated `PipActivityController` and implemented `IPipActivity`.
+- **Decision:** Introduce pure domain models `PipState` (IDLE, ENTERING, IN_PIP, STASHED, EXITING), `PipSourceModel` (with tag, priority, availability, attached state, needsMediaSession, and aspect ratio), and `PipSessionInfo`. Define abstract contract `PipRepository` covering reactive session observation (`observeSessionInfo`), snapshot retrieval (`getSessionInfo`), source registration/unregistration (`registerSource`, `unregisterSource`), state updates (`updateSourceAvailability`, `updateSourceRatio`, `updateSourceAttached`), PiP state transitions (`updatePipState`), action execution (`triggerPipAction`), and eligibility checks (`canEnterPip`). Implement `LegacyPipRepository` operating safely on `Dispatchers.Main` with full priority arbitration and MediaSession synchronization. Encapsulate presentation state and MVI events in `PipViewModel`.
+- **Consequences:** All Picture-in-Picture session arbitration, candidate priority resolution, and media session lifecycle controls are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `PipActivityController` and Android OS PiP framework.
 
 ### ADR 056: Chat Messages Metadata (Reactions, Paid Media & Stories) Controller Isolation
 - **Context:** In Telegram Android, viewport metadata updates for visible chat messages (reactions updates, extended/paid media previews, and linked stories) were managed by `ChatMessagesMetadataController.java` (~184 lines) attached to `ChatActivity.java`. The controller directly coupled `ChatActivity` adapter positions, in-memory arrays of `MessageObject`, direct MTProto RPC dispatching (`TLRPC.TL_messages_getMessagesReactions`, `TLRPC.TL_messages_getExtendedMedia`, `TL_stories.TL_stories_getStoriesByID`), concurrent request limiting queues (`reactionsRequests.size() > 5`, `extendedMediaRequests.size() > 10`), and background storage queue dispatches.
