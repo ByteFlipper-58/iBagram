@@ -1079,6 +1079,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── StarGiftsUiState.kt
             ├── StarGiftsEvent.kt
             └── StarGiftsViewModel.kt
+    │
+    └── aitones/                          # AI Compose Tones & Styles Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── AiToneModel.kt
+        │   │   └── AiTonesStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── AiTonesRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveAiTonesUseCase.kt
+        │       ├── GetAiTonesStateUseCase.kt
+        │       ├── LoadAiTonesUseCase.kt
+        │       ├── AddAiToneUseCase.kt
+        │       ├── RemoveAiToneUseCase.kt
+        │       ├── UnsaveAiToneUseCase.kt
+        │       └── EditAiToneUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_aicompose.AiComposeTone <-> Domain)
+        │   │   └── AiToneMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyAiTonesRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── AiTonesUiState.kt
+            ├── AiTonesEvent.kt
+            └── AiTonesViewModel.kt
 ```
 
 ### Layer Rules
@@ -1332,10 +1359,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveStarGiftsCatalogUseCase`, `GetStarGiftsCatalogUseCase`, `GetStarGiftByIdUseCase`, `ObserveProfileGiftsUseCase`, `LoadProfileGiftsUseCase`, `TogglePinProfileGiftUseCase`, `ToggleHideProfileGiftUseCase`
   - [x] Data layer: `StarGiftMapper`, `LegacyStarGiftsRepository` (Main-thread safe, adapting `StarsController` and `NotificationCenterFlowBridge` observing `NotificationCenter.starGiftsLoaded`)
   - [x] Presentation layer: `StarGiftsUiState`, `StarGiftsEvent`, `StarGiftsViewModel`
+- [x] AI Compose Tones & Styles (`feature.aitones`)
+  - [x] Domain entities: `AiToneModel`, `AiTonesStateModel`
+  - [x] Repository contract: `AiTonesRepository`
+  - [x] Use cases: `ObserveAiTonesUseCase`, `GetAiTonesStateUseCase`, `LoadAiTonesUseCase`, `AddAiToneUseCase`, `RemoveAiToneUseCase`, `UnsaveAiToneUseCase`, `EditAiToneUseCase`
+  - [x] Data layer: `AiToneMapper`, `LegacyAiTonesRepository` (Main-thread safe, adapting `AiTonesController` via `MessagesController.getTonesController()` and `NotificationCenterFlowBridge` observing `NotificationCenter.loadedAiComposeTones`)
+  - [x] Presentation layer: `AiTonesUiState`, `AiTonesEvent`, `AiTonesViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 039: AI Compose Tones & Styles Controller Isolation
+- **Context:** In Telegram Android, message tone rewriting styles for the Telegram AI Compose feature are managed by `AiTonesController.java` (~158 lines) instantiated on `MessagesController`. The controller directly handles local Base64 serialization in `mainSettings`, MTProto queries (`TL_aicompose.getTones`, `TL_aicompose.saveTone`), and untyped notifications via `NotificationCenter.loadedAiComposeTones`. UI components like `AIEditorAlert.java` (~2300 lines) directly interacted with mutable controller lists and executed manual reload calls.
+- **Decision:** Introduce pure domain models `AiToneModel` (with title, emoji, prompt, creator flag, install count, example rewrite from/to text) and `AiTonesStateModel`. Define abstract contract `AiTonesRepository` covering reactive tones observation (`observeTones`), snapshot retrieval (`getTonesState`), loading (`loadTones`), adding (`addTone`), removing (`removeTone`), unsaving (`unsaveTone`), and editing custom tones (`editTone`). Implement `LegacyAiTonesRepository` operating safely on `Dispatchers.Main` with reactive `NotificationCenterFlowBridge` observation on `NotificationCenter.loadedAiComposeTones`. Encapsulate presentation state, selected tone, and MVI events in `AiTonesViewModel`.
+- **Consequences:** AI Compose tone rewriting styles, custom prompts, install counters, and MTProto tone synchronization are decoupled behind testable domain interfaces with full unit test coverage while maintaining 100% compatibility with Telegram's core `AiTonesController` and MTProto AI compose protocol.
 
 ### ADR 038: Telegram Star Gifts, Catalog & Profile Saved Gifts Isolation
 - **Context:** In Telegram Android, user/channel gifts and the star gifts catalog are managed by `StarsController.java` (`getGiftsList()`, `getProfileGiftsList(dialogId)`). The gifts data model spans raw MTProto TL types `TL_stars.StarGift`, `TL_stars.SavedStarGift`, `TL_stars.TL_payments_getSavedStarGifts`, and `TL_stars.TL_payments_saveStarGift`. UI components like `StarGiftSheet.java` (~1100 lines) and profile tabs directly invoked `StarsController` methods, performed direct list mutations, and relied on untyped `NotificationCenter` broadcasts without lifecycle safety or clean separation between catalog viewing and profile-pinned gifts.

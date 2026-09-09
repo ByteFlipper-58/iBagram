@@ -384,6 +384,16 @@ import org.telegram.messenger.feature.stargifts.domain.usecase.ObserveStarGiftsC
 import org.telegram.messenger.feature.stargifts.domain.usecase.ToggleHideProfileGiftUseCase
 import org.telegram.messenger.feature.stargifts.domain.usecase.TogglePinProfileGiftUseCase
 import org.telegram.messenger.feature.stargifts.presentation.StarGiftsViewModel
+import org.telegram.messenger.feature.aitones.data.repository.LegacyAiTonesRepository
+import org.telegram.messenger.feature.aitones.domain.repository.AiTonesRepository
+import org.telegram.messenger.feature.aitones.domain.usecase.AddAiToneUseCase
+import org.telegram.messenger.feature.aitones.domain.usecase.EditAiToneUseCase
+import org.telegram.messenger.feature.aitones.domain.usecase.GetAiTonesStateUseCase
+import org.telegram.messenger.feature.aitones.domain.usecase.LoadAiTonesUseCase
+import org.telegram.messenger.feature.aitones.domain.usecase.ObserveAiTonesUseCase
+import org.telegram.messenger.feature.aitones.domain.usecase.RemoveAiToneUseCase
+import org.telegram.messenger.feature.aitones.domain.usecase.UnsaveAiToneUseCase
+import org.telegram.messenger.feature.aitones.presentation.AiTonesViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2453,6 +2463,59 @@ class AccountFeatureContainer private constructor(val account: Int) {
             loadProfileGiftsUseCase = loadProfileGiftsUseCase,
             togglePinProfileGiftUseCase = togglePinProfileGiftUseCase,
             toggleHideProfileGiftUseCase = toggleHideProfileGiftUseCase
+        )
+    }
+
+    private var customAiTonesRepository: AiTonesRepository? = null
+
+    var aiTonesRepository: AiTonesRepository
+        get() = customAiTonesRepository ?: LegacyAiTonesRepository(account)
+        set(value) {
+            customAiTonesRepository = value
+        }
+
+    val observeAiTonesUseCase: ObserveAiTonesUseCase
+        get() = ObserveAiTonesUseCase(aiTonesRepository)
+
+    val getAiTonesStateUseCase: GetAiTonesStateUseCase
+        get() = GetAiTonesStateUseCase(aiTonesRepository)
+
+    val loadAiTonesUseCase: LoadAiTonesUseCase
+        get() = LoadAiTonesUseCase(aiTonesRepository)
+
+    val addAiToneUseCase: AddAiToneUseCase
+        get() = AddAiToneUseCase(aiTonesRepository)
+
+    val removeAiToneUseCase: RemoveAiToneUseCase
+        get() = RemoveAiToneUseCase(aiTonesRepository)
+
+    val unsaveAiToneUseCase: UnsaveAiToneUseCase
+        get() = UnsaveAiToneUseCase(aiTonesRepository)
+
+    val editAiToneUseCase: EditAiToneUseCase
+        get() = EditAiToneUseCase(aiTonesRepository)
+
+    private var cachedAiTonesViewModel: AiTonesViewModel? = null
+
+    val aiTonesViewModel: AiTonesViewModel
+        get() {
+            var vm = cachedAiTonesViewModel
+            if (vm == null) {
+                vm = createAiTonesViewModel()
+                cachedAiTonesViewModel = vm
+            }
+            return vm
+        }
+
+    fun createAiTonesViewModel(): AiTonesViewModel {
+        return AiTonesViewModel(
+            observeAiTonesUseCase = observeAiTonesUseCase,
+            getAiTonesStateUseCase = getAiTonesStateUseCase,
+            loadAiTonesUseCase = loadAiTonesUseCase,
+            addAiToneUseCase = addAiToneUseCase,
+            removeAiToneUseCase = removeAiToneUseCase,
+            unsaveAiToneUseCase = unsaveAiToneUseCase,
+            editAiToneUseCase = editAiToneUseCase
         )
     }
 
