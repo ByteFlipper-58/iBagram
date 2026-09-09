@@ -1022,6 +1022,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── AutoDeleteUiState.kt
             ├── AutoDeleteEvent.kt
             └── AutoDeleteViewModel.kt
+    │
+    └── unconfirmedauth/                # Unconfirmed Auth Sessions & Login Approvals Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities
+        │   │   ├── UnconfirmedAuthModel.kt
+        │   │   └── UnconfirmedAuthStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── UnconfirmedAuthRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveUnconfirmedAuthsUseCase.kt
+        │       ├── GetUnconfirmedAuthsUseCase.kt
+        │       ├── ConfirmAuthUseCase.kt
+        │       ├── DenyAuthUseCase.kt
+        │       ├── ConfirmAllAuthsUseCase.kt
+        │       ├── DenyAllAuthsUseCase.kt
+        │       └── ClearUnconfirmedAuthsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (UnconfirmedAuthController.UnconfirmedAuth <-> Domain)
+        │   │   └── UnconfirmedAuthMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyUnconfirmedAuthRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── UnconfirmedAuthUiState.kt
+            ├── UnconfirmedAuthEvent.kt
+            └── UnconfirmedAuthViewModel.kt
 ```
 
 ### Layer Rules
@@ -1263,10 +1290,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveGlobalAutoDeleteUseCase`, `GetGlobalAutoDeleteUseCase`, `SetGlobalAutoDeleteUseCase`, `GetChatAutoDeleteUseCase`, `SetChatAutoDeleteUseCase`, `SetChatsAutoDeleteBatchUseCase`
   - [x] Data layer: `AutoDeleteMapper`, `LegacyAutoDeleteRepository` (Main-thread safe, adapting `UserConfig.getGlobalTTl`, `MessagesController.setDialogHistoryTTL`, `TL_messages_setDefaultHistoryTTL` with `suspendCancellableCoroutine` and `NotificationCenterFlowBridge` observation)
   - [x] Presentation layer: `AutoDeleteUiState`, `AutoDeleteEvent`, `AutoDeleteViewModel`
+- [x] Unconfirmed Auth Sessions & Login Approvals (`feature.unconfirmedauth`)
+  - [x] Domain entities: `UnconfirmedAuthModel`, `UnconfirmedAuthStateModel`
+  - [x] Repository contract: `UnconfirmedAuthRepository`
+  - [x] Use cases: `ObserveUnconfirmedAuthsUseCase`, `GetUnconfirmedAuthsUseCase`, `ConfirmAuthUseCase`, `DenyAuthUseCase`, `ConfirmAllAuthsUseCase`, `DenyAllAuthsUseCase`, `ClearUnconfirmedAuthsUseCase`
+  - [x] Data layer: `UnconfirmedAuthMapper`, `LegacyUnconfirmedAuthRepository` (Main-thread safe, adapting `UnconfirmedAuthController`, `MessagesController.getUnconfirmedAuthController()`, `confirm` and `deny` with `suspendCancellableCoroutine`, and `NotificationCenterFlowBridge` observing `NotificationCenter.unconfirmedAuthUpdate`)
+  - [x] Presentation layer: `UnconfirmedAuthUiState`, `UnconfirmedAuthEvent`, `UnconfirmedAuthViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 037: Unconfirmed Auth Sessions & Login Approvals Controller Isolation
+- **Context:** In Telegram Android, login approvals on new devices, web authorizations awaiting confirmation, and connected bot session approvals are governed by `UnconfirmedAuthController.java` (~414 lines) instantiated on `MessagesController`. The controller directly handles local SQLite storage queries on `unconfirmed_auth`, MTProto requests (`TL_account.changeAuthorizationSettings`, `TL_account.resetAuthorization`, `TL_account.confirmBotConnection`, `TL_account.updateConnectedBot`), in-memory cached session lists (`auths`), and expiration checking runnables. UI components like `UnconfirmedAuthHintCell.java` (~370 lines) directly queried unsynchronized controller arrays and executed direct callback methods without lifecycle safety.
+- **Decision:** Introduce pure domain models `UnconfirmedAuthModel` (with hash, date, device, location, bot flags, expiration calculations) and `UnconfirmedAuthStateModel`. Define abstract contract `UnconfirmedAuthRepository` covering reactive pending auths observation (`observeUnconfirmedAuths`), state snapshot retrieval (`getUnconfirmedAuths`), single authorization confirmation/denial (`confirmAuth`, `denyAuth`), batch confirmation/denial (`confirmAll`, `denyAll`), and cache cleanup (`clear`). Implement `LegacyUnconfirmedAuthRepository` operating safely on `Dispatchers.Main` with `suspendCancellableCoroutine` for asynchronous MTProto confirmations and reactive `NotificationCenterFlowBridge` observation on `unconfirmedAuthUpdate`. Encapsulate presentation state and MVI events in `UnconfirmedAuthViewModel`.
+- **Consequences:** Unconfirmed sessions, new device login approvals, bot connection confirmations, and expiration monitoring are cleanly decoupled behind testable domain interfaces with complete unit test coverage while maintaining 100% compatibility with Telegram's core auth controller and MTProto authorization protocol.
 
 ### ADR 036: Auto-Delete Messages & Global History TTL Isolation
 - **Context:** In Telegram Android, message auto-delete and self-destruct timers operate on two distinct levels: global account-level default TTL for new chats (`TLRPC.TL_messages_setDefaultHistoryTTL`, `UserConfig.getGlobalTTl()`, `NotificationCenter.didUpdateGlobalAutoDeleteTimer`), and per-dialog TTL periods (`MessagesController.setDialogHistoryTTL`, `TLRPC.TL_messages_setHistoryTTL`, `dialog.ttl_period`). Presentation logic inside `AutoDeleteMessagesActivity.java` (~337 lines) directly handled raw MTProto request dispatching, manual seconds/minutes conversions, direct `UserConfig` mutations, and custom UI transitions mixed with networking callbacks.

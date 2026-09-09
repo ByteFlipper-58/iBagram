@@ -364,6 +364,16 @@ import org.telegram.messenger.feature.autodelete.domain.usecase.SetChatAutoDelet
 import org.telegram.messenger.feature.autodelete.domain.usecase.SetChatsAutoDeleteBatchUseCase
 import org.telegram.messenger.feature.autodelete.domain.usecase.SetGlobalAutoDeleteUseCase
 import org.telegram.messenger.feature.autodelete.presentation.AutoDeleteViewModel
+import org.telegram.messenger.feature.unconfirmedauth.data.repository.LegacyUnconfirmedAuthRepository
+import org.telegram.messenger.feature.unconfirmedauth.domain.repository.UnconfirmedAuthRepository
+import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.ClearUnconfirmedAuthsUseCase
+import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.ConfirmAllAuthsUseCase
+import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.ConfirmAuthUseCase
+import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.DenyAllAuthsUseCase
+import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.DenyAuthUseCase
+import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.GetUnconfirmedAuthsUseCase
+import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.ObserveUnconfirmedAuthsUseCase
+import org.telegram.messenger.feature.unconfirmedauth.presentation.UnconfirmedAuthViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2327,6 +2337,59 @@ class AccountFeatureContainer private constructor(val account: Int) {
             getChatAutoDeleteUseCase = getChatAutoDeleteUseCase,
             setChatAutoDeleteUseCase = setChatAutoDeleteUseCase,
             setChatsAutoDeleteBatchUseCase = setChatsAutoDeleteBatchUseCase
+        )
+    }
+
+    private var customUnconfirmedAuthRepository: UnconfirmedAuthRepository? = null
+
+    var unconfirmedAuthRepository: UnconfirmedAuthRepository
+        get() = customUnconfirmedAuthRepository ?: LegacyUnconfirmedAuthRepository(account)
+        set(value) {
+            customUnconfirmedAuthRepository = value
+        }
+
+    val observeUnconfirmedAuthsUseCase: ObserveUnconfirmedAuthsUseCase
+        get() = ObserveUnconfirmedAuthsUseCase(unconfirmedAuthRepository)
+
+    val getUnconfirmedAuthsUseCase: GetUnconfirmedAuthsUseCase
+        get() = GetUnconfirmedAuthsUseCase(unconfirmedAuthRepository)
+
+    val confirmAuthUseCase: ConfirmAuthUseCase
+        get() = ConfirmAuthUseCase(unconfirmedAuthRepository)
+
+    val denyAuthUseCase: DenyAuthUseCase
+        get() = DenyAuthUseCase(unconfirmedAuthRepository)
+
+    val confirmAllAuthsUseCase: ConfirmAllAuthsUseCase
+        get() = ConfirmAllAuthsUseCase(unconfirmedAuthRepository)
+
+    val denyAllAuthsUseCase: DenyAllAuthsUseCase
+        get() = DenyAllAuthsUseCase(unconfirmedAuthRepository)
+
+    val clearUnconfirmedAuthsUseCase: ClearUnconfirmedAuthsUseCase
+        get() = ClearUnconfirmedAuthsUseCase(unconfirmedAuthRepository)
+
+    private var cachedUnconfirmedAuthViewModel: UnconfirmedAuthViewModel? = null
+
+    val unconfirmedAuthViewModel: UnconfirmedAuthViewModel
+        get() {
+            var vm = cachedUnconfirmedAuthViewModel
+            if (vm == null) {
+                vm = createUnconfirmedAuthViewModel()
+                cachedUnconfirmedAuthViewModel = vm
+            }
+            return vm
+        }
+
+    fun createUnconfirmedAuthViewModel(): UnconfirmedAuthViewModel {
+        return UnconfirmedAuthViewModel(
+            observeUnconfirmedAuthsUseCase = observeUnconfirmedAuthsUseCase,
+            getUnconfirmedAuthsUseCase = getUnconfirmedAuthsUseCase,
+            confirmAuthUseCase = confirmAuthUseCase,
+            denyAuthUseCase = denyAuthUseCase,
+            confirmAllAuthsUseCase = confirmAllAuthsUseCase,
+            denyAllAuthsUseCase = denyAllAuthsUseCase,
+            clearUnconfirmedAuthsUseCase = clearUnconfirmedAuthsUseCase
         )
     }
 
