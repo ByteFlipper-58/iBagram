@@ -476,6 +476,17 @@ import org.telegram.messenger.feature.botstars.domain.usecase.ObserveBotTransact
 import org.telegram.messenger.feature.botstars.domain.usecase.ObserveConnectedStarBotsUseCase
 import org.telegram.messenger.feature.botstars.domain.usecase.ObserveTonStatsUseCase
 import org.telegram.messenger.feature.botstars.presentation.BotStarsViewModel
+import org.telegram.messenger.feature.billing.data.repository.LegacyBillingRepository
+import org.telegram.messenger.feature.billing.domain.repository.BillingRepository
+import org.telegram.messenger.feature.billing.domain.usecase.FormatCurrencyUseCase
+import org.telegram.messenger.feature.billing.domain.usecase.GetBillingStateUseCase
+import org.telegram.messenger.feature.billing.domain.usecase.GetCurrencyExpUseCase
+import org.telegram.messenger.feature.billing.domain.usecase.GetPremiumProductUseCase
+import org.telegram.messenger.feature.billing.domain.usecase.ManageSubscriptionUseCase
+import org.telegram.messenger.feature.billing.domain.usecase.ObserveBillingStateUseCase
+import org.telegram.messenger.feature.billing.domain.usecase.QueryBillingPurchasesUseCase
+import org.telegram.messenger.feature.billing.domain.usecase.StartBillingConnectionUseCase
+import org.telegram.messenger.feature.billing.presentation.BillingViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3028,6 +3039,60 @@ class AccountFeatureContainer private constructor(val account: Int) {
             loadConnectedStarBotsUseCase = loadConnectedStarBotsUseCase,
             loadSuggestedStarBotsUseCase = loadSuggestedStarBotsUseCase,
             getAdminedBotsAndChannelsUseCase = getAdminedBotsAndChannelsUseCase
+        )
+    }
+
+    private var customBillingRepository: BillingRepository? = null
+
+    var billingRepository: BillingRepository
+        get() = customBillingRepository ?: LegacyBillingRepository()
+        set(value) {
+            customBillingRepository = value
+        }
+
+    val observeBillingStateUseCase: ObserveBillingStateUseCase
+        get() = ObserveBillingStateUseCase(billingRepository)
+
+    val getBillingStateUseCase: GetBillingStateUseCase
+        get() = GetBillingStateUseCase(billingRepository)
+
+    val startBillingConnectionUseCase: StartBillingConnectionUseCase
+        get() = StartBillingConnectionUseCase(billingRepository)
+
+    val getPremiumProductUseCase: GetPremiumProductUseCase
+        get() = GetPremiumProductUseCase(billingRepository)
+
+    val formatCurrencyUseCase: FormatCurrencyUseCase
+        get() = FormatCurrencyUseCase(billingRepository)
+
+    val getCurrencyExpUseCase: GetCurrencyExpUseCase
+        get() = GetCurrencyExpUseCase(billingRepository)
+
+    val queryBillingPurchasesUseCase: QueryBillingPurchasesUseCase
+        get() = QueryBillingPurchasesUseCase(billingRepository)
+
+    val manageSubscriptionUseCase: ManageSubscriptionUseCase
+        get() = ManageSubscriptionUseCase(billingRepository)
+
+    private var cachedBillingViewModel: BillingViewModel? = null
+
+    val billingViewModel: BillingViewModel
+        get() {
+            var vm = cachedBillingViewModel
+            if (vm == null) {
+                vm = createBillingViewModel()
+                cachedBillingViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBillingViewModel(): BillingViewModel {
+        return BillingViewModel(
+            observeBillingStateUseCase = observeBillingStateUseCase,
+            getBillingStateUseCase = getBillingStateUseCase,
+            startBillingConnectionUseCase = startBillingConnectionUseCase,
+            queryBillingPurchasesUseCase = queryBillingPurchasesUseCase,
+            manageSubscriptionUseCase = manageSubscriptionUseCase
         )
     }
 

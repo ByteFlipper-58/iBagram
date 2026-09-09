@@ -1336,6 +1336,38 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BotStarsUiState.kt
             ├── BotStarsEvent.kt
             └── BotStarsViewModel.kt
+    │
+    └── billing/                          # Google Play Billing, Subscriptions & In-App Purchases Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── BillingProductType.kt
+        │   │   ├── BillingPriceModel.kt
+        │   │   ├── BillingProductModel.kt
+        │   │   ├── BillingPurchaseState.kt
+        │   │   ├── BillingPurchaseModel.kt
+        │   │   └── BillingStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BillingRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveBillingStateUseCase.kt
+        │       ├── GetBillingStateUseCase.kt
+        │       ├── StartBillingConnectionUseCase.kt
+        │       ├── GetPremiumProductUseCase.kt
+        │       ├── FormatCurrencyUseCase.kt
+        │       ├── GetCurrencyExpUseCase.kt
+        │       ├── QueryBillingPurchasesUseCase.kt
+        │       └── ManageSubscriptionUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (ProductDetails / Purchase <-> Domain)
+        │   │   └── BillingMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBillingRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BillingUiState.kt
+            ├── BillingEvent.kt
+            └── BillingViewModel.kt
 ```
 
 ### Layer Rules
@@ -1643,10 +1675,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveBotStarsStatsUseCase`, `GetBotStarsStatsUseCase`, `ObserveTonStatsUseCase`, `GetTonStatsUseCase`, `ObserveBotTransactionsUseCase`, `LoadBotTransactionsUseCase`, `ObserveConnectedStarBotsUseCase`, `LoadConnectedStarBotsUseCase`, `LoadSuggestedStarBotsUseCase`, `GetAdminedBotsAndChannelsUseCase`
   - [x] Data layer: `BotStarsMapper`, `LegacyBotStarsRepository` (Main-thread safe, adapting `BotStarsController`, `NotificationCenter.botStarsUpdated`, `botStarsTransactionsLoaded`, `channelConnectedBotsUpdate`, and MTProto star revenue protocols)
   - [x] Presentation layer: `BotStarsUiState`, `BotStarsEvent`, `BotStarsViewModel`
+- [x] Google Play Billing, Subscriptions & Currency Formatting (`feature.billing`)
+  - [x] Domain entities: `BillingProductType`, `BillingPriceModel`, `BillingProductModel`, `BillingPurchaseState`, `BillingPurchaseModel`, `BillingStateModel`
+  - [x] Repository contract: `BillingRepository`
+  - [x] Use cases: `ObserveBillingStateUseCase`, `GetBillingStateUseCase`, `StartBillingConnectionUseCase`, `GetPremiumProductUseCase`, `FormatCurrencyUseCase`, `GetCurrencyExpUseCase`, `QueryBillingPurchasesUseCase`, `ManageSubscriptionUseCase`
+  - [x] Data layer: `BillingMapper`, `LegacyBillingRepository` (Main-thread safe, adapting `BillingController`, `NotificationCenter.billingProductDetailsUpdated`, `billingConfirmPurchaseError`, and Google Play BillingClient query/consume APIs)
+  - [x] Presentation layer: `BillingUiState`, `BillingEvent`, `BillingViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 048: Google Play Billing, Subscriptions & Currency Formatting Controller Isolation
+- **Context:** In Telegram Android, Google Play in-app purchases, Telegram Premium subscription product details (`PREMIUM_PRODUCT_ID = "telegram_premium"`), purchase consumption (gifts, stars top-ups, giveaways, auth codes), Play Store subscription deep links, and multi-currency formatting (`formatCurrency` with special rules for TON, XTR, and fiat currencies) were managed by `BillingController.java` (~574 lines). The controller directly handled Google Play `BillingClient` callbacks (`PurchasesUpdatedListener`, `BillingClientStateListener`), maintained transaction hashes and tokens (`lastPremiumTransaction`, `lastPremiumToken`), managed fallback to invoice mode (`billingClientEmpty`), and coordinated MTProto assignment requests (`TL_payments_assignPlayMarketTransaction`) with UI progress dialogs and notifications on `NotificationCenter.billingProductDetailsUpdated` and `billingConfirmPurchaseError`. UI classes like `PremiumPreviewFragment.java`, `PaymentFormActivity.java`, and Stars dialogs directly accessed `BillingController.getInstance()`.
+- **Decision:** Introduce pure domain models `BillingProductType` (INAPP, SUBS), `BillingPriceModel`, `BillingProductModel`, `BillingPurchaseState` (UNSPECIFIED, PURCHASED, PENDING), `BillingPurchaseModel`, and `BillingStateModel`. Define abstract contract `BillingRepository` covering reactive state observation (`observeBillingState`), snapshot state retrieval (`getBillingState`), connection management (`startConnection`, `isReady`, `isInvoiceMode`), cached premium product lookup (`getPremiumProduct`), transaction tracking (`getLastPremiumTransaction`, `getLastPremiumToken`), currency formatting with exponents (`formatCurrency`, `getCurrencyExp`), active purchases querying (`queryPurchases`), and Play Store subscription management (`manageSubscription`). Implement `LegacyBillingRepository` operating safely on `Dispatchers.Main` with `NotificationCenterFlowBridge` observation on billing events, and `suspendCancellableCoroutine` for asynchronous BillingClient setup and purchase querying. Encapsulate presentation state and MVI events in `BillingViewModel`.
+- **Consequences:** Google Play Billing integration, Telegram Premium subscription queries, purchase tokens, and currency formatting are cleanly decoupled behind testable domain interfaces with full unit test coverage while maintaining 100% compatibility with Telegram's core billing controller, Google Play Billing Client, and MTProto payment transaction assignment protocols.
 
 ### ADR 047: Telegram Stars Bot Revenue, Balance & Transactions Controller Isolation
 - **Context:** In Telegram Android, Telegram Stars and TON revenue statistics, balances, transaction histories, connected referral bot links (`ChannelConnectedBots`), suggested bots for referral programs (`ChannelSuggestedBots`), and admined bots/channels were managed by `BotStarsController.java` (~652 lines) located in `org.telegram.ui.Stars`. The controller directly maintained nested in-memory caching maps (`botStarsStats`, `tonStats`, `transactions`, `connectedBots`, `suggestedBots`), raw MTProto request dispatching (`TLRPC.TL_payments_getStarsRevenueStats`, `TL_stars.TL_payments_getStarsTransactions`, `TL_payments.getConnectedStarRefBots`, `TL_payments.getSuggestedStarRefBots`, `TL_bots.getAdminedBots`, `TLRPC.TL_channels_getAdminedPublicChannels`), and untyped global notifications (`NotificationCenter.botStarsUpdated`, `botStarsTransactionsLoaded`, `channelConnectedBotsUpdate`, `channelSuggestedBotsUpdate`, `adminedChannelsLoaded`). UI classes like `BotStarsActivity.java` (~1700 lines) directly mutated controller state and handled raw responses.
