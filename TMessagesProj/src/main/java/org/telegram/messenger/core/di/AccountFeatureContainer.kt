@@ -611,6 +611,15 @@ import org.telegram.messenger.feature.camera.domain.usecase.SetCameraFlashModeUs
 import org.telegram.messenger.feature.camera.domain.usecase.SwitchCameraUseCase
 import org.telegram.messenger.feature.camera.domain.usecase.ToggleMirrorFrontCameraUseCase
 import org.telegram.messenger.feature.camera.presentation.CameraViewModel
+import org.telegram.messenger.feature.cachebychats.data.repository.LegacyCacheByChatsRepository
+import org.telegram.messenger.feature.cachebychats.domain.repository.CacheByChatsRepository
+import org.telegram.messenger.feature.cachebychats.domain.usecase.ClearKeepMediaExceptionsUseCase
+import org.telegram.messenger.feature.cachebychats.domain.usecase.GetCacheByChatsConfigUseCase
+import org.telegram.messenger.feature.cachebychats.domain.usecase.ObserveCacheByChatsConfigUseCase
+import org.telegram.messenger.feature.cachebychats.domain.usecase.RemoveKeepMediaExceptionUseCase
+import org.telegram.messenger.feature.cachebychats.domain.usecase.SetKeepMediaDurationUseCase
+import org.telegram.messenger.feature.cachebychats.domain.usecase.SetKeepMediaExceptionUseCase
+import org.telegram.messenger.feature.cachebychats.presentation.CacheByChatsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3864,6 +3873,57 @@ class AccountFeatureContainer private constructor(val account: Int) {
             toggleMirrorFrontCameraUseCase = toggleMirrorFrontCameraUseCase,
             chooseOptimalResolutionUseCase = chooseOptimalResolutionUseCase,
             notifyCameraRecordingUseCase = notifyCameraRecordingUseCase
+        )
+    }
+
+    // ==========================================
+    // Feature: CacheByChats (Keep-Media Cache Retention & Exceptions)
+    // ==========================================
+
+    private var customCacheByChatsRepository: CacheByChatsRepository? = null
+
+    var cacheByChatsRepository: CacheByChatsRepository
+        get() = customCacheByChatsRepository ?: LegacyCacheByChatsRepository(account)
+        set(value) { customCacheByChatsRepository = value }
+
+    val observeCacheByChatsConfigUseCase: ObserveCacheByChatsConfigUseCase
+        get() = ObserveCacheByChatsConfigUseCase(cacheByChatsRepository)
+
+    val getCacheByChatsConfigUseCase: GetCacheByChatsConfigUseCase
+        get() = GetCacheByChatsConfigUseCase(cacheByChatsRepository)
+
+    val setKeepMediaDurationUseCase: SetKeepMediaDurationUseCase
+        get() = SetKeepMediaDurationUseCase(cacheByChatsRepository)
+
+    val setKeepMediaExceptionUseCase: SetKeepMediaExceptionUseCase
+        get() = SetKeepMediaExceptionUseCase(cacheByChatsRepository)
+
+    val removeKeepMediaExceptionUseCase: RemoveKeepMediaExceptionUseCase
+        get() = RemoveKeepMediaExceptionUseCase(cacheByChatsRepository)
+
+    val clearKeepMediaExceptionsUseCase: ClearKeepMediaExceptionsUseCase
+        get() = ClearKeepMediaExceptionsUseCase(cacheByChatsRepository)
+
+    private var cachedCacheByChatsViewModel: CacheByChatsViewModel? = null
+
+    val cacheByChatsViewModel: CacheByChatsViewModel
+        get() {
+            var vm = cachedCacheByChatsViewModel
+            if (vm == null) {
+                vm = createCacheByChatsViewModel()
+                cachedCacheByChatsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createCacheByChatsViewModel(): CacheByChatsViewModel {
+        return CacheByChatsViewModel(
+            observeCacheByChatsConfigUseCase = observeCacheByChatsConfigUseCase,
+            getCacheByChatsConfigUseCase = getCacheByChatsConfigUseCase,
+            setKeepMediaDurationUseCase = setKeepMediaDurationUseCase,
+            setKeepMediaExceptionUseCase = setKeepMediaExceptionUseCase,
+            removeKeepMediaExceptionUseCase = removeKeepMediaExceptionUseCase,
+            clearKeepMediaExceptionsUseCase = clearKeepMediaExceptionsUseCase
         )
     }
 

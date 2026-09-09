@@ -1714,6 +1714,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── CameraUiState.kt
             ├── CameraEvent.kt
             └── CameraViewModel.kt
+    │
+    └── cachebychats/                      # Keep-Media Cache Retention & Dialog Exceptions Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── CacheChatType.kt
+        │   │   ├── KeepMediaDuration.kt
+        │   │   ├── KeepMediaExceptionModel.kt
+        │   │   └── CacheByChatsConfigModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── CacheByChatsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveCacheByChatsConfigUseCase.kt
+        │       ├── GetCacheByChatsConfigUseCase.kt
+        │       ├── SetKeepMediaDurationUseCase.kt
+        │       ├── SetKeepMediaExceptionUseCase.kt
+        │       ├── RemoveKeepMediaExceptionUseCase.kt
+        │       └── ClearKeepMediaExceptionsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Legacy KeepMediaException <-> Domain)
+        │   │   └── CacheByChatsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyCacheByChatsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── CacheByChatsUiState.kt
+            ├── CacheByChatsEvent.kt
+            └── CacheByChatsViewModel.kt
 ```
 
 ### Layer Rules
@@ -2099,10 +2127,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveCameraStateUseCase`, `GetCameraStateUseCase`, `InitCamerasUseCase`, `SelectCameraUseCase`, `SwitchCameraUseCase`, `SetCameraFlashModeUseCase`, `ToggleMirrorFrontCameraUseCase`, `ChooseOptimalResolutionUseCase`, `NotifyCameraRecordingUseCase`
   - [x] Data layer: `CameraMapper`, `LegacyCameraRepository` (thread safe, adapting `CameraController`, resolution selection heuristics, headless fallback)
   - [x] Presentation layer: `CameraUiState`, `CameraEvent`, `CameraViewModel`
+- [x] Keep-Media Cache Retention & Dialog Exceptions (`feature.cachebychats`)
+  - [x] Domain entities: `CacheChatType`, `KeepMediaDuration`, `KeepMediaExceptionModel`, `CacheByChatsConfigModel`
+  - [x] Repository contract: `CacheByChatsRepository`
+  - [x] Use cases: `ObserveCacheByChatsConfigUseCase`, `GetCacheByChatsConfigUseCase`, `SetKeepMediaDurationUseCase`, `SetKeepMediaExceptionUseCase`, `RemoveKeepMediaExceptionUseCase`, `ClearKeepMediaExceptionsUseCase`
+  - [x] Data layer: `CacheByChatsMapper`, `LegacyCacheByChatsRepository` (thread safe, adapting `CacheByChatsController`, duration presets, dialog exceptions binary serialization)
+  - [x] Presentation layer: `CacheByChatsUiState`, `CacheByChatsEvent`, `CacheByChatsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 061: Keep-Media Cache Retention & Dialog Exceptions Controller Isolation
+- **Context:** In Telegram Android, automatic media cache eviction policies (keep media duration for personal chats, groups, channels, stories) and per-dialog exceptions were managed by `CacheByChatsController.java` (~215 lines) located in `org.telegram.messenger`. The controller coupled integer duration codes (`KEEP_MEDIA_DELETE = 4`, `KEEP_MEDIA_FOREVER = 2`, `KEEP_MEDIA_ONE_DAY = 3`, `KEEP_MEDIA_ONE_WEEK = 0`, `KEEP_MEDIA_ONE_MONTH = 1`, `KEEP_MEDIA_TWO_DAY = 6`), chat type codes (`USER = 0`, `GROUP = 1`, `CHANNEL = 2`, `STORIES = 3`), binary serialization of dialog exceptions into Hex strings (`keep_media_exceptions_<type>`), and direct SharedPreferences calls on `SharedConfig` and `UserConfig`.
+- **Decision:** Introduce pure domain models `CacheChatType` (USER, GROUP, CHANNEL, STORIES), `KeepMediaDuration` (with seconds equivalents and default durations per type), `KeepMediaExceptionModel` (with `dialogId`, `type`, and `duration`), and `CacheByChatsConfigModel`. Define abstract contract `CacheByChatsRepository` covering reactive configuration observation (`observeConfig`), snapshot retrieval (`getConfig`), retention duration get/set (`getDuration`, `setDuration`), and exception management (`getExceptions`, `setException`, `removeException`, `clearAllExceptions`). Implement `LegacyCacheByChatsRepository` operating safely across threads with binary serialization mapping to `CacheByChatsController` and headless in-memory fallback. Encapsulate presentation state and MVI events in `CacheByChatsViewModel`.
+- **Consequences:** All cache retention configuration, peer category durations, dialog retention exceptions, and expiration lookups are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `CacheByChatsController` and cache clearing cleanup tasks.
 
 ### ADR 060: Hardware Camera & Video Recording Controller Isolation
 - **Context:** In Telegram Android, camera hardware initialization, device enumeration, preview and picture resolution selection, flash mode management, front camera mirroring, and video recording lifecycle were managed by `CameraController.java` (~975 lines) located in `org.telegram.messenger.camera`. The controller directly coupled legacy Android `Camera` and `Camera2` APIs, thread pools (`ThreadPoolExecutor`), SharedPreferences (`cameraCache` Base64 serialization), `MediaRecorder`, `MediaMetadataRetriever`, thumbnail generation (`SendMessagesHelper.createVideoThumbnail`), and global notifications on `NotificationCenter.cameraInitied`. Camera UI components (`CameraView.java`, `ChatActivity.java`, `StoryRecorder.java`) had tightly coupled dependencies on singleton `CameraController.getInstance()`.
