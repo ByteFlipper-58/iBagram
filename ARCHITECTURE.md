@@ -1301,6 +1301,41 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── TimezonesUiState.kt
             ├── TimezonesEvent.kt
             └── TimezonesViewModel.kt
+    │
+    └── botstars/                         # Telegram Stars Bot Revenue, Balance & Transactions Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── BotStarsRevenueStatusModel.kt
+        │   │   ├── BotStarsRevenueStatsModel.kt
+        │   │   ├── BotStarsTransactionType.kt
+        │   │   ├── BotStarsTransactionModel.kt
+        │   │   ├── ConnectedBotStarRefModel.kt
+        │   │   ├── StarRefProgramModel.kt
+        │   │   └── BotStarsStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BotStarsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveBotStarsStatsUseCase.kt
+        │       ├── GetBotStarsStatsUseCase.kt
+        │       ├── ObserveTonStatsUseCase.kt
+        │       ├── GetTonStatsUseCase.kt
+        │       ├── ObserveBotTransactionsUseCase.kt
+        │       ├── LoadBotTransactionsUseCase.kt
+        │       ├── ObserveConnectedStarBotsUseCase.kt
+        │       ├── LoadConnectedStarBotsUseCase.kt
+        │       ├── LoadSuggestedStarBotsUseCase.kt
+        │       └── GetAdminedBotsAndChannelsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TL_payments / TL_stars <-> Domain)
+        │   │   └── BotStarsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBotStarsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BotStarsUiState.kt
+            ├── BotStarsEvent.kt
+            └── BotStarsViewModel.kt
 ```
 
 ### Layer Rules
@@ -1602,10 +1637,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveTimezonesUseCase`, `GetTimezonesUseCase`, `LoadTimezonesUseCase`, `FindTimezoneUseCase`, `GetSystemTimezoneIdUseCase`, `GetTimezoneNameUseCase`
   - [x] Data layer: `TimezoneMapper`, `LegacyTimezonesRepository` (Main-thread safe, adapting `TimezonesController`, `mainSettings` cache, and `NotificationCenter.timezonesUpdated`)
   - [x] Presentation layer: `TimezonesUiState`, `TimezonesEvent`, `TimezonesViewModel`
+- [x] Telegram Stars Bot Revenue, Balance & Transactions (`feature.botstars`)
+  - [x] Domain entities: `BotStarsRevenueStatusModel`, `BotStarsRevenueStatsModel`, `BotStarsTransactionType`, `BotStarsTransactionModel`, `ConnectedBotStarRefModel`, `StarRefProgramModel`, `BotStarsStateModel`
+  - [x] Repository contract: `BotStarsRepository`
+  - [x] Use cases: `ObserveBotStarsStatsUseCase`, `GetBotStarsStatsUseCase`, `ObserveTonStatsUseCase`, `GetTonStatsUseCase`, `ObserveBotTransactionsUseCase`, `LoadBotTransactionsUseCase`, `ObserveConnectedStarBotsUseCase`, `LoadConnectedStarBotsUseCase`, `LoadSuggestedStarBotsUseCase`, `GetAdminedBotsAndChannelsUseCase`
+  - [x] Data layer: `BotStarsMapper`, `LegacyBotStarsRepository` (Main-thread safe, adapting `BotStarsController`, `NotificationCenter.botStarsUpdated`, `botStarsTransactionsLoaded`, `channelConnectedBotsUpdate`, and MTProto star revenue protocols)
+  - [x] Presentation layer: `BotStarsUiState`, `BotStarsEvent`, `BotStarsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 047: Telegram Stars Bot Revenue, Balance & Transactions Controller Isolation
+- **Context:** In Telegram Android, Telegram Stars and TON revenue statistics, balances, transaction histories, connected referral bot links (`ChannelConnectedBots`), suggested bots for referral programs (`ChannelSuggestedBots`), and admined bots/channels were managed by `BotStarsController.java` (~652 lines) located in `org.telegram.ui.Stars`. The controller directly maintained nested in-memory caching maps (`botStarsStats`, `tonStats`, `transactions`, `connectedBots`, `suggestedBots`), raw MTProto request dispatching (`TLRPC.TL_payments_getStarsRevenueStats`, `TL_stars.TL_payments_getStarsTransactions`, `TL_payments.getConnectedStarRefBots`, `TL_payments.getSuggestedStarRefBots`, `TL_bots.getAdminedBots`, `TLRPC.TL_channels_getAdminedPublicChannels`), and untyped global notifications (`NotificationCenter.botStarsUpdated`, `botStarsTransactionsLoaded`, `channelConnectedBotsUpdate`, `channelSuggestedBotsUpdate`, `adminedChannelsLoaded`). UI classes like `BotStarsActivity.java` (~1700 lines) directly mutated controller state and handled raw responses.
+- **Decision:** Introduce pure domain models `BotStarsRevenueStatusModel`, `BotStarsRevenueStatsModel`, `BotStarsTransactionType` (ALL, INCOMING, OUTGOING), `BotStarsTransactionModel`, `ConnectedBotStarRefModel`, `StarRefProgramModel`, and `BotStarsStateModel`. Define abstract contract `BotStarsRepository` covering reactive stats observation (`observeBotStarsStats`, `observeTonStats`), snapshot retrieval (`getBotStarsStats`, `getTonStats`), reactive and paginated transactions loading (`observeTransactions`, `loadTransactions`), referral bot links (`observeConnectedBots`, `loadConnectedBots`), suggested program bots (`loadSuggestedBots`), and admined bots/channels (`loadAdminedBots`, `loadAdminedChannels`). Implement `LegacyBotStarsRepository` operating safely on `Dispatchers.Main` with `NotificationCenterFlowBridge` observation on all related events, and `suspendCancellableCoroutine` for request coordination. Encapsulate presentation state, tab switching, and MVI events in `BotStarsViewModel`.
+- **Consequences:** Bot and channel Stars/TON revenues, balance tracking, transaction filters, referral programs, and admined bot inventories are decoupled behind testable domain interfaces with full unit test coverage while maintaining 100% compatibility with Telegram's core bot stars controller and MTProto payments protocols.
 
 ### ADR 046: Telegram Timezones & Business Hours Offset Controller Isolation
 - **Context:** In Telegram Android, timezones selection and timezone offset calculation (used across Telegram Business opening hours, profile hours, scheduled messages, and premium features) was managed by `TimezonesController.java` (~183 lines) located in `org.telegram.ui.Business`. The controller directly coupled local SharedPreferences hex deserialization (`mainSettings.getString("timezones", null)`), raw MTProto requests (`TLRPC.TL_help_getTimezonesList`), untyped global notifications on `NotificationCenter.timezonesUpdated`, and Android/Java 8 `java.time.ZoneId` system timezone resolution with fallback heuristics. UI classes like `TimezoneSelector.java`, `OpeningHoursActivity.java`, `ProfileHoursCell.java`, and `AlertsCreator.java` directly invoked `TimezonesController.getInstance(account)`.

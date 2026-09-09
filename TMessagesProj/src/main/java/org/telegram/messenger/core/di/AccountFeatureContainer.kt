@@ -463,6 +463,19 @@ import org.telegram.messenger.feature.timezones.domain.usecase.GetTimezonesUseCa
 import org.telegram.messenger.feature.timezones.domain.usecase.LoadTimezonesUseCase
 import org.telegram.messenger.feature.timezones.domain.usecase.ObserveTimezonesUseCase
 import org.telegram.messenger.feature.timezones.presentation.TimezonesViewModel
+import org.telegram.messenger.feature.botstars.data.repository.LegacyBotStarsRepository
+import org.telegram.messenger.feature.botstars.domain.repository.BotStarsRepository
+import org.telegram.messenger.feature.botstars.domain.usecase.GetAdminedBotsAndChannelsUseCase
+import org.telegram.messenger.feature.botstars.domain.usecase.GetBotStarsStatsUseCase
+import org.telegram.messenger.feature.botstars.domain.usecase.GetTonStatsUseCase
+import org.telegram.messenger.feature.botstars.domain.usecase.LoadBotTransactionsUseCase
+import org.telegram.messenger.feature.botstars.domain.usecase.LoadConnectedStarBotsUseCase
+import org.telegram.messenger.feature.botstars.domain.usecase.LoadSuggestedStarBotsUseCase
+import org.telegram.messenger.feature.botstars.domain.usecase.ObserveBotStarsStatsUseCase
+import org.telegram.messenger.feature.botstars.domain.usecase.ObserveBotTransactionsUseCase
+import org.telegram.messenger.feature.botstars.domain.usecase.ObserveConnectedStarBotsUseCase
+import org.telegram.messenger.feature.botstars.domain.usecase.ObserveTonStatsUseCase
+import org.telegram.messenger.feature.botstars.presentation.BotStarsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2949,6 +2962,72 @@ class AccountFeatureContainer private constructor(val account: Int) {
             findTimezoneUseCase = findTimezoneUseCase,
             getSystemTimezoneIdUseCase = getSystemTimezoneIdUseCase,
             getTimezoneNameUseCase = getTimezoneNameUseCase
+        )
+    }
+
+    // --- Bot Stars ---
+    private var customBotStarsRepository: BotStarsRepository? = null
+
+    var botStarsRepository: BotStarsRepository
+        get() = customBotStarsRepository ?: LegacyBotStarsRepository(account)
+        set(value) {
+            customBotStarsRepository = value
+        }
+
+    val observeBotStarsStatsUseCase: ObserveBotStarsStatsUseCase
+        get() = ObserveBotStarsStatsUseCase(botStarsRepository)
+
+    val getBotStarsStatsUseCase: GetBotStarsStatsUseCase
+        get() = GetBotStarsStatsUseCase(botStarsRepository)
+
+    val observeTonStatsUseCase: ObserveTonStatsUseCase
+        get() = ObserveTonStatsUseCase(botStarsRepository)
+
+    val getTonStatsUseCase: GetTonStatsUseCase
+        get() = GetTonStatsUseCase(botStarsRepository)
+
+    val observeBotTransactionsUseCase: ObserveBotTransactionsUseCase
+        get() = ObserveBotTransactionsUseCase(botStarsRepository)
+
+    val loadBotTransactionsUseCase: LoadBotTransactionsUseCase
+        get() = LoadBotTransactionsUseCase(botStarsRepository)
+
+    val observeConnectedStarBotsUseCase: ObserveConnectedStarBotsUseCase
+        get() = ObserveConnectedStarBotsUseCase(botStarsRepository)
+
+    val loadConnectedStarBotsUseCase: LoadConnectedStarBotsUseCase
+        get() = LoadConnectedStarBotsUseCase(botStarsRepository)
+
+    val loadSuggestedStarBotsUseCase: LoadSuggestedStarBotsUseCase
+        get() = LoadSuggestedStarBotsUseCase(botStarsRepository)
+
+    val getAdminedBotsAndChannelsUseCase: GetAdminedBotsAndChannelsUseCase
+        get() = GetAdminedBotsAndChannelsUseCase(botStarsRepository)
+
+    private var cachedBotStarsViewModel: BotStarsViewModel? = null
+
+    val botStarsViewModel: BotStarsViewModel
+        get() {
+            var vm = cachedBotStarsViewModel
+            if (vm == null) {
+                vm = createBotStarsViewModel()
+                cachedBotStarsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBotStarsViewModel(): BotStarsViewModel {
+        return BotStarsViewModel(
+            observeBotStarsStatsUseCase = observeBotStarsStatsUseCase,
+            getBotStarsStatsUseCase = getBotStarsStatsUseCase,
+            observeTonStatsUseCase = observeTonStatsUseCase,
+            getTonStatsUseCase = getTonStatsUseCase,
+            observeBotTransactionsUseCase = observeBotTransactionsUseCase,
+            loadBotTransactionsUseCase = loadBotTransactionsUseCase,
+            observeConnectedStarBotsUseCase = observeConnectedStarBotsUseCase,
+            loadConnectedStarBotsUseCase = loadConnectedStarBotsUseCase,
+            loadSuggestedStarBotsUseCase = loadSuggestedStarBotsUseCase,
+            getAdminedBotsAndChannelsUseCase = getAdminedBotsAndChannelsUseCase
         )
     }
 
