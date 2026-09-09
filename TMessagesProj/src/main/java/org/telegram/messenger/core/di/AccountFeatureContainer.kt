@@ -394,6 +394,14 @@ import org.telegram.messenger.feature.aitones.domain.usecase.ObserveAiTonesUseCa
 import org.telegram.messenger.feature.aitones.domain.usecase.RemoveAiToneUseCase
 import org.telegram.messenger.feature.aitones.domain.usecase.UnsaveAiToneUseCase
 import org.telegram.messenger.feature.aitones.presentation.AiTonesViewModel
+import org.telegram.messenger.feature.captcha.data.repository.LegacyCaptchaRepository
+import org.telegram.messenger.feature.captcha.domain.repository.CaptchaRepository
+import org.telegram.messenger.feature.captcha.domain.usecase.CancelCaptchaUseCase
+import org.telegram.messenger.feature.captcha.domain.usecase.GetActiveCaptchaRequestsUseCase
+import org.telegram.messenger.feature.captcha.domain.usecase.ObserveActiveCaptchaRequestsUseCase
+import org.telegram.messenger.feature.captcha.domain.usecase.SubmitCaptchaResultUseCase
+import org.telegram.messenger.feature.captcha.domain.usecase.VerifyCaptchaUseCase
+import org.telegram.messenger.feature.captcha.presentation.CaptchaViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2516,6 +2524,51 @@ class AccountFeatureContainer private constructor(val account: Int) {
             removeAiToneUseCase = removeAiToneUseCase,
             unsaveAiToneUseCase = unsaveAiToneUseCase,
             editAiToneUseCase = editAiToneUseCase
+        )
+    }
+
+    private var customCaptchaRepository: CaptchaRepository? = null
+
+    var captchaRepository: CaptchaRepository
+        get() = customCaptchaRepository ?: LegacyCaptchaRepository(account)
+        set(value) {
+            customCaptchaRepository = value
+        }
+
+    val observeActiveCaptchaRequestsUseCase: ObserveActiveCaptchaRequestsUseCase
+        get() = ObserveActiveCaptchaRequestsUseCase(captchaRepository)
+
+    val getActiveCaptchaRequestsUseCase: GetActiveCaptchaRequestsUseCase
+        get() = GetActiveCaptchaRequestsUseCase(captchaRepository)
+
+    val verifyCaptchaUseCase: VerifyCaptchaUseCase
+        get() = VerifyCaptchaUseCase(captchaRepository)
+
+    val submitCaptchaResultUseCase: SubmitCaptchaResultUseCase
+        get() = SubmitCaptchaResultUseCase(captchaRepository)
+
+    val cancelCaptchaUseCase: CancelCaptchaUseCase
+        get() = CancelCaptchaUseCase(captchaRepository)
+
+    private var cachedCaptchaViewModel: CaptchaViewModel? = null
+
+    val captchaViewModel: CaptchaViewModel
+        get() {
+            var vm = cachedCaptchaViewModel
+            if (vm == null) {
+                vm = createCaptchaViewModel()
+                cachedCaptchaViewModel = vm
+            }
+            return vm
+        }
+
+    fun createCaptchaViewModel(): CaptchaViewModel {
+        return CaptchaViewModel(
+            observeActiveCaptchaRequestsUseCase = observeActiveCaptchaRequestsUseCase,
+            getActiveCaptchaRequestsUseCase = getActiveCaptchaRequestsUseCase,
+            verifyCaptchaUseCase = verifyCaptchaUseCase,
+            submitCaptchaResultUseCase = submitCaptchaResultUseCase,
+            cancelCaptchaUseCase = cancelCaptchaUseCase
         )
     }
 

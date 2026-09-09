@@ -1106,6 +1106,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── AiTonesUiState.kt
             ├── AiTonesEvent.kt
             └── AiTonesViewModel.kt
+    │
+    └── captcha/                          # reCAPTCHA Enterprise Verification Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── CaptchaAction.kt
+        │   │   ├── CaptchaRequestModel.kt
+        │   │   └── CaptchaResult.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── CaptchaRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveActiveCaptchaRequestsUseCase.kt
+        │       ├── GetActiveCaptchaRequestsUseCase.kt
+        │       ├── VerifyCaptchaUseCase.kt
+        │       ├── SubmitCaptchaResultUseCase.kt
+        │       └── CancelCaptchaUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers & error formatters
+        │   │   └── CaptchaMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyCaptchaRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── CaptchaUiState.kt
+            ├── CaptchaEvent.kt
+            └── CaptchaViewModel.kt
 ```
 
 ### Layer Rules
@@ -1365,10 +1391,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveAiTonesUseCase`, `GetAiTonesStateUseCase`, `LoadAiTonesUseCase`, `AddAiToneUseCase`, `RemoveAiToneUseCase`, `UnsaveAiToneUseCase`, `EditAiToneUseCase`
   - [x] Data layer: `AiToneMapper`, `LegacyAiTonesRepository` (Main-thread safe, adapting `AiTonesController` via `MessagesController.getTonesController()` and `NotificationCenterFlowBridge` observing `NotificationCenter.loadedAiComposeTones`)
   - [x] Presentation layer: `AiTonesUiState`, `AiTonesEvent`, `AiTonesViewModel`
+- [x] reCAPTCHA Enterprise Verification (`feature.captcha`)
+  - [x] Domain entities: `CaptchaAction`, `CaptchaRequestModel`, `CaptchaResult`
+  - [x] Repository contract: `CaptchaRepository`
+  - [x] Use cases: `ObserveActiveCaptchaRequestsUseCase`, `GetActiveCaptchaRequestsUseCase`, `VerifyCaptchaUseCase`, `SubmitCaptchaResultUseCase`, `CancelCaptchaUseCase`
+  - [x] Data layer: `CaptchaMapper`, `LegacyCaptchaRepository` (Main-thread safe, adapting Google Play Services reCAPTCHA Enterprise Tasks API and MTProto `ConnectionsManager.native_receivedCaptchaResult`)
+  - [x] Presentation layer: `CaptchaUiState`, `CaptchaEvent`, `CaptchaViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 040: reCAPTCHA Enterprise Verification Controller Isolation
+- **Context:** In Telegram Android, reCAPTCHA Enterprise challenge verification during registration, login, and sensitive MTProto actions was managed by `CaptchaController.java` (~115 lines). The legacy controller directly coupled global mutable static state (`public static HashMap<Integer, Request> currentRequests`), direct Android `Activity` extraction via `AndroidUtilities.getActivity()`, Google Play Services reCAPTCHA Enterprise Tasks API callbacks, and immediate invocation of MTProto native JNI methods (`ConnectionsManager.native_receivedCaptchaResult`). Native code in `TgNetWrapper.cpp` triggered `ConnectionsManager.onCaptchaCheck(currentAccount, requestToken, action, key_id)` directly into `CaptchaController.request`.
+- **Decision:** Introduce pure domain models `CaptchaAction` (Login, SignUp, Custom), `CaptchaRequestModel` (with deduplicated token sets), and `CaptchaResult` (Success, Failure with error codes). Define abstract contract `CaptchaRepository` covering reactive requests observation (`observeActiveRequests`), snapshot retrieval (`getActiveRequests`), verification (`verifyCaptcha`), result submission (`submitCaptchaResult`), and request cancellation (`cancelCaptcha`). Implement `LegacyCaptchaRepository` operating safely on `Dispatchers.Main` with `suspendCancellableCoroutine` for Google Play Tasks client execution and thread-safe submission to `ConnectionsManager.native_receivedCaptchaResult`. Encapsulate MVI verification flow and UI states in `CaptchaViewModel`.
+- **Consequences:** Captcha verification, token deduplication, error code formatting, and MTProto response reporting are decoupled behind clean, testable domain interfaces with complete unit test coverage while maintaining 100% compatibility with Telegram's core native networking layer and reCAPTCHA Enterprise API.
 
 ### ADR 039: AI Compose Tones & Styles Controller Isolation
 - **Context:** In Telegram Android, message tone rewriting styles for the Telegram AI Compose feature are managed by `AiTonesController.java` (~158 lines) instantiated on `MessagesController`. The controller directly handles local Base64 serialization in `mainSettings`, MTProto queries (`TL_aicompose.getTones`, `TL_aicompose.saveTone`), and untyped notifications via `NotificationCenter.loadedAiComposeTones`. UI components like `AIEditorAlert.java` (~2300 lines) directly interacted with mutable controller lists and executed manual reload calls.
