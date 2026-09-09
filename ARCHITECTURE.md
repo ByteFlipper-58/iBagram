@@ -1820,6 +1820,31 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── FloatingDebugUiState.kt
             ├── FloatingDebugEvent.kt
             └── FloatingDebugViewModel.kt
+    │
+    └── keyboardinsets/                    # Window Insets & In-App Keyboard Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (KeyboardVisibilityState, InAppImeMode, KeyboardInsetsModel)
+        │   │   └── KeyboardInsetsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── KeyboardInsetsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── RequestInAppKeyboardHeightUseCase.kt
+        │       ├── ResetInAppKeyboardHeightUseCase.kt
+        │       ├── RequestInAppKeyboardHeightWithNavbarUseCase.kt
+        │       ├── UpdateSystemInsetsUseCase.kt
+        │       ├── GetKeyboardInsetsUseCase.kt
+        │       └── ObserveKeyboardInsetsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Legacy insets mapping <-> Domain)
+        │   │   └── KeyboardInsetsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyKeyboardInsetsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── KeyboardInsetsUiState.kt
+            ├── KeyboardInsetsEvent.kt
+            └── KeyboardInsetsViewModel.kt
 ```
 
 ### Layer Rules
@@ -2229,10 +2254,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `IsFloatingDebugActiveUseCase`, `SetFloatingDebugActiveUseCase`, `ToggleFloatingDebugActiveUseCase`, `GetFloatingDebugItemsUseCase`, `RegisterFloatingDebugItemsUseCase`, `ClearFloatingDebugItemsUseCase`, `ObserveFloatingDebugStateUseCase`, `GetFloatingDebugStateUseCase`
   - [x] Data layer: `FloatingDebugMapper`, `LegacyFloatingDebugRepository` (thread safe, adapting `FloatingDebugController`, items registration, headless in-memory fallback)
   - [x] Presentation layer: `FloatingDebugUiState`, `FloatingDebugEvent`, `FloatingDebugViewModel`
+- [x] Window Insets & In-App Keyboard Offsets (`feature.keyboardinsets`)
+  - [x] Domain entities: `KeyboardVisibilityState`, `InAppImeMode`, `KeyboardInsetsModel`
+  - [x] Repository contract: `KeyboardInsetsRepository`
+  - [x] Use cases: `RequestInAppKeyboardHeightUseCase`, `ResetInAppKeyboardHeightUseCase`, `RequestInAppKeyboardHeightWithNavbarUseCase`, `UpdateSystemInsetsUseCase`, `GetKeyboardInsetsUseCase`, `ObserveKeyboardInsetsUseCase`
+  - [x] Data layer: `KeyboardInsetsMapper`, `LegacyKeyboardInsetsRepository` (thread safe, adapting `WindowInsetsInAppController`, effective bottom inset calculation, headless in-memory fallback)
+  - [x] Presentation layer: `KeyboardInsetsUiState`, `KeyboardInsetsEvent`, `KeyboardInsetsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 065: Isolation of Window Insets & In-App Keyboard Offsets into feature.keyboardinsets
+- **Context:** In Telegram Android, managing virtual in-app keyboard heights (such as custom emoji, sticker, and media panels), system window insets (IME, navigation bars, status bars), and navigation bar compensation during keyboard animations was handled by `WindowInsetsInAppController.java` (~165 lines) and helper state holders in `org.telegram.ui.Components.inset`. The controller directly coupled Android `WindowInsets`, system view hierarchies, `ValueAnimator` animations, and mutable height tracking (`inAppKeyboardHeight`, `inAppKeyboardHeightWithNavbar`, `hasNavbar`). UI components like `ChatActivity.java`, `LaunchActivity.java`, `SizeNotifierFrameLayout.java`, and chat input panels directly manipulated these controllers.
+- **Decision:** Introduce pure domain models `KeyboardVisibilityState` (HIDDEN, SHOWING, SHOWN, HIDING), `InAppImeMode` (NONE, STICKERS, EMOJI, MEDIA, CUSTOM), and `KeyboardInsetsModel` (with `effectiveBottomInset` combining IME, navigation bar, and in-app keyboard heights). Define abstract contract `KeyboardInsetsRepository` covering in-app keyboard height mutations (`requestInAppKeyboardHeight`, `resetInAppKeyboardHeight`), system insets updates (`updateSystemInsets`), snapshot retrieval (`getInsets`), and reactive observation (`observeInsets`). Implement `LegacyKeyboardInsetsRepository` providing thread-safe adapter functionality to `WindowInsetsInAppController` with standalone in-memory headless capability for JVM testing. Encapsulate presentation state and MVI events in `KeyboardInsetsViewModel`.
+- **Consequences:** All in-app keyboard heights, system window insets arbitration, navigation bar offsets, and effective bottom insets calculations are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `WindowInsetsInAppController` and in-app keyboard animations.
 
 ### ADR 064: Isolation of Floating Debug Tools & Overlay into feature.floatingdebug
 - **Context:** In Telegram Android, developer diagnostic overlays and in-app floating debug tools were managed by `FloatingDebugController.java` (~89 lines) located in `org.telegram.ui.Components.FloatingDebug`. The controller directly coupled Android `LaunchActivity` view hierarchy calls (`getMainContainerFrameLayout().addView()`, `removeView()`), `SharedConfig.isFloatingDebugActive` persistence, `FloatingDebugView` lifecycle (`showFab()`, `dismiss()`, `onBackPressed()`), and internal `DebugItem` definitions with custom callbacks. Presentation components across `ChatActivity.java`, `DialogsActivity.java`, `ProfileActivity.java`, `SettingsActivity.java`, and `ActionBarLayout.java` directly referenced `FloatingDebugController`.

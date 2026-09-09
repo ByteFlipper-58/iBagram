@@ -652,6 +652,16 @@ import org.telegram.messenger.feature.floatingdebug.domain.usecase.SetFloatingDe
 import org.telegram.messenger.feature.floatingdebug.domain.usecase.ToggleFloatingDebugActiveUseCase
 import org.telegram.messenger.feature.floatingdebug.presentation.FloatingDebugViewModel
 import org.telegram.ui.LaunchActivity
+import org.telegram.messenger.feature.keyboardinsets.data.repository.LegacyKeyboardInsetsRepository
+import org.telegram.messenger.feature.keyboardinsets.domain.repository.KeyboardInsetsRepository
+import org.telegram.messenger.feature.keyboardinsets.domain.usecase.GetKeyboardInsetsUseCase
+import org.telegram.messenger.feature.keyboardinsets.domain.usecase.ObserveKeyboardInsetsUseCase
+import org.telegram.messenger.feature.keyboardinsets.domain.usecase.RequestInAppKeyboardHeightUseCase
+import org.telegram.messenger.feature.keyboardinsets.domain.usecase.RequestInAppKeyboardHeightWithNavbarUseCase
+import org.telegram.messenger.feature.keyboardinsets.domain.usecase.ResetInAppKeyboardHeightUseCase
+import org.telegram.messenger.feature.keyboardinsets.domain.usecase.UpdateSystemInsetsUseCase
+import org.telegram.messenger.feature.keyboardinsets.presentation.KeyboardInsetsViewModel
+import org.telegram.ui.Components.inset.WindowInsetsInAppController
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4110,6 +4120,56 @@ class AccountFeatureContainer private constructor(val account: Int) {
             toggleFloatingDebugActiveUseCase = ToggleFloatingDebugActiveUseCase(repo),
             registerFloatingDebugItemsUseCase = RegisterFloatingDebugItemsUseCase(repo),
             clearFloatingDebugItemsUseCase = ClearFloatingDebugItemsUseCase(repo)
+        )
+    }
+
+    fun createKeyboardInsetsRepository(inAppController: WindowInsetsInAppController? = null): KeyboardInsetsRepository {
+        return LegacyKeyboardInsetsRepository(inAppController)
+    }
+
+    val keyboardInsetsRepository: KeyboardInsetsRepository by lazy {
+        LegacyKeyboardInsetsRepository()
+    }
+
+    val requestInAppKeyboardHeightUseCase: RequestInAppKeyboardHeightUseCase
+        get() = RequestInAppKeyboardHeightUseCase(keyboardInsetsRepository)
+
+    val resetInAppKeyboardHeightUseCase: ResetInAppKeyboardHeightUseCase
+        get() = ResetInAppKeyboardHeightUseCase(keyboardInsetsRepository)
+
+    val requestInAppKeyboardHeightWithNavbarUseCase: RequestInAppKeyboardHeightWithNavbarUseCase
+        get() = RequestInAppKeyboardHeightWithNavbarUseCase(keyboardInsetsRepository)
+
+    val updateSystemInsetsUseCase: UpdateSystemInsetsUseCase
+        get() = UpdateSystemInsetsUseCase(keyboardInsetsRepository)
+
+    val getKeyboardInsetsUseCase: GetKeyboardInsetsUseCase
+        get() = GetKeyboardInsetsUseCase(keyboardInsetsRepository)
+
+    val observeKeyboardInsetsUseCase: ObserveKeyboardInsetsUseCase
+        get() = ObserveKeyboardInsetsUseCase(keyboardInsetsRepository)
+
+    private var cachedKeyboardInsetsViewModel: KeyboardInsetsViewModel? = null
+
+    val keyboardInsetsViewModel: KeyboardInsetsViewModel
+        get() {
+            var vm = cachedKeyboardInsetsViewModel
+            if (vm == null) {
+                vm = createKeyboardInsetsViewModel()
+                cachedKeyboardInsetsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createKeyboardInsetsViewModel(inAppController: WindowInsetsInAppController? = null): KeyboardInsetsViewModel {
+        val repo = if (inAppController != null) createKeyboardInsetsRepository(inAppController) else keyboardInsetsRepository
+        return KeyboardInsetsViewModel(
+            observeKeyboardInsetsUseCase = ObserveKeyboardInsetsUseCase(repo),
+            getKeyboardInsetsUseCase = GetKeyboardInsetsUseCase(repo),
+            requestInAppKeyboardHeightUseCase = RequestInAppKeyboardHeightUseCase(repo),
+            resetInAppKeyboardHeightUseCase = ResetInAppKeyboardHeightUseCase(repo),
+            requestInAppKeyboardHeightWithNavbarUseCase = RequestInAppKeyboardHeightWithNavbarUseCase(repo),
+            updateSystemInsetsUseCase = UpdateSystemInsetsUseCase(repo)
         )
     }
 
