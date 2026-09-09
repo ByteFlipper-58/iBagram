@@ -579,6 +579,17 @@ import org.telegram.messenger.feature.pip.domain.usecase.TriggerPipActionUseCase
 import org.telegram.messenger.feature.pip.domain.usecase.UnregisterPipSourceUseCase
 import org.telegram.messenger.feature.pip.domain.usecase.UpdatePipSourceStateUseCase
 import org.telegram.messenger.feature.pip.presentation.PipViewModel
+import org.telegram.messenger.feature.drafts.data.repository.LegacyDraftsRepository
+import org.telegram.messenger.feature.drafts.domain.repository.DraftsRepository
+import org.telegram.messenger.feature.drafts.domain.usecase.CleanupExpiredDraftsUseCase
+import org.telegram.messenger.feature.drafts.domain.usecase.DeleteDraftUseCase
+import org.telegram.messenger.feature.drafts.domain.usecase.DeleteForEditUseCase
+import org.telegram.messenger.feature.drafts.domain.usecase.GetDraftForEditUseCase
+import org.telegram.messenger.feature.drafts.domain.usecase.GetDraftsStateUseCase
+import org.telegram.messenger.feature.drafts.domain.usecase.LoadDraftsUseCase
+import org.telegram.messenger.feature.drafts.domain.usecase.ObserveDraftsStateUseCase
+import org.telegram.messenger.feature.drafts.domain.usecase.SaveDraftUseCase
+import org.telegram.messenger.feature.drafts.presentation.DraftsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3661,6 +3672,63 @@ class AccountFeatureContainer private constructor(val account: Int) {
             dispatchPipStateUseCase = dispatchPipStateUseCase,
             triggerPipActionUseCase = triggerPipActionUseCase,
             evaluatePipEligibilityUseCase = evaluatePipEligibilityUseCase
+        )
+    }
+
+    private var customDraftsRepository: DraftsRepository? = null
+
+    var draftsRepository: DraftsRepository
+        get() = customDraftsRepository ?: LegacyDraftsRepository(account)
+        set(value) {
+            customDraftsRepository = value
+        }
+
+    val observeDraftsStateUseCase: ObserveDraftsStateUseCase
+        get() = ObserveDraftsStateUseCase(draftsRepository)
+
+    val getDraftsStateUseCase: GetDraftsStateUseCase
+        get() = GetDraftsStateUseCase(draftsRepository)
+
+    val loadDraftsUseCase: LoadDraftsUseCase
+        get() = LoadDraftsUseCase(draftsRepository)
+
+    val saveDraftUseCase: SaveDraftUseCase
+        get() = SaveDraftUseCase(draftsRepository)
+
+    val deleteDraftUseCase: DeleteDraftUseCase
+        get() = DeleteDraftUseCase(draftsRepository)
+
+    val deleteForEditUseCase: DeleteForEditUseCase
+        get() = DeleteForEditUseCase(draftsRepository)
+
+    val getDraftForEditUseCase: GetDraftForEditUseCase
+        get() = GetDraftForEditUseCase(draftsRepository)
+
+    val cleanupExpiredDraftsUseCase: CleanupExpiredDraftsUseCase
+        get() = CleanupExpiredDraftsUseCase(draftsRepository)
+
+    private var cachedDraftsViewModel: DraftsViewModel? = null
+
+    val draftsViewModel: DraftsViewModel
+        get() {
+            var vm = cachedDraftsViewModel
+            if (vm == null) {
+                vm = createDraftsViewModel()
+                cachedDraftsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createDraftsViewModel(): DraftsViewModel {
+        return DraftsViewModel(
+            observeDraftsStateUseCase = observeDraftsStateUseCase,
+            getDraftsStateUseCase = getDraftsStateUseCase,
+            loadDraftsUseCase = loadDraftsUseCase,
+            saveDraftUseCase = saveDraftUseCase,
+            deleteDraftUseCase = deleteDraftUseCase,
+            deleteForEditUseCase = deleteForEditUseCase,
+            getDraftForEditUseCase = getDraftForEditUseCase,
+            cleanupExpiredDraftsUseCase = cleanupExpiredDraftsUseCase
         )
     }
 

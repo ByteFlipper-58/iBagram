@@ -1624,6 +1624,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── PipUiState.kt
             ├── PipEvent.kt
             └── PipViewModel.kt
+    │
+    └── drafts/                            # Story & Media Creation Drafts Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models & enums
+        │   │   ├── DraftType.kt
+        │   │   ├── StoryDraftModel.kt
+        │   │   └── DraftsStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── DraftsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveDraftsStateUseCase.kt
+        │       ├── GetDraftsStateUseCase.kt
+        │       ├── LoadDraftsUseCase.kt
+        │       ├── SaveDraftUseCase.kt
+        │       ├── DeleteDraftUseCase.kt
+        │       ├── DeleteForEditUseCase.kt
+        │       ├── GetDraftForEditUseCase.kt
+        │       └── CleanupExpiredDraftsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (StoryEntry <-> Domain)
+        │   │   └── DraftsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyDraftsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── DraftsUiState.kt
+            ├── DraftsEvent.kt
+            └── DraftsViewModel.kt
 ```
 
 ### Layer Rules
@@ -1991,10 +2020,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObservePipSessionUseCase`, `GetPipSessionUseCase`, `RegisterPipSourceUseCase`, `UnregisterPipSourceUseCase`, `UpdatePipSourceStateUseCase`, `DispatchPipStateUseCase`, `TriggerPipActionUseCase`, `EvaluatePipEligibilityUseCase`
   - [x] Data layer: `PipMapper`, `LegacyPipRepository` (Main-thread safe, adapting `PipActivityController`, source priority arbitration, MediaSession management, and remote actions)
   - [x] Presentation layer: `PipUiState`, `PipEvent`, `PipViewModel`
+- [x] Story & Media Creation Drafts (`feature.drafts`)
+  - [x] Domain entities: `DraftType`, `StoryDraftModel`, `DraftsStateModel`
+  - [x] Repository contract: `DraftsRepository`
+  - [x] Use cases: `ObserveDraftsStateUseCase`, `GetDraftsStateUseCase`, `LoadDraftsUseCase`, `SaveDraftUseCase`, `DeleteDraftUseCase`, `DeleteForEditUseCase`, `GetDraftForEditUseCase`, `CleanupExpiredDraftsUseCase`
+  - [x] Data layer: `DraftsMapper`, `LegacyDraftsRepository` (Main-thread safe, adapting `DraftsController`, `MessagesStorage` SQLite persistence, and 7-day expiration cleanup)
+  - [x] Presentation layer: `DraftsUiState`, `DraftsEvent`, `DraftsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 058: Story & Media Creation Drafts Controller Isolation
+- **Context:** In Telegram Android, story drafts and in-progress multimedia creations were managed by `DraftsController.java` (~1077 lines) located in `org.telegram.ui.Stories.recorder`. The controller directly coupled SQLite database queries (`story_drafts` table, `REPLACE INTO`, `DELETE FROM`, `NativeByteBuffer` serialization), raw file system manipulation (copying to `cache/drafts`, unlinking expired media files), 7-day expiration checks (`EXPIRATION_PERIOD = 7 days`), and untyped global notifications on `NotificationCenter.storiesDraftsUpdated`. Presentation components like `StoryRecorder.java`, `RecordControl.java`, and `GalleryListView.java` directly queried and manipulated `MessagesController.getInstance(account).getStoriesController().getDraftsController().drafts` and invoked synchronous operations on the Main thread.
+- **Decision:** Introduce pure domain models `DraftType` (NEW, EDIT, FAILED), `StoryDraftModel` (with id, date, file path, video/collage flags, caption, and edit expiration checks), and `DraftsStateModel`. Define abstract contract `DraftsRepository` covering reactive drafts observation (`observeDraftsState`), snapshot retrieval (`getDraftsState`), loading (`loadDrafts`), saving (`saveDraft`), single/batch deletion (`deleteDraft`, `deleteDrafts`), edit drafts tracking (`deleteForEdit`, `getDraftForEdit`), and automatic expiration cleanup (`cleanupExpiredDrafts`). Implement `LegacyDraftsRepository` executing safely on `Dispatchers.Main` with reactive `NotificationCenterFlowBridge` observation on `storiesDraftsUpdated` and headless in-memory fallback. Encapsulate presentation state, filtering, and MVI events in `DraftsViewModel`.
+- **Consequences:** Story drafts persistence, edit tracking, and expiration garbage collection are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `StoryRecorder`, `DraftsController`, and SQLite storage schema.
 
 ### ADR 057: Picture-in-Picture & Video Window Session Controller Isolation
 - **Context:** In Telegram Android, Picture-in-Picture (PiP) mode coordination across video playback, live streams, stories, and VoIP video calls was handled by `PipActivityController.java` (~261 lines) and `PipActivityHandler.java` (~401 lines) located in `org.telegram.messenger.pip`. The controller coupled registered sources (`HashMap<String, PipSource>`), priority arbitration (`source.priority > newSource.priority`), media session lifecycle (`MediaSessionCompat`, `MediaSessionConnector`), aspect ratio parameters (`PipSourceParams`), and system broadcast actions (`PipActions.ACTION`). UI activities like `LaunchActivity.java` directly instantiated `PipActivityController` and implemented `IPipActivity`.
