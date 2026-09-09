@@ -1793,6 +1793,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BottomViewsUiState.kt
             ├── BottomViewsEvent.kt
             └── BottomViewsViewModel.kt
+    │
+    └── floatingdebug/                     # Floating Debug Tools & Overlay Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (DebugItemKind, DebugItemModel, FloatingDebugState)
+        │   │   └── FloatingDebugModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── FloatingDebugRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── IsFloatingDebugActiveUseCase.kt
+        │       ├── SetFloatingDebugActiveUseCase.kt
+        │       ├── ToggleFloatingDebugActiveUseCase.kt
+        │       ├── GetFloatingDebugItemsUseCase.kt
+        │       ├── RegisterFloatingDebugItemsUseCase.kt
+        │       ├── ClearFloatingDebugItemsUseCase.kt
+        │       ├── ObserveFloatingDebugStateUseCase.kt
+        │       └── GetFloatingDebugStateUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Legacy debug item type <-> Domain)
+        │   │   └── FloatingDebugMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyFloatingDebugRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── FloatingDebugUiState.kt
+            ├── FloatingDebugEvent.kt
+            └── FloatingDebugViewModel.kt
 ```
 
 ### Layer Rules
@@ -2196,10 +2223,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `GetBottomViewVisibilityUseCase`, `SetBottomViewVisibleUseCase`, `GetPriorityBottomContainerUseCase`, `GetBottomViewsStateUseCase`, `ObserveBottomViewsVisibilityUseCase`
   - [x] Data layer: `BottomViewsVisibilityMapper`, `LegacyBottomViewsVisibilityRepository` (thread safe, adapting `ChatActivityBottomViewsVisibilityController`, bitwise priority calculation, headless in-memory fallback)
   - [x] Presentation layer: `BottomViewsUiState`, `BottomViewsEvent`, `BottomViewsViewModel`
+- [x] Floating Debug Tools & Overlay (`feature.floatingdebug`)
+  - [x] Domain entities: `DebugItemKind`, `DebugItemModel`, `FloatingDebugState`
+  - [x] Repository contract: `FloatingDebugRepository`
+  - [x] Use cases: `IsFloatingDebugActiveUseCase`, `SetFloatingDebugActiveUseCase`, `ToggleFloatingDebugActiveUseCase`, `GetFloatingDebugItemsUseCase`, `RegisterFloatingDebugItemsUseCase`, `ClearFloatingDebugItemsUseCase`, `ObserveFloatingDebugStateUseCase`, `GetFloatingDebugStateUseCase`
+  - [x] Data layer: `FloatingDebugMapper`, `LegacyFloatingDebugRepository` (thread safe, adapting `FloatingDebugController`, items registration, headless in-memory fallback)
+  - [x] Presentation layer: `FloatingDebugUiState`, `FloatingDebugEvent`, `FloatingDebugViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 064: Isolation of Floating Debug Tools & Overlay into feature.floatingdebug
+- **Context:** In Telegram Android, developer diagnostic overlays and in-app floating debug tools were managed by `FloatingDebugController.java` (~89 lines) located in `org.telegram.ui.Components.FloatingDebug`. The controller directly coupled Android `LaunchActivity` view hierarchy calls (`getMainContainerFrameLayout().addView()`, `removeView()`), `SharedConfig.isFloatingDebugActive` persistence, `FloatingDebugView` lifecycle (`showFab()`, `dismiss()`, `onBackPressed()`), and internal `DebugItem` definitions with custom callbacks. Presentation components across `ChatActivity.java`, `DialogsActivity.java`, `ProfileActivity.java`, `SettingsActivity.java`, and `ActionBarLayout.java` directly referenced `FloatingDebugController`.
+- **Decision:** Introduce pure domain models `DebugItemKind` (SIMPLE, HEADER, SEEKBAR), `DebugItemModel` (with title, kind, action lambda, range, and current value), and `FloatingDebugState` (with active flag and registered items). Define abstract contract `FloatingDebugRepository` covering active status query/mutation (`isActive`, `setActive`, `toggleActive`), dynamic items registry (`getDebugItems`, `registerDebugItems`, `clearDebugItems`), snapshot retrieval (`getState`), and reactive observation (`observeState`). Implement `LegacyFloatingDebugRepository` operating safely across threads with `FloatingDebugController` delegation and headless in-memory fallback. Encapsulate presentation state, menu visibility, and MVI events in `FloatingDebugViewModel`.
+- **Consequences:** All floating debug tools, debug action registrations, FAB visibility, and persistent developer flags are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `FloatingDebugController` and `FloatingDebugProvider` callbacks.
 
 ### ADR 063: Isolation of Chat Bottom Views Visibility Arbitration into feature.bottomviews
 - **Context:** In Telegram Android, mutual exclusion and visibility transitions between bottom chat components (message input field, audio/video recording panel, media attachments, search bar, message actions/selection bar, join channel bar, bot overlays) were arbitrated by `ChatActivityBottomViewsVisibilityController.java` (~63 lines) located in `org.telegram.ui.Components.chat`. The controller coupled bitwise container flags (`visibilityFlags`, `1 << containerId`), highest-bit priority selection (`31 - Integer.numberOfLeadingZeros(flags)`), custom UI animator callbacks (`ReplaceAnimator.Callback`), float array visibility weights (`float[32]`), and `ChatActivity` view hierarchy updates (`checkBottomViewVisibility`, `actionsButtonsLayout`, `chatActivityEnterView`).

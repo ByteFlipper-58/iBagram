@@ -640,6 +640,18 @@ import org.telegram.messenger.feature.bottomviews.domain.usecase.ObserveBottomVi
 import org.telegram.messenger.feature.bottomviews.domain.usecase.SetBottomViewVisibleUseCase
 import org.telegram.messenger.feature.bottomviews.presentation.BottomViewsViewModel
 import org.telegram.ui.Components.chat.ChatActivityBottomViewsVisibilityController
+import org.telegram.messenger.feature.floatingdebug.data.repository.LegacyFloatingDebugRepository
+import org.telegram.messenger.feature.floatingdebug.domain.repository.FloatingDebugRepository
+import org.telegram.messenger.feature.floatingdebug.domain.usecase.ClearFloatingDebugItemsUseCase
+import org.telegram.messenger.feature.floatingdebug.domain.usecase.GetFloatingDebugItemsUseCase
+import org.telegram.messenger.feature.floatingdebug.domain.usecase.GetFloatingDebugStateUseCase
+import org.telegram.messenger.feature.floatingdebug.domain.usecase.IsFloatingDebugActiveUseCase
+import org.telegram.messenger.feature.floatingdebug.domain.usecase.ObserveFloatingDebugStateUseCase
+import org.telegram.messenger.feature.floatingdebug.domain.usecase.RegisterFloatingDebugItemsUseCase
+import org.telegram.messenger.feature.floatingdebug.domain.usecase.SetFloatingDebugActiveUseCase
+import org.telegram.messenger.feature.floatingdebug.domain.usecase.ToggleFloatingDebugActiveUseCase
+import org.telegram.messenger.feature.floatingdebug.presentation.FloatingDebugViewModel
+import org.telegram.ui.LaunchActivity
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4042,6 +4054,62 @@ class AccountFeatureContainer private constructor(val account: Int) {
             observeBottomViewsVisibilityUseCase = ObserveBottomViewsVisibilityUseCase(repo),
             getBottomViewsStateUseCase = GetBottomViewsStateUseCase(repo),
             setBottomViewVisibleUseCase = SetBottomViewVisibleUseCase(repo)
+        )
+    }
+
+    fun createFloatingDebugRepository(activityProvider: (() -> LaunchActivity?)? = null): FloatingDebugRepository {
+        return LegacyFloatingDebugRepository(activityProvider)
+    }
+
+    val floatingDebugRepository: FloatingDebugRepository by lazy {
+        LegacyFloatingDebugRepository()
+    }
+
+    val isFloatingDebugActiveUseCase: IsFloatingDebugActiveUseCase
+        get() = IsFloatingDebugActiveUseCase(floatingDebugRepository)
+
+    val setFloatingDebugActiveUseCase: SetFloatingDebugActiveUseCase
+        get() = SetFloatingDebugActiveUseCase(floatingDebugRepository)
+
+    val toggleFloatingDebugActiveUseCase: ToggleFloatingDebugActiveUseCase
+        get() = ToggleFloatingDebugActiveUseCase(floatingDebugRepository)
+
+    val getFloatingDebugItemsUseCase: GetFloatingDebugItemsUseCase
+        get() = GetFloatingDebugItemsUseCase(floatingDebugRepository)
+
+    val registerFloatingDebugItemsUseCase: RegisterFloatingDebugItemsUseCase
+        get() = RegisterFloatingDebugItemsUseCase(floatingDebugRepository)
+
+    val clearFloatingDebugItemsUseCase: ClearFloatingDebugItemsUseCase
+        get() = ClearFloatingDebugItemsUseCase(floatingDebugRepository)
+
+    val observeFloatingDebugStateUseCase: ObserveFloatingDebugStateUseCase
+        get() = ObserveFloatingDebugStateUseCase(floatingDebugRepository)
+
+    val getFloatingDebugStateUseCase: GetFloatingDebugStateUseCase
+        get() = GetFloatingDebugStateUseCase(floatingDebugRepository)
+
+    private var cachedFloatingDebugViewModel: FloatingDebugViewModel? = null
+
+    val floatingDebugViewModel: FloatingDebugViewModel
+        get() {
+            var vm = cachedFloatingDebugViewModel
+            if (vm == null) {
+                vm = createFloatingDebugViewModel()
+                cachedFloatingDebugViewModel = vm
+            }
+            return vm
+        }
+
+    fun createFloatingDebugViewModel(activityProvider: (() -> LaunchActivity?)? = null): FloatingDebugViewModel {
+        val repo = if (activityProvider != null) createFloatingDebugRepository(activityProvider) else floatingDebugRepository
+        return FloatingDebugViewModel(
+            observeFloatingDebugStateUseCase = ObserveFloatingDebugStateUseCase(repo),
+            getFloatingDebugStateUseCase = GetFloatingDebugStateUseCase(repo),
+            setFloatingDebugActiveUseCase = SetFloatingDebugActiveUseCase(repo),
+            toggleFloatingDebugActiveUseCase = ToggleFloatingDebugActiveUseCase(repo),
+            registerFloatingDebugItemsUseCase = RegisterFloatingDebugItemsUseCase(repo),
+            clearFloatingDebugItemsUseCase = ClearFloatingDebugItemsUseCase(repo)
         )
     }
 
