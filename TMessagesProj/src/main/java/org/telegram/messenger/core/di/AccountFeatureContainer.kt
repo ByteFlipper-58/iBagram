@@ -620,6 +620,17 @@ import org.telegram.messenger.feature.cachebychats.domain.usecase.RemoveKeepMedi
 import org.telegram.messenger.feature.cachebychats.domain.usecase.SetKeepMediaDurationUseCase
 import org.telegram.messenger.feature.cachebychats.domain.usecase.SetKeepMediaExceptionUseCase
 import org.telegram.messenger.feature.cachebychats.presentation.CacheByChatsViewModel
+import org.telegram.messenger.feature.draftmeasure.data.repository.LegacyDraftMeasureRepository
+import org.telegram.messenger.feature.draftmeasure.domain.repository.DraftMeasureRepository
+import org.telegram.messenger.feature.draftmeasure.domain.usecase.CalculateDraftMeasureOverrideUseCase
+import org.telegram.messenger.feature.draftmeasure.domain.usecase.GetDraftMeasureConfigUseCase
+import org.telegram.messenger.feature.draftmeasure.domain.usecase.ObserveDraftMeasureConfigUseCase
+import org.telegram.messenger.feature.draftmeasure.domain.usecase.OnDraftMessageIdChangedUseCase
+import org.telegram.messenger.feature.draftmeasure.domain.usecase.ResetDraftMeasureTargetUseCase
+import org.telegram.messenger.feature.draftmeasure.domain.usecase.SetDraftMeasureTargetUseCase
+import org.telegram.messenger.feature.draftmeasure.domain.usecase.SetPreviousMessageHeightUseCase
+import org.telegram.messenger.feature.draftmeasure.presentation.DraftMeasureViewModel
+import org.telegram.ui.Components.chat.ChatActivityDraftMessageMeasureController
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3924,6 +3935,60 @@ class AccountFeatureContainer private constructor(val account: Int) {
             setKeepMediaExceptionUseCase = setKeepMediaExceptionUseCase,
             removeKeepMediaExceptionUseCase = removeKeepMediaExceptionUseCase,
             clearKeepMediaExceptionsUseCase = clearKeepMediaExceptionsUseCase
+        )
+    }
+
+    fun createDraftMeasureRepository(legacyController: ChatActivityDraftMessageMeasureController? = null): DraftMeasureRepository {
+        return LegacyDraftMeasureRepository(legacyController)
+    }
+
+    val draftMeasureRepository: DraftMeasureRepository by lazy {
+        LegacyDraftMeasureRepository()
+    }
+
+    val calculateDraftMeasureOverrideUseCase: CalculateDraftMeasureOverrideUseCase
+        get() = CalculateDraftMeasureOverrideUseCase(draftMeasureRepository)
+
+    val setDraftMeasureTargetUseCase: SetDraftMeasureTargetUseCase
+        get() = SetDraftMeasureTargetUseCase(draftMeasureRepository)
+
+    val onDraftMessageIdChangedUseCase: OnDraftMessageIdChangedUseCase
+        get() = OnDraftMessageIdChangedUseCase(draftMeasureRepository)
+
+    val setPreviousMessageHeightUseCase: SetPreviousMessageHeightUseCase
+        get() = SetPreviousMessageHeightUseCase(draftMeasureRepository)
+
+    val resetDraftMeasureTargetUseCase: ResetDraftMeasureTargetUseCase
+        get() = ResetDraftMeasureTargetUseCase(draftMeasureRepository)
+
+    val observeDraftMeasureConfigUseCase: ObserveDraftMeasureConfigUseCase
+        get() = ObserveDraftMeasureConfigUseCase(draftMeasureRepository)
+
+    val getDraftMeasureConfigUseCase: GetDraftMeasureConfigUseCase
+        get() = GetDraftMeasureConfigUseCase(draftMeasureRepository)
+
+    private var cachedDraftMeasureViewModel: DraftMeasureViewModel? = null
+
+    val draftMeasureViewModel: DraftMeasureViewModel
+        get() {
+            var vm = cachedDraftMeasureViewModel
+            if (vm == null) {
+                vm = createDraftMeasureViewModel()
+                cachedDraftMeasureViewModel = vm
+            }
+            return vm
+        }
+
+    fun createDraftMeasureViewModel(legacyController: ChatActivityDraftMessageMeasureController? = null): DraftMeasureViewModel {
+        val repo = if (legacyController != null) createDraftMeasureRepository(legacyController) else draftMeasureRepository
+        return DraftMeasureViewModel(
+            calculateOverrideUseCase = CalculateDraftMeasureOverrideUseCase(repo),
+            setTargetUseCase = SetDraftMeasureTargetUseCase(repo),
+            onMessageIdChangedUseCase = OnDraftMessageIdChangedUseCase(repo),
+            setPreviousHeightUseCase = SetPreviousMessageHeightUseCase(repo),
+            resetTargetUseCase = ResetDraftMeasureTargetUseCase(repo),
+            observeConfigUseCase = ObserveDraftMeasureConfigUseCase(repo),
+            getConfigUseCase = GetDraftMeasureConfigUseCase(repo)
         )
     }
 

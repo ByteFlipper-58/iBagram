@@ -1742,6 +1742,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── CacheByChatsUiState.kt
             ├── CacheByChatsEvent.kt
             └── CacheByChatsViewModel.kt
+    │
+    └── draftmeasure/                      # Chat Draft Message Height Measurement & Override Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (DraftMeasureTarget, Viewport, Result, Config)
+        │   │   └── DraftMeasureModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── DraftMeasureRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── CalculateDraftMeasureOverrideUseCase.kt
+        │       ├── SetDraftMeasureTargetUseCase.kt
+        │       ├── OnDraftMessageIdChangedUseCase.kt
+        │       ├── SetPreviousMessageHeightUseCase.kt
+        │       ├── ResetDraftMeasureTargetUseCase.kt
+        │       ├── ObserveDraftMeasureConfigUseCase.kt
+        │       └── GetDraftMeasureConfigUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Legacy height calculations <-> Domain)
+        │   │   └── DraftMeasureMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyDraftMeasureRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── DraftMeasureUiState.kt
+            ├── DraftMeasureEvent.kt
+            └── DraftMeasureViewModel.kt
 ```
 
 ### Layer Rules
@@ -2133,10 +2159,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveCacheByChatsConfigUseCase`, `GetCacheByChatsConfigUseCase`, `SetKeepMediaDurationUseCase`, `SetKeepMediaExceptionUseCase`, `RemoveKeepMediaExceptionUseCase`, `ClearKeepMediaExceptionsUseCase`
   - [x] Data layer: `CacheByChatsMapper`, `LegacyCacheByChatsRepository` (thread safe, adapting `CacheByChatsController`, duration presets, dialog exceptions binary serialization)
   - [x] Presentation layer: `CacheByChatsUiState`, `CacheByChatsEvent`, `CacheByChatsViewModel`
+- [x] Chat Draft Message Height Measure (`feature.draftmeasure`)
+  - [x] Domain entities: `DraftMeasureTarget`, `DraftMeasureViewport`, `DraftMeasureResult`, `DraftMeasureConfig`
+  - [x] Repository contract: `DraftMeasureRepository`
+  - [x] Use cases: `CalculateDraftMeasureOverrideUseCase`, `SetDraftMeasureTargetUseCase`, `OnDraftMessageIdChangedUseCase`, `SetPreviousMessageHeightUseCase`, `ResetDraftMeasureTargetUseCase`, `ObserveDraftMeasureConfigUseCase`, `GetDraftMeasureConfigUseCase`
+  - [x] Data layer: `DraftMeasureMapper`, `LegacyDraftMeasureRepository` (thread safe, adapting `ChatActivityDraftMessageMeasureController`, viewport measurement constraints, headless in-memory fallback)
+  - [x] Presentation layer: `DraftMeasureUiState`, `DraftMeasureEvent`, `DraftMeasureViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 062: Isolation of Chat Draft Message Measure & Height Override into feature.draftmeasure
+- **Context:** In Telegram Android, dynamic height calculations and vertical space overrides for message cells when expanding or sending drafts were handled by `ChatActivityDraftMessageMeasureController.java` (~109 lines) in `org.telegram.ui.Components.chat`. The controller directly coupled Android `RecyclerView` measurements (`getHeight()`, `getPaddingTop()`, `getPaddingBottom()`), `ChatMessageCell`, `ChatActionCell`, internal `MessageObject` ID/group ID tracking, and mutable layout override flags (`hasAdditionalHeight`, `previousMessageHeight`). UI components in `ChatActivity.java` and `ChatMessageCell.java` had direct references to `ChatActivityDraftMessageMeasureController`.
+- **Decision:** Introduce pure domain models `DraftMeasureTarget` (with target `messageId`, `groupId`, and matching predicate), `DraftMeasureViewport` (with available height computation), `DraftMeasureResult`, and `DraftMeasureConfig`. Define abstract contract `DraftMeasureRepository` covering target management (`getTarget`, `setTarget`, `onMessageIdChanged`, `resetTarget`), previous message height state (`setPreviousMessageHeight`, `getPreviousMessageHeight`), override calculation (`calculateOverrideHeight`), and reactive observation (`observeConfig`). Implement `LegacyDraftMeasureRepository` providing thread-safe adapter functionality to `ChatActivityDraftMessageMeasureController` with standalone in-memory headless capability for JVM testing. Encapsulate presentation state and MVI events in `DraftMeasureViewModel`.
+- **Consequences:** Draft height overrides, viewport constraint checks, message ID lifecycle updates, and cell height expansion logic are completely decoupled behind clean Kotlin domain interfaces, fully covered by unit tests, while retaining 100% backward compatibility with Telegram's chat UI.
 
 ### ADR 061: Keep-Media Cache Retention & Dialog Exceptions Controller Isolation
 - **Context:** In Telegram Android, automatic media cache eviction policies (keep media duration for personal chats, groups, channels, stories) and per-dialog exceptions were managed by `CacheByChatsController.java` (~215 lines) located in `org.telegram.messenger`. The controller coupled integer duration codes (`KEEP_MEDIA_DELETE = 4`, `KEEP_MEDIA_FOREVER = 2`, `KEEP_MEDIA_ONE_DAY = 3`, `KEEP_MEDIA_ONE_WEEK = 0`, `KEEP_MEDIA_ONE_MONTH = 1`, `KEEP_MEDIA_TWO_DAY = 6`), chat type codes (`USER = 0`, `GROUP = 1`, `CHANNEL = 2`, `STORIES = 3`), binary serialization of dialog exceptions into Hex strings (`keep_media_exceptions_<type>`), and direct SharedPreferences calls on `SharedConfig` and `UserConfig`.
