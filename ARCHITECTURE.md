@@ -1162,6 +1162,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── HashtagSearchUiState.kt
             ├── HashtagSearchEvent.kt
             └── HashtagSearchViewModel.kt
+    │
+    └── biometrics/                       # Biometrics, Hardware Keystore & Passcode Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & status enums
+        │   │   ├── BiometricStatus.kt
+        │   │   └── BiometricKeyStateModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BiometricsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveBiometricKeyStateUseCase.kt
+        │       ├── GetBiometricKeyStateUseCase.kt
+        │       ├── CheckBiometricKeyReadyUseCase.kt
+        │       ├── DeleteInvalidBiometricKeyUseCase.kt
+        │       ├── IsBiometricKeyReadyUseCase.kt
+        │       └── HasDeviceBiometricsChangedUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (hardware/keystore flags <-> domain)
+        │   │   └── BiometricMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBiometricsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BiometricsUiState.kt
+            ├── BiometricsEvent.kt
+            └── BiometricsViewModel.kt
 ```
 
 ### Layer Rules
@@ -1433,10 +1459,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveHashtagHistoryUseCase`, `GetHashtagHistoryUseCase`, `AddHashtagToHistoryUseCase`, `RemoveHashtagFromHistoryUseCase`, `ClearHashtagHistoryUseCase`, `ObserveHashtagSearchResultUseCase`, `SearchHashtagUseCase`, `JumpToHashtagMessageUseCase`, `ClearHashtagSearchResultsUseCase`
   - [x] Data layer: `HashtagMapper`, `LegacyHashtagSearchRepository` (Main-thread safe, adapting `HashtagSearchController`, SharedPreferences history, and MTProto global/channel search)
   - [x] Presentation layer: `HashtagSearchUiState`, `HashtagSearchEvent`, `HashtagSearchViewModel`
+- [x] Biometrics, Hardware Keystore & Passcode Authentication (`feature.biometrics`)
+  - [x] Domain entities: `BiometricStatus`, `BiometricKeyStateModel` (pure entities decoupled from AndroidKeyStore and FingerprintManagerCompat)
+  - [x] Repository contract: `BiometricsRepository`
+  - [x] Use cases: `ObserveBiometricKeyStateUseCase`, `GetBiometricKeyStateUseCase`, `CheckBiometricKeyReadyUseCase`, `DeleteInvalidBiometricKeyUseCase`, `IsBiometricKeyReadyUseCase`, `HasDeviceBiometricsChangedUseCase`
+  - [x] Data layer: `BiometricMapper`, `LegacyBiometricsRepository` (Safe across Android versions M+, adapts `FingerprintController`, `NotificationCenter.didGenerateFingerprintKeyPair`)
+  - [x] Presentation layer: `BiometricsUiState`, `BiometricsEvent`, `BiometricsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 042: Biometrics, Hardware Keystore & Passcode Authentication Isolation
+- **Context:** In Telegram Android, hardware-backed biometric security and cryptographic key pair generation for passcode authentication was managed by `FingerprintController.java` (~145 lines). The controller directly coupled AndroidKeyStore RSA-OAEP key pair generation (`KEY_ALIAS = "tmessages_passcode"`), device locale switching hacks to circumvent AndroidKeyStore bugs in RTL languages, KeyPermanentlyInvalidatedException detection for changed device biometrics, and untyped global broadcasts (`NotificationCenter.didGenerateFingerprintKeyPair`). UI components like `PasscodeView.java` and `LaunchActivity.java` directly queried static methods (`FingerprintController.checkKeyReady()`, `FingerprintController.isKeyReady()`, `FingerprintController.checkDeviceFingerprintsChanged()`) without state isolation or testability.
+- **Decision:** Introduce pure domain models `BiometricStatus` (Available, HardwareUnavailable, NoEnrolledBiometrics, KeyPermanentlyInvalidated, NotSupported) and `BiometricKeyStateModel` (with `canAuthenticate` logic). Define abstract contract `BiometricsRepository` covering reactive state observation (`observeKeyState`), state retrieval (`getKeyState`), key initialization (`checkKeyReady`), invalid key cleanup (`deleteInvalidKey`), readiness query (`isKeyReady`), and biometrics change detection (`hasDeviceBiometricsChanged`). Implement `LegacyBiometricsRepository` safely handling Android M+ requirements, `FingerprintManagerCompat` checks, and bridging `didGenerateFingerprintKeyPair` via `NotificationCenterFlowBridge`. Encapsulate presentation state and MVI events in `BiometricsViewModel`.
+- **Consequences:** Passcode biometric authentication, AndroidKeyStore key pair status, and device biometrics modification tracking are decoupled behind clean, testable domain interfaces with complete unit test coverage while preserving 100% compatibility with Telegram's passcode lock screens and hardware security modules.
 
 ### ADR 041: Hashtag Search & History Controller Isolation
 - **Context:** In Telegram Android, search for messages containing hashtags and cashtags across personal chats, public channels, and current channels was managed by `HashtagSearchController.java` (~389 lines). The controller directly managed volatile static instances per account (`Instance[UserConfig.MAX_ACCOUNT_COUNT]`), raw SharedPreferences persistence (`hashtag_search_history<currentAccount>`), manual capacity trimming (100 items), low-level MTProto search requests (`TLRPC.TL_messages_searchGlobal`, `TLRPC.TL_channels_searchPosts`, `TLRPC.TL_messages_search`), synthetic ID generation (`generatedIds`), and direct broadcasts on `NotificationCenter.hashtagSearchUpdated` and `messagesDidLoad`.

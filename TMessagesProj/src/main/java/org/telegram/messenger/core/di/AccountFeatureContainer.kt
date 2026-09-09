@@ -414,6 +414,15 @@ import org.telegram.messenger.feature.hashtagsearch.domain.usecase.ObserveHashta
 import org.telegram.messenger.feature.hashtagsearch.domain.usecase.RemoveHashtagFromHistoryUseCase
 import org.telegram.messenger.feature.hashtagsearch.domain.usecase.SearchHashtagUseCase
 import org.telegram.messenger.feature.hashtagsearch.presentation.HashtagSearchViewModel
+import org.telegram.messenger.feature.biometrics.data.repository.LegacyBiometricsRepository
+import org.telegram.messenger.feature.biometrics.domain.repository.BiometricsRepository
+import org.telegram.messenger.feature.biometrics.domain.usecase.CheckBiometricKeyReadyUseCase
+import org.telegram.messenger.feature.biometrics.domain.usecase.DeleteInvalidBiometricKeyUseCase
+import org.telegram.messenger.feature.biometrics.domain.usecase.GetBiometricKeyStateUseCase
+import org.telegram.messenger.feature.biometrics.domain.usecase.HasDeviceBiometricsChangedUseCase
+import org.telegram.messenger.feature.biometrics.domain.usecase.IsBiometricKeyReadyUseCase
+import org.telegram.messenger.feature.biometrics.domain.usecase.ObserveBiometricKeyStateUseCase
+import org.telegram.messenger.feature.biometrics.presentation.BiometricsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -2642,6 +2651,55 @@ class AccountFeatureContainer private constructor(val account: Int) {
             searchHashtagUseCase = searchHashtagUseCase,
             jumpToHashtagMessageUseCase = jumpToHashtagMessageUseCase,
             clearHashtagSearchResultsUseCase = clearHashtagSearchResultsUseCase
+        )
+    }
+
+    private var customBiometricsRepository: BiometricsRepository? = null
+
+    var biometricsRepository: BiometricsRepository
+        get() = customBiometricsRepository ?: LegacyBiometricsRepository()
+        set(value) {
+            customBiometricsRepository = value
+        }
+
+    val observeBiometricKeyStateUseCase: ObserveBiometricKeyStateUseCase
+        get() = ObserveBiometricKeyStateUseCase(biometricsRepository)
+
+    val getBiometricKeyStateUseCase: GetBiometricKeyStateUseCase
+        get() = GetBiometricKeyStateUseCase(biometricsRepository)
+
+    val checkBiometricKeyReadyUseCase: CheckBiometricKeyReadyUseCase
+        get() = CheckBiometricKeyReadyUseCase(biometricsRepository)
+
+    val deleteInvalidBiometricKeyUseCase: DeleteInvalidBiometricKeyUseCase
+        get() = DeleteInvalidBiometricKeyUseCase(biometricsRepository)
+
+    val isBiometricKeyReadyUseCase: IsBiometricKeyReadyUseCase
+        get() = IsBiometricKeyReadyUseCase(biometricsRepository)
+
+    val hasDeviceBiometricsChangedUseCase: HasDeviceBiometricsChangedUseCase
+        get() = HasDeviceBiometricsChangedUseCase(biometricsRepository)
+
+    private var cachedBiometricsViewModel: BiometricsViewModel? = null
+
+    val biometricsViewModel: BiometricsViewModel
+        get() {
+            var vm = cachedBiometricsViewModel
+            if (vm == null) {
+                vm = createBiometricsViewModel()
+                cachedBiometricsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBiometricsViewModel(): BiometricsViewModel {
+        return BiometricsViewModel(
+            observeBiometricKeyStateUseCase = observeBiometricKeyStateUseCase,
+            getBiometricKeyStateUseCase = getBiometricKeyStateUseCase,
+            checkBiometricKeyReadyUseCase = checkBiometricKeyReadyUseCase,
+            deleteInvalidBiometricKeyUseCase = deleteInvalidBiometricKeyUseCase,
+            isBiometricKeyReadyUseCase = isBiometricKeyReadyUseCase,
+            hasDeviceBiometricsChangedUseCase = hasDeviceBiometricsChangedUseCase
         )
     }
 
