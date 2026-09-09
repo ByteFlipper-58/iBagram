@@ -559,6 +559,15 @@ import org.telegram.messenger.feature.refreshrate.domain.usecase.StartRefreshRat
 import org.telegram.messenger.feature.refreshrate.domain.usecase.StopRefreshRateTrackingUseCase
 import org.telegram.messenger.feature.refreshrate.domain.usecase.ToggleAdaptiveRefreshRateUseCase
 import org.telegram.messenger.feature.refreshrate.presentation.RefreshRateViewModel
+import org.telegram.messenger.feature.chatmeta.data.repository.LegacyChatMessagesMetadataRepository
+import org.telegram.messenger.feature.chatmeta.domain.repository.ChatMessagesMetadataRepository
+import org.telegram.messenger.feature.chatmeta.domain.usecase.CancelPendingMetadataRequestsUseCase
+import org.telegram.messenger.feature.chatmeta.domain.usecase.CheckMessagesMetadataUseCase
+import org.telegram.messenger.feature.chatmeta.domain.usecase.GetChatMetadataStatsUseCase
+import org.telegram.messenger.feature.chatmeta.domain.usecase.LoadMessagesExtendedMediaUseCase
+import org.telegram.messenger.feature.chatmeta.domain.usecase.LoadMessagesReactionsUseCase
+import org.telegram.messenger.feature.chatmeta.domain.usecase.ObserveChatMetadataStatsUseCase
+import org.telegram.messenger.feature.chatmeta.presentation.ChatMetadataViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -3535,6 +3544,55 @@ class AccountFeatureContainer private constructor(val account: Int) {
             setPreferredRefreshRateModeUseCase = setPreferredRefreshRateModeUseCase,
             recordFrameMetricUseCase = recordFrameMetricUseCase,
             resetRefreshRateStatsUseCase = resetRefreshRateStatsUseCase
+        )
+    }
+
+    private var customChatMessagesMetadataRepository: ChatMessagesMetadataRepository? = null
+
+    var chatMessagesMetadataRepository: ChatMessagesMetadataRepository
+        get() = customChatMessagesMetadataRepository ?: LegacyChatMessagesMetadataRepository(account)
+        set(value) {
+            customChatMessagesMetadataRepository = value
+        }
+
+    val observeChatMetadataStatsUseCase: ObserveChatMetadataStatsUseCase
+        get() = ObserveChatMetadataStatsUseCase(chatMessagesMetadataRepository)
+
+    val getChatMetadataStatsUseCase: GetChatMetadataStatsUseCase
+        get() = GetChatMetadataStatsUseCase(chatMessagesMetadataRepository)
+
+    val checkMessagesMetadataUseCase: CheckMessagesMetadataUseCase
+        get() = CheckMessagesMetadataUseCase(chatMessagesMetadataRepository)
+
+    val loadMessagesReactionsUseCase: LoadMessagesReactionsUseCase
+        get() = LoadMessagesReactionsUseCase(chatMessagesMetadataRepository)
+
+    val loadMessagesExtendedMediaUseCase: LoadMessagesExtendedMediaUseCase
+        get() = LoadMessagesExtendedMediaUseCase(chatMessagesMetadataRepository)
+
+    val cancelPendingMetadataRequestsUseCase: CancelPendingMetadataRequestsUseCase
+        get() = CancelPendingMetadataRequestsUseCase(chatMessagesMetadataRepository)
+
+    private var cachedChatMetadataViewModel: ChatMetadataViewModel? = null
+
+    val chatMetadataViewModel: ChatMetadataViewModel
+        get() {
+            var vm = cachedChatMetadataViewModel
+            if (vm == null) {
+                vm = createChatMetadataViewModel()
+                cachedChatMetadataViewModel = vm
+            }
+            return vm
+        }
+
+    fun createChatMetadataViewModel(): ChatMetadataViewModel {
+        return ChatMetadataViewModel(
+            observeChatMetadataStatsUseCase = observeChatMetadataStatsUseCase,
+            getChatMetadataStatsUseCase = getChatMetadataStatsUseCase,
+            checkMessagesMetadataUseCase = checkMessagesMetadataUseCase,
+            loadMessagesReactionsUseCase = loadMessagesReactionsUseCase,
+            loadMessagesExtendedMediaUseCase = loadMessagesExtendedMediaUseCase,
+            cancelPendingMetadataRequestsUseCase = cancelPendingMetadataRequestsUseCase
         )
     }
 

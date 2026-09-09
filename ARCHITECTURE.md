@@ -1567,6 +1567,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── RefreshRateUiState.kt
             ├── RefreshRateEvent.kt
             └── RefreshRateViewModel.kt
+    │
+    └── chatmeta/                         # Chat Messages Metadata (Reactions, Paid Media, Stories) Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain models
+        │   │   ├── MessageMetadataType.kt
+        │   │   ├── MessageMetadataCheckItem.kt
+        │   │   ├── ChatMetadataStatsModel.kt
+        │   │   └── ChatMetadataBatchResult.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ChatMessagesMetadataRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveChatMetadataStatsUseCase.kt
+        │       ├── GetChatMetadataStatsUseCase.kt
+        │       ├── CheckMessagesMetadataUseCase.kt
+        │       ├── LoadMessagesReactionsUseCase.kt
+        │       ├── LoadMessagesExtendedMediaUseCase.kt
+        │       └── CancelPendingMetadataRequestsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (MessageObject <-> Domain)
+        │   │   └── ChatMetadataMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyChatMessagesMetadataRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ChatMetadataUiState.kt
+            ├── ChatMetadataEvent.kt
+            └── ChatMetadataViewModel.kt
 ```
 
 ### Layer Rules
@@ -1922,10 +1950,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveRefreshRateStateUseCase`, `GetRefreshRateStateUseCase`, `StartRefreshRateTrackingUseCase`, `StopRefreshRateTrackingUseCase`, `ToggleAdaptiveRefreshRateUseCase`, `SetPreferredRefreshRateModeUseCase`, `RecordFrameMetricUseCase`, `ResetRefreshRateStatsUseCase`, `GetDisplayRefreshModesUseCase`
   - [x] Data layer: `RefreshRateMapper`, `LegacyRefreshRateRepository` (Main-thread safe, adapting `RefreshRateController` logic, ring buffer FPS calculations, and hysteresis control)
   - [x] Presentation layer: `RefreshRateUiState`, `RefreshRateEvent`, `RefreshRateViewModel`
+- [x] Chat Messages Metadata (Reactions, Paid Media & Stories) (`feature.chatmeta`)
+  - [x] Domain entities: `MessageMetadataType`, `MessageMetadataCheckItem`, `ChatMetadataStatsModel`, `ChatMetadataBatchResult`
+  - [x] Repository contract: `ChatMessagesMetadataRepository`
+  - [x] Use cases: `ObserveChatMetadataStatsUseCase`, `GetChatMetadataStatsUseCase`, `CheckMessagesMetadataUseCase`, `LoadMessagesReactionsUseCase`, `LoadMessagesExtendedMediaUseCase`, `CancelPendingMetadataRequestsUseCase`
+  - [x] Data layer: `ChatMetadataMapper`, `LegacyChatMessagesMetadataRepository` (Main-thread safe, adapting `ChatMessagesMetadataController`, `ConnectionsManager` batching, and request cancellation)
+  - [x] Presentation layer: `ChatMetadataUiState`, `ChatMetadataEvent`, `ChatMetadataViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 056: Chat Messages Metadata (Reactions, Paid Media & Stories) Controller Isolation
+- **Context:** In Telegram Android, viewport metadata updates for visible chat messages (reactions updates, extended/paid media previews, and linked stories) were managed by `ChatMessagesMetadataController.java` (~184 lines) attached to `ChatActivity.java`. The controller directly coupled `ChatActivity` adapter positions, in-memory arrays of `MessageObject`, direct MTProto RPC dispatching (`TLRPC.TL_messages_getMessagesReactions`, `TLRPC.TL_messages_getExtendedMedia`, `TL_stories.TL_stories_getStoriesByID`), concurrent request limiting queues (`reactionsRequests.size() > 5`, `extendedMediaRequests.size() > 10`), and background storage queue dispatches.
+- **Decision:** Introduce pure domain models `MessageMetadataType`, `MessageMetadataCheckItem` (with interval eligibility checks: 15s for reactions, 30s for extended media, 300s for stories), `ChatMetadataStatsModel`, and `ChatMetadataBatchResult`. Define abstract contract `ChatMessagesMetadataRepository` covering reactive stats observation (`observeStats`), stats snapshot retrieval (`getStats`), viewport messages check (`checkMessages`), reactions loading (`loadReactions`), extended media loading (`loadExtendedMedia`), and pending requests cancellation (`cancelPendingRequests`). Implement `LegacyChatMessagesMetadataRepository` operating on `Dispatchers.Main` with safe fallback during headless unit testing. Encapsulate presentation state and MVI events in `ChatMetadataViewModel`.
+- **Consequences:** All visible chat messages metadata checking, throttling intervals, and request queue cancellations are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `ChatActivity` rendering loop and MTProto updates pipeline.
 
 ### ADR 055: Adaptive Display Refresh Rate & FPS Metrics Controller Isolation
 - **Context:** In Telegram Android, dynamic switching of display refresh rates (60 Hz vs 90/120 Hz) based on rendering performance was managed by `RefreshRateController.java` (~307 lines) located in `org.telegram.messenger.utils`. The controller directly coupled Android `Window.OnFrameMetricsAvailableListener`, `FrameMetrics.TOTAL_DURATION`, Android `Display.Mode` querying, and custom ring-buffer nanosecond running sums with hardcoded thresholds (`DOWN_FPS = 55.0f`, `UP_FPS = 58.5f`, `STABLE_WINDOW_MS = 1800ms`, `MIN_SWITCH_INTERVAL_MS = 3000ms`). UI activities like `LaunchActivity.java` had tightly coupled references to this component.
