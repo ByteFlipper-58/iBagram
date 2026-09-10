@@ -1,0 +1,12 @@
+﻿package org.telegram.messenger.feature.security.sessions.domain.usecase
+
+import org.telegram.messenger.core.result.Result
+import org.telegram.messenger.feature.security.sessions.domain.repository.SessionsRepository
+
+class TerminateWebSessionUseCase(
+    private val repository: SessionsRepository
+) {
+    suspend operator fun invoke(hash: Long): Result<Unit> {
+        return repository.terminateWebSession(hash)
+    }
+}

@@ -1,7 +1,7 @@
 ﻿package org.telegram.messenger.core.di
 
 import org.telegram.messenger.UserConfig
-import org.telegram.messenger.feature.chat.data.repository.LegacyChatRepository
+import org.telegram.messenger.feature.messaging.chat.data.repository.LegacyChatRepository
 import org.telegram.messenger.feature.social.profile.data.repository.LegacyProfileRepository
 import org.telegram.messenger.feature.social.profile.domain.repository.ProfileRepository
 import org.telegram.messenger.feature.social.profile.domain.usecase.BlockPeerUseCase
@@ -10,45 +10,45 @@ import org.telegram.messenger.feature.social.profile.domain.usecase.LoadFullProf
 import org.telegram.messenger.feature.social.profile.domain.usecase.ObserveProfileUseCase
 import org.telegram.messenger.feature.social.profile.domain.usecase.UnblockPeerUseCase
 import org.telegram.messenger.feature.social.profile.presentation.ProfileViewModel
-import org.telegram.messenger.feature.settings.data.repository.LegacySettingsRepository
-import org.telegram.messenger.feature.settings.domain.repository.SettingsRepository
-import org.telegram.messenger.feature.settings.domain.usecase.GetSettingsUseCase
-import org.telegram.messenger.feature.settings.domain.usecase.ObserveSettingsUseCase
-import org.telegram.messenger.feature.settings.domain.usecase.UpdateBubbleRadiusUseCase
-import org.telegram.messenger.feature.settings.domain.usecase.UpdateFontSizeUseCase
-import org.telegram.messenger.feature.settings.domain.usecase.UpdateSaveToGalleryUseCase
-import org.telegram.messenger.feature.settings.domain.usecase.UpdateStreamMediaUseCase
-import org.telegram.messenger.feature.settings.domain.usecase.UpdateSyncContactsUseCase
-import org.telegram.messenger.feature.settings.presentation.SettingsViewModel
-import org.telegram.messenger.feature.media.data.repository.LegacyMediaRepository
-import org.telegram.messenger.feature.media.domain.repository.MediaRepository
-import org.telegram.messenger.feature.media.domain.usecase.GetAlbumMediaUseCase
-import org.telegram.messenger.feature.media.domain.usecase.GetAllMediaUseCase
-import org.telegram.messenger.feature.media.domain.usecase.GetMediaAlbumsUseCase
-import org.telegram.messenger.feature.media.domain.usecase.ObserveMediaAlbumsUseCase
-import org.telegram.messenger.feature.media.presentation.MediaViewModel
-import org.telegram.messenger.feature.voip.data.repository.LegacyVoIPRepository
-import org.telegram.messenger.feature.voip.domain.repository.VoIPRepository
-import org.telegram.messenger.feature.voip.domain.usecase.AcceptCallUseCase
-import org.telegram.messenger.feature.voip.domain.usecase.DeclineCallUseCase
-import org.telegram.messenger.feature.voip.domain.usecase.GetCurrentCallUseCase
-import org.telegram.messenger.feature.voip.domain.usecase.HangUpCallUseCase
-import org.telegram.messenger.feature.voip.domain.usecase.ObserveCurrentCallUseCase
-import org.telegram.messenger.feature.voip.domain.usecase.StartCallUseCase
-import org.telegram.messenger.feature.voip.domain.usecase.ToggleMuteUseCase
-import org.telegram.messenger.feature.voip.domain.usecase.ToggleSpeakerphoneUseCase
-import org.telegram.messenger.feature.voip.presentation.CallViewModel
-import org.telegram.messenger.feature.secretchat.data.repository.LegacySecretChatRepository
-import org.telegram.messenger.feature.secretchat.domain.repository.SecretChatRepository
-import org.telegram.messenger.feature.secretchat.domain.usecase.AcceptSecretChatUseCase
-import org.telegram.messenger.feature.secretchat.domain.usecase.DeclineSecretChatUseCase
-import org.telegram.messenger.feature.secretchat.domain.usecase.GetSecretChatUseCase
-import org.telegram.messenger.feature.secretchat.domain.usecase.ObserveSecretChatUseCase
-import org.telegram.messenger.feature.secretchat.domain.usecase.ObserveSecretChatsUseCase
-import org.telegram.messenger.feature.secretchat.domain.usecase.SendScreenshotNotificationUseCase
-import org.telegram.messenger.feature.secretchat.domain.usecase.SetSecretChatTtlUseCase
-import org.telegram.messenger.feature.secretchat.domain.usecase.StartSecretChatUseCase
-import org.telegram.messenger.feature.secretchat.presentation.SecretChatViewModel
+import org.telegram.messenger.feature.system.settings.data.repository.LegacySettingsRepository
+import org.telegram.messenger.feature.system.settings.domain.repository.SettingsRepository
+import org.telegram.messenger.feature.system.settings.domain.usecase.GetSettingsUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.ObserveSettingsUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateBubbleRadiusUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateFontSizeUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateSaveToGalleryUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateStreamMediaUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateSyncContactsUseCase
+import org.telegram.messenger.feature.system.settings.presentation.SettingsViewModel
+import org.telegram.messenger.feature.media.mediadata.data.repository.LegacyMediaRepository
+import org.telegram.messenger.feature.media.mediadata.domain.repository.MediaRepository
+import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetAlbumMediaUseCase
+import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetAllMediaUseCase
+import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetMediaAlbumsUseCase
+import org.telegram.messenger.feature.media.mediadata.domain.usecase.ObserveMediaAlbumsUseCase
+import org.telegram.messenger.feature.media.mediadata.presentation.MediaViewModel
+import org.telegram.messenger.feature.media.voip.data.repository.LegacyVoIPRepository
+import org.telegram.messenger.feature.media.voip.domain.repository.VoIPRepository
+import org.telegram.messenger.feature.media.voip.domain.usecase.AcceptCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.DeclineCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.GetCurrentCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.HangUpCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.ObserveCurrentCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.StartCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.ToggleMuteUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.ToggleSpeakerphoneUseCase
+import org.telegram.messenger.feature.media.voip.presentation.CallViewModel
+import org.telegram.messenger.feature.security.secretchat.data.repository.LegacySecretChatRepository
+import org.telegram.messenger.feature.security.secretchat.domain.repository.SecretChatRepository
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.AcceptSecretChatUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.DeclineSecretChatUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.GetSecretChatUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.ObserveSecretChatUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.ObserveSecretChatsUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.SendScreenshotNotificationUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.SetSecretChatTtlUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.StartSecretChatUseCase
+import org.telegram.messenger.feature.security.secretchat.presentation.SecretChatViewModel
 import org.telegram.messenger.feature.social.contacts.data.repository.LegacyContactsRepository
 import org.telegram.messenger.feature.social.contacts.domain.repository.ContactsRepository
 import org.telegram.messenger.feature.social.contacts.domain.usecase.AddContactUseCase
@@ -58,162 +58,162 @@ import org.telegram.messenger.feature.social.contacts.domain.usecase.GetContacts
 import org.telegram.messenger.feature.social.contacts.domain.usecase.ObserveContactsUseCase
 import org.telegram.messenger.feature.social.contacts.domain.usecase.SearchContactsUseCase
 import org.telegram.messenger.feature.social.contacts.presentation.ContactsViewModel
-import org.telegram.messenger.feature.folders.data.repository.LegacyFoldersRepository
-import org.telegram.messenger.feature.folders.domain.repository.FoldersRepository
-import org.telegram.messenger.feature.folders.domain.usecase.CreateFolderUseCase
-import org.telegram.messenger.feature.folders.domain.usecase.DeleteFolderUseCase
-import org.telegram.messenger.feature.folders.domain.usecase.GetFolderUseCase
-import org.telegram.messenger.feature.folders.domain.usecase.GetFoldersUseCase
-import org.telegram.messenger.feature.folders.domain.usecase.GetSuggestedFoldersUseCase
-import org.telegram.messenger.feature.folders.domain.usecase.ObserveFoldersUseCase
-import org.telegram.messenger.feature.folders.domain.usecase.ReorderFoldersUseCase
-import org.telegram.messenger.feature.folders.domain.usecase.UpdateFolderUseCase
-import org.telegram.messenger.feature.folders.presentation.FoldersViewModel
-import org.telegram.messenger.feature.stickers.data.repository.LegacyStickersRepository
-import org.telegram.messenger.feature.stickers.domain.repository.StickersRepository
-import org.telegram.messenger.feature.stickers.domain.usecase.GetRecentStickersUseCase
-import org.telegram.messenger.feature.stickers.domain.usecase.GetStickerSetUseCase
-import org.telegram.messenger.feature.stickers.domain.usecase.GetStickerSetsUseCase
-import org.telegram.messenger.feature.stickers.domain.usecase.GetStickersForEmojiUseCase
-import org.telegram.messenger.feature.stickers.domain.usecase.ObserveStickerSetsUseCase
-import org.telegram.messenger.feature.stickers.domain.usecase.ToggleStickerSetArchivedUseCase
-import org.telegram.messenger.feature.stickers.domain.usecase.ToggleStickerSetInstalledUseCase
-import org.telegram.messenger.feature.stickers.presentation.StickersViewModel
-import org.telegram.messenger.feature.fileloader.data.repository.LegacyFileLoaderRepository
-import org.telegram.messenger.feature.fileloader.domain.repository.FileLoaderRepository
-import org.telegram.messenger.feature.fileloader.domain.usecase.CancelAllDownloadsUseCase
-import org.telegram.messenger.feature.fileloader.domain.usecase.CancelFileUploadUseCase
-import org.telegram.messenger.feature.fileloader.domain.usecase.CancelLoadFileUseCase
-import org.telegram.messenger.feature.fileloader.domain.usecase.GetActiveDownloadsUseCase
-import org.telegram.messenger.feature.fileloader.domain.usecase.GetRecentDownloadsUseCase
-import org.telegram.messenger.feature.fileloader.domain.usecase.LoadFileUseCase
-import org.telegram.messenger.feature.fileloader.domain.usecase.ObserveTransferUseCase
-import org.telegram.messenger.feature.fileloader.domain.usecase.ObserveTransfersUseCase
-import org.telegram.messenger.feature.fileloader.domain.usecase.UploadFileUseCase
-import org.telegram.messenger.feature.fileloader.presentation.FileLoaderViewModel
-import org.telegram.messenger.feature.search.data.repository.LegacySearchRepository
-import org.telegram.messenger.feature.search.domain.repository.SearchRepository
-import org.telegram.messenger.feature.search.domain.usecase.ClearRecentHashtagsUseCase
-import org.telegram.messenger.feature.search.domain.usecase.ClearRecentSearchesUseCase
-import org.telegram.messenger.feature.search.domain.usecase.GetRecentHashtagsUseCase
-import org.telegram.messenger.feature.search.domain.usecase.GetRecentSearchesUseCase
-import org.telegram.messenger.feature.search.domain.usecase.PutRecentHashtagUseCase
-import org.telegram.messenger.feature.search.domain.usecase.RemoveRecentSearchUseCase
-import org.telegram.messenger.feature.search.domain.usecase.SearchGlobalUseCase
-import org.telegram.messenger.feature.search.domain.usecase.SearchLocalUseCase
-import org.telegram.messenger.feature.search.presentation.SearchViewModel
-import org.telegram.messenger.feature.notifications.data.repository.LegacyNotificationsRepository
-import org.telegram.messenger.feature.notifications.domain.repository.NotificationsRepository
-import org.telegram.messenger.feature.notifications.domain.usecase.GetBadgeSettingsUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.GetBadgeUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.GetNotificationSettingsUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.IsDialogMutedUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.MuteDialogUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.ObserveBadgeSettingsUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.ObserveBadgeUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.ObserveNotificationSettingsUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.RefreshBadgeUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.ToggleContactJoinedNotificationsUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.ToggleInAppPreviewUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.ToggleInAppSoundsUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.ToggleInAppVibrateUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.ToggleInChatSoundUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.TogglePeerNotificationsUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.TogglePinnedMessagesNotificationsUseCase
-import org.telegram.messenger.feature.notifications.domain.usecase.UpdateBadgeSettingsUseCase
-import org.telegram.messenger.feature.notifications.presentation.NotificationsViewModel
-import org.telegram.messenger.feature.privacy.data.repository.LegacyPrivacyRepository
-import org.telegram.messenger.feature.privacy.domain.repository.PrivacyRepository
-import org.telegram.messenger.feature.privacy.domain.usecase.BlockPrivacyPeerUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.CheckPasscodeUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.ClearPasscodeUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.GetBlockedPeersUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.GetPasscodeSettingsUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.GetPrivacyRulesUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.LoadPrivacyRulesUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.LoadTwoStepVerificationUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.ObserveBlockedPeersUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.ObservePrivacyRulesUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.ObserveTwoStepVerificationUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.SetPasscodeUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.SetPrivacyRuleUseCase
-import org.telegram.messenger.feature.privacy.domain.usecase.UnblockPrivacyPeerUseCase
-import org.telegram.messenger.feature.privacy.presentation.PrivacyViewModel
-import org.telegram.messenger.feature.themes.data.repository.LegacyThemeRepository
-import org.telegram.messenger.feature.themes.domain.repository.ThemeRepository
-import org.telegram.messenger.feature.themes.domain.usecase.ApplyThemeUseCase
-import org.telegram.messenger.feature.themes.domain.usecase.GetAppearanceSettingsUseCase
-import org.telegram.messenger.feature.themes.domain.usecase.GetAvailableThemesUseCase
-import org.telegram.messenger.feature.themes.domain.usecase.ObserveAppearanceSettingsUseCase
-import org.telegram.messenger.feature.themes.domain.usecase.ObserveAvailableThemesUseCase
-import org.telegram.messenger.feature.themes.domain.usecase.ObserveNightModeUseCase
-import org.telegram.messenger.feature.themes.domain.usecase.ResetAppearanceSettingsUseCase
-import org.telegram.messenger.feature.themes.domain.usecase.SetBubbleRadiusUseCase
-import org.telegram.messenger.feature.themes.domain.usecase.SetNightModeSettingsUseCase
-import org.telegram.messenger.feature.themes.domain.usecase.SetNightModeTypeUseCase
-import org.telegram.messenger.feature.themes.domain.usecase.SetThemeAccentUseCase
-import org.telegram.messenger.feature.themes.presentation.ThemeViewModel
-import org.telegram.messenger.feature.stories.data.repository.LegacyStoriesRepository
-import org.telegram.messenger.feature.stories.domain.repository.StoriesRepository
-import org.telegram.messenger.feature.stories.domain.usecase.ActivateStealthModeUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.DeleteStoryUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.GetPeerStoriesUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.GetStoryLimitUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.MarkStoryAsReadUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.ObserveHiddenStoriesUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.ObserveSelfStoriesUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.ObserveStealthModeUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.ObserveStoriesUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.RefreshStoriesUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.ToggleStoryHiddenUseCase
-import org.telegram.messenger.feature.stories.domain.usecase.ToggleStoryPinUseCase
-import org.telegram.messenger.feature.stories.presentation.StoriesViewModel
-import org.telegram.messenger.feature.payments.data.repository.LegacyPaymentsRepository
-import org.telegram.messenger.feature.payments.domain.repository.PaymentsRepository
-import org.telegram.messenger.feature.payments.domain.usecase.GetStarSubscriptionsUseCase
-import org.telegram.messenger.feature.payments.domain.usecase.GetStarTopupOptionsUseCase
-import org.telegram.messenger.feature.payments.domain.usecase.GetStarTransactionsUseCase
-import org.telegram.messenger.feature.payments.domain.usecase.GetStarsBalanceUseCase
-import org.telegram.messenger.feature.payments.domain.usecase.ObserveStarSubscriptionsUseCase
-import org.telegram.messenger.feature.payments.domain.usecase.ObserveStarTransactionsUseCase
-import org.telegram.messenger.feature.payments.domain.usecase.ObserveStarsBalanceUseCase
-import org.telegram.messenger.feature.payments.domain.usecase.RefreshStarSubscriptionsUseCase
-import org.telegram.messenger.feature.payments.domain.usecase.RefreshStarTransactionsUseCase
-import org.telegram.messenger.feature.payments.domain.usecase.RefreshStarsBalanceUseCase
-import org.telegram.messenger.feature.payments.presentation.PaymentsViewModel
-import org.telegram.messenger.feature.datastorage.data.repository.LegacyDataStorageRepository
-import org.telegram.messenger.feature.datastorage.domain.repository.DataStorageRepository
-import org.telegram.messenger.feature.datastorage.domain.usecase.ClearCacheUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.ClearDatabaseUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.GetAutoDownloadPresetUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.GetKeepMediaSettingsUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.GetNetworkUsageUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.GetStorageUsageUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.ObserveAutoDownloadPresetUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.ObserveKeepMediaSettingsUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.ObserveNetworkUsageUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.ObserveStorageUsageUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.RefreshStorageUsageUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.ResetNetworkUsageUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.UpdateAutoDownloadPresetUseCase
-import org.telegram.messenger.feature.datastorage.domain.usecase.UpdateKeepMediaUseCase
-import org.telegram.messenger.feature.datastorage.presentation.DataStorageViewModel
-import org.telegram.messenger.feature.topics.data.repository.LegacyTopicsRepository
-import org.telegram.messenger.feature.topics.domain.repository.TopicsRepository
-import org.telegram.messenger.feature.topics.domain.usecase.DeleteTopicsUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.GetForumUnreadCountUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.GetTopicUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.GetTopicsUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.LoadTopicsUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.MarkTopicReactionsAsReadUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.ObserveForumUnreadCountUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.ObserveTopicsUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.ReloadTopicsUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.ReorderPinnedTopicsUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.ToggleCloseTopicUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.TogglePinTopicUseCase
-import org.telegram.messenger.feature.topics.domain.usecase.ToggleShowTopicUseCase
-import org.telegram.messenger.feature.topics.presentation.TopicsViewModel
+import org.telegram.messenger.feature.messaging.folders.data.repository.LegacyFoldersRepository
+import org.telegram.messenger.feature.messaging.folders.domain.repository.FoldersRepository
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.CreateFolderUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.DeleteFolderUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.GetFolderUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.GetFoldersUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.GetSuggestedFoldersUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.ObserveFoldersUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.ReorderFoldersUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.UpdateFolderUseCase
+import org.telegram.messenger.feature.messaging.folders.presentation.FoldersViewModel
+import org.telegram.messenger.feature.messaging.stickers.data.repository.LegacyStickersRepository
+import org.telegram.messenger.feature.messaging.stickers.domain.repository.StickersRepository
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetRecentStickersUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetStickerSetUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetStickerSetsUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetStickersForEmojiUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.ObserveStickerSetsUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.ToggleStickerSetArchivedUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.ToggleStickerSetInstalledUseCase
+import org.telegram.messenger.feature.messaging.stickers.presentation.StickersViewModel
+import org.telegram.messenger.feature.media.fileloader.data.repository.LegacyFileLoaderRepository
+import org.telegram.messenger.feature.media.fileloader.domain.repository.FileLoaderRepository
+import org.telegram.messenger.feature.media.fileloader.domain.usecase.CancelAllDownloadsUseCase
+import org.telegram.messenger.feature.media.fileloader.domain.usecase.CancelFileUploadUseCase
+import org.telegram.messenger.feature.media.fileloader.domain.usecase.CancelLoadFileUseCase
+import org.telegram.messenger.feature.media.fileloader.domain.usecase.GetActiveDownloadsUseCase
+import org.telegram.messenger.feature.media.fileloader.domain.usecase.GetRecentDownloadsUseCase
+import org.telegram.messenger.feature.media.fileloader.domain.usecase.LoadFileUseCase
+import org.telegram.messenger.feature.media.fileloader.domain.usecase.ObserveTransferUseCase
+import org.telegram.messenger.feature.media.fileloader.domain.usecase.ObserveTransfersUseCase
+import org.telegram.messenger.feature.media.fileloader.domain.usecase.UploadFileUseCase
+import org.telegram.messenger.feature.media.fileloader.presentation.FileLoaderViewModel
+import org.telegram.messenger.feature.messaging.search.data.repository.LegacySearchRepository
+import org.telegram.messenger.feature.messaging.search.domain.repository.SearchRepository
+import org.telegram.messenger.feature.messaging.search.domain.usecase.ClearRecentHashtagsUseCase
+import org.telegram.messenger.feature.messaging.search.domain.usecase.ClearRecentSearchesUseCase
+import org.telegram.messenger.feature.messaging.search.domain.usecase.GetRecentHashtagsUseCase
+import org.telegram.messenger.feature.messaging.search.domain.usecase.GetRecentSearchesUseCase
+import org.telegram.messenger.feature.messaging.search.domain.usecase.PutRecentHashtagUseCase
+import org.telegram.messenger.feature.messaging.search.domain.usecase.RemoveRecentSearchUseCase
+import org.telegram.messenger.feature.messaging.search.domain.usecase.SearchGlobalUseCase
+import org.telegram.messenger.feature.messaging.search.domain.usecase.SearchLocalUseCase
+import org.telegram.messenger.feature.messaging.search.presentation.SearchViewModel
+import org.telegram.messenger.feature.system.notifications.data.repository.LegacyNotificationsRepository
+import org.telegram.messenger.feature.system.notifications.domain.repository.NotificationsRepository
+import org.telegram.messenger.feature.system.notifications.domain.usecase.GetBadgeSettingsUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.GetBadgeUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.GetNotificationSettingsUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.IsDialogMutedUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.MuteDialogUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.ObserveBadgeSettingsUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.ObserveBadgeUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.ObserveNotificationSettingsUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.RefreshBadgeUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.ToggleContactJoinedNotificationsUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.ToggleInAppPreviewUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.ToggleInAppSoundsUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.ToggleInAppVibrateUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.ToggleInChatSoundUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.TogglePeerNotificationsUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.TogglePinnedMessagesNotificationsUseCase
+import org.telegram.messenger.feature.system.notifications.domain.usecase.UpdateBadgeSettingsUseCase
+import org.telegram.messenger.feature.system.notifications.presentation.NotificationsViewModel
+import org.telegram.messenger.feature.security.privacy.data.repository.LegacyPrivacyRepository
+import org.telegram.messenger.feature.security.privacy.domain.repository.PrivacyRepository
+import org.telegram.messenger.feature.security.privacy.domain.usecase.BlockPrivacyPeerUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.CheckPasscodeUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.ClearPasscodeUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.GetBlockedPeersUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.GetPasscodeSettingsUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.GetPrivacyRulesUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.LoadPrivacyRulesUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.LoadTwoStepVerificationUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.ObserveBlockedPeersUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.ObservePrivacyRulesUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.ObserveTwoStepVerificationUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.SetPasscodeUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.SetPrivacyRuleUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.UnblockPrivacyPeerUseCase
+import org.telegram.messenger.feature.security.privacy.presentation.PrivacyViewModel
+import org.telegram.messenger.feature.system.themes.data.repository.LegacyThemeRepository
+import org.telegram.messenger.feature.system.themes.domain.repository.ThemeRepository
+import org.telegram.messenger.feature.system.themes.domain.usecase.ApplyThemeUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.GetAppearanceSettingsUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.GetAvailableThemesUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.ObserveAppearanceSettingsUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.ObserveAvailableThemesUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.ObserveNightModeUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.ResetAppearanceSettingsUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.SetBubbleRadiusUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.SetNightModeSettingsUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.SetNightModeTypeUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.SetThemeAccentUseCase
+import org.telegram.messenger.feature.system.themes.presentation.ThemeViewModel
+import org.telegram.messenger.feature.media.stories.data.repository.LegacyStoriesRepository
+import org.telegram.messenger.feature.media.stories.domain.repository.StoriesRepository
+import org.telegram.messenger.feature.media.stories.domain.usecase.ActivateStealthModeUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.DeleteStoryUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.GetPeerStoriesUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.GetStoryLimitUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.MarkStoryAsReadUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveHiddenStoriesUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveSelfStoriesUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveStealthModeUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveStoriesUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.RefreshStoriesUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ToggleStoryHiddenUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ToggleStoryPinUseCase
+import org.telegram.messenger.feature.media.stories.presentation.StoriesViewModel
+import org.telegram.messenger.feature.business.payments.data.repository.LegacyPaymentsRepository
+import org.telegram.messenger.feature.business.payments.domain.repository.PaymentsRepository
+import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarSubscriptionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarTopupOptionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarTransactionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarsBalanceUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.ObserveStarSubscriptionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.ObserveStarTransactionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.ObserveStarsBalanceUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarSubscriptionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarTransactionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarsBalanceUseCase
+import org.telegram.messenger.feature.business.payments.presentation.PaymentsViewModel
+import org.telegram.messenger.feature.system.datastorage.data.repository.LegacyDataStorageRepository
+import org.telegram.messenger.feature.system.datastorage.domain.repository.DataStorageRepository
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ClearCacheUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ClearDatabaseUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetAutoDownloadPresetUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetKeepMediaSettingsUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetNetworkUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetStorageUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveAutoDownloadPresetUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveKeepMediaSettingsUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveNetworkUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveStorageUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.RefreshStorageUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ResetNetworkUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.UpdateAutoDownloadPresetUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.UpdateKeepMediaUseCase
+import org.telegram.messenger.feature.system.datastorage.presentation.DataStorageViewModel
+import org.telegram.messenger.feature.messaging.topics.data.repository.LegacyTopicsRepository
+import org.telegram.messenger.feature.messaging.topics.domain.repository.TopicsRepository
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.DeleteTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.GetForumUnreadCountUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.GetTopicUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.GetTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.LoadTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.MarkTopicReactionsAsReadUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ObserveForumUnreadCountUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ObserveTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ReloadTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ReorderPinnedTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ToggleCloseTopicUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.TogglePinTopicUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ToggleShowTopicUseCase
+import org.telegram.messenger.feature.messaging.topics.presentation.TopicsViewModel
 import org.telegram.messenger.feature.social.location.data.repository.LegacyLocationRepository
 import org.telegram.messenger.feature.social.location.domain.repository.LocationRepository
 import org.telegram.messenger.feature.social.location.domain.usecase.GetActiveSharingsUseCase
@@ -231,53 +231,53 @@ import org.telegram.messenger.feature.social.location.domain.usecase.SetProximit
 import org.telegram.messenger.feature.social.location.domain.usecase.StopAllLocationSharingsUseCase
 import org.telegram.messenger.feature.social.location.domain.usecase.StopLocationSharingUseCase
 import org.telegram.messenger.feature.social.location.presentation.LocationViewModel
-import org.telegram.messenger.feature.sessions.data.repository.LegacySessionsRepository
-import org.telegram.messenger.feature.sessions.domain.repository.SessionsRepository
-import org.telegram.messenger.feature.sessions.domain.usecase.AcceptQrLoginUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.GetSessionsUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.GetWebSessionsUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.LoadSessionsUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.LoadWebSessionsUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.ObserveSessionsUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.ObserveWebSessionsUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.SetSessionsTtlUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.TerminateAllOtherSessionsUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.TerminateAllWebSessionsUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.TerminateSessionUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.TerminateWebSessionUseCase
-import org.telegram.messenger.feature.sessions.domain.usecase.UpdateSessionSettingsUseCase
-import org.telegram.messenger.feature.sessions.presentation.SessionsViewModel
-import org.telegram.messenger.feature.translate.data.repository.LegacyTranslationRepository
-import org.telegram.messenger.feature.translate.domain.repository.TranslationRepository
-import org.telegram.messenger.feature.translate.domain.usecase.AddDoNotTranslateLanguageUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.ApplyAppLanguageUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.GetAvailableLanguagesUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.GetDialogTranslationStateUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.GetTranslateSettingsUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.ObserveDialogTranslationStateUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.ObserveTranslateSettingsUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.RemoveDoNotTranslateLanguageUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.SetChatTranslateEnabledUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.SetContextTranslateEnabledUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.SetDialogTargetLanguageUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.SetDoNotTranslateLanguagesUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.ToggleDialogTranslatingUseCase
-import org.telegram.messenger.feature.translate.domain.usecase.TranslateTextUseCase
-import org.telegram.messenger.feature.translate.presentation.TranslateViewModel
-import org.telegram.messenger.feature.reactions.data.repository.LegacyReactionsRepository
-import org.telegram.messenger.feature.reactions.domain.repository.ReactionsRepository
-import org.telegram.messenger.feature.reactions.domain.usecase.ClearReactionsUseCase
-import org.telegram.messenger.feature.reactions.domain.usecase.GetAvailableReactionsUseCase
-import org.telegram.messenger.feature.reactions.domain.usecase.GetDoubleTapReactionUseCase
-import org.telegram.messenger.feature.reactions.domain.usecase.GetReactionsSettingsUseCase
-import org.telegram.messenger.feature.reactions.domain.usecase.GetRecentReactionsUseCase
-import org.telegram.messenger.feature.reactions.domain.usecase.LoadAvailableReactionsUseCase
-import org.telegram.messenger.feature.reactions.domain.usecase.ObserveAvailableReactionsUseCase
-import org.telegram.messenger.feature.reactions.domain.usecase.ObserveRecentReactionsUseCase
-import org.telegram.messenger.feature.reactions.domain.usecase.SendReactionUseCase
-import org.telegram.messenger.feature.reactions.domain.usecase.SendVoteUseCase
-import org.telegram.messenger.feature.reactions.domain.usecase.SetDoubleTapReactionUseCase
-import org.telegram.messenger.feature.reactions.presentation.ReactionsViewModel
+import org.telegram.messenger.feature.security.sessions.data.repository.LegacySessionsRepository
+import org.telegram.messenger.feature.security.sessions.domain.repository.SessionsRepository
+import org.telegram.messenger.feature.security.sessions.domain.usecase.AcceptQrLoginUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.GetSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.GetWebSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.LoadSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.LoadWebSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.ObserveSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.ObserveWebSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.SetSessionsTtlUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateAllOtherSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateAllWebSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateSessionUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateWebSessionUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.UpdateSessionSettingsUseCase
+import org.telegram.messenger.feature.security.sessions.presentation.SessionsViewModel
+import org.telegram.messenger.feature.messaging.translate.data.repository.LegacyTranslationRepository
+import org.telegram.messenger.feature.messaging.translate.domain.repository.TranslationRepository
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.AddDoNotTranslateLanguageUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.ApplyAppLanguageUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.GetAvailableLanguagesUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.GetDialogTranslationStateUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.GetTranslateSettingsUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.ObserveDialogTranslationStateUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.ObserveTranslateSettingsUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.RemoveDoNotTranslateLanguageUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetChatTranslateEnabledUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetContextTranslateEnabledUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetDialogTargetLanguageUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetDoNotTranslateLanguagesUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.ToggleDialogTranslatingUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.TranslateTextUseCase
+import org.telegram.messenger.feature.messaging.translate.presentation.TranslateViewModel
+import org.telegram.messenger.feature.messaging.reactions.data.repository.LegacyReactionsRepository
+import org.telegram.messenger.feature.messaging.reactions.domain.repository.ReactionsRepository
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.ClearReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetAvailableReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetDoubleTapReactionUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetReactionsSettingsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetRecentReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.LoadAvailableReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.ObserveAvailableReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.ObserveRecentReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SendReactionUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SendVoteUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SetDoubleTapReactionUseCase
+import org.telegram.messenger.feature.messaging.reactions.presentation.ReactionsViewModel
 import org.telegram.messenger.feature.social.boosts.data.repository.LegacyBoostsRepository
 import org.telegram.messenger.feature.social.boosts.domain.repository.BoostsRepository
 import org.telegram.messenger.feature.social.boosts.domain.usecase.ApplyBoostUseCase
@@ -285,19 +285,19 @@ import org.telegram.messenger.feature.social.boosts.domain.usecase.CheckCanApply
 import org.telegram.messenger.feature.social.boosts.domain.usecase.GetBoostsStatusUseCase
 import org.telegram.messenger.feature.social.boosts.domain.usecase.GetMyBoostsUseCase
 import org.telegram.messenger.feature.social.boosts.presentation.BoostsViewModel
-import org.telegram.messenger.feature.quickreplies.data.repository.LegacyQuickRepliesRepository
-import org.telegram.messenger.feature.quickreplies.domain.repository.QuickRepliesRepository
-import org.telegram.messenger.feature.quickreplies.domain.usecase.CanAddNewQuickReplyUseCase
-import org.telegram.messenger.feature.quickreplies.domain.usecase.CheckQuickReplyNameBusyUseCase
-import org.telegram.messenger.feature.quickreplies.domain.usecase.DeleteQuickRepliesUseCase
-import org.telegram.messenger.feature.quickreplies.domain.usecase.FindQuickReplyUseCase
-import org.telegram.messenger.feature.quickreplies.domain.usecase.GetQuickRepliesUseCase
-import org.telegram.messenger.feature.quickreplies.domain.usecase.LoadQuickRepliesUseCase
-import org.telegram.messenger.feature.quickreplies.domain.usecase.ObserveQuickRepliesUseCase
-import org.telegram.messenger.feature.quickreplies.domain.usecase.RenameQuickReplyUseCase
-import org.telegram.messenger.feature.quickreplies.domain.usecase.ReorderQuickRepliesUseCase
-import org.telegram.messenger.feature.quickreplies.domain.usecase.SendQuickReplyUseCase
-import org.telegram.messenger.feature.quickreplies.presentation.QuickRepliesViewModel
+import org.telegram.messenger.feature.business.quickreplies.data.repository.LegacyQuickRepliesRepository
+import org.telegram.messenger.feature.business.quickreplies.domain.repository.QuickRepliesRepository
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.CanAddNewQuickReplyUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.CheckQuickReplyNameBusyUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.DeleteQuickRepliesUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.FindQuickReplyUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.GetQuickRepliesUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.LoadQuickRepliesUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.ObserveQuickRepliesUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.RenameQuickReplyUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.ReorderQuickRepliesUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.SendQuickReplyUseCase
+import org.telegram.messenger.feature.business.quickreplies.presentation.QuickRepliesViewModel
 import org.telegram.messenger.feature.social.joinrequests.data.repository.LegacyJoinRequestsRepository
 import org.telegram.messenger.feature.social.joinrequests.domain.repository.JoinRequestsRepository
 import org.telegram.messenger.feature.social.joinrequests.domain.usecase.ApproveAllJoinRequestsUseCase
@@ -309,15 +309,15 @@ import org.telegram.messenger.feature.social.joinrequests.domain.usecase.GetPend
 import org.telegram.messenger.feature.social.joinrequests.domain.usecase.LoadJoinRequestsUseCase
 import org.telegram.messenger.feature.social.joinrequests.domain.usecase.ObservePendingRequestsUseCase
 import org.telegram.messenger.feature.social.joinrequests.presentation.JoinRequestsViewModel
-import org.telegram.messenger.feature.factcheck.data.repository.LegacyFactCheckRepository
-import org.telegram.messenger.feature.factcheck.domain.repository.FactCheckRepository
-import org.telegram.messenger.feature.factcheck.domain.usecase.ApplyFactCheckUseCase
-import org.telegram.messenger.feature.factcheck.domain.usecase.DeleteFactCheckUseCase
-import org.telegram.messenger.feature.factcheck.domain.usecase.GetFactCheckLimitUseCase
-import org.telegram.messenger.feature.factcheck.domain.usecase.GetFactCheckUseCase
-import org.telegram.messenger.feature.factcheck.domain.usecase.LoadFactCheckUseCase
-import org.telegram.messenger.feature.factcheck.domain.usecase.ObserveFactCheckLoadedUseCase
-import org.telegram.messenger.feature.factcheck.presentation.FactCheckViewModel
+import org.telegram.messenger.feature.messaging.factcheck.data.repository.LegacyFactCheckRepository
+import org.telegram.messenger.feature.messaging.factcheck.domain.repository.FactCheckRepository
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.ApplyFactCheckUseCase
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.DeleteFactCheckUseCase
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.GetFactCheckLimitUseCase
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.GetFactCheckUseCase
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.LoadFactCheckUseCase
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.ObserveFactCheckLoadedUseCase
+import org.telegram.messenger.feature.messaging.factcheck.presentation.FactCheckViewModel
 import org.telegram.messenger.feature.social.birthdays.data.repository.LegacyBirthdaysRepository
 import org.telegram.messenger.feature.social.birthdays.domain.repository.BirthdaysRepository
 import org.telegram.messenger.feature.social.birthdays.domain.usecase.CheckBirthdaysUseCase
@@ -327,23 +327,23 @@ import org.telegram.messenger.feature.social.birthdays.domain.usecase.HideTodayB
 import org.telegram.messenger.feature.social.birthdays.domain.usecase.IsBirthdayTodayUseCase
 import org.telegram.messenger.feature.social.birthdays.domain.usecase.ObserveBirthdaysUseCase
 import org.telegram.messenger.feature.social.birthdays.presentation.BirthdaysViewModel
-import org.telegram.messenger.feature.chattheme.data.repository.LegacyChatThemeRepository
-import org.telegram.messenger.feature.chattheme.domain.repository.ChatThemeRepository
-import org.telegram.messenger.feature.chattheme.domain.usecase.GetAvailableChatThemesUseCase
-import org.telegram.messenger.feature.chattheme.domain.usecase.GetDialogThemeStateUseCase
-import org.telegram.messenger.feature.chattheme.domain.usecase.ObserveDialogThemeUseCase
-import org.telegram.messenger.feature.chattheme.domain.usecase.ResetDialogThemeUseCase
-import org.telegram.messenger.feature.chattheme.domain.usecase.SaveChatWallpaperUseCase
-import org.telegram.messenger.feature.chattheme.domain.usecase.SetDialogThemeUseCase
-import org.telegram.messenger.feature.chattheme.presentation.ChatThemeViewModel
-import org.telegram.messenger.feature.passkeys.data.repository.LegacyPasskeysRepository
-import org.telegram.messenger.feature.passkeys.domain.repository.PasskeysRepository
-import org.telegram.messenger.feature.passkeys.domain.usecase.CheckCanAddPasskeyUseCase
-import org.telegram.messenger.feature.passkeys.domain.usecase.DeletePasskeyUseCase
-import org.telegram.messenger.feature.passkeys.domain.usecase.GetPasskeysUseCase
-import org.telegram.messenger.feature.passkeys.domain.usecase.IsPasskeysSupportedUseCase
-import org.telegram.messenger.feature.passkeys.domain.usecase.ObservePasskeysUseCase
-import org.telegram.messenger.feature.passkeys.presentation.PasskeysViewModel
+import org.telegram.messenger.feature.messaging.chattheme.data.repository.LegacyChatThemeRepository
+import org.telegram.messenger.feature.messaging.chattheme.domain.repository.ChatThemeRepository
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.GetAvailableChatThemesUseCase
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.GetDialogThemeStateUseCase
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.ObserveDialogThemeUseCase
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.ResetDialogThemeUseCase
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.SaveChatWallpaperUseCase
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.SetDialogThemeUseCase
+import org.telegram.messenger.feature.messaging.chattheme.presentation.ChatThemeViewModel
+import org.telegram.messenger.feature.security.passkeys.data.repository.LegacyPasskeysRepository
+import org.telegram.messenger.feature.security.passkeys.domain.repository.PasskeysRepository
+import org.telegram.messenger.feature.security.passkeys.domain.usecase.CheckCanAddPasskeyUseCase
+import org.telegram.messenger.feature.security.passkeys.domain.usecase.DeletePasskeyUseCase
+import org.telegram.messenger.feature.security.passkeys.domain.usecase.GetPasskeysUseCase
+import org.telegram.messenger.feature.security.passkeys.domain.usecase.IsPasskeysSupportedUseCase
+import org.telegram.messenger.feature.security.passkeys.domain.usecase.ObservePasskeysUseCase
+import org.telegram.messenger.feature.security.passkeys.presentation.PasskeysViewModel
 import org.telegram.messenger.feature.network.proxy.data.repository.LegacyProxyRepository
 import org.telegram.messenger.feature.network.proxy.domain.repository.ProxyRepository
 import org.telegram.messenger.feature.network.proxy.domain.usecase.AddProxyUseCase
@@ -355,147 +355,147 @@ import org.telegram.messenger.feature.network.proxy.domain.usecase.GetProxySetti
 import org.telegram.messenger.feature.network.proxy.domain.usecase.ObserveProxySettingsUseCase
 import org.telegram.messenger.feature.network.proxy.domain.usecase.ToggleProxyRotationUseCase
 import org.telegram.messenger.feature.network.proxy.presentation.ProxyViewModel
-import org.telegram.messenger.feature.autodelete.data.repository.LegacyAutoDeleteRepository
-import org.telegram.messenger.feature.autodelete.domain.repository.AutoDeleteRepository
-import org.telegram.messenger.feature.autodelete.domain.usecase.GetChatAutoDeleteUseCase
-import org.telegram.messenger.feature.autodelete.domain.usecase.GetGlobalAutoDeleteUseCase
-import org.telegram.messenger.feature.autodelete.domain.usecase.ObserveGlobalAutoDeleteUseCase
-import org.telegram.messenger.feature.autodelete.domain.usecase.SetChatAutoDeleteUseCase
-import org.telegram.messenger.feature.autodelete.domain.usecase.SetChatsAutoDeleteBatchUseCase
-import org.telegram.messenger.feature.autodelete.domain.usecase.SetGlobalAutoDeleteUseCase
-import org.telegram.messenger.feature.autodelete.presentation.AutoDeleteViewModel
-import org.telegram.messenger.feature.unconfirmedauth.data.repository.LegacyUnconfirmedAuthRepository
-import org.telegram.messenger.feature.unconfirmedauth.domain.repository.UnconfirmedAuthRepository
-import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.ClearUnconfirmedAuthsUseCase
-import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.ConfirmAllAuthsUseCase
-import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.ConfirmAuthUseCase
-import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.DenyAllAuthsUseCase
-import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.DenyAuthUseCase
-import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.GetUnconfirmedAuthsUseCase
-import org.telegram.messenger.feature.unconfirmedauth.domain.usecase.ObserveUnconfirmedAuthsUseCase
-import org.telegram.messenger.feature.unconfirmedauth.presentation.UnconfirmedAuthViewModel
-import org.telegram.messenger.feature.stargifts.data.repository.LegacyStarGiftsRepository
-import org.telegram.messenger.feature.stargifts.domain.repository.StarGiftsRepository
-import org.telegram.messenger.feature.stargifts.domain.usecase.GetStarGiftByIdUseCase
-import org.telegram.messenger.feature.stargifts.domain.usecase.GetStarGiftsCatalogUseCase
-import org.telegram.messenger.feature.stargifts.domain.usecase.LoadProfileGiftsUseCase
-import org.telegram.messenger.feature.stargifts.domain.usecase.ObserveProfileGiftsUseCase
-import org.telegram.messenger.feature.stargifts.domain.usecase.ObserveStarGiftsCatalogUseCase
-import org.telegram.messenger.feature.stargifts.domain.usecase.ToggleHideProfileGiftUseCase
-import org.telegram.messenger.feature.stargifts.domain.usecase.TogglePinProfileGiftUseCase
-import org.telegram.messenger.feature.stargifts.presentation.StarGiftsViewModel
-import org.telegram.messenger.feature.aitones.data.repository.LegacyAiTonesRepository
-import org.telegram.messenger.feature.aitones.domain.repository.AiTonesRepository
-import org.telegram.messenger.feature.aitones.domain.usecase.AddAiToneUseCase
-import org.telegram.messenger.feature.aitones.domain.usecase.EditAiToneUseCase
-import org.telegram.messenger.feature.aitones.domain.usecase.GetAiTonesStateUseCase
-import org.telegram.messenger.feature.aitones.domain.usecase.LoadAiTonesUseCase
-import org.telegram.messenger.feature.aitones.domain.usecase.ObserveAiTonesUseCase
-import org.telegram.messenger.feature.aitones.domain.usecase.RemoveAiToneUseCase
-import org.telegram.messenger.feature.aitones.domain.usecase.UnsaveAiToneUseCase
-import org.telegram.messenger.feature.aitones.presentation.AiTonesViewModel
-import org.telegram.messenger.feature.captcha.data.repository.LegacyCaptchaRepository
-import org.telegram.messenger.feature.captcha.domain.repository.CaptchaRepository
-import org.telegram.messenger.feature.captcha.domain.usecase.CancelCaptchaUseCase
-import org.telegram.messenger.feature.captcha.domain.usecase.GetActiveCaptchaRequestsUseCase
-import org.telegram.messenger.feature.captcha.domain.usecase.ObserveActiveCaptchaRequestsUseCase
-import org.telegram.messenger.feature.captcha.domain.usecase.SubmitCaptchaResultUseCase
-import org.telegram.messenger.feature.captcha.domain.usecase.VerifyCaptchaUseCase
-import org.telegram.messenger.feature.captcha.presentation.CaptchaViewModel
-import org.telegram.messenger.feature.hashtagsearch.data.repository.LegacyHashtagSearchRepository
-import org.telegram.messenger.feature.hashtagsearch.domain.repository.HashtagSearchRepository
-import org.telegram.messenger.feature.hashtagsearch.domain.usecase.AddHashtagToHistoryUseCase
-import org.telegram.messenger.feature.hashtagsearch.domain.usecase.ClearHashtagHistoryUseCase
-import org.telegram.messenger.feature.hashtagsearch.domain.usecase.ClearHashtagSearchResultsUseCase
-import org.telegram.messenger.feature.hashtagsearch.domain.usecase.GetHashtagHistoryUseCase
-import org.telegram.messenger.feature.hashtagsearch.domain.usecase.JumpToHashtagMessageUseCase
-import org.telegram.messenger.feature.hashtagsearch.domain.usecase.ObserveHashtagHistoryUseCase
-import org.telegram.messenger.feature.hashtagsearch.domain.usecase.ObserveHashtagSearchResultUseCase
-import org.telegram.messenger.feature.hashtagsearch.domain.usecase.RemoveHashtagFromHistoryUseCase
-import org.telegram.messenger.feature.hashtagsearch.domain.usecase.SearchHashtagUseCase
-import org.telegram.messenger.feature.hashtagsearch.presentation.HashtagSearchViewModel
-import org.telegram.messenger.feature.biometrics.data.repository.LegacyBiometricsRepository
-import org.telegram.messenger.feature.biometrics.domain.repository.BiometricsRepository
-import org.telegram.messenger.feature.biometrics.domain.usecase.CheckBiometricKeyReadyUseCase
-import org.telegram.messenger.feature.biometrics.domain.usecase.DeleteInvalidBiometricKeyUseCase
-import org.telegram.messenger.feature.biometrics.domain.usecase.GetBiometricKeyStateUseCase
-import org.telegram.messenger.feature.biometrics.domain.usecase.HasDeviceBiometricsChangedUseCase
-import org.telegram.messenger.feature.biometrics.domain.usecase.IsBiometricKeyReadyUseCase
-import org.telegram.messenger.feature.biometrics.domain.usecase.ObserveBiometricKeyStateUseCase
-import org.telegram.messenger.feature.biometrics.presentation.BiometricsViewModel
-import org.telegram.messenger.feature.giftauctions.data.repository.LegacyGiftAuctionsRepository
-import org.telegram.messenger.feature.giftauctions.domain.repository.GiftAuctionsRepository
-import org.telegram.messenger.feature.giftauctions.domain.usecase.GetActiveAuctionsUseCase
-import org.telegram.messenger.feature.giftauctions.domain.usecase.GetAuctionByIdUseCase
-import org.telegram.messenger.feature.giftauctions.domain.usecase.GetAuctionBySlugUseCase
-import org.telegram.messenger.feature.giftauctions.domain.usecase.LoadAuctionAcquiredGiftsUseCase
-import org.telegram.messenger.feature.giftauctions.domain.usecase.ObserveActiveAuctionsUseCase
-import org.telegram.messenger.feature.giftauctions.domain.usecase.ObserveAuctionUseCase
-import org.telegram.messenger.feature.giftauctions.domain.usecase.RefreshActiveAuctionsUseCase
-import org.telegram.messenger.feature.giftauctions.domain.usecase.SendAuctionBidUseCase
-import org.telegram.messenger.feature.giftauctions.presentation.GiftAuctionsViewModel
-import org.telegram.messenger.feature.businesslinks.data.repository.LegacyBusinessLinksRepository
-import org.telegram.messenger.feature.businesslinks.domain.repository.BusinessLinksRepository
-import org.telegram.messenger.feature.businesslinks.domain.usecase.CanAddNewBusinessLinkUseCase
-import org.telegram.messenger.feature.businesslinks.domain.usecase.CreateBusinessLinkUseCase
-import org.telegram.messenger.feature.businesslinks.domain.usecase.DeleteBusinessLinkUseCase
-import org.telegram.messenger.feature.businesslinks.domain.usecase.EditBusinessLinkUseCase
-import org.telegram.messenger.feature.businesslinks.domain.usecase.FindBusinessLinkUseCase
-import org.telegram.messenger.feature.businesslinks.domain.usecase.GetBusinessLinksUseCase
-import org.telegram.messenger.feature.businesslinks.domain.usecase.LoadBusinessLinksUseCase
-import org.telegram.messenger.feature.businesslinks.domain.usecase.ObserveBusinessLinksUseCase
-import org.telegram.messenger.feature.businesslinks.presentation.BusinessLinksViewModel
-import org.telegram.messenger.feature.businessbots.data.repository.LegacyBusinessBotsRepository
-import org.telegram.messenger.feature.businessbots.domain.repository.BusinessBotsRepository
-import org.telegram.messenger.feature.businessbots.domain.usecase.DeleteConnectedBotUseCase
-import org.telegram.messenger.feature.businessbots.domain.usecase.FindConnectedBotUseCase
-import org.telegram.messenger.feature.businessbots.domain.usecase.GetConnectedBotsUseCase
-import org.telegram.messenger.feature.businessbots.domain.usecase.LoadConnectedBotsUseCase
-import org.telegram.messenger.feature.businessbots.domain.usecase.ObserveConnectedBotsUseCase
-import org.telegram.messenger.feature.businessbots.domain.usecase.UpdateConnectedBotUseCase
-import org.telegram.messenger.feature.businessbots.presentation.BusinessBotsViewModel
-import org.telegram.messenger.feature.timezones.data.repository.LegacyTimezonesRepository
-import org.telegram.messenger.feature.timezones.domain.repository.TimezonesRepository
-import org.telegram.messenger.feature.timezones.domain.usecase.FindTimezoneUseCase
-import org.telegram.messenger.feature.timezones.domain.usecase.GetSystemTimezoneIdUseCase
-import org.telegram.messenger.feature.timezones.domain.usecase.GetTimezoneNameUseCase
-import org.telegram.messenger.feature.timezones.domain.usecase.GetTimezonesUseCase
-import org.telegram.messenger.feature.timezones.domain.usecase.LoadTimezonesUseCase
-import org.telegram.messenger.feature.timezones.domain.usecase.ObserveTimezonesUseCase
-import org.telegram.messenger.feature.timezones.presentation.TimezonesViewModel
-import org.telegram.messenger.feature.botstars.data.repository.LegacyBotStarsRepository
-import org.telegram.messenger.feature.botstars.domain.repository.BotStarsRepository
-import org.telegram.messenger.feature.botstars.domain.usecase.GetAdminedBotsAndChannelsUseCase
-import org.telegram.messenger.feature.botstars.domain.usecase.GetBotStarsStatsUseCase
-import org.telegram.messenger.feature.botstars.domain.usecase.GetTonStatsUseCase
-import org.telegram.messenger.feature.botstars.domain.usecase.LoadBotTransactionsUseCase
-import org.telegram.messenger.feature.botstars.domain.usecase.LoadConnectedStarBotsUseCase
-import org.telegram.messenger.feature.botstars.domain.usecase.LoadSuggestedStarBotsUseCase
-import org.telegram.messenger.feature.botstars.domain.usecase.ObserveBotStarsStatsUseCase
-import org.telegram.messenger.feature.botstars.domain.usecase.ObserveBotTransactionsUseCase
-import org.telegram.messenger.feature.botstars.domain.usecase.ObserveConnectedStarBotsUseCase
-import org.telegram.messenger.feature.botstars.domain.usecase.ObserveTonStatsUseCase
-import org.telegram.messenger.feature.botstars.presentation.BotStarsViewModel
-import org.telegram.messenger.feature.billing.data.repository.LegacyBillingRepository
-import org.telegram.messenger.feature.billing.domain.repository.BillingRepository
-import org.telegram.messenger.feature.billing.domain.usecase.FormatCurrencyUseCase
-import org.telegram.messenger.feature.billing.domain.usecase.GetBillingStateUseCase
-import org.telegram.messenger.feature.billing.domain.usecase.GetCurrencyExpUseCase
-import org.telegram.messenger.feature.billing.domain.usecase.GetPremiumProductUseCase
-import org.telegram.messenger.feature.billing.domain.usecase.ManageSubscriptionUseCase
-import org.telegram.messenger.feature.billing.domain.usecase.ObserveBillingStateUseCase
-import org.telegram.messenger.feature.billing.domain.usecase.QueryBillingPurchasesUseCase
-import org.telegram.messenger.feature.billing.domain.usecase.StartBillingConnectionUseCase
-import org.telegram.messenger.feature.billing.presentation.BillingViewModel
-import org.telegram.messenger.feature.launchericon.data.repository.LegacyLauncherIconRepository
-import org.telegram.messenger.feature.launchericon.domain.repository.LauncherIconRepository
-import org.telegram.messenger.feature.launchericon.domain.usecase.FixLauncherIconIfNeededUseCase
-import org.telegram.messenger.feature.launchericon.domain.usecase.GetActiveLauncherIconUseCase
-import org.telegram.messenger.feature.launchericon.domain.usecase.GetLauncherIconsUseCase
-import org.telegram.messenger.feature.launchericon.domain.usecase.IsLauncherIconEnabledUseCase
-import org.telegram.messenger.feature.launchericon.domain.usecase.ObserveLauncherIconsUseCase
-import org.telegram.messenger.feature.launchericon.domain.usecase.SetLauncherIconUseCase
-import org.telegram.messenger.feature.launchericon.presentation.LauncherIconViewModel
+import org.telegram.messenger.feature.messaging.autodelete.data.repository.LegacyAutoDeleteRepository
+import org.telegram.messenger.feature.messaging.autodelete.domain.repository.AutoDeleteRepository
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.GetChatAutoDeleteUseCase
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.GetGlobalAutoDeleteUseCase
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.ObserveGlobalAutoDeleteUseCase
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetChatAutoDeleteUseCase
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetChatsAutoDeleteBatchUseCase
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetGlobalAutoDeleteUseCase
+import org.telegram.messenger.feature.messaging.autodelete.presentation.AutoDeleteViewModel
+import org.telegram.messenger.feature.security.unconfirmedauth.data.repository.LegacyUnconfirmedAuthRepository
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.repository.UnconfirmedAuthRepository
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ClearUnconfirmedAuthsUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ConfirmAllAuthsUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ConfirmAuthUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.DenyAllAuthsUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.DenyAuthUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.GetUnconfirmedAuthsUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ObserveUnconfirmedAuthsUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.presentation.UnconfirmedAuthViewModel
+import org.telegram.messenger.feature.business.stargifts.data.repository.LegacyStarGiftsRepository
+import org.telegram.messenger.feature.business.stargifts.domain.repository.StarGiftsRepository
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.GetStarGiftByIdUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.GetStarGiftsCatalogUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.LoadProfileGiftsUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.ObserveProfileGiftsUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.ObserveStarGiftsCatalogUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.ToggleHideProfileGiftUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.TogglePinProfileGiftUseCase
+import org.telegram.messenger.feature.business.stargifts.presentation.StarGiftsViewModel
+import org.telegram.messenger.feature.messaging.aitones.data.repository.LegacyAiTonesRepository
+import org.telegram.messenger.feature.messaging.aitones.domain.repository.AiTonesRepository
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.AddAiToneUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.EditAiToneUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.GetAiTonesStateUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.LoadAiTonesUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.ObserveAiTonesUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.RemoveAiToneUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.UnsaveAiToneUseCase
+import org.telegram.messenger.feature.messaging.aitones.presentation.AiTonesViewModel
+import org.telegram.messenger.feature.security.captcha.data.repository.LegacyCaptchaRepository
+import org.telegram.messenger.feature.security.captcha.domain.repository.CaptchaRepository
+import org.telegram.messenger.feature.security.captcha.domain.usecase.CancelCaptchaUseCase
+import org.telegram.messenger.feature.security.captcha.domain.usecase.GetActiveCaptchaRequestsUseCase
+import org.telegram.messenger.feature.security.captcha.domain.usecase.ObserveActiveCaptchaRequestsUseCase
+import org.telegram.messenger.feature.security.captcha.domain.usecase.SubmitCaptchaResultUseCase
+import org.telegram.messenger.feature.security.captcha.domain.usecase.VerifyCaptchaUseCase
+import org.telegram.messenger.feature.security.captcha.presentation.CaptchaViewModel
+import org.telegram.messenger.feature.messaging.hashtagsearch.data.repository.LegacyHashtagSearchRepository
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.repository.HashtagSearchRepository
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.AddHashtagToHistoryUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ClearHashtagHistoryUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ClearHashtagSearchResultsUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.GetHashtagHistoryUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.JumpToHashtagMessageUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ObserveHashtagHistoryUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ObserveHashtagSearchResultUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.RemoveHashtagFromHistoryUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.SearchHashtagUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.presentation.HashtagSearchViewModel
+import org.telegram.messenger.feature.security.biometrics.data.repository.LegacyBiometricsRepository
+import org.telegram.messenger.feature.security.biometrics.domain.repository.BiometricsRepository
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.CheckBiometricKeyReadyUseCase
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.DeleteInvalidBiometricKeyUseCase
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.GetBiometricKeyStateUseCase
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.HasDeviceBiometricsChangedUseCase
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.IsBiometricKeyReadyUseCase
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.ObserveBiometricKeyStateUseCase
+import org.telegram.messenger.feature.security.biometrics.presentation.BiometricsViewModel
+import org.telegram.messenger.feature.business.giftauctions.data.repository.LegacyGiftAuctionsRepository
+import org.telegram.messenger.feature.business.giftauctions.domain.repository.GiftAuctionsRepository
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.GetActiveAuctionsUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.GetAuctionByIdUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.GetAuctionBySlugUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.LoadAuctionAcquiredGiftsUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.ObserveActiveAuctionsUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.ObserveAuctionUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.RefreshActiveAuctionsUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.SendAuctionBidUseCase
+import org.telegram.messenger.feature.business.giftauctions.presentation.GiftAuctionsViewModel
+import org.telegram.messenger.feature.business.businesslinks.data.repository.LegacyBusinessLinksRepository
+import org.telegram.messenger.feature.business.businesslinks.domain.repository.BusinessLinksRepository
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.CanAddNewBusinessLinkUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.CreateBusinessLinkUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.DeleteBusinessLinkUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.EditBusinessLinkUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.FindBusinessLinkUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.GetBusinessLinksUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.LoadBusinessLinksUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.ObserveBusinessLinksUseCase
+import org.telegram.messenger.feature.business.businesslinks.presentation.BusinessLinksViewModel
+import org.telegram.messenger.feature.business.businessbots.data.repository.LegacyBusinessBotsRepository
+import org.telegram.messenger.feature.business.businessbots.domain.repository.BusinessBotsRepository
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.DeleteConnectedBotUseCase
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.FindConnectedBotUseCase
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.GetConnectedBotsUseCase
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.LoadConnectedBotsUseCase
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.ObserveConnectedBotsUseCase
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.UpdateConnectedBotUseCase
+import org.telegram.messenger.feature.business.businessbots.presentation.BusinessBotsViewModel
+import org.telegram.messenger.feature.business.timezones.data.repository.LegacyTimezonesRepository
+import org.telegram.messenger.feature.business.timezones.domain.repository.TimezonesRepository
+import org.telegram.messenger.feature.business.timezones.domain.usecase.FindTimezoneUseCase
+import org.telegram.messenger.feature.business.timezones.domain.usecase.GetSystemTimezoneIdUseCase
+import org.telegram.messenger.feature.business.timezones.domain.usecase.GetTimezoneNameUseCase
+import org.telegram.messenger.feature.business.timezones.domain.usecase.GetTimezonesUseCase
+import org.telegram.messenger.feature.business.timezones.domain.usecase.LoadTimezonesUseCase
+import org.telegram.messenger.feature.business.timezones.domain.usecase.ObserveTimezonesUseCase
+import org.telegram.messenger.feature.business.timezones.presentation.TimezonesViewModel
+import org.telegram.messenger.feature.business.botstars.data.repository.LegacyBotStarsRepository
+import org.telegram.messenger.feature.business.botstars.domain.repository.BotStarsRepository
+import org.telegram.messenger.feature.business.botstars.domain.usecase.GetAdminedBotsAndChannelsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.GetBotStarsStatsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.GetTonStatsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.LoadBotTransactionsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.LoadConnectedStarBotsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.LoadSuggestedStarBotsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveBotStarsStatsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveBotTransactionsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveConnectedStarBotsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveTonStatsUseCase
+import org.telegram.messenger.feature.business.botstars.presentation.BotStarsViewModel
+import org.telegram.messenger.feature.business.billing.data.repository.LegacyBillingRepository
+import org.telegram.messenger.feature.business.billing.domain.repository.BillingRepository
+import org.telegram.messenger.feature.business.billing.domain.usecase.FormatCurrencyUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.GetBillingStateUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.GetCurrencyExpUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.GetPremiumProductUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.ManageSubscriptionUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.ObserveBillingStateUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.QueryBillingPurchasesUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.StartBillingConnectionUseCase
+import org.telegram.messenger.feature.business.billing.presentation.BillingViewModel
+import org.telegram.messenger.feature.system.launchericon.data.repository.LegacyLauncherIconRepository
+import org.telegram.messenger.feature.system.launchericon.domain.repository.LauncherIconRepository
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.FixLauncherIconIfNeededUseCase
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.GetActiveLauncherIconUseCase
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.GetLauncherIconsUseCase
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.IsLauncherIconEnabledUseCase
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.ObserveLauncherIconsUseCase
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.SetLauncherIconUseCase
+import org.telegram.messenger.feature.system.launchericon.presentation.LauncherIconViewModel
 import org.telegram.messenger.feature.network.push.data.repository.LegacyPushRepository
 import org.telegram.messenger.feature.network.push.domain.repository.PushRepository
 import org.telegram.messenger.feature.network.push.domain.usecase.GetPushStatusUseCase
@@ -505,444 +505,444 @@ import org.telegram.messenger.feature.network.push.domain.usecase.RegisterPushTo
 import org.telegram.messenger.feature.network.push.domain.usecase.RequestPushTokenUseCase
 import org.telegram.messenger.feature.network.push.domain.usecase.ResetPushTokenUseCase
 import org.telegram.messenger.feature.network.push.presentation.PushViewModel
-import org.telegram.messenger.feature.chromecast.data.repository.LegacyChromecastRepository
-import org.telegram.messenger.feature.chromecast.domain.repository.ChromecastRepository
-import org.telegram.messenger.feature.chromecast.domain.usecase.CastMediaUseCase
-import org.telegram.messenger.feature.chromecast.domain.usecase.GetChromecastStateUseCase
-import org.telegram.messenger.feature.chromecast.domain.usecase.IsCastingUseCase
-import org.telegram.messenger.feature.chromecast.domain.usecase.IsMediaPlayingOnCastUseCase
-import org.telegram.messenger.feature.chromecast.domain.usecase.ObserveChromecastStateUseCase
-import org.telegram.messenger.feature.chromecast.domain.usecase.SetCastCoverFileUseCase
-import org.telegram.messenger.feature.chromecast.domain.usecase.StopCastingUseCase
-import org.telegram.messenger.feature.chromecast.presentation.ChromecastViewModel
-import org.telegram.messenger.feature.hints.data.repository.LegacyHintsRepository
-import org.telegram.messenger.feature.hints.domain.repository.HintsRepository
-import org.telegram.messenger.feature.hints.domain.usecase.DoNotShowAgainHintUseCase
-import org.telegram.messenger.feature.hints.domain.usecase.GetHintUseCase
-import org.telegram.messenger.feature.hints.domain.usecase.GetHintsStateUseCase
-import org.telegram.messenger.feature.hints.domain.usecase.IncrementHintUseCase
-import org.telegram.messenger.feature.hints.domain.usecase.ObserveHintsUseCase
-import org.telegram.messenger.feature.hints.domain.usecase.ResetAllHintsUseCase
-import org.telegram.messenger.feature.hints.domain.usecase.ResetHintUseCase
-import org.telegram.messenger.feature.hints.domain.usecase.ShouldShowHintUseCase
-import org.telegram.messenger.feature.hints.presentation.HintsViewModel
-import org.telegram.messenger.feature.groupcallmsg.data.repository.LegacyGroupCallMessagesRepository
-import org.telegram.messenger.feature.groupcallmsg.domain.repository.GroupCallMessagesRepository
-import org.telegram.messenger.feature.groupcallmsg.domain.usecase.ClearGroupCallMessagesUseCase
-import org.telegram.messenger.feature.groupcallmsg.domain.usecase.GetGroupCallMessagesUseCase
-import org.telegram.messenger.feature.groupcallmsg.domain.usecase.ObserveGroupCallMessagesUseCase
-import org.telegram.messenger.feature.groupcallmsg.domain.usecase.PopGroupCallMessageUseCase
-import org.telegram.messenger.feature.groupcallmsg.domain.usecase.SendGroupCallMessageUseCase
-import org.telegram.messenger.feature.groupcallmsg.presentation.GroupCallMessagesViewModel
-import org.telegram.messenger.feature.gallerysave.data.repository.LegacyGallerySaveRepository
-import org.telegram.messenger.feature.gallerysave.domain.repository.GallerySaveRepository
-import org.telegram.messenger.feature.gallerysave.domain.usecase.GetGallerySaveConfigUseCase
-import org.telegram.messenger.feature.gallerysave.domain.usecase.GetGallerySaveExceptionsUseCase
-import org.telegram.messenger.feature.gallerysave.domain.usecase.GetGallerySaveSettingsUseCase
-import org.telegram.messenger.feature.gallerysave.domain.usecase.ObserveGallerySaveConfigUseCase
-import org.telegram.messenger.feature.gallerysave.domain.usecase.RemoveAllGallerySaveExceptionsUseCase
-import org.telegram.messenger.feature.gallerysave.domain.usecase.RemoveGallerySaveExceptionUseCase
-import org.telegram.messenger.feature.gallerysave.domain.usecase.SetGallerySaveExceptionUseCase
-import org.telegram.messenger.feature.gallerysave.domain.usecase.SetGallerySaveVideoLimitUseCase
-import org.telegram.messenger.feature.gallerysave.domain.usecase.ToggleGallerySavePeerTypeUseCase
-import org.telegram.messenger.feature.gallerysave.domain.usecase.UpdateGallerySaveSettingsUseCase
-import org.telegram.messenger.feature.gallerysave.presentation.GallerySaveViewModel
-import org.telegram.messenger.feature.refreshrate.data.repository.LegacyRefreshRateRepository
-import org.telegram.messenger.feature.refreshrate.domain.repository.RefreshRateRepository
-import org.telegram.messenger.feature.refreshrate.domain.usecase.GetDisplayRefreshModesUseCase
-import org.telegram.messenger.feature.refreshrate.domain.usecase.GetRefreshRateStateUseCase
-import org.telegram.messenger.feature.refreshrate.domain.usecase.ObserveRefreshRateStateUseCase
-import org.telegram.messenger.feature.refreshrate.domain.usecase.RecordFrameMetricUseCase
-import org.telegram.messenger.feature.refreshrate.domain.usecase.ResetRefreshRateStatsUseCase
-import org.telegram.messenger.feature.refreshrate.domain.usecase.SetPreferredRefreshRateModeUseCase
-import org.telegram.messenger.feature.refreshrate.domain.usecase.StartRefreshRateTrackingUseCase
-import org.telegram.messenger.feature.refreshrate.domain.usecase.StopRefreshRateTrackingUseCase
-import org.telegram.messenger.feature.refreshrate.domain.usecase.ToggleAdaptiveRefreshRateUseCase
-import org.telegram.messenger.feature.refreshrate.presentation.RefreshRateViewModel
-import org.telegram.messenger.feature.chatmeta.data.repository.LegacyChatMessagesMetadataRepository
-import org.telegram.messenger.feature.chatmeta.domain.repository.ChatMessagesMetadataRepository
-import org.telegram.messenger.feature.chatmeta.domain.usecase.CancelPendingMetadataRequestsUseCase
-import org.telegram.messenger.feature.chatmeta.domain.usecase.CheckMessagesMetadataUseCase
-import org.telegram.messenger.feature.chatmeta.domain.usecase.GetChatMetadataStatsUseCase
-import org.telegram.messenger.feature.chatmeta.domain.usecase.LoadMessagesExtendedMediaUseCase
-import org.telegram.messenger.feature.chatmeta.domain.usecase.LoadMessagesReactionsUseCase
-import org.telegram.messenger.feature.chatmeta.domain.usecase.ObserveChatMetadataStatsUseCase
-import org.telegram.messenger.feature.chatmeta.presentation.ChatMetadataViewModel
-import org.telegram.messenger.feature.pip.data.repository.LegacyPipRepository
-import org.telegram.messenger.feature.pip.domain.repository.PipRepository
-import org.telegram.messenger.feature.pip.domain.usecase.DispatchPipStateUseCase
-import org.telegram.messenger.feature.pip.domain.usecase.EvaluatePipEligibilityUseCase
-import org.telegram.messenger.feature.pip.domain.usecase.GetPipSessionUseCase
-import org.telegram.messenger.feature.pip.domain.usecase.ObservePipSessionUseCase
-import org.telegram.messenger.feature.pip.domain.usecase.RegisterPipSourceUseCase
-import org.telegram.messenger.feature.pip.domain.usecase.TriggerPipActionUseCase
-import org.telegram.messenger.feature.pip.domain.usecase.UnregisterPipSourceUseCase
-import org.telegram.messenger.feature.pip.domain.usecase.UpdatePipSourceStateUseCase
-import org.telegram.messenger.feature.pip.presentation.PipViewModel
-import org.telegram.messenger.feature.drafts.data.repository.LegacyDraftsRepository
-import org.telegram.messenger.feature.drafts.domain.repository.DraftsRepository
-import org.telegram.messenger.feature.drafts.domain.usecase.CleanupExpiredDraftsUseCase
-import org.telegram.messenger.feature.drafts.domain.usecase.DeleteDraftUseCase
-import org.telegram.messenger.feature.drafts.domain.usecase.DeleteForEditUseCase
-import org.telegram.messenger.feature.drafts.domain.usecase.GetDraftForEditUseCase
-import org.telegram.messenger.feature.drafts.domain.usecase.GetDraftsStateUseCase
-import org.telegram.messenger.feature.drafts.domain.usecase.LoadDraftsUseCase
-import org.telegram.messenger.feature.drafts.domain.usecase.ObserveDraftsStateUseCase
-import org.telegram.messenger.feature.drafts.domain.usecase.SaveDraftUseCase
-import org.telegram.messenger.feature.drafts.presentation.DraftsViewModel
-import org.telegram.messenger.feature.fileref.data.repository.LegacyFileRefRepository
-import org.telegram.messenger.feature.fileref.domain.repository.FileRefRepository
-import org.telegram.messenger.feature.fileref.domain.usecase.CancelFileRefRequestUseCase
-import org.telegram.messenger.feature.fileref.domain.usecase.ClearFileRefCacheUseCase
-import org.telegram.messenger.feature.fileref.domain.usecase.GetFileRefStatsUseCase
-import org.telegram.messenger.feature.fileref.domain.usecase.NotifyReferenceRenewedUseCase
-import org.telegram.messenger.feature.fileref.domain.usecase.ObserveFileRefStatsUseCase
-import org.telegram.messenger.feature.fileref.domain.usecase.RequestReferenceRenewalUseCase
-import org.telegram.messenger.feature.fileref.presentation.FileRefViewModel
-import org.telegram.messenger.feature.camera.data.repository.LegacyCameraRepository
-import org.telegram.messenger.feature.camera.domain.repository.CameraRepository
-import org.telegram.messenger.feature.camera.domain.usecase.ChooseOptimalResolutionUseCase
-import org.telegram.messenger.feature.camera.domain.usecase.GetCameraStateUseCase
-import org.telegram.messenger.feature.camera.domain.usecase.InitCamerasUseCase
-import org.telegram.messenger.feature.camera.domain.usecase.NotifyCameraRecordingUseCase
-import org.telegram.messenger.feature.camera.domain.usecase.ObserveCameraStateUseCase
-import org.telegram.messenger.feature.camera.domain.usecase.SelectCameraUseCase
-import org.telegram.messenger.feature.camera.domain.usecase.SetCameraFlashModeUseCase
-import org.telegram.messenger.feature.camera.domain.usecase.SwitchCameraUseCase
-import org.telegram.messenger.feature.camera.domain.usecase.ToggleMirrorFrontCameraUseCase
-import org.telegram.messenger.feature.camera.presentation.CameraViewModel
-import org.telegram.messenger.feature.cachebychats.data.repository.LegacyCacheByChatsRepository
-import org.telegram.messenger.feature.cachebychats.domain.repository.CacheByChatsRepository
-import org.telegram.messenger.feature.cachebychats.domain.usecase.ClearKeepMediaExceptionsUseCase
-import org.telegram.messenger.feature.cachebychats.domain.usecase.GetCacheByChatsConfigUseCase
-import org.telegram.messenger.feature.cachebychats.domain.usecase.ObserveCacheByChatsConfigUseCase
-import org.telegram.messenger.feature.cachebychats.domain.usecase.RemoveKeepMediaExceptionUseCase
-import org.telegram.messenger.feature.cachebychats.domain.usecase.SetKeepMediaDurationUseCase
-import org.telegram.messenger.feature.cachebychats.domain.usecase.SetKeepMediaExceptionUseCase
-import org.telegram.messenger.feature.cachebychats.presentation.CacheByChatsViewModel
-import org.telegram.messenger.feature.draftmeasure.data.repository.LegacyDraftMeasureRepository
-import org.telegram.messenger.feature.draftmeasure.domain.repository.DraftMeasureRepository
-import org.telegram.messenger.feature.draftmeasure.domain.usecase.CalculateDraftMeasureOverrideUseCase
-import org.telegram.messenger.feature.draftmeasure.domain.usecase.GetDraftMeasureConfigUseCase
-import org.telegram.messenger.feature.draftmeasure.domain.usecase.ObserveDraftMeasureConfigUseCase
-import org.telegram.messenger.feature.draftmeasure.domain.usecase.OnDraftMessageIdChangedUseCase
-import org.telegram.messenger.feature.draftmeasure.domain.usecase.ResetDraftMeasureTargetUseCase
-import org.telegram.messenger.feature.draftmeasure.domain.usecase.SetDraftMeasureTargetUseCase
-import org.telegram.messenger.feature.draftmeasure.domain.usecase.SetPreviousMessageHeightUseCase
-import org.telegram.messenger.feature.draftmeasure.presentation.DraftMeasureViewModel
+import org.telegram.messenger.feature.media.chromecast.data.repository.LegacyChromecastRepository
+import org.telegram.messenger.feature.media.chromecast.domain.repository.ChromecastRepository
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.CastMediaUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.GetChromecastStateUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.IsCastingUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.IsMediaPlayingOnCastUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.ObserveChromecastStateUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.SetCastCoverFileUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.StopCastingUseCase
+import org.telegram.messenger.feature.media.chromecast.presentation.ChromecastViewModel
+import org.telegram.messenger.feature.system.hints.data.repository.LegacyHintsRepository
+import org.telegram.messenger.feature.system.hints.domain.repository.HintsRepository
+import org.telegram.messenger.feature.system.hints.domain.usecase.DoNotShowAgainHintUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.GetHintUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.GetHintsStateUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.IncrementHintUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.ObserveHintsUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.ResetAllHintsUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.ResetHintUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.ShouldShowHintUseCase
+import org.telegram.messenger.feature.system.hints.presentation.HintsViewModel
+import org.telegram.messenger.feature.messaging.groupcallmsg.data.repository.LegacyGroupCallMessagesRepository
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.repository.GroupCallMessagesRepository
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.ClearGroupCallMessagesUseCase
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.GetGroupCallMessagesUseCase
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.ObserveGroupCallMessagesUseCase
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.PopGroupCallMessageUseCase
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.SendGroupCallMessageUseCase
+import org.telegram.messenger.feature.messaging.groupcallmsg.presentation.GroupCallMessagesViewModel
+import org.telegram.messenger.feature.media.gallerysave.data.repository.LegacyGallerySaveRepository
+import org.telegram.messenger.feature.media.gallerysave.domain.repository.GallerySaveRepository
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.GetGallerySaveConfigUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.GetGallerySaveExceptionsUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.GetGallerySaveSettingsUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.ObserveGallerySaveConfigUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.RemoveAllGallerySaveExceptionsUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.RemoveGallerySaveExceptionUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.SetGallerySaveExceptionUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.SetGallerySaveVideoLimitUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.ToggleGallerySavePeerTypeUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.UpdateGallerySaveSettingsUseCase
+import org.telegram.messenger.feature.media.gallerysave.presentation.GallerySaveViewModel
+import org.telegram.messenger.feature.system.refreshrate.data.repository.LegacyRefreshRateRepository
+import org.telegram.messenger.feature.system.refreshrate.domain.repository.RefreshRateRepository
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.GetDisplayRefreshModesUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.GetRefreshRateStateUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.ObserveRefreshRateStateUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.RecordFrameMetricUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.ResetRefreshRateStatsUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.SetPreferredRefreshRateModeUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.StartRefreshRateTrackingUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.StopRefreshRateTrackingUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.ToggleAdaptiveRefreshRateUseCase
+import org.telegram.messenger.feature.system.refreshrate.presentation.RefreshRateViewModel
+import org.telegram.messenger.feature.messaging.chatmeta.data.repository.LegacyChatMessagesMetadataRepository
+import org.telegram.messenger.feature.messaging.chatmeta.domain.repository.ChatMessagesMetadataRepository
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.CancelPendingMetadataRequestsUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.CheckMessagesMetadataUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.GetChatMetadataStatsUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.LoadMessagesExtendedMediaUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.LoadMessagesReactionsUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.ObserveChatMetadataStatsUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.presentation.ChatMetadataViewModel
+import org.telegram.messenger.feature.media.pip.data.repository.LegacyPipRepository
+import org.telegram.messenger.feature.media.pip.domain.repository.PipRepository
+import org.telegram.messenger.feature.media.pip.domain.usecase.DispatchPipStateUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.EvaluatePipEligibilityUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.GetPipSessionUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.ObservePipSessionUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.RegisterPipSourceUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.TriggerPipActionUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.UnregisterPipSourceUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.UpdatePipSourceStateUseCase
+import org.telegram.messenger.feature.media.pip.presentation.PipViewModel
+import org.telegram.messenger.feature.messaging.drafts.data.repository.LegacyDraftsRepository
+import org.telegram.messenger.feature.messaging.drafts.domain.repository.DraftsRepository
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.CleanupExpiredDraftsUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.DeleteDraftUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.DeleteForEditUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.GetDraftForEditUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.GetDraftsStateUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.LoadDraftsUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.ObserveDraftsStateUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.SaveDraftUseCase
+import org.telegram.messenger.feature.messaging.drafts.presentation.DraftsViewModel
+import org.telegram.messenger.feature.media.fileref.data.repository.LegacyFileRefRepository
+import org.telegram.messenger.feature.media.fileref.domain.repository.FileRefRepository
+import org.telegram.messenger.feature.media.fileref.domain.usecase.CancelFileRefRequestUseCase
+import org.telegram.messenger.feature.media.fileref.domain.usecase.ClearFileRefCacheUseCase
+import org.telegram.messenger.feature.media.fileref.domain.usecase.GetFileRefStatsUseCase
+import org.telegram.messenger.feature.media.fileref.domain.usecase.NotifyReferenceRenewedUseCase
+import org.telegram.messenger.feature.media.fileref.domain.usecase.ObserveFileRefStatsUseCase
+import org.telegram.messenger.feature.media.fileref.domain.usecase.RequestReferenceRenewalUseCase
+import org.telegram.messenger.feature.media.fileref.presentation.FileRefViewModel
+import org.telegram.messenger.feature.media.camera.data.repository.LegacyCameraRepository
+import org.telegram.messenger.feature.media.camera.domain.repository.CameraRepository
+import org.telegram.messenger.feature.media.camera.domain.usecase.ChooseOptimalResolutionUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.GetCameraStateUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.InitCamerasUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.NotifyCameraRecordingUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.ObserveCameraStateUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.SelectCameraUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.SetCameraFlashModeUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.SwitchCameraUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.ToggleMirrorFrontCameraUseCase
+import org.telegram.messenger.feature.media.camera.presentation.CameraViewModel
+import org.telegram.messenger.feature.media.cachebychats.data.repository.LegacyCacheByChatsRepository
+import org.telegram.messenger.feature.media.cachebychats.domain.repository.CacheByChatsRepository
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.ClearKeepMediaExceptionsUseCase
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.GetCacheByChatsConfigUseCase
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.ObserveCacheByChatsConfigUseCase
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.RemoveKeepMediaExceptionUseCase
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.SetKeepMediaDurationUseCase
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.SetKeepMediaExceptionUseCase
+import org.telegram.messenger.feature.media.cachebychats.presentation.CacheByChatsViewModel
+import org.telegram.messenger.feature.messaging.draftmeasure.data.repository.LegacyDraftMeasureRepository
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.repository.DraftMeasureRepository
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.CalculateDraftMeasureOverrideUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.GetDraftMeasureConfigUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.ObserveDraftMeasureConfigUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.OnDraftMessageIdChangedUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.ResetDraftMeasureTargetUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.SetDraftMeasureTargetUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.SetPreviousMessageHeightUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.presentation.DraftMeasureViewModel
 import org.telegram.ui.Components.chat.ChatActivityDraftMessageMeasureController
-import org.telegram.messenger.feature.bottomviews.data.repository.LegacyBottomViewsVisibilityRepository
-import org.telegram.messenger.feature.bottomviews.domain.repository.BottomViewsVisibilityRepository
-import org.telegram.messenger.feature.bottomviews.domain.usecase.GetBottomViewVisibilityUseCase
-import org.telegram.messenger.feature.bottomviews.domain.usecase.GetBottomViewsStateUseCase
-import org.telegram.messenger.feature.bottomviews.domain.usecase.GetPriorityBottomContainerUseCase
-import org.telegram.messenger.feature.bottomviews.domain.usecase.ObserveBottomViewsVisibilityUseCase
-import org.telegram.messenger.feature.bottomviews.domain.usecase.SetBottomViewVisibleUseCase
-import org.telegram.messenger.feature.bottomviews.presentation.BottomViewsViewModel
+import org.telegram.messenger.feature.messaging.bottomviews.data.repository.LegacyBottomViewsVisibilityRepository
+import org.telegram.messenger.feature.messaging.bottomviews.domain.repository.BottomViewsVisibilityRepository
+import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.GetBottomViewVisibilityUseCase
+import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.GetBottomViewsStateUseCase
+import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.GetPriorityBottomContainerUseCase
+import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.ObserveBottomViewsVisibilityUseCase
+import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.SetBottomViewVisibleUseCase
+import org.telegram.messenger.feature.messaging.bottomviews.presentation.BottomViewsViewModel
 import org.telegram.ui.Components.chat.ChatActivityBottomViewsVisibilityController
-import org.telegram.messenger.feature.floatingdebug.data.repository.LegacyFloatingDebugRepository
-import org.telegram.messenger.feature.floatingdebug.domain.repository.FloatingDebugRepository
-import org.telegram.messenger.feature.floatingdebug.domain.usecase.ClearFloatingDebugItemsUseCase
-import org.telegram.messenger.feature.floatingdebug.domain.usecase.GetFloatingDebugItemsUseCase
-import org.telegram.messenger.feature.floatingdebug.domain.usecase.GetFloatingDebugStateUseCase
-import org.telegram.messenger.feature.floatingdebug.domain.usecase.IsFloatingDebugActiveUseCase
-import org.telegram.messenger.feature.floatingdebug.domain.usecase.ObserveFloatingDebugStateUseCase
-import org.telegram.messenger.feature.floatingdebug.domain.usecase.RegisterFloatingDebugItemsUseCase
-import org.telegram.messenger.feature.floatingdebug.domain.usecase.SetFloatingDebugActiveUseCase
-import org.telegram.messenger.feature.floatingdebug.domain.usecase.ToggleFloatingDebugActiveUseCase
-import org.telegram.messenger.feature.floatingdebug.presentation.FloatingDebugViewModel
+import org.telegram.messenger.feature.system.floatingdebug.data.repository.LegacyFloatingDebugRepository
+import org.telegram.messenger.feature.system.floatingdebug.domain.repository.FloatingDebugRepository
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.ClearFloatingDebugItemsUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.GetFloatingDebugItemsUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.GetFloatingDebugStateUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.IsFloatingDebugActiveUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.ObserveFloatingDebugStateUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.RegisterFloatingDebugItemsUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.SetFloatingDebugActiveUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.ToggleFloatingDebugActiveUseCase
+import org.telegram.messenger.feature.system.floatingdebug.presentation.FloatingDebugViewModel
 import org.telegram.ui.LaunchActivity
-import org.telegram.messenger.feature.keyboardinsets.data.repository.LegacyKeyboardInsetsRepository
-import org.telegram.messenger.feature.keyboardinsets.domain.repository.KeyboardInsetsRepository
-import org.telegram.messenger.feature.keyboardinsets.domain.usecase.GetKeyboardInsetsUseCase
-import org.telegram.messenger.feature.keyboardinsets.domain.usecase.ObserveKeyboardInsetsUseCase
-import org.telegram.messenger.feature.keyboardinsets.domain.usecase.RequestInAppKeyboardHeightUseCase
-import org.telegram.messenger.feature.keyboardinsets.domain.usecase.RequestInAppKeyboardHeightWithNavbarUseCase
-import org.telegram.messenger.feature.keyboardinsets.domain.usecase.ResetInAppKeyboardHeightUseCase
-import org.telegram.messenger.feature.keyboardinsets.domain.usecase.UpdateSystemInsetsUseCase
-import org.telegram.messenger.feature.keyboardinsets.presentation.KeyboardInsetsViewModel
+import org.telegram.messenger.feature.system.keyboardinsets.data.repository.LegacyKeyboardInsetsRepository
+import org.telegram.messenger.feature.system.keyboardinsets.domain.repository.KeyboardInsetsRepository
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.GetKeyboardInsetsUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.ObserveKeyboardInsetsUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.RequestInAppKeyboardHeightUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.RequestInAppKeyboardHeightWithNavbarUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.ResetInAppKeyboardHeightUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.UpdateSystemInsetsUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.presentation.KeyboardInsetsViewModel
 import org.telegram.ui.Components.inset.WindowInsetsInAppController
-import org.telegram.messenger.feature.maintabs.data.repository.LegacyMainTabsRepository
-import org.telegram.messenger.feature.maintabs.domain.repository.MainTabsRepository
-import org.telegram.messenger.feature.maintabs.domain.usecase.GetMainTabsConfigUseCase
-import org.telegram.messenger.feature.maintabs.domain.usecase.ObserveMainTabsConfigUseCase
-import org.telegram.messenger.feature.maintabs.domain.usecase.SelectMainTabUseCase
-import org.telegram.messenger.feature.maintabs.domain.usecase.SetContactsPermissionWarningUseCase
-import org.telegram.messenger.feature.maintabs.domain.usecase.SetMainTabsVisibleUseCase
-import org.telegram.messenger.feature.maintabs.domain.usecase.SetShowCallsTabUseCase
-import org.telegram.messenger.feature.maintabs.domain.usecase.UpdateChatsUnreadCountUseCase
-import org.telegram.messenger.feature.maintabs.presentation.MainTabsViewModel
+import org.telegram.messenger.feature.system.maintabs.data.repository.LegacyMainTabsRepository
+import org.telegram.messenger.feature.system.maintabs.domain.repository.MainTabsRepository
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.GetMainTabsConfigUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.ObserveMainTabsConfigUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.SelectMainTabUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetContactsPermissionWarningUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetMainTabsVisibleUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetShowCallsTabUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.UpdateChatsUnreadCountUseCase
+import org.telegram.messenger.feature.system.maintabs.presentation.MainTabsViewModel
 import org.telegram.ui.MainTabsActivityController
-import org.telegram.messenger.feature.richcaption.data.repository.LegacyRichCaptionRepository
-import org.telegram.messenger.feature.richcaption.domain.repository.RichCaptionRepository
-import org.telegram.messenger.feature.richcaption.domain.usecase.CalculateCaptionMeasureWidthUseCase
-import org.telegram.messenger.feature.richcaption.domain.usecase.CheckCaptionPressHitUseCase
-import org.telegram.messenger.feature.richcaption.domain.usecase.ClearRichCaptionUseCase
-import org.telegram.messenger.feature.richcaption.domain.usecase.GetRichCaptionUseCase
-import org.telegram.messenger.feature.richcaption.domain.usecase.ObserveRichCaptionUseCase
-import org.telegram.messenger.feature.richcaption.domain.usecase.SetRichCaptionCreditUseCase
-import org.telegram.messenger.feature.richcaption.domain.usecase.SetRichCaptionLockedUseCase
-import org.telegram.messenger.feature.richcaption.domain.usecase.SetRichCaptionTextUseCase
-import org.telegram.messenger.feature.richcaption.presentation.RichCaptionViewModel
-import org.telegram.messenger.feature.adjustpan.data.repository.LegacyAdjustPanRepository
-import org.telegram.messenger.feature.adjustpan.domain.repository.AdjustPanRepository
-import org.telegram.messenger.feature.adjustpan.domain.usecase.CalculatePanTransitionPlanUseCase
-import org.telegram.messenger.feature.adjustpan.domain.usecase.ComputePanProgressUseCase
-import org.telegram.messenger.feature.adjustpan.domain.usecase.GetAdjustPanStateUseCase
-import org.telegram.messenger.feature.adjustpan.domain.usecase.ObserveAdjustPanStateUseCase
-import org.telegram.messenger.feature.adjustpan.domain.usecase.ResetAdjustPanUseCase
-import org.telegram.messenger.feature.adjustpan.domain.usecase.SetAdjustPanEnabledUseCase
-import org.telegram.messenger.feature.adjustpan.domain.usecase.StartAdjustPanTransitionUseCase
-import org.telegram.messenger.feature.adjustpan.domain.usecase.StopAdjustPanTransitionUseCase
-import org.telegram.messenger.feature.adjustpan.domain.usecase.UpdateAdjustPanTransitionUseCase
-import org.telegram.messenger.feature.adjustpan.presentation.AdjustPanViewModel
-import org.telegram.messenger.feature.keyboardhide.data.repository.LegacyKeyboardHideRepository
-import org.telegram.messenger.feature.keyboardhide.domain.repository.KeyboardHideRepository
-import org.telegram.messenger.feature.keyboardhide.domain.usecase.CalculateKeyboardHideProgressUseCase
-import org.telegram.messenger.feature.keyboardhide.domain.usecase.EndKeyboardHideMovingUseCase
-import org.telegram.messenger.feature.keyboardhide.domain.usecase.EvaluateKeyboardDismissDecisionUseCase
-import org.telegram.messenger.feature.keyboardhide.domain.usecase.FinishKeyboardHideDismissUseCase
-import org.telegram.messenger.feature.keyboardhide.domain.usecase.GetKeyboardHideStateUseCase
-import org.telegram.messenger.feature.keyboardhide.domain.usecase.ObserveKeyboardHideStateUseCase
-import org.telegram.messenger.feature.keyboardhide.domain.usecase.ResetKeyboardHideUseCase
-import org.telegram.messenger.feature.keyboardhide.domain.usecase.SetKeyboardHideEnabledUseCase
-import org.telegram.messenger.feature.keyboardhide.domain.usecase.StartKeyboardHideMovingUseCase
-import org.telegram.messenger.feature.keyboardhide.domain.usecase.UpdateKeyboardHideMovingUseCase
-import org.telegram.messenger.feature.keyboardhide.presentation.KeyboardHideViewModel
-import org.telegram.messenger.feature.businessrecipients.data.repository.LegacyBusinessRecipientsRepository
-import org.telegram.messenger.feature.businessrecipients.domain.repository.BusinessRecipientsRepository
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.AddExcludedUsersUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.AddSelectedUsersUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.CheckRecipientsChangesUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.GetBusinessRecipientsUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.ObserveBusinessRecipientsUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.RemoveExcludedUserUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.RemoveSelectedUserUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.ResetBusinessRecipientsUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.SetBusinessRecipientsUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.ToggleExcludeSelectedUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.ToggleRecipientFilterUseCase
-import org.telegram.messenger.feature.businessrecipients.domain.usecase.ValidateBusinessRecipientsUseCase
-import org.telegram.messenger.feature.businessrecipients.presentation.BusinessRecipientsViewModel
-import org.telegram.messenger.feature.pinchtozoom.data.repository.LegacyPinchToZoomRepository
-import org.telegram.messenger.feature.pinchtozoom.domain.repository.PinchToZoomRepository
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.CalculatePinchImageBoundsUseCase
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.CalculatePinchScaleUseCase
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.CalculatePinchTransformUseCase
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.CalculatePinchTranslationUseCase
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.EvaluatePinchGestureUseCase
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.FinishPinchZoomUseCase
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.GetPinchZoomStateUseCase
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.ObservePinchZoomStateUseCase
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.ResetPinchZoomUseCase
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.StartPinchZoomUseCase
-import org.telegram.messenger.feature.pinchtozoom.domain.usecase.UpdatePinchZoomUseCase
-import org.telegram.messenger.feature.pinchtozoom.presentation.PinchToZoomViewModel
-import org.telegram.messenger.feature.recyclerscroll.data.repository.LegacyRecyclerScrollRepository
-import org.telegram.messenger.feature.recyclerscroll.domain.repository.RecyclerScrollRepository
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.CalculateScrollAnimationPlanUseCase
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.CalculateScrollLengthUseCase
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.CancelRecyclerScrollUseCase
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.ComputeScrollViewTranslationsUseCase
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.EvaluateScrollEligibilityUseCase
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.FinishRecyclerScrollUseCase
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.GetRecyclerScrollStateUseCase
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.ObserveRecyclerScrollStateUseCase
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.ResetRecyclerScrollUseCase
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.StartRecyclerScrollUseCase
-import org.telegram.messenger.feature.recyclerscroll.domain.usecase.UpdateRecyclerScrollProgressUseCase
-import org.telegram.messenger.feature.recyclerscroll.presentation.RecyclerScrollViewModel
-import org.telegram.messenger.feature.emojieffects.data.repository.LegacyEmojiEffectsRepository
-import org.telegram.messenger.feature.emojieffects.domain.repository.EmojiEffectsRepository
-import org.telegram.messenger.feature.emojieffects.domain.usecase.CalculateEmojiBoundsUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.CalculateEmojiOverlayPositionUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.ClearEmojiEffectsUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.DecodeEmojiInteractionsJsonUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.DismissEmojiEffectUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.EncodeEmojiInteractionsJsonUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.EvaluateAnimationQuotaUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.EvaluateEmojiSupportUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.GetEmojiEffectsStateUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.NormalizeEmojiUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.ObserveEmojiEffectsStateUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.RecordEmojiTapUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.StartEmojiEffectUseCase
-import org.telegram.messenger.feature.emojieffects.domain.usecase.UpdateEmojiEffectProgressUseCase
-import org.telegram.messenger.feature.emojieffects.presentation.EmojiEffectsViewModel
-import org.telegram.messenger.feature.mentions.data.repository.LegacyMentionsRepository
-import org.telegram.messenger.feature.mentions.domain.repository.MentionsRepository
-import org.telegram.messenger.feature.mentions.domain.usecase.ClearMentionsUseCase
-import org.telegram.messenger.feature.mentions.domain.usecase.DismissMentionsUseCase
-import org.telegram.messenger.feature.mentions.domain.usecase.FilterMentionsUseCase
-import org.telegram.messenger.feature.mentions.domain.usecase.FormatMentionReplacementUseCase
-import org.telegram.messenger.feature.mentions.domain.usecase.GetMentionsStateUseCase
-import org.telegram.messenger.feature.mentions.domain.usecase.ObserveMentionsStateUseCase
-import org.telegram.messenger.feature.mentions.domain.usecase.ParseMentionQueryUseCase
-import org.telegram.messenger.feature.mentions.domain.usecase.SetMentionCandidatesUseCase
-import org.telegram.messenger.feature.mentions.domain.usecase.UpdateMentionQueryUseCase
-import org.telegram.messenger.feature.mentions.domain.usecase.ValidateUsernameUseCase
-import org.telegram.messenger.feature.mentions.presentation.MentionsViewModel
-import org.telegram.messenger.feature.sharedmedia.data.repository.LegacySharedMediaRepository
-import org.telegram.messenger.feature.sharedmedia.domain.repository.SharedMediaRepository
-import org.telegram.messenger.feature.sharedmedia.domain.usecase.CalculateMediaSelectionUseCase
-import org.telegram.messenger.feature.sharedmedia.domain.usecase.ClearMediaSelectionUseCase
-import org.telegram.messenger.feature.sharedmedia.domain.usecase.FilterSharedMediaUseCase
-import org.telegram.messenger.feature.sharedmedia.domain.usecase.GetSharedMediaStateUseCase
-import org.telegram.messenger.feature.sharedmedia.domain.usecase.GroupMediaByMonthUseCase
-import org.telegram.messenger.feature.sharedmedia.domain.usecase.ObserveSharedMediaStateUseCase
-import org.telegram.messenger.feature.sharedmedia.domain.usecase.ResolveAvailableTabsUseCase
-import org.telegram.messenger.feature.sharedmedia.domain.usecase.SelectSharedMediaTabUseCase
-import org.telegram.messenger.feature.sharedmedia.domain.usecase.SetSharedMediaFilterUseCase
-import org.telegram.messenger.feature.sharedmedia.domain.usecase.ToggleMediaSelectionUseCase
-import org.telegram.messenger.feature.sharedmedia.presentation.SharedMediaViewModel
-import org.telegram.messenger.feature.contentpreview.data.repository.LegacyContentPreviewRepository
-import org.telegram.messenger.feature.contentpreview.domain.repository.ContentPreviewRepository
-import org.telegram.messenger.feature.contentpreview.domain.usecase.CalculatePreviewDragUseCase
-import org.telegram.messenger.feature.contentpreview.domain.usecase.ClearContentPreviewUseCase
-import org.telegram.messenger.feature.contentpreview.domain.usecase.DismissContentPreviewUseCase
-import org.telegram.messenger.feature.contentpreview.domain.usecase.EvaluatePreviewEligibilityUseCase
-import org.telegram.messenger.feature.contentpreview.domain.usecase.GetContentPreviewStateUseCase
-import org.telegram.messenger.feature.contentpreview.domain.usecase.ObserveContentPreviewStateUseCase
-import org.telegram.messenger.feature.contentpreview.domain.usecase.OpenContentPreviewUseCase
-import org.telegram.messenger.feature.contentpreview.domain.usecase.ResolvePreviewActionsUseCase
-import org.telegram.messenger.feature.contentpreview.domain.usecase.TriggerPreviewActionUseCase
-import org.telegram.messenger.feature.contentpreview.domain.usecase.UpdatePreviewDragUseCase
-import org.telegram.messenger.feature.contentpreview.presentation.ContentPreviewViewModel
-import org.telegram.messenger.feature.emojipicker.data.repository.LegacyEmojiPickerRepository
-import org.telegram.messenger.feature.emojipicker.domain.repository.EmojiPickerRepository
-import org.telegram.messenger.feature.emojipicker.domain.usecase.ClearRecentPickerItemsUseCase
-import org.telegram.messenger.feature.emojipicker.domain.usecase.FilterEmojiItemsUseCase
-import org.telegram.messenger.feature.emojipicker.domain.usecase.FilterGifsUseCase
-import org.telegram.messenger.feature.emojipicker.domain.usecase.FilterStickersUseCase
-import org.telegram.messenger.feature.emojipicker.domain.usecase.GetEmojiPickerStateUseCase
-import org.telegram.messenger.feature.emojipicker.domain.usecase.ObserveEmojiPickerStateUseCase
-import org.telegram.messenger.feature.emojipicker.domain.usecase.ResolveAvailablePickerTabsUseCase
-import org.telegram.messenger.feature.emojipicker.domain.usecase.SelectPickerTabUseCase
-import org.telegram.messenger.feature.emojipicker.domain.usecase.ToggleStickerFavoriteUseCase
-import org.telegram.messenger.feature.emojipicker.domain.usecase.UpdatePickerSearchQueryUseCase
-import org.telegram.messenger.feature.emojipicker.presentation.EmojiPickerViewModel
-import org.telegram.messenger.feature.chatattach.data.repository.LegacyChatAttachRepository
-import org.telegram.messenger.feature.chatattach.domain.repository.ChatAttachRepository
-import org.telegram.messenger.feature.chatattach.domain.usecase.CalculateAttachCaptionLimitUseCase
-import org.telegram.messenger.feature.chatattach.domain.usecase.ClearAttachSelectionUseCase
-import org.telegram.messenger.feature.chatattach.domain.usecase.GetChatAttachStateUseCase
-import org.telegram.messenger.feature.chatattach.domain.usecase.ObserveChatAttachStateUseCase
-import org.telegram.messenger.feature.chatattach.domain.usecase.OpenChatAttachAlertUseCase
-import org.telegram.messenger.feature.chatattach.domain.usecase.ResolveAvailableAttachLayoutsUseCase
-import org.telegram.messenger.feature.chatattach.domain.usecase.SelectAttachLayoutUseCase
-import org.telegram.messenger.feature.chatattach.domain.usecase.ToggleAttachItemSelectionUseCase
-import org.telegram.messenger.feature.chatattach.domain.usecase.UpdateAttachSendOptionsUseCase
-import org.telegram.messenger.feature.chatattach.domain.usecase.ValidateSendOptionsUseCase
-import org.telegram.messenger.feature.chatattach.presentation.ChatAttachViewModel
-import org.telegram.messenger.feature.photoviewer.data.repository.LegacyPhotoViewerRepository
-import org.telegram.messenger.feature.photoviewer.domain.repository.PhotoViewerRepository
-import org.telegram.messenger.feature.photoviewer.domain.usecase.CalculateMediaPagingUseCase
-import org.telegram.messenger.feature.photoviewer.domain.usecase.CalculateZoomTransformUseCase
-import org.telegram.messenger.feature.photoviewer.domain.usecase.ClosePhotoViewerUseCase
-import org.telegram.messenger.feature.photoviewer.domain.usecase.GetPhotoViewerStateUseCase
-import org.telegram.messenger.feature.photoviewer.domain.usecase.NavigatePhotoViewerUseCase
-import org.telegram.messenger.feature.photoviewer.domain.usecase.ObservePhotoViewerStateUseCase
-import org.telegram.messenger.feature.photoviewer.domain.usecase.OpenPhotoViewerUseCase
-import org.telegram.messenger.feature.photoviewer.domain.usecase.ResolveMediaQualityUseCase
-import org.telegram.messenger.feature.photoviewer.domain.usecase.UpdatePlaybackStateUseCase
-import org.telegram.messenger.feature.photoviewer.domain.usecase.ValidateViewerActionsUseCase
-import org.telegram.messenger.feature.photoviewer.presentation.PhotoViewerViewModel
-import org.telegram.messenger.feature.chatinput.data.repository.LegacyChatInputRepository
-import org.telegram.messenger.feature.chatinput.domain.repository.ChatInputRepository
-import org.telegram.messenger.feature.chatinput.domain.usecase.CalculateSendButtonStateUseCase
-import org.telegram.messenger.feature.chatinput.domain.usecase.ClearChatInputReplyUseCase
-import org.telegram.messenger.feature.chatinput.domain.usecase.FormatTextSelectionUseCase
-import org.telegram.messenger.feature.chatinput.domain.usecase.GetChatInputStateUseCase
-import org.telegram.messenger.feature.chatinput.domain.usecase.ObserveChatInputStateUseCase
-import org.telegram.messenger.feature.chatinput.domain.usecase.ResolvePanelVisibilityUseCase
-import org.telegram.messenger.feature.chatinput.domain.usecase.SetChatInputPanelModeUseCase
-import org.telegram.messenger.feature.chatinput.domain.usecase.SetChatInputReplyUseCase
-import org.telegram.messenger.feature.chatinput.domain.usecase.SetChatInputTextUseCase
-import org.telegram.messenger.feature.chatinput.domain.usecase.ValidateVoiceRecordActionUseCase
-import org.telegram.messenger.feature.chatinput.presentation.ChatInputViewModel
-import org.telegram.messenger.feature.audioplayer.data.repository.LegacyAudioPlayerRepository
-import org.telegram.messenger.feature.audioplayer.domain.repository.AudioPlayerRepository
-import org.telegram.messenger.feature.audioplayer.domain.usecase.ConfigureEqualizerUseCase
-import org.telegram.messenger.feature.audioplayer.domain.usecase.CyclePlaybackSpeedUseCase
-import org.telegram.messenger.feature.audioplayer.domain.usecase.CycleRepeatModeUseCase
-import org.telegram.messenger.feature.audioplayer.domain.usecase.GetPlaybackStateUseCase
-import org.telegram.messenger.feature.audioplayer.domain.usecase.HandleProximitySensorUseCase
-import org.telegram.messenger.feature.audioplayer.domain.usecase.NavigatePlaylistUseCase
-import org.telegram.messenger.feature.audioplayer.domain.usecase.ObservePlaybackStateUseCase
-import org.telegram.messenger.feature.audioplayer.domain.usecase.PlayTrackUseCase
-import org.telegram.messenger.feature.audioplayer.domain.usecase.SeekAudioUseCase
-import org.telegram.messenger.feature.audioplayer.domain.usecase.TogglePlayPauseUseCase
-import org.telegram.messenger.feature.audioplayer.domain.usecase.ToggleShuffleUseCase
-import org.telegram.messenger.feature.audioplayer.presentation.AudioPlayerViewModel
-import org.telegram.messenger.feature.sendmessages.data.repository.LegacySendMessagesRepository
-import org.telegram.messenger.feature.sendmessages.domain.repository.SendMessagesRepository
-import org.telegram.messenger.feature.sendmessages.domain.usecase.CancelSendMessageUseCase
-import org.telegram.messenger.feature.sendmessages.domain.usecase.ForwardMessagesUseCase
-import org.telegram.messenger.feature.sendmessages.domain.usecase.ObservePendingSendsUseCase
-import org.telegram.messenger.feature.sendmessages.domain.usecase.RetrySendMessageUseCase
-import org.telegram.messenger.feature.sendmessages.domain.usecase.SendMediaAlbumUseCase
-import org.telegram.messenger.feature.sendmessages.domain.usecase.SendMediaMessageUseCase
-import org.telegram.messenger.feature.sendmessages.domain.usecase.SendTextMessageUseCase
-import org.telegram.messenger.feature.sendmessages.presentation.SendMessagesViewModel
-import org.telegram.messenger.feature.imageloader.data.repository.LegacyImageLoaderRepository
-import org.telegram.messenger.feature.imageloader.domain.repository.ImageLoaderRepository
-import org.telegram.messenger.feature.imageloader.domain.usecase.BuildImageCacheKeyUseCase
-import org.telegram.messenger.feature.imageloader.domain.usecase.CalculateImageDownscaleUseCase
-import org.telegram.messenger.feature.imageloader.domain.usecase.CancelImageRequestUseCase
-import org.telegram.messenger.feature.imageloader.domain.usecase.ClearImageCacheUseCase
-import org.telegram.messenger.feature.imageloader.domain.usecase.EnqueueImageRequestUseCase
-import org.telegram.messenger.feature.imageloader.domain.usecase.EvaluateImageCacheEligibilityUseCase
-import org.telegram.messenger.feature.imageloader.domain.usecase.FormatImageFilterUseCase
-import org.telegram.messenger.feature.imageloader.domain.usecase.GetImageLoaderStateUseCase
-import org.telegram.messenger.feature.imageloader.domain.usecase.ObserveImageLoaderStateUseCase
-import org.telegram.messenger.feature.imageloader.domain.usecase.ParseImageFilterUseCase
-import org.telegram.messenger.feature.imageloader.domain.usecase.TrimImageMemoryUseCase
-import org.telegram.messenger.feature.imageloader.presentation.ImageLoaderViewModel
-import org.telegram.messenger.feature.downloadmanager.data.repository.LegacyDownloadManagerRepository
-import org.telegram.messenger.feature.downloadmanager.domain.repository.DownloadManagerRepository
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.CancelDownloadUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.ClearRecentDownloadsUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.EnqueueDownloadUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.EvaluateAutoDownloadEligibilityUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.GetDownloadManagerStateUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.MarkDownloadsAsViewedUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.ObserveDownloadManagerStateUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.PauseDownloadUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.ResumeDownloadUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.RetryDownloadUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.SetDownloadNetworkTypeUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.UpdateDownloadPresetUseCase
-import org.telegram.messenger.feature.downloadmanager.domain.usecase.UpdateDownloadProgressUseCase
-import org.telegram.messenger.feature.downloadmanager.presentation.DownloadManagerViewModel
-import org.telegram.messenger.feature.localization.data.repository.LegacyLocalizationRepository
-import org.telegram.messenger.feature.localization.domain.repository.LocalizationRepository
-import org.telegram.messenger.feature.localization.domain.usecase.ApplyLocaleUseCase
-import org.telegram.messenger.feature.localization.domain.usecase.DetectRtlLanguageUseCase
-import org.telegram.messenger.feature.localization.domain.usecase.FormatFullNameUseCase
-import org.telegram.messenger.feature.localization.domain.usecase.FormatNumberWithSuffixUseCase
-import org.telegram.messenger.feature.localization.domain.usecase.FormatRelativeTimestampUseCase
-import org.telegram.messenger.feature.localization.domain.usecase.GetLocalizationStateUseCase
-import org.telegram.messenger.feature.localization.domain.usecase.ObserveLocalizationStateUseCase
-import org.telegram.messenger.feature.localization.domain.usecase.ResolvePluralQuantityUseCase
-import org.telegram.messenger.feature.localization.domain.usecase.SetNameDisplayOrderUseCase
-import org.telegram.messenger.feature.localization.domain.usecase.Toggle24HourFormatUseCase
-import org.telegram.messenger.feature.localization.presentation.LocalizationViewModel
-import org.telegram.messenger.feature.ringtones.data.repository.LegacyRingtoneRepository
-import org.telegram.messenger.feature.ringtones.domain.repository.RingtoneRepository
-import org.telegram.messenger.feature.ringtones.domain.usecase.AddRingtoneUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.CancelRingtoneUploadUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.GetRingtoneByIdUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.GetRingtoneSoundPathUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.GetRingtonesUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.ObserveRingtoneStateUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.ObserveRingtonesUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.RefreshRingtonesUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.RemoveRingtoneUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.SaveRingtoneFromDocumentUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.SelectRingtoneUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.UploadRingtoneUseCase
-import org.telegram.messenger.feature.ringtones.domain.usecase.ValidateRingtoneEligibilityUseCase
-import org.telegram.messenger.feature.ringtones.presentation.RingtoneViewModel
+import org.telegram.messenger.feature.messaging.richcaption.data.repository.LegacyRichCaptionRepository
+import org.telegram.messenger.feature.messaging.richcaption.domain.repository.RichCaptionRepository
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.CalculateCaptionMeasureWidthUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.CheckCaptionPressHitUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.ClearRichCaptionUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.GetRichCaptionUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.ObserveRichCaptionUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionCreditUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionLockedUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionTextUseCase
+import org.telegram.messenger.feature.messaging.richcaption.presentation.RichCaptionViewModel
+import org.telegram.messenger.feature.system.adjustpan.data.repository.LegacyAdjustPanRepository
+import org.telegram.messenger.feature.system.adjustpan.domain.repository.AdjustPanRepository
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.CalculatePanTransitionPlanUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.ComputePanProgressUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.GetAdjustPanStateUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.ObserveAdjustPanStateUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.ResetAdjustPanUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.SetAdjustPanEnabledUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.StartAdjustPanTransitionUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.StopAdjustPanTransitionUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.UpdateAdjustPanTransitionUseCase
+import org.telegram.messenger.feature.system.adjustpan.presentation.AdjustPanViewModel
+import org.telegram.messenger.feature.system.keyboardhide.data.repository.LegacyKeyboardHideRepository
+import org.telegram.messenger.feature.system.keyboardhide.domain.repository.KeyboardHideRepository
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.CalculateKeyboardHideProgressUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.EndKeyboardHideMovingUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.EvaluateKeyboardDismissDecisionUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.FinishKeyboardHideDismissUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.GetKeyboardHideStateUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.ObserveKeyboardHideStateUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.ResetKeyboardHideUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.SetKeyboardHideEnabledUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.StartKeyboardHideMovingUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.UpdateKeyboardHideMovingUseCase
+import org.telegram.messenger.feature.system.keyboardhide.presentation.KeyboardHideViewModel
+import org.telegram.messenger.feature.business.businessrecipients.data.repository.LegacyBusinessRecipientsRepository
+import org.telegram.messenger.feature.business.businessrecipients.domain.repository.BusinessRecipientsRepository
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.AddExcludedUsersUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.AddSelectedUsersUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.CheckRecipientsChangesUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.GetBusinessRecipientsUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ObserveBusinessRecipientsUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.RemoveExcludedUserUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.RemoveSelectedUserUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ResetBusinessRecipientsUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.SetBusinessRecipientsUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ToggleExcludeSelectedUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ToggleRecipientFilterUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ValidateBusinessRecipientsUseCase
+import org.telegram.messenger.feature.business.businessrecipients.presentation.BusinessRecipientsViewModel
+import org.telegram.messenger.feature.system.pinchtozoom.data.repository.LegacyPinchToZoomRepository
+import org.telegram.messenger.feature.system.pinchtozoom.domain.repository.PinchToZoomRepository
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.CalculatePinchImageBoundsUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.CalculatePinchScaleUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.CalculatePinchTransformUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.CalculatePinchTranslationUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.EvaluatePinchGestureUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.FinishPinchZoomUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.GetPinchZoomStateUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.ObservePinchZoomStateUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.ResetPinchZoomUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.StartPinchZoomUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.UpdatePinchZoomUseCase
+import org.telegram.messenger.feature.system.pinchtozoom.presentation.PinchToZoomViewModel
+import org.telegram.messenger.feature.system.recyclerscroll.data.repository.LegacyRecyclerScrollRepository
+import org.telegram.messenger.feature.system.recyclerscroll.domain.repository.RecyclerScrollRepository
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.CalculateScrollAnimationPlanUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.CalculateScrollLengthUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.CancelRecyclerScrollUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.ComputeScrollViewTranslationsUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.EvaluateScrollEligibilityUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.FinishRecyclerScrollUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.GetRecyclerScrollStateUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.ObserveRecyclerScrollStateUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.ResetRecyclerScrollUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.StartRecyclerScrollUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.UpdateRecyclerScrollProgressUseCase
+import org.telegram.messenger.feature.system.recyclerscroll.presentation.RecyclerScrollViewModel
+import org.telegram.messenger.feature.messaging.emojieffects.data.repository.LegacyEmojiEffectsRepository
+import org.telegram.messenger.feature.messaging.emojieffects.domain.repository.EmojiEffectsRepository
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.CalculateEmojiBoundsUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.CalculateEmojiOverlayPositionUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.ClearEmojiEffectsUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.DecodeEmojiInteractionsJsonUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.DismissEmojiEffectUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.EncodeEmojiInteractionsJsonUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.EvaluateAnimationQuotaUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.EvaluateEmojiSupportUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.GetEmojiEffectsStateUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.NormalizeEmojiUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.ObserveEmojiEffectsStateUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.RecordEmojiTapUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.StartEmojiEffectUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.UpdateEmojiEffectProgressUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.presentation.EmojiEffectsViewModel
+import org.telegram.messenger.feature.messaging.mentions.data.repository.LegacyMentionsRepository
+import org.telegram.messenger.feature.messaging.mentions.domain.repository.MentionsRepository
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ClearMentionsUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.DismissMentionsUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.FilterMentionsUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.FormatMentionReplacementUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.GetMentionsStateUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ObserveMentionsStateUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ParseMentionQueryUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.SetMentionCandidatesUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.UpdateMentionQueryUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ValidateUsernameUseCase
+import org.telegram.messenger.feature.messaging.mentions.presentation.MentionsViewModel
+import org.telegram.messenger.feature.media.sharedmedia.data.repository.LegacySharedMediaRepository
+import org.telegram.messenger.feature.media.sharedmedia.domain.repository.SharedMediaRepository
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.CalculateMediaSelectionUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ClearMediaSelectionUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.FilterSharedMediaUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.GetSharedMediaStateUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.GroupMediaByMonthUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ObserveSharedMediaStateUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ResolveAvailableTabsUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.SelectSharedMediaTabUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.SetSharedMediaFilterUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ToggleMediaSelectionUseCase
+import org.telegram.messenger.feature.media.sharedmedia.presentation.SharedMediaViewModel
+import org.telegram.messenger.feature.media.contentpreview.data.repository.LegacyContentPreviewRepository
+import org.telegram.messenger.feature.media.contentpreview.domain.repository.ContentPreviewRepository
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.CalculatePreviewDragUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.ClearContentPreviewUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.DismissContentPreviewUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.EvaluatePreviewEligibilityUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.GetContentPreviewStateUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.ObserveContentPreviewStateUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.OpenContentPreviewUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.ResolvePreviewActionsUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.TriggerPreviewActionUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.UpdatePreviewDragUseCase
+import org.telegram.messenger.feature.media.contentpreview.presentation.ContentPreviewViewModel
+import org.telegram.messenger.feature.messaging.emojipicker.data.repository.LegacyEmojiPickerRepository
+import org.telegram.messenger.feature.messaging.emojipicker.domain.repository.EmojiPickerRepository
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ClearRecentPickerItemsUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.FilterEmojiItemsUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.FilterGifsUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.FilterStickersUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.GetEmojiPickerStateUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ObserveEmojiPickerStateUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ResolveAvailablePickerTabsUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.SelectPickerTabUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ToggleStickerFavoriteUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.UpdatePickerSearchQueryUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.presentation.EmojiPickerViewModel
+import org.telegram.messenger.feature.messaging.chatattach.data.repository.LegacyChatAttachRepository
+import org.telegram.messenger.feature.messaging.chatattach.domain.repository.ChatAttachRepository
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.CalculateAttachCaptionLimitUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ClearAttachSelectionUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.GetChatAttachStateUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ObserveChatAttachStateUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.OpenChatAttachAlertUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ResolveAvailableAttachLayoutsUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.SelectAttachLayoutUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ToggleAttachItemSelectionUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.UpdateAttachSendOptionsUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ValidateSendOptionsUseCase
+import org.telegram.messenger.feature.messaging.chatattach.presentation.ChatAttachViewModel
+import org.telegram.messenger.feature.media.photoviewer.data.repository.LegacyPhotoViewerRepository
+import org.telegram.messenger.feature.media.photoviewer.domain.repository.PhotoViewerRepository
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.CalculateMediaPagingUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.CalculateZoomTransformUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ClosePhotoViewerUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.GetPhotoViewerStateUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.NavigatePhotoViewerUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ObservePhotoViewerStateUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.OpenPhotoViewerUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ResolveMediaQualityUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.UpdatePlaybackStateUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ValidateViewerActionsUseCase
+import org.telegram.messenger.feature.media.photoviewer.presentation.PhotoViewerViewModel
+import org.telegram.messenger.feature.messaging.chatinput.data.repository.LegacyChatInputRepository
+import org.telegram.messenger.feature.messaging.chatinput.domain.repository.ChatInputRepository
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.CalculateSendButtonStateUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ClearChatInputReplyUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.FormatTextSelectionUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.GetChatInputStateUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ObserveChatInputStateUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ResolvePanelVisibilityUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChatInputPanelModeUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChatInputReplyUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChatInputTextUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ValidateVoiceRecordActionUseCase
+import org.telegram.messenger.feature.messaging.chatinput.presentation.ChatInputViewModel
+import org.telegram.messenger.feature.media.audioplayer.data.repository.LegacyAudioPlayerRepository
+import org.telegram.messenger.feature.media.audioplayer.domain.repository.AudioPlayerRepository
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.ConfigureEqualizerUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.CyclePlaybackSpeedUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.CycleRepeatModeUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.GetPlaybackStateUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.HandleProximitySensorUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.NavigatePlaylistUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.ObservePlaybackStateUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.PlayTrackUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.SeekAudioUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.TogglePlayPauseUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.ToggleShuffleUseCase
+import org.telegram.messenger.feature.media.audioplayer.presentation.AudioPlayerViewModel
+import org.telegram.messenger.feature.messaging.sendmessages.data.repository.LegacySendMessagesRepository
+import org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.CancelSendMessageUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.ForwardMessagesUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.ObservePendingSendsUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.RetrySendMessageUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendMediaAlbumUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendMediaMessageUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendTextMessageUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.presentation.SendMessagesViewModel
+import org.telegram.messenger.feature.media.imageloader.data.repository.LegacyImageLoaderRepository
+import org.telegram.messenger.feature.media.imageloader.domain.repository.ImageLoaderRepository
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.BuildImageCacheKeyUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.CalculateImageDownscaleUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.CancelImageRequestUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.ClearImageCacheUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.EnqueueImageRequestUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.EvaluateImageCacheEligibilityUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.FormatImageFilterUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.GetImageLoaderStateUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.ObserveImageLoaderStateUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.ParseImageFilterUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.TrimImageMemoryUseCase
+import org.telegram.messenger.feature.media.imageloader.presentation.ImageLoaderViewModel
+import org.telegram.messenger.feature.media.downloadmanager.data.repository.LegacyDownloadManagerRepository
+import org.telegram.messenger.feature.media.downloadmanager.domain.repository.DownloadManagerRepository
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.CancelDownloadUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.ClearRecentDownloadsUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.EnqueueDownloadUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.EvaluateAutoDownloadEligibilityUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.GetDownloadManagerStateUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.MarkDownloadsAsViewedUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.ObserveDownloadManagerStateUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.PauseDownloadUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.ResumeDownloadUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.RetryDownloadUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.SetDownloadNetworkTypeUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.UpdateDownloadPresetUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.UpdateDownloadProgressUseCase
+import org.telegram.messenger.feature.media.downloadmanager.presentation.DownloadManagerViewModel
+import org.telegram.messenger.feature.system.localization.data.repository.LegacyLocalizationRepository
+import org.telegram.messenger.feature.system.localization.domain.repository.LocalizationRepository
+import org.telegram.messenger.feature.system.localization.domain.usecase.ApplyLocaleUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.DetectRtlLanguageUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.FormatFullNameUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.FormatNumberWithSuffixUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.FormatRelativeTimestampUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.GetLocalizationStateUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.ObserveLocalizationStateUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.ResolvePluralQuantityUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.SetNameDisplayOrderUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.Toggle24HourFormatUseCase
+import org.telegram.messenger.feature.system.localization.presentation.LocalizationViewModel
+import org.telegram.messenger.feature.system.ringtones.data.repository.LegacyRingtoneRepository
+import org.telegram.messenger.feature.system.ringtones.domain.repository.RingtoneRepository
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.AddRingtoneUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.CancelRingtoneUploadUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.GetRingtoneByIdUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.GetRingtoneSoundPathUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.GetRingtonesUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.ObserveRingtoneStateUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.ObserveRingtonesUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.RefreshRingtonesUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.RemoveRingtoneUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.SaveRingtoneFromDocumentUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.SelectRingtoneUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.UploadRingtoneUseCase
+import org.telegram.messenger.feature.system.ringtones.domain.usecase.ValidateRingtoneEligibilityUseCase
+import org.telegram.messenger.feature.system.ringtones.presentation.RingtoneViewModel
 import org.telegram.messenger.feature.network.networkstats.data.repository.LegacyNetworkStatsRepository
 import org.telegram.messenger.feature.network.networkstats.domain.repository.NetworkStatsRepository
 import org.telegram.messenger.feature.network.networkstats.domain.usecase.CalculateMessagesTrafficUseCase
@@ -969,207 +969,207 @@ import org.telegram.messenger.feature.network.pushlistener.domain.usecase.Proces
 import org.telegram.messenger.feature.network.pushlistener.domain.usecase.RegisterPushListenerTokenUseCase
 import org.telegram.messenger.feature.network.pushlistener.domain.usecase.TogglePushListeningUseCase
 import org.telegram.messenger.feature.network.pushlistener.presentation.PushListenerViewModel
-import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
-import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
-import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
-import org.telegram.messenger.feature.chat.domain.usecase.LoadHistoryUseCase
-import org.telegram.messenger.feature.chat.domain.usecase.ObserveMessagesUseCase
-import org.telegram.messenger.feature.chat.domain.usecase.SendMessageUseCase
-import org.telegram.messenger.feature.chat.presentation.ChatViewModel
-import org.telegram.messenger.feature.dialogs.data.repository.LegacyDialogsRepository
-import org.telegram.messenger.feature.dialogs.domain.repository.DialogsRepository
-import org.telegram.messenger.feature.dialogs.domain.usecase.DeleteDialogUseCase
-import org.telegram.messenger.feature.dialogs.domain.usecase.GetDialogsUseCase
-import org.telegram.messenger.feature.dialogs.domain.usecase.LoadMoreDialogsUseCase
-import org.telegram.messenger.feature.dialogs.domain.usecase.MarkDialogAsReadUseCase
-import org.telegram.messenger.feature.dialogs.domain.usecase.PinDialogUseCase
-import org.telegram.messenger.feature.dialogs.presentation.DialogsViewModel
-import org.telegram.messenger.feature.savedmessages.data.repository.LegacySavedMessagesRepository
-import org.telegram.messenger.feature.savedmessages.domain.repository.SavedMessagesRepository
-import org.telegram.messenger.feature.savedmessages.domain.usecase.DeleteSavedDialogUseCase
-import org.telegram.messenger.feature.savedmessages.domain.usecase.GetSavedDialogsUseCase
-import org.telegram.messenger.feature.savedmessages.domain.usecase.GetSavedTagsUseCase
-import org.telegram.messenger.feature.savedmessages.domain.usecase.SearchSavedDialogsUseCase
-import org.telegram.messenger.feature.savedmessages.domain.usecase.TogglePinSavedDialogUseCase
-import org.telegram.messenger.feature.savedmessages.presentation.SavedMessagesViewModel
-import org.telegram.messenger.feature.browser.data.repository.LegacyBrowserRepository
-import org.telegram.messenger.feature.browser.domain.repository.BrowserRepository
-import org.telegram.messenger.feature.browser.domain.usecase.CheckUrlSafetyUseCase
-import org.telegram.messenger.feature.browser.domain.usecase.ClassifyUrlTargetUseCase
-import org.telegram.messenger.feature.browser.domain.usecase.ExtractUsernameFromUrlUseCase
-import org.telegram.messenger.feature.browser.domain.usecase.GetBrowserStateUseCase
-import org.telegram.messenger.feature.browser.domain.usecase.ManageBrowserHistoryUseCase
-import org.telegram.messenger.feature.browser.domain.usecase.ObserveBrowserStateUseCase
-import org.telegram.messenger.feature.browser.domain.usecase.OpenBrowserUrlUseCase
-import org.telegram.messenger.feature.browser.domain.usecase.UpdateBrowserSettingsUseCase
-import org.telegram.messenger.feature.browser.presentation.BrowserViewModel
-import org.telegram.messenger.feature.litemode.data.repository.LegacyLiteModeRepository
-import org.telegram.messenger.feature.litemode.domain.repository.LiteModeRepository
-import org.telegram.messenger.feature.litemode.domain.usecase.CalculateEffectiveFlagsUseCase
-import org.telegram.messenger.feature.litemode.domain.usecase.CheckLiteModeFlagUseCase
-import org.telegram.messenger.feature.litemode.domain.usecase.GetLiteModeStateUseCase
-import org.telegram.messenger.feature.litemode.domain.usecase.ObserveLiteModeStateUseCase
-import org.telegram.messenger.feature.litemode.domain.usecase.ResolvePresetUseCase
-import org.telegram.messenger.feature.litemode.domain.usecase.SetLiteModePresetUseCase
-import org.telegram.messenger.feature.litemode.domain.usecase.ToggleLiteModeFlagUseCase
-import org.telegram.messenger.feature.litemode.domain.usecase.UpdatePowerSaverThresholdUseCase
-import org.telegram.messenger.feature.litemode.presentation.LiteModeViewModel
-import org.telegram.messenger.feature.appconfig.data.repository.LegacyAppConfigRepository
-import org.telegram.messenger.feature.appconfig.domain.repository.AppConfigRepository
-import org.telegram.messenger.feature.appconfig.domain.usecase.GetAiComposeConfigUseCase
-import org.telegram.messenger.feature.appconfig.domain.usecase.GetAppConfigUseCase
-import org.telegram.messenger.feature.appconfig.domain.usecase.GetAppLimitsUseCase
-import org.telegram.messenger.feature.appconfig.domain.usecase.GetMessageLimitsUseCase
-import org.telegram.messenger.feature.appconfig.domain.usecase.GetPollsConfigUseCase
-import org.telegram.messenger.feature.appconfig.domain.usecase.GetRichMessageLimitsUseCase
-import org.telegram.messenger.feature.appconfig.domain.usecase.GetStarsPricingConfigUseCase
-import org.telegram.messenger.feature.appconfig.domain.usecase.GetTonPricingConfigUseCase
-import org.telegram.messenger.feature.appconfig.domain.usecase.ObserveAppConfigUseCase
-import org.telegram.messenger.feature.appconfig.domain.usecase.ReloadAppConfigUseCase
-import org.telegram.messenger.feature.appconfig.domain.usecase.UpdateAppConfigValueUseCase
-import org.telegram.messenger.feature.appconfig.presentation.AppConfigViewModel
-import org.telegram.messenger.feature.autodeletemedia.data.repository.LegacyAutoDeleteMediaRepository
-import org.telegram.messenger.feature.autodeletemedia.domain.repository.AutoDeleteMediaRepository
-import org.telegram.messenger.feature.autodeletemedia.domain.usecase.CalculateEvictionCandidatesUseCase
-import org.telegram.messenger.feature.autodeletemedia.domain.usecase.CheckShouldRunCleanupUseCase
-import org.telegram.messenger.feature.autodeletemedia.domain.usecase.GetAutoDeleteStateUseCase
-import org.telegram.messenger.feature.autodeletemedia.domain.usecase.IsFileLockedUseCase
-import org.telegram.messenger.feature.autodeletemedia.domain.usecase.LockFileUseCase
-import org.telegram.messenger.feature.autodeletemedia.domain.usecase.ObserveAutoDeleteStateUseCase
-import org.telegram.messenger.feature.autodeletemedia.domain.usecase.RunAutoDeleteCleanupUseCase
-import org.telegram.messenger.feature.autodeletemedia.domain.usecase.UnlockFileUseCase
-import org.telegram.messenger.feature.autodeletemedia.presentation.AutoDeleteMediaViewModel
-import org.telegram.messenger.feature.authtokens.data.repository.LegacyAuthTokensRepository
-import org.telegram.messenger.feature.authtokens.domain.repository.AuthTokensRepository
-import org.telegram.messenger.feature.authtokens.domain.usecase.AddLogoutTokenUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.ClearAllTokensUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.GetAuthTokensStateUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.GetSavedLoginTokensUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.GetSavedLogoutTokensUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.ObserveAuthTokensStateUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.PruneTokensListUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.RefreshAuthTokensUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.RemoveTokenUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.SaveLoginTokenUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.SaveLogoutTokensUseCase
-import org.telegram.messenger.feature.authtokens.domain.usecase.ValidateAuthTokenFormatUseCase
-import org.telegram.messenger.feature.authtokens.presentation.AuthTokensViewModel
-import org.telegram.messenger.feature.messagecustomparams.data.repository.LegacyMessageCustomParamsRepository
-import org.telegram.messenger.feature.messagecustomparams.domain.repository.MessageCustomParamsRepository
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.CheckMessageCustomParamsEmptyUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.ClearAllMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.CopyMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.GetMessageCustomParamsStateUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.GetMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.MergeMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.ObserveMessageCustomParamsStateUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.RemoveMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.SetMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.UpdateMessageSummaryUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.UpdateMessageTranslationUseCase
-import org.telegram.messenger.feature.messagecustomparams.domain.usecase.UpdateVoiceTranscriptionUseCase
-import org.telegram.messenger.feature.messagecustomparams.presentation.MessageCustomParamsViewModel
-import org.telegram.messenger.feature.botforum.data.repository.LegacyBotForumRepository
-import org.telegram.messenger.feature.botforum.domain.repository.BotForumRepository
-import org.telegram.messenger.feature.botforum.domain.usecase.CheckHasBotForumDraftsUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.CheckIsBotForumUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.CheckIsStreamingTopicUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.CheckNewMessageDraftReplacementUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.DeriveTopicNameFromMessageUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.GetBotForumStateUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.GetStreamingSendButtonStateUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.ObserveBotForumStateUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.RemoveMarkedRemovedDraftsUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.ResolveStreamingButtonStateUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.SaveIsStreamingTopicUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.StopStreamingDraftUseCase
-import org.telegram.messenger.feature.botforum.domain.usecase.UpdateBotForumDraftUseCase
-import org.telegram.messenger.feature.botforum.presentation.BotForumViewModel
-import org.telegram.messenger.feature.storycustomparams.data.repository.LegacyStoryCustomParamsRepository
-import org.telegram.messenger.feature.storycustomparams.domain.repository.StoryCustomParamsRepository
-import org.telegram.messenger.feature.storycustomparams.domain.usecase.CheckStoryCustomParamsEmptyUseCase
-import org.telegram.messenger.feature.storycustomparams.domain.usecase.ClearAllStoryCustomParamsUseCase
-import org.telegram.messenger.feature.storycustomparams.domain.usecase.ComputeStoryCustomParamsFlagsUseCase
-import org.telegram.messenger.feature.storycustomparams.domain.usecase.CopyStoryCustomParamsUseCase
-import org.telegram.messenger.feature.storycustomparams.domain.usecase.GetStoryCustomParamsStateUseCase
-import org.telegram.messenger.feature.storycustomparams.domain.usecase.GetStoryCustomParamsUseCase
-import org.telegram.messenger.feature.storycustomparams.domain.usecase.ObserveStoryCustomParamsStateUseCase
-import org.telegram.messenger.feature.storycustomparams.domain.usecase.RemoveStoryCustomParamsUseCase
-import org.telegram.messenger.feature.storycustomparams.domain.usecase.SaveStoryCustomParamsUseCase
-import org.telegram.messenger.feature.storycustomparams.domain.usecase.UpdateStoryTranslationUseCase
-import org.telegram.messenger.feature.storycustomparams.presentation.StoryCustomParamsViewModel
-import org.telegram.messenger.feature.botguard.data.repository.LegacyBotGuardRepository
-import org.telegram.messenger.feature.botguard.domain.repository.BotGuardRepository
-import org.telegram.messenger.feature.botguard.domain.usecase.ClearAllGuardBotSessionsUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.CloseGuardBotSessionUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.DetermineGuardBotLaunchFlowUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.FormatGuardBotBulletinUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.GetAllActiveGuardBotSessionsUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.GetGuardBotSessionUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.IsGuardBotConfirmationNeededUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.MapJoinChatBotResultUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.ObserveGuardBotDecisionsUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.ObserveGuardBotStateUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.RegisterGuardBotSessionUseCase
-import org.telegram.messenger.feature.botguard.domain.usecase.SetGuardBotConfirmationShownUseCase
-import org.telegram.messenger.feature.botguard.presentation.BotGuardViewModel
-import org.telegram.messenger.feature.ephemeralmessages.data.repository.LegacyEphemeralMessagesRepository
-import org.telegram.messenger.feature.ephemeralmessages.domain.repository.EphemeralMessagesRepository
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.ClearAllWelcomeAnchorBindingsUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.GetEphemeralCommandBotIdUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.GetEphemeralMessagesStateUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.GetWelcomeAnchorBindingsUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.IsEphemeralCommandUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.IsEphemeralMessageIdUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.ObserveEphemeralMessagesStateUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.PackEphemeralMessageIdUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.ParseBotCommandUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.PutWelcomeAnchorBindingUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.RemoveWelcomeAnchorBindingUseCase
-import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.UnpackEphemeralMessageIdUseCase
-import org.telegram.messenger.feature.ephemeralmessages.presentation.EphemeralMessagesViewModel
-import org.telegram.messenger.feature.botkeyboard.data.repository.LegacyBotKeyboardRepository
-import org.telegram.messenger.feature.botkeyboard.domain.repository.BotKeyboardRepository
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.BuildBotKeyboardLayoutUseCase
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.CheckIsButtonWebViewUseCase
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.CheckIsForceReplyUseCase
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.ClearAllKeyboardsUseCase
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.GetBotKeyboardStateUseCase
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.GetKeyboardForMessageUseCase
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.ObserveBotKeyboardStateUseCase
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.RecordButtonPressedUseCase
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.RemoveKeyboardForMessageUseCase
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.ResolveCustomButtonTypeUseCase
-import org.telegram.messenger.feature.botkeyboard.domain.usecase.SetKeyboardForMessageUseCase
-import org.telegram.messenger.feature.botkeyboard.presentation.BotKeyboardViewModel
-import org.telegram.messenger.feature.windowvisibility.data.repository.LegacyWindowVisibilityRepository
-import org.telegram.messenger.feature.windowvisibility.domain.repository.WindowVisibilityRepository
-import org.telegram.messenger.feature.windowvisibility.domain.usecase.RequestHideWindowUseCase
-import org.telegram.messenger.feature.windowvisibility.domain.usecase.ReleaseHideWindowUseCase
-import org.telegram.messenger.feature.windowvisibility.domain.usecase.ToggleWindowHideUseCase
-import org.telegram.messenger.feature.windowvisibility.domain.usecase.CheckIsWindowVisibleUseCase
-import org.telegram.messenger.feature.windowvisibility.domain.usecase.GetWindowVisibilityStateUseCase
-import org.telegram.messenger.feature.windowvisibility.domain.usecase.GetActiveHideReasonsUseCase
-import org.telegram.messenger.feature.windowvisibility.domain.usecase.ResetWindowVisibilityUseCase
-import org.telegram.messenger.feature.windowvisibility.domain.usecase.ObserveWindowVisibilityStateUseCase
-import org.telegram.messenger.feature.windowvisibility.domain.usecase.ObserveWindowVisibilityChangesUseCase
-import org.telegram.messenger.feature.windowvisibility.domain.usecase.CreateVisibilityControllerUseCase
-import org.telegram.messenger.feature.windowvisibility.presentation.WindowVisibilityViewModel
-import org.telegram.messenger.feature.countdowntimer.data.repository.LegacyCountdownTimerRepository
-import org.telegram.messenger.feature.countdowntimer.domain.repository.CountdownTimerRepository
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.StartCountdownTimerUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.StopCountdownTimerUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.PauseCountdownTimerUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.ResumeCountdownTimerUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.GetCountdownTimerUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.IsCountdownTimerRunningUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.TickCountdownTimerUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.ClearAllCountdownTimersUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.ObserveCountdownTimerUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.ObserveCountdownStateUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.DecomposeCountdownTimeUseCase
-import org.telegram.messenger.feature.countdowntimer.domain.usecase.FormatCountdownTimeUseCase
-import org.telegram.messenger.feature.countdowntimer.presentation.CountdownTimerViewModel
+import org.telegram.messenger.feature.messaging.chat.domain.repository.ChatRepository
+import org.telegram.messenger.feature.messaging.chat.domain.usecase.DeleteMessagesUseCase
+import org.telegram.messenger.feature.messaging.chat.domain.usecase.GetMessagesUseCase
+import org.telegram.messenger.feature.messaging.chat.domain.usecase.LoadHistoryUseCase
+import org.telegram.messenger.feature.messaging.chat.domain.usecase.ObserveMessagesUseCase
+import org.telegram.messenger.feature.messaging.chat.domain.usecase.SendMessageUseCase
+import org.telegram.messenger.feature.messaging.chat.presentation.ChatViewModel
+import org.telegram.messenger.feature.messaging.dialogs.data.repository.LegacyDialogsRepository
+import org.telegram.messenger.feature.messaging.dialogs.domain.repository.DialogsRepository
+import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.DeleteDialogUseCase
+import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.GetDialogsUseCase
+import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.LoadMoreDialogsUseCase
+import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.MarkDialogAsReadUseCase
+import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.PinDialogUseCase
+import org.telegram.messenger.feature.messaging.dialogs.presentation.DialogsViewModel
+import org.telegram.messenger.feature.messaging.savedmessages.data.repository.LegacySavedMessagesRepository
+import org.telegram.messenger.feature.messaging.savedmessages.domain.repository.SavedMessagesRepository
+import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.DeleteSavedDialogUseCase
+import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.GetSavedDialogsUseCase
+import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.GetSavedTagsUseCase
+import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.SearchSavedDialogsUseCase
+import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.TogglePinSavedDialogUseCase
+import org.telegram.messenger.feature.messaging.savedmessages.presentation.SavedMessagesViewModel
+import org.telegram.messenger.feature.system.browser.data.repository.LegacyBrowserRepository
+import org.telegram.messenger.feature.system.browser.domain.repository.BrowserRepository
+import org.telegram.messenger.feature.system.browser.domain.usecase.CheckUrlSafetyUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.ClassifyUrlTargetUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.ExtractUsernameFromUrlUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.GetBrowserStateUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.ManageBrowserHistoryUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.ObserveBrowserStateUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.OpenBrowserUrlUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.UpdateBrowserSettingsUseCase
+import org.telegram.messenger.feature.system.browser.presentation.BrowserViewModel
+import org.telegram.messenger.feature.system.litemode.data.repository.LegacyLiteModeRepository
+import org.telegram.messenger.feature.system.litemode.domain.repository.LiteModeRepository
+import org.telegram.messenger.feature.system.litemode.domain.usecase.CalculateEffectiveFlagsUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.CheckLiteModeFlagUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.GetLiteModeStateUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.ObserveLiteModeStateUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.ResolvePresetUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.SetLiteModePresetUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.ToggleLiteModeFlagUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.UpdatePowerSaverThresholdUseCase
+import org.telegram.messenger.feature.system.litemode.presentation.LiteModeViewModel
+import org.telegram.messenger.feature.system.appconfig.data.repository.LegacyAppConfigRepository
+import org.telegram.messenger.feature.system.appconfig.domain.repository.AppConfigRepository
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetAiComposeConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetAppConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetAppLimitsUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetMessageLimitsUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetPollsConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetRichMessageLimitsUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetStarsPricingConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetTonPricingConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.ObserveAppConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.ReloadAppConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.UpdateAppConfigValueUseCase
+import org.telegram.messenger.feature.system.appconfig.presentation.AppConfigViewModel
+import org.telegram.messenger.feature.media.autodeletemedia.data.repository.LegacyAutoDeleteMediaRepository
+import org.telegram.messenger.feature.media.autodeletemedia.domain.repository.AutoDeleteMediaRepository
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.CalculateEvictionCandidatesUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.CheckShouldRunCleanupUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.GetAutoDeleteStateUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.IsFileLockedUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.LockFileUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.ObserveAutoDeleteStateUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.RunAutoDeleteCleanupUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.UnlockFileUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.presentation.AutoDeleteMediaViewModel
+import org.telegram.messenger.feature.security.authtokens.data.repository.LegacyAuthTokensRepository
+import org.telegram.messenger.feature.security.authtokens.domain.repository.AuthTokensRepository
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.AddLogoutTokenUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.ClearAllTokensUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.GetAuthTokensStateUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.GetSavedLoginTokensUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.GetSavedLogoutTokensUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.ObserveAuthTokensStateUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.PruneTokensListUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.RefreshAuthTokensUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.RemoveTokenUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.SaveLoginTokenUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.SaveLogoutTokensUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.ValidateAuthTokenFormatUseCase
+import org.telegram.messenger.feature.security.authtokens.presentation.AuthTokensViewModel
+import org.telegram.messenger.feature.messaging.messagecustomparams.data.repository.LegacyMessageCustomParamsRepository
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.repository.MessageCustomParamsRepository
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.CheckMessageCustomParamsEmptyUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.ClearAllMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.CopyMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.GetMessageCustomParamsStateUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.GetMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.MergeMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.ObserveMessageCustomParamsStateUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.RemoveMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.SetMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateMessageSummaryUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateMessageTranslationUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateVoiceTranscriptionUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.presentation.MessageCustomParamsViewModel
+import org.telegram.messenger.feature.messaging.botforum.data.repository.LegacyBotForumRepository
+import org.telegram.messenger.feature.messaging.botforum.domain.repository.BotForumRepository
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckHasBotForumDraftsUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckIsBotForumUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckIsStreamingTopicUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckNewMessageDraftReplacementUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.DeriveTopicNameFromMessageUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.GetBotForumStateUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.GetStreamingSendButtonStateUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.ObserveBotForumStateUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.RemoveMarkedRemovedDraftsUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.ResolveStreamingButtonStateUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.SaveIsStreamingTopicUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.StopStreamingDraftUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.UpdateBotForumDraftUseCase
+import org.telegram.messenger.feature.messaging.botforum.presentation.BotForumViewModel
+import org.telegram.messenger.feature.media.storycustomparams.data.repository.LegacyStoryCustomParamsRepository
+import org.telegram.messenger.feature.media.storycustomparams.domain.repository.StoryCustomParamsRepository
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.CheckStoryCustomParamsEmptyUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.ClearAllStoryCustomParamsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.ComputeStoryCustomParamsFlagsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.CopyStoryCustomParamsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.GetStoryCustomParamsStateUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.GetStoryCustomParamsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.ObserveStoryCustomParamsStateUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.RemoveStoryCustomParamsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.SaveStoryCustomParamsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.UpdateStoryTranslationUseCase
+import org.telegram.messenger.feature.media.storycustomparams.presentation.StoryCustomParamsViewModel
+import org.telegram.messenger.feature.security.botguard.data.repository.LegacyBotGuardRepository
+import org.telegram.messenger.feature.security.botguard.domain.repository.BotGuardRepository
+import org.telegram.messenger.feature.security.botguard.domain.usecase.ClearAllGuardBotSessionsUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.CloseGuardBotSessionUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.DetermineGuardBotLaunchFlowUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.FormatGuardBotBulletinUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.GetAllActiveGuardBotSessionsUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.GetGuardBotSessionUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.IsGuardBotConfirmationNeededUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.MapJoinChatBotResultUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.ObserveGuardBotDecisionsUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.ObserveGuardBotStateUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.RegisterGuardBotSessionUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.SetGuardBotConfirmationShownUseCase
+import org.telegram.messenger.feature.security.botguard.presentation.BotGuardViewModel
+import org.telegram.messenger.feature.messaging.ephemeralmessages.data.repository.LegacyEphemeralMessagesRepository
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.repository.EphemeralMessagesRepository
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.ClearAllWelcomeAnchorBindingsUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.GetEphemeralCommandBotIdUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.GetEphemeralMessagesStateUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.GetWelcomeAnchorBindingsUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.IsEphemeralCommandUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.IsEphemeralMessageIdUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.ObserveEphemeralMessagesStateUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.PackEphemeralMessageIdUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.ParseBotCommandUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.PutWelcomeAnchorBindingUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.RemoveWelcomeAnchorBindingUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.UnpackEphemeralMessageIdUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.presentation.EphemeralMessagesViewModel
+import org.telegram.messenger.feature.messaging.botkeyboard.data.repository.LegacyBotKeyboardRepository
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.repository.BotKeyboardRepository
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.BuildBotKeyboardLayoutUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.CheckIsButtonWebViewUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.CheckIsForceReplyUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.ClearAllKeyboardsUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.GetBotKeyboardStateUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.GetKeyboardForMessageUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.ObserveBotKeyboardStateUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.RecordButtonPressedUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.RemoveKeyboardForMessageUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.ResolveCustomButtonTypeUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.SetKeyboardForMessageUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.presentation.BotKeyboardViewModel
+import org.telegram.messenger.feature.system.windowvisibility.data.repository.LegacyWindowVisibilityRepository
+import org.telegram.messenger.feature.system.windowvisibility.domain.repository.WindowVisibilityRepository
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.RequestHideWindowUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ReleaseHideWindowUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ToggleWindowHideUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.CheckIsWindowVisibleUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.GetWindowVisibilityStateUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.GetActiveHideReasonsUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ResetWindowVisibilityUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ObserveWindowVisibilityStateUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ObserveWindowVisibilityChangesUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.CreateVisibilityControllerUseCase
+import org.telegram.messenger.feature.system.windowvisibility.presentation.WindowVisibilityViewModel
+import org.telegram.messenger.feature.system.countdowntimer.data.repository.LegacyCountdownTimerRepository
+import org.telegram.messenger.feature.system.countdowntimer.domain.repository.CountdownTimerRepository
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.StartCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.StopCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.PauseCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ResumeCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.GetCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.IsCountdownTimerRunningUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.TickCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ClearAllCountdownTimersUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ObserveCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ObserveCountdownStateUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.DecomposeCountdownTimeUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.FormatCountdownTimeUseCase
+import org.telegram.messenger.feature.system.countdowntimer.presentation.CountdownTimerViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6922,44 +6922,44 @@ class AccountFeatureContainer private constructor(val account: Int) {
         )
     }
 
-    private var customTextHtmlRepository: org.telegram.messenger.feature.texthtml.domain.repository.TextHtmlRepository? = null
+    private var customTextHtmlRepository: org.telegram.messenger.feature.messaging.texthtml.domain.repository.TextHtmlRepository? = null
 
-    var textHtmlRepository: org.telegram.messenger.feature.texthtml.domain.repository.TextHtmlRepository
-        get() = customTextHtmlRepository ?: org.telegram.messenger.feature.texthtml.data.repository.LegacyTextHtmlRepository()
+    var textHtmlRepository: org.telegram.messenger.feature.messaging.texthtml.domain.repository.TextHtmlRepository
+        get() = customTextHtmlRepository ?: org.telegram.messenger.feature.messaging.texthtml.data.repository.LegacyTextHtmlRepository()
         set(value) {
             customTextHtmlRepository = value
         }
 
-    val convertToHtmlUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.ConvertToHtmlUseCase
-        get() = org.telegram.messenger.feature.texthtml.domain.usecase.ConvertToHtmlUseCase(textHtmlRepository)
+    val convertToHtmlUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ConvertToHtmlUseCase
+        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ConvertToHtmlUseCase(textHtmlRepository)
 
-    val parseFromHtmlUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.ParseFromHtmlUseCase
-        get() = org.telegram.messenger.feature.texthtml.domain.usecase.ParseFromHtmlUseCase(textHtmlRepository)
+    val parseFromHtmlUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ParseFromHtmlUseCase
+        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ParseFromHtmlUseCase(textHtmlRepository)
 
-    val escapeHtmlUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.EscapeHtmlUseCase
-        get() = org.telegram.messenger.feature.texthtml.domain.usecase.EscapeHtmlUseCase(textHtmlRepository)
+    val escapeHtmlUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.EscapeHtmlUseCase
+        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.EscapeHtmlUseCase(textHtmlRepository)
 
-    val unescapeHtmlUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.UnescapeHtmlUseCase
-        get() = org.telegram.messenger.feature.texthtml.domain.usecase.UnescapeHtmlUseCase(textHtmlRepository)
+    val unescapeHtmlUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.UnescapeHtmlUseCase
+        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.UnescapeHtmlUseCase(textHtmlRepository)
 
-    val stripHtmlFormattingUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.StripHtmlFormattingUseCase
-        get() = org.telegram.messenger.feature.texthtml.domain.usecase.StripHtmlFormattingUseCase(textHtmlRepository)
+    val stripHtmlFormattingUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.StripHtmlFormattingUseCase
+        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.StripHtmlFormattingUseCase(textHtmlRepository)
 
-    val extractHtmlSpansUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.ExtractHtmlSpansUseCase
-        get() = org.telegram.messenger.feature.texthtml.domain.usecase.ExtractHtmlSpansUseCase()
+    val extractHtmlSpansUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ExtractHtmlSpansUseCase
+        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ExtractHtmlSpansUseCase()
 
-    val hasRichFormattingUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.HasRichFormattingUseCase
-        get() = org.telegram.messenger.feature.texthtml.domain.usecase.HasRichFormattingUseCase()
+    val hasRichFormattingUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.HasRichFormattingUseCase
+        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.HasRichFormattingUseCase()
 
-    val observeTextHtmlStateUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.ObserveTextHtmlStateUseCase
-        get() = org.telegram.messenger.feature.texthtml.domain.usecase.ObserveTextHtmlStateUseCase(textHtmlRepository)
+    val observeTextHtmlStateUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ObserveTextHtmlStateUseCase
+        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ObserveTextHtmlStateUseCase(textHtmlRepository)
 
-    val clearTextHtmlStateUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.ClearTextHtmlStateUseCase
-        get() = org.telegram.messenger.feature.texthtml.domain.usecase.ClearTextHtmlStateUseCase(textHtmlRepository)
+    val clearTextHtmlStateUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ClearTextHtmlStateUseCase
+        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ClearTextHtmlStateUseCase(textHtmlRepository)
 
-    private var cachedTextHtmlViewModel: org.telegram.messenger.feature.texthtml.presentation.TextHtmlViewModel? = null
+    private var cachedTextHtmlViewModel: org.telegram.messenger.feature.messaging.texthtml.presentation.TextHtmlViewModel? = null
 
-    val textHtmlViewModel: org.telegram.messenger.feature.texthtml.presentation.TextHtmlViewModel
+    val textHtmlViewModel: org.telegram.messenger.feature.messaging.texthtml.presentation.TextHtmlViewModel
         get() {
             var vm = cachedTextHtmlViewModel
             if (vm == null) {
@@ -6969,8 +6969,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
             return vm
         }
 
-    fun createTextHtmlViewModel(): org.telegram.messenger.feature.texthtml.presentation.TextHtmlViewModel {
-        return org.telegram.messenger.feature.texthtml.presentation.TextHtmlViewModel(
+    fun createTextHtmlViewModel(): org.telegram.messenger.feature.messaging.texthtml.presentation.TextHtmlViewModel {
+        return org.telegram.messenger.feature.messaging.texthtml.presentation.TextHtmlViewModel(
             convertToHtmlUseCase = convertToHtmlUseCase,
             parseFromHtmlUseCase = parseFromHtmlUseCase,
             escapeHtmlUseCase = escapeHtmlUseCase,
@@ -6980,47 +6980,47 @@ class AccountFeatureContainer private constructor(val account: Int) {
         )
     }
 
-    private var customLeakDetectorRepository: org.telegram.messenger.feature.leakdetector.domain.repository.LeakDetectorRepository? = null
+    private var customLeakDetectorRepository: org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository? = null
 
-    var leakDetectorRepository: org.telegram.messenger.feature.leakdetector.domain.repository.LeakDetectorRepository
-        get() = customLeakDetectorRepository ?: org.telegram.messenger.feature.leakdetector.data.repository.LegacyLeakDetectorRepository()
+    var leakDetectorRepository: org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository
+        get() = customLeakDetectorRepository ?: org.telegram.messenger.feature.system.leakdetector.data.repository.LegacyLeakDetectorRepository()
         set(value) {
             customLeakDetectorRepository = value
         }
 
-    val startLeakDetectionUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.StartLeakDetectionUseCase
-        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.StartLeakDetectionUseCase(leakDetectorRepository)
+    val startLeakDetectionUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.StartLeakDetectionUseCase
+        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.StartLeakDetectionUseCase(leakDetectorRepository)
 
-    val stopLeakDetectionUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.StopLeakDetectionUseCase
-        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.StopLeakDetectionUseCase(leakDetectorRepository)
+    val stopLeakDetectionUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.StopLeakDetectionUseCase
+        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.StopLeakDetectionUseCase(leakDetectorRepository)
 
-    val trackInstanceUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.TrackInstanceUseCase
-        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.TrackInstanceUseCase(leakDetectorRepository)
+    val trackInstanceUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.TrackInstanceUseCase
+        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.TrackInstanceUseCase(leakDetectorRepository)
 
-    val triggerLeakCheckUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.TriggerLeakCheckUseCase
-        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.TriggerLeakCheckUseCase(leakDetectorRepository)
+    val triggerLeakCheckUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.TriggerLeakCheckUseCase
+        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.TriggerLeakCheckUseCase(leakDetectorRepository)
 
-    val confirmLeakUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.ConfirmLeakUseCase
-        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.ConfirmLeakUseCase(leakDetectorRepository)
+    val confirmLeakUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ConfirmLeakUseCase
+        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.ConfirmLeakUseCase(leakDetectorRepository)
 
-    val getTrackedClassesStatsUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.GetTrackedClassesStatsUseCase
-        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.GetTrackedClassesStatsUseCase(leakDetectorRepository)
+    val getTrackedClassesStatsUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.GetTrackedClassesStatsUseCase
+        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.GetTrackedClassesStatsUseCase(leakDetectorRepository)
 
-    val getConfirmedLeaksUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.GetConfirmedLeaksUseCase
-        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.GetConfirmedLeaksUseCase(leakDetectorRepository)
+    val getConfirmedLeaksUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.GetConfirmedLeaksUseCase
+        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.GetConfirmedLeaksUseCase(leakDetectorRepository)
 
-    val resetLeakDetectorUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.ResetLeakDetectorUseCase
-        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.ResetLeakDetectorUseCase(leakDetectorRepository)
+    val resetLeakDetectorUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ResetLeakDetectorUseCase
+        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.ResetLeakDetectorUseCase(leakDetectorRepository)
 
-    val observeLeakDetectorStateUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.ObserveLeakDetectorStateUseCase
-        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.ObserveLeakDetectorStateUseCase(leakDetectorRepository)
+    val observeLeakDetectorStateUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ObserveLeakDetectorStateUseCase
+        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.ObserveLeakDetectorStateUseCase(leakDetectorRepository)
 
-    val observeConfirmedLeaksUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.ObserveConfirmedLeaksUseCase
-        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.ObserveConfirmedLeaksUseCase(leakDetectorRepository)
+    val observeConfirmedLeaksUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ObserveConfirmedLeaksUseCase
+        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.ObserveConfirmedLeaksUseCase(leakDetectorRepository)
 
-    private var cachedLeakDetectorViewModel: org.telegram.messenger.feature.leakdetector.presentation.LeakDetectorViewModel? = null
+    private var cachedLeakDetectorViewModel: org.telegram.messenger.feature.system.leakdetector.presentation.LeakDetectorViewModel? = null
 
-    val leakDetectorViewModel: org.telegram.messenger.feature.leakdetector.presentation.LeakDetectorViewModel
+    val leakDetectorViewModel: org.telegram.messenger.feature.system.leakdetector.presentation.LeakDetectorViewModel
         get() {
             var vm = cachedLeakDetectorViewModel
             if (vm == null) {
@@ -7030,8 +7030,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
             return vm
         }
 
-    fun createLeakDetectorViewModel(): org.telegram.messenger.feature.leakdetector.presentation.LeakDetectorViewModel {
-        return org.telegram.messenger.feature.leakdetector.presentation.LeakDetectorViewModel(
+    fun createLeakDetectorViewModel(): org.telegram.messenger.feature.system.leakdetector.presentation.LeakDetectorViewModel {
+        return org.telegram.messenger.feature.system.leakdetector.presentation.LeakDetectorViewModel(
             startLeakDetectionUseCase = startLeakDetectionUseCase,
             stopLeakDetectionUseCase = stopLeakDetectionUseCase,
             trackInstanceUseCase = trackInstanceUseCase,
@@ -7045,53 +7045,53 @@ class AccountFeatureContainer private constructor(val account: Int) {
     }
 
     // --- 60 FPS Frame Rate & V-Sync Content Arbitration (feature.fpscontent) ---
-    private var customFpsContentRepository: org.telegram.messenger.feature.fpscontent.domain.repository.FpsContentRepository? = null
+    private var customFpsContentRepository: org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository? = null
 
-    var fpsContentRepository: org.telegram.messenger.feature.fpscontent.domain.repository.FpsContentRepository
-        get() = customFpsContentRepository ?: org.telegram.messenger.feature.fpscontent.data.repository.LegacyFpsContentRepository()
+    var fpsContentRepository: org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository
+        get() = customFpsContentRepository ?: org.telegram.messenger.feature.system.fpscontent.data.repository.LegacyFpsContentRepository()
         set(value) {
             customFpsContentRepository = value
         }
 
-    val registerFrameCallbackUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.RegisterFrameCallbackUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.RegisterFrameCallbackUseCase(fpsContentRepository)
+    val registerFrameCallbackUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RegisterFrameCallbackUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.RegisterFrameCallbackUseCase(fpsContentRepository)
 
-    val registerRunnableCallbackUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.RegisterRunnableCallbackUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.RegisterRunnableCallbackUseCase(fpsContentRepository)
+    val registerRunnableCallbackUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RegisterRunnableCallbackUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.RegisterRunnableCallbackUseCase(fpsContentRepository)
 
-    val unregisterCallbackUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.UnregisterCallbackUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.UnregisterCallbackUseCase(fpsContentRepository)
+    val unregisterCallbackUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.UnregisterCallbackUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.UnregisterCallbackUseCase(fpsContentRepository)
 
-    val requestViewInvalidationUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.RequestViewInvalidationUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.RequestViewInvalidationUseCase(fpsContentRepository)
+    val requestViewInvalidationUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RequestViewInvalidationUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.RequestViewInvalidationUseCase(fpsContentRepository)
 
-    val requestDrawableInvalidationUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.RequestDrawableInvalidationUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.RequestDrawableInvalidationUseCase(fpsContentRepository)
+    val requestDrawableInvalidationUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RequestDrawableInvalidationUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.RequestDrawableInvalidationUseCase(fpsContentRepository)
 
-    val dispatchVsyncTickUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.DispatchVsyncTickUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.DispatchVsyncTickUseCase(fpsContentRepository)
+    val dispatchVsyncTickUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.DispatchVsyncTickUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.DispatchVsyncTickUseCase(fpsContentRepository)
 
-    val calculateFpsTimingUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.CalculateFpsTimingUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.CalculateFpsTimingUseCase()
+    val calculateFpsTimingUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.CalculateFpsTimingUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.CalculateFpsTimingUseCase()
 
-    val getFpsContentStatsUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.GetFpsContentStatsUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.GetFpsContentStatsUseCase(fpsContentRepository)
+    val getFpsContentStatsUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.GetFpsContentStatsUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.GetFpsContentStatsUseCase(fpsContentRepository)
 
-    val getFpsSubscriptionsUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.GetFpsSubscriptionsUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.GetFpsSubscriptionsUseCase(fpsContentRepository)
+    val getFpsSubscriptionsUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.GetFpsSubscriptionsUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.GetFpsSubscriptionsUseCase(fpsContentRepository)
 
-    val observeFpsContentStatsUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.ObserveFpsContentStatsUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.ObserveFpsContentStatsUseCase(fpsContentRepository)
+    val observeFpsContentStatsUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.ObserveFpsContentStatsUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.ObserveFpsContentStatsUseCase(fpsContentRepository)
 
-    val observeFpsTicksUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.ObserveFpsTicksUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.ObserveFpsTicksUseCase(fpsContentRepository)
+    val observeFpsTicksUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.ObserveFpsTicksUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.ObserveFpsTicksUseCase(fpsContentRepository)
 
-    val resetFpsContentUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.ResetFpsContentUseCase
-        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.ResetFpsContentUseCase(fpsContentRepository)
+    val resetFpsContentUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.ResetFpsContentUseCase
+        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.ResetFpsContentUseCase(fpsContentRepository)
 
-    private var cachedFpsContentViewModel: org.telegram.messenger.feature.fpscontent.presentation.FpsContentViewModel? = null
+    private var cachedFpsContentViewModel: org.telegram.messenger.feature.system.fpscontent.presentation.FpsContentViewModel? = null
 
-    val fpsContentViewModel: org.telegram.messenger.feature.fpscontent.presentation.FpsContentViewModel
+    val fpsContentViewModel: org.telegram.messenger.feature.system.fpscontent.presentation.FpsContentViewModel
         get() {
             var vm = cachedFpsContentViewModel
             if (vm == null) {
@@ -7101,8 +7101,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
             return vm
         }
 
-    fun createFpsContentViewModel(): org.telegram.messenger.feature.fpscontent.presentation.FpsContentViewModel {
-        return org.telegram.messenger.feature.fpscontent.presentation.FpsContentViewModel(
+    fun createFpsContentViewModel(): org.telegram.messenger.feature.system.fpscontent.presentation.FpsContentViewModel {
+        return org.telegram.messenger.feature.system.fpscontent.presentation.FpsContentViewModel(
             registerFrameCallbackUseCase = registerFrameCallbackUseCase,
             registerRunnableCallbackUseCase = registerRunnableCallbackUseCase,
             unregisterCallbackUseCase = unregisterCallbackUseCase,
@@ -7118,53 +7118,53 @@ class AccountFeatureContainer private constructor(val account: Int) {
     }
 
     // --- Main Thread ANR Watchdog & UI Freeze Diagnostics (feature.anrwatchdog) ---
-    private var customAnrWatchdogRepository: org.telegram.messenger.feature.anrwatchdog.domain.repository.AnrWatchdogRepository? = null
+    private var customAnrWatchdogRepository: org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository? = null
 
-    var anrWatchdogRepository: org.telegram.messenger.feature.anrwatchdog.domain.repository.AnrWatchdogRepository
-        get() = customAnrWatchdogRepository ?: org.telegram.messenger.feature.anrwatchdog.data.repository.LegacyAnrWatchdogRepository()
+    var anrWatchdogRepository: org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository
+        get() = customAnrWatchdogRepository ?: org.telegram.messenger.feature.system.anrwatchdog.data.repository.LegacyAnrWatchdogRepository()
         set(value) {
             customAnrWatchdogRepository = value
         }
 
-    val startAnrMonitoringUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.StartAnrMonitoringUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.StartAnrMonitoringUseCase(anrWatchdogRepository)
+    val startAnrMonitoringUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.StartAnrMonitoringUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.StartAnrMonitoringUseCase(anrWatchdogRepository)
 
-    val stopAnrMonitoringUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.StopAnrMonitoringUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.StopAnrMonitoringUseCase(anrWatchdogRepository)
+    val stopAnrMonitoringUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.StopAnrMonitoringUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.StopAnrMonitoringUseCase(anrWatchdogRepository)
 
-    val setAppForegroundStatusUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.SetAppForegroundStatusUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.SetAppForegroundStatusUseCase(anrWatchdogRepository)
+    val setAppForegroundStatusUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.SetAppForegroundStatusUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.SetAppForegroundStatusUseCase(anrWatchdogRepository)
 
-    val sendMainThreadPingUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.SendMainThreadPingUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.SendMainThreadPingUseCase(anrWatchdogRepository)
+    val sendMainThreadPingUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.SendMainThreadPingUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.SendMainThreadPingUseCase(anrWatchdogRepository)
 
-    val acknowledgePingUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.AcknowledgePingUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.AcknowledgePingUseCase(anrWatchdogRepository)
+    val acknowledgePingUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.AcknowledgePingUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.AcknowledgePingUseCase(anrWatchdogRepository)
 
-    val checkMainThreadFreezeUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.CheckMainThreadFreezeUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.CheckMainThreadFreezeUseCase(anrWatchdogRepository)
+    val checkMainThreadFreezeUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.CheckMainThreadFreezeUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.CheckMainThreadFreezeUseCase(anrWatchdogRepository)
 
-    val resolveIncidentUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.ResolveIncidentUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.ResolveIncidentUseCase(anrWatchdogRepository)
+    val resolveIncidentUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ResolveIncidentUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ResolveIncidentUseCase(anrWatchdogRepository)
 
-    val getAnrWatchdogStateUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.GetAnrWatchdogStateUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.GetAnrWatchdogStateUseCase(anrWatchdogRepository)
+    val getAnrWatchdogStateUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.GetAnrWatchdogStateUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.GetAnrWatchdogStateUseCase(anrWatchdogRepository)
 
-    val getAnrIncidentsUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.GetAnrIncidentsUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.GetAnrIncidentsUseCase(anrWatchdogRepository)
+    val getAnrIncidentsUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.GetAnrIncidentsUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.GetAnrIncidentsUseCase(anrWatchdogRepository)
 
-    val clearAnrHistoryUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.ClearAnrHistoryUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.ClearAnrHistoryUseCase(anrWatchdogRepository)
+    val clearAnrHistoryUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ClearAnrHistoryUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ClearAnrHistoryUseCase(anrWatchdogRepository)
 
-    val observeAnrWatchdogStateUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.ObserveAnrWatchdogStateUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.ObserveAnrWatchdogStateUseCase(anrWatchdogRepository)
+    val observeAnrWatchdogStateUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ObserveAnrWatchdogStateUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ObserveAnrWatchdogStateUseCase(anrWatchdogRepository)
 
-    val observeAnrIncidentsUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.ObserveAnrIncidentsUseCase
-        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.ObserveAnrIncidentsUseCase(anrWatchdogRepository)
+    val observeAnrIncidentsUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ObserveAnrIncidentsUseCase
+        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ObserveAnrIncidentsUseCase(anrWatchdogRepository)
 
-    private var cachedAnrWatchdogViewModel: org.telegram.messenger.feature.anrwatchdog.presentation.AnrWatchdogViewModel? = null
+    private var cachedAnrWatchdogViewModel: org.telegram.messenger.feature.system.anrwatchdog.presentation.AnrWatchdogViewModel? = null
 
-    val anrWatchdogViewModel: org.telegram.messenger.feature.anrwatchdog.presentation.AnrWatchdogViewModel
+    val anrWatchdogViewModel: org.telegram.messenger.feature.system.anrwatchdog.presentation.AnrWatchdogViewModel
         get() {
             var vm = cachedAnrWatchdogViewModel
             if (vm == null) {
@@ -7174,8 +7174,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
             return vm
         }
 
-    fun createAnrWatchdogViewModel(): org.telegram.messenger.feature.anrwatchdog.presentation.AnrWatchdogViewModel {
-        return org.telegram.messenger.feature.anrwatchdog.presentation.AnrWatchdogViewModel(
+    fun createAnrWatchdogViewModel(): org.telegram.messenger.feature.system.anrwatchdog.presentation.AnrWatchdogViewModel {
+        return org.telegram.messenger.feature.system.anrwatchdog.presentation.AnrWatchdogViewModel(
             startAnrMonitoringUseCase = startAnrMonitoringUseCase,
             stopAnrMonitoringUseCase = stopAnrMonitoringUseCase,
             setAppForegroundStatusUseCase = setAppForegroundStatusUseCase,
@@ -7192,44 +7192,44 @@ class AccountFeatureContainer private constructor(val account: Int) {
     }
 
     // --- EmuDetector ---
-    private var customEmuDetectorRepository: org.telegram.messenger.feature.emudetector.domain.repository.EmuDetectorRepository? = null
+    private var customEmuDetectorRepository: org.telegram.messenger.feature.system.emudetector.domain.repository.EmuDetectorRepository? = null
 
-    var emuDetectorRepository: org.telegram.messenger.feature.emudetector.domain.repository.EmuDetectorRepository
-        get() = customEmuDetectorRepository ?: org.telegram.messenger.feature.emudetector.data.repository.LegacyEmuDetectorRepository()
+    var emuDetectorRepository: org.telegram.messenger.feature.system.emudetector.domain.repository.EmuDetectorRepository
+        get() = customEmuDetectorRepository ?: org.telegram.messenger.feature.system.emudetector.data.repository.LegacyEmuDetectorRepository()
         set(value) {
             customEmuDetectorRepository = value
         }
 
-    val detectEnvironmentUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.DetectEnvironmentUseCase
-        get() = org.telegram.messenger.feature.emudetector.domain.usecase.DetectEnvironmentUseCase(emuDetectorRepository)
+    val detectEnvironmentUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.DetectEnvironmentUseCase
+        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.DetectEnvironmentUseCase(emuDetectorRepository)
 
-    val isEmulatorUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.IsEmulatorUseCase
-        get() = org.telegram.messenger.feature.emudetector.domain.usecase.IsEmulatorUseCase(emuDetectorRepository)
+    val isEmulatorUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.IsEmulatorUseCase
+        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.IsEmulatorUseCase(emuDetectorRepository)
 
-    val getCachedDiagnosticsUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.GetCachedDiagnosticsUseCase
-        get() = org.telegram.messenger.feature.emudetector.domain.usecase.GetCachedDiagnosticsUseCase(emuDetectorRepository)
+    val getCachedDiagnosticsUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.GetCachedDiagnosticsUseCase
+        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.GetCachedDiagnosticsUseCase(emuDetectorRepository)
 
-    val observeDiagnosticsUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.ObserveDiagnosticsUseCase
-        get() = org.telegram.messenger.feature.emudetector.domain.usecase.ObserveDiagnosticsUseCase(emuDetectorRepository)
+    val observeDiagnosticsUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.ObserveDiagnosticsUseCase
+        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.ObserveDiagnosticsUseCase(emuDetectorRepository)
 
-    val observeIsEmulatorUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.ObserveIsEmulatorUseCase
-        get() = org.telegram.messenger.feature.emudetector.domain.usecase.ObserveIsEmulatorUseCase(emuDetectorRepository)
+    val observeIsEmulatorUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.ObserveIsEmulatorUseCase
+        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.ObserveIsEmulatorUseCase(emuDetectorRepository)
 
-    val getDetectorConfigUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.GetDetectorConfigUseCase
-        get() = org.telegram.messenger.feature.emudetector.domain.usecase.GetDetectorConfigUseCase(emuDetectorRepository)
+    val getDetectorConfigUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.GetDetectorConfigUseCase
+        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.GetDetectorConfigUseCase(emuDetectorRepository)
 
-    val updateDetectorConfigUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.UpdateDetectorConfigUseCase
-        get() = org.telegram.messenger.feature.emudetector.domain.usecase.UpdateDetectorConfigUseCase(emuDetectorRepository)
+    val updateDetectorConfigUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.UpdateDetectorConfigUseCase
+        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.UpdateDetectorConfigUseCase(emuDetectorRepository)
 
-    val addCustomPackageNameUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.AddCustomPackageNameUseCase
-        get() = org.telegram.messenger.feature.emudetector.domain.usecase.AddCustomPackageNameUseCase(emuDetectorRepository)
+    val addCustomPackageNameUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.AddCustomPackageNameUseCase
+        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.AddCustomPackageNameUseCase(emuDetectorRepository)
 
-    val clearDetectorCacheUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.ClearDetectorCacheUseCase
-        get() = org.telegram.messenger.feature.emudetector.domain.usecase.ClearDetectorCacheUseCase(emuDetectorRepository)
+    val clearDetectorCacheUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.ClearDetectorCacheUseCase
+        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.ClearDetectorCacheUseCase(emuDetectorRepository)
 
-    private var cachedEmuDetectorViewModel: org.telegram.messenger.feature.emudetector.presentation.EmuDetectorViewModel? = null
+    private var cachedEmuDetectorViewModel: org.telegram.messenger.feature.system.emudetector.presentation.EmuDetectorViewModel? = null
 
-    val emuDetectorViewModel: org.telegram.messenger.feature.emudetector.presentation.EmuDetectorViewModel
+    val emuDetectorViewModel: org.telegram.messenger.feature.system.emudetector.presentation.EmuDetectorViewModel
         get() {
             var vm = cachedEmuDetectorViewModel
             if (vm == null) {
@@ -7239,8 +7239,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
             return vm
         }
 
-    fun createEmuDetectorViewModel(): org.telegram.messenger.feature.emudetector.presentation.EmuDetectorViewModel {
-        return org.telegram.messenger.feature.emudetector.presentation.EmuDetectorViewModel(
+    fun createEmuDetectorViewModel(): org.telegram.messenger.feature.system.emudetector.presentation.EmuDetectorViewModel {
+        return org.telegram.messenger.feature.system.emudetector.presentation.EmuDetectorViewModel(
             detectEnvironmentUseCase = detectEnvironmentUseCase,
             observeDiagnosticsUseCase = observeDiagnosticsUseCase,
             getDetectorConfigUseCase = getDetectorConfigUseCase,
@@ -7251,52 +7251,52 @@ class AccountFeatureContainer private constructor(val account: Int) {
     }
 
     // --- FlagSecure ---
-    private var customFlagSecureRepository: org.telegram.messenger.feature.flagsecure.domain.repository.FlagSecureRepository? = null
+    private var customFlagSecureRepository: org.telegram.messenger.feature.security.flagsecure.domain.repository.FlagSecureRepository? = null
 
-    var flagSecureRepository: org.telegram.messenger.feature.flagsecure.domain.repository.FlagSecureRepository
-        get() = customFlagSecureRepository ?: org.telegram.messenger.feature.flagsecure.data.repository.LegacyFlagSecureRepository()
+    var flagSecureRepository: org.telegram.messenger.feature.security.flagsecure.domain.repository.FlagSecureRepository
+        get() = customFlagSecureRepository ?: org.telegram.messenger.feature.security.flagsecure.data.repository.LegacyFlagSecureRepository()
         set(value) {
             customFlagSecureRepository = value
         }
 
-    val attachSecurityReasonUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.AttachSecurityReasonUseCase
-        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.AttachSecurityReasonUseCase(flagSecureRepository)
+    val attachSecurityReasonUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.AttachSecurityReasonUseCase
+        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.AttachSecurityReasonUseCase(flagSecureRepository)
 
-    val detachSecurityReasonUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.DetachSecurityReasonUseCase
-        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.DetachSecurityReasonUseCase(flagSecureRepository)
+    val detachSecurityReasonUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.DetachSecurityReasonUseCase
+        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.DetachSecurityReasonUseCase(flagSecureRepository)
 
-    val invalidateWindowSecurityUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.InvalidateWindowSecurityUseCase
-        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.InvalidateWindowSecurityUseCase(flagSecureRepository)
+    val invalidateWindowSecurityUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.InvalidateWindowSecurityUseCase
+        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.InvalidateWindowSecurityUseCase(flagSecureRepository)
 
-    val isWindowSecuredUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.IsWindowSecuredUseCase
-        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.IsWindowSecuredUseCase(flagSecureRepository)
+    val isWindowSecuredUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.IsWindowSecuredUseCase
+        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.IsWindowSecuredUseCase(flagSecureRepository)
 
-    val getWindowSecurityStateUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.GetWindowSecurityStateUseCase
-        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.GetWindowSecurityStateUseCase(flagSecureRepository)
+    val getWindowSecurityStateUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.GetWindowSecurityStateUseCase
+        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.GetWindowSecurityStateUseCase(flagSecureRepository)
 
-    val getAllWindowStatesUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.GetAllWindowStatesUseCase
-        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.GetAllWindowStatesUseCase(flagSecureRepository)
+    val getAllWindowStatesUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.GetAllWindowStatesUseCase
+        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.GetAllWindowStatesUseCase(flagSecureRepository)
 
-    val resetWindowSecurityUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.ResetWindowSecurityUseCase
-        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.ResetWindowSecurityUseCase(flagSecureRepository)
+    val resetWindowSecurityUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.ResetWindowSecurityUseCase
+        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.ResetWindowSecurityUseCase(flagSecureRepository)
 
-    val observeWindowStateUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.ObserveWindowStateUseCase
-        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.ObserveWindowStateUseCase(flagSecureRepository)
+    val observeWindowStateUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.ObserveWindowStateUseCase
+        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.ObserveWindowStateUseCase(flagSecureRepository)
 
-    val observeAllWindowStatesUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.ObserveAllWindowStatesUseCase
-        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.ObserveAllWindowStatesUseCase(flagSecureRepository)
+    val observeAllWindowStatesUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.ObserveAllWindowStatesUseCase
+        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.ObserveAllWindowStatesUseCase(flagSecureRepository)
 
-    val evaluateSecurityRuleUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.EvaluateSecurityRuleUseCase
-        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.EvaluateSecurityRuleUseCase()
+    val evaluateSecurityRuleUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.EvaluateSecurityRuleUseCase
+        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.EvaluateSecurityRuleUseCase()
 
-    private val cachedFlagSecureViewModels = ConcurrentHashMap<String, org.telegram.messenger.feature.flagsecure.presentation.FlagSecureViewModel>()
+    private val cachedFlagSecureViewModels = ConcurrentHashMap<String, org.telegram.messenger.feature.security.flagsecure.presentation.FlagSecureViewModel>()
 
-    fun getFlagSecureViewModel(windowId: String = "main"): org.telegram.messenger.feature.flagsecure.presentation.FlagSecureViewModel {
+    fun getFlagSecureViewModel(windowId: String = "main"): org.telegram.messenger.feature.security.flagsecure.presentation.FlagSecureViewModel {
         return cachedFlagSecureViewModels.computeIfAbsent(windowId) { createFlagSecureViewModel(it) }
     }
 
-    fun createFlagSecureViewModel(windowId: String = "main"): org.telegram.messenger.feature.flagsecure.presentation.FlagSecureViewModel {
-        return org.telegram.messenger.feature.flagsecure.presentation.FlagSecureViewModel(
+    fun createFlagSecureViewModel(windowId: String = "main"): org.telegram.messenger.feature.security.flagsecure.presentation.FlagSecureViewModel {
+        return org.telegram.messenger.feature.security.flagsecure.presentation.FlagSecureViewModel(
             initialWindowId = windowId,
             attachSecurityReasonUseCase = attachSecurityReasonUseCase,
             detachSecurityReasonUseCase = detachSecurityReasonUseCase,
@@ -7309,50 +7309,50 @@ class AccountFeatureContainer private constructor(val account: Int) {
     }
 
     // --- AnimationLocker ---
-    private var customAnimationLockerRepository: org.telegram.messenger.feature.animationlocker.domain.repository.AnimationLockerRepository? = null
+    private var customAnimationLockerRepository: org.telegram.messenger.feature.system.animationlocker.domain.repository.AnimationLockerRepository? = null
 
-    var animationLockerRepository: org.telegram.messenger.feature.animationlocker.domain.repository.AnimationLockerRepository
-        get() = customAnimationLockerRepository ?: org.telegram.messenger.feature.animationlocker.data.repository.LegacyAnimationLockerRepository(account)
+    var animationLockerRepository: org.telegram.messenger.feature.system.animationlocker.domain.repository.AnimationLockerRepository
+        get() = customAnimationLockerRepository ?: org.telegram.messenger.feature.system.animationlocker.data.repository.LegacyAnimationLockerRepository(account)
         set(value) {
             customAnimationLockerRepository = value
         }
 
-    val acquireAnimationLockUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.AcquireAnimationLockUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.AcquireAnimationLockUseCase(animationLockerRepository)
+    val acquireAnimationLockUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.AcquireAnimationLockUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.AcquireAnimationLockUseCase(animationLockerRepository)
 
-    val releaseAnimationLockUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.ReleaseAnimationLockUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.ReleaseAnimationLockUseCase(animationLockerRepository)
+    val releaseAnimationLockUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.ReleaseAnimationLockUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.ReleaseAnimationLockUseCase(animationLockerRepository)
 
-    val releaseAllAnimationLocksUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.ReleaseAllAnimationLocksUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.ReleaseAllAnimationLocksUseCase(animationLockerRepository)
+    val releaseAllAnimationLocksUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.ReleaseAllAnimationLocksUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.ReleaseAllAnimationLocksUseCase(animationLockerRepository)
 
-    val setAnimationLockerDisabledUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.SetAnimationLockerDisabledUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.SetAnimationLockerDisabledUseCase(animationLockerRepository)
+    val setAnimationLockerDisabledUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.SetAnimationLockerDisabledUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.SetAnimationLockerDisabledUseCase(animationLockerRepository)
 
-    val isAnimationLockedUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.IsAnimationLockedUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.IsAnimationLockedUseCase(animationLockerRepository)
+    val isAnimationLockedUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.IsAnimationLockedUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.IsAnimationLockedUseCase(animationLockerRepository)
 
-    val isNotificationAllowedUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.IsNotificationAllowedUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.IsNotificationAllowedUseCase(animationLockerRepository)
+    val isNotificationAllowedUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.IsNotificationAllowedUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.IsNotificationAllowedUseCase(animationLockerRepository)
 
-    val getAnimationLockerStateUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.GetAnimationLockerStateUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.GetAnimationLockerStateUseCase(animationLockerRepository)
+    val getAnimationLockerStateUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.GetAnimationLockerStateUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.GetAnimationLockerStateUseCase(animationLockerRepository)
 
-    val getAnimationLockerConfigUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.GetAnimationLockerConfigUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.GetAnimationLockerConfigUseCase(animationLockerRepository)
+    val getAnimationLockerConfigUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.GetAnimationLockerConfigUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.GetAnimationLockerConfigUseCase(animationLockerRepository)
 
-    val updateAnimationLockerConfigUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.UpdateAnimationLockerConfigUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.UpdateAnimationLockerConfigUseCase(animationLockerRepository)
+    val updateAnimationLockerConfigUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.UpdateAnimationLockerConfigUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.UpdateAnimationLockerConfigUseCase(animationLockerRepository)
 
-    val observeAnimationLockerStateUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.ObserveAnimationLockerStateUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.ObserveAnimationLockerStateUseCase(animationLockerRepository)
+    val observeAnimationLockerStateUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.ObserveAnimationLockerStateUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.ObserveAnimationLockerStateUseCase(animationLockerRepository)
 
-    val observeIsAnimationLockedUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.ObserveIsAnimationLockedUseCase
-        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.ObserveIsAnimationLockedUseCase(animationLockerRepository)
+    val observeIsAnimationLockedUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.ObserveIsAnimationLockedUseCase
+        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.ObserveIsAnimationLockedUseCase(animationLockerRepository)
 
-    private var cachedAnimationLockerViewModel: org.telegram.messenger.feature.animationlocker.presentation.AnimationLockerViewModel? = null
+    private var cachedAnimationLockerViewModel: org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel? = null
 
-    val animationLockerViewModel: org.telegram.messenger.feature.animationlocker.presentation.AnimationLockerViewModel
+    val animationLockerViewModel: org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel
         get() {
             var vm = cachedAnimationLockerViewModel
             if (vm == null) {
@@ -7362,8 +7362,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
             return vm
         }
 
-    fun createAnimationLockerViewModel(): org.telegram.messenger.feature.animationlocker.presentation.AnimationLockerViewModel {
-        return org.telegram.messenger.feature.animationlocker.presentation.AnimationLockerViewModel(
+    fun createAnimationLockerViewModel(): org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel {
+        return org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel(
             acquireAnimationLockUseCase = acquireAnimationLockUseCase,
             releaseAnimationLockUseCase = releaseAnimationLockUseCase,
             releaseAllAnimationLocksUseCase = releaseAllAnimationLocksUseCase,

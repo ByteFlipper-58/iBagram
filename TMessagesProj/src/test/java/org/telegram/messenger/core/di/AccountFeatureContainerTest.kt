@@ -15,9 +15,9 @@ import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Test
 import org.telegram.messenger.core.result.Result
-import org.telegram.messenger.feature.savedmessages.domain.model.SavedDialogModel
-import org.telegram.messenger.feature.savedmessages.domain.model.SavedTagModel
-import org.telegram.messenger.feature.savedmessages.domain.repository.SavedMessagesRepository
+import org.telegram.messenger.feature.messaging.savedmessages.domain.model.SavedDialogModel
+import org.telegram.messenger.feature.messaging.savedmessages.domain.model.SavedTagModel
+import org.telegram.messenger.feature.messaging.savedmessages.domain.repository.SavedMessagesRepository
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AccountFeatureContainerTest {
