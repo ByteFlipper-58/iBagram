@@ -958,6 +958,17 @@ import org.telegram.messenger.feature.networkstats.domain.usecase.ObserveNetwork
 import org.telegram.messenger.feature.networkstats.domain.usecase.RefreshNetworkStatsUseCase
 import org.telegram.messenger.feature.networkstats.domain.usecase.ResetNetworkStatsUseCase
 import org.telegram.messenger.feature.networkstats.presentation.NetworkStatsViewModel
+import org.telegram.messenger.feature.pushlistener.data.repository.LegacyPushListenerRepository
+import org.telegram.messenger.feature.pushlistener.domain.repository.PushListenerRepository
+import org.telegram.messenger.feature.pushlistener.domain.usecase.DeterminePushActionTypeUseCase
+import org.telegram.messenger.feature.pushlistener.domain.usecase.GetPushListenerStateUseCase
+import org.telegram.messenger.feature.pushlistener.domain.usecase.ObserveIncomingPushesUseCase
+import org.telegram.messenger.feature.pushlistener.domain.usecase.ObservePushListenerStateUseCase
+import org.telegram.messenger.feature.pushlistener.domain.usecase.ParsePushJsonPayloadUseCase
+import org.telegram.messenger.feature.pushlistener.domain.usecase.ProcessIncomingPushUseCase
+import org.telegram.messenger.feature.pushlistener.domain.usecase.RegisterPushListenerTokenUseCase
+import org.telegram.messenger.feature.pushlistener.domain.usecase.TogglePushListeningUseCase
+import org.telegram.messenger.feature.pushlistener.presentation.PushListenerViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5865,6 +5876,59 @@ class AccountFeatureContainer private constructor(val account: Int) {
             incrementCallsTimeUseCase = incrementCallsTimeUseCase,
             formatTrafficBytesUseCase = formatTrafficBytesUseCase,
             formatCallsDurationUseCase = formatCallsDurationUseCase
+        )
+    }
+
+    private var customPushListenerRepository: PushListenerRepository? = null
+
+    var pushListenerRepository: PushListenerRepository
+        get() = customPushListenerRepository ?: LegacyPushListenerRepository(account)
+        set(value) {
+            customPushListenerRepository = value
+        }
+
+    val observePushListenerStateUseCase: ObservePushListenerStateUseCase
+        get() = ObservePushListenerStateUseCase(pushListenerRepository)
+
+    val observeIncomingPushesUseCase: ObserveIncomingPushesUseCase
+        get() = ObserveIncomingPushesUseCase(pushListenerRepository)
+
+    val getPushListenerStateUseCase: GetPushListenerStateUseCase
+        get() = GetPushListenerStateUseCase(pushListenerRepository)
+
+    val processIncomingPushUseCase: ProcessIncomingPushUseCase
+        get() = ProcessIncomingPushUseCase(pushListenerRepository)
+
+    val registerPushListenerTokenUseCase: RegisterPushListenerTokenUseCase
+        get() = RegisterPushListenerTokenUseCase(pushListenerRepository)
+
+    val togglePushListeningUseCase: TogglePushListeningUseCase
+        get() = TogglePushListeningUseCase(pushListenerRepository)
+
+    val determinePushActionTypeUseCase: DeterminePushActionTypeUseCase
+        get() = DeterminePushActionTypeUseCase()
+
+    val parsePushJsonPayloadUseCase: ParsePushJsonPayloadUseCase
+        get() = ParsePushJsonPayloadUseCase()
+
+    private var cachedPushListenerViewModel: PushListenerViewModel? = null
+
+    val pushListenerViewModel: PushListenerViewModel
+        get() {
+            var vm = cachedPushListenerViewModel
+            if (vm == null) {
+                vm = createPushListenerViewModel()
+                cachedPushListenerViewModel = vm
+            }
+            return vm
+        }
+
+    fun createPushListenerViewModel(): PushListenerViewModel {
+        return PushListenerViewModel(
+            observeStateUseCase = observePushListenerStateUseCase,
+            processPushUseCase = processIncomingPushUseCase,
+            registerTokenUseCase = registerPushListenerTokenUseCase,
+            toggleListeningUseCase = togglePushListeningUseCase
         )
     }
 

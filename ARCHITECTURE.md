@@ -2574,6 +2574,38 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── NetworkStatsUiState.kt
             ├── NetworkStatsEvent.kt
             └── NetworkStatsViewModel.kt
+    │
+    └── pushlistener/                     # Inbound Push Notifications, Payloads & Remote Actions Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── PushType.kt
+        │   │   ├── PushActionType.kt
+        │   │   ├── PushDecryptStatus.kt
+        │   │   ├── PushPayloadModel.kt
+        │   │   ├── PushProcessResult.kt
+        │   │   └── PushListenerState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── PushListenerRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObservePushListenerStateUseCase.kt
+        │       ├── ObserveIncomingPushesUseCase.kt
+        │       ├── GetPushListenerStateUseCase.kt
+        │       ├── ProcessIncomingPushUseCase.kt
+        │       ├── RegisterPushTokenUseCase.kt
+        │       ├── TogglePushListeningUseCase.kt
+        │       ├── DeterminePushActionTypeUseCase.kt
+        │       └── ParsePushJsonPayloadUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (Legacy PUSH_TYPE_* <-> Domain)
+        │   │   └── PushListenerMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyPushListenerRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── PushListenerUiState.kt
+            ├── PushListenerEvent.kt
+            └── PushListenerViewModel.kt
 ```
 
 ### Layer Rules
@@ -3121,10 +3153,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveNetworkStatsUseCase`, `ObserveAllNetworkStatsUseCase`, `GetNetworkStatsUseCase`, `GetAllNetworkStatsUseCase`, `IncrementTrafficBytesUseCase`, `IncrementTrafficItemsUseCase`, `IncrementCallsTimeUseCase`, `ResetNetworkStatsUseCase`, `RefreshNetworkStatsUseCase`, `CalculateMessagesTrafficUseCase`, `FormatTrafficBytesUseCase`, `FormatCallsDurationUseCase`
   - [x] Data layer: `NetworkStatsMapper`, `LegacyNetworkStatsRepository` (thread-safe StateFlow engine adapting `StatsController.java`'s cellular/WiFi/roaming tracking, sent/received bytes & items counters, total call duration, messages traffic deduction formula, and stats resetting)
   - [x] Presentation layer: `NetworkStatsUiState`, `NetworkStatsEvent`, `NetworkStatsViewModel`
+- [x] Inbound Push Notifications, Payloads & Remote Actions (`feature.pushlistener`)
+  - [x] Domain entities: `PushType`, `PushActionType`, `PushDecryptStatus`, `PushPayloadModel`, `PushProcessResult`, `PushListenerState`
+  - [x] Repository contract: `PushListenerRepository`
+  - [x] Use cases: `ObservePushListenerStateUseCase`, `ObserveIncomingPushesUseCase`, `GetPushListenerStateUseCase`, `ProcessIncomingPushUseCase`, `RegisterPushTokenUseCase`, `TogglePushListeningUseCase`, `DeterminePushActionTypeUseCase`, `ParsePushJsonPayloadUseCase`
+  - [x] Data layer: `PushListenerMapper`, `LegacyPushListenerRepository` (thread-safe StateFlow/SharedFlow engine adapting `PushListenerController.java`'s 1700+ lines, FCM/Huawei multi-provider handling, JSON/TL remote payload parsing, VoIP call triggers, datacenter updates, and decryption error tracking)
+  - [x] Presentation layer: `PushListenerUiState`, `PushListenerEvent`, `PushListenerViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 088: Isolation of Inbound Push Notifications, Payloads & Remote Actions into feature.pushlistener
+- **Context:** In Telegram Android, inbound push notification handling, multi-account device token distribution (`sendRegistrationToServer`), encrypted payload unpacking (`aesIgeEncryption`, `computeSHA256` auth key validation), remote payload routing (`loc_key`: `DC_UPDATE`, `MESSAGE_ANNOUNCEMENT`, `SESSION_REVOKE`, `GEO_LIVE_PENDING`, `OAUTH_REQUEST`, `CONF_CALL_REQUEST`, `READ_HISTORY`, `READ_STORIES`, `STORY_DELETED`, `MESSAGE_DELETED`, `READ_REACTION`), and background thread synchronization via `CountDownLatch` were located in `PushListenerController.java` (~1,735 lines, 120KB). Direct coupling with `NotificationsController`, `MessagesController`, `VoIPGroupNotification`, and Android background services made incoming push logic difficult to test and maintain without risking regressions in critical message delivery and incoming VoIP ringing.
+- **Decision:** Introduce pure domain models `PushType` (FIREBASE, HUAWEI), `PushActionType` (DC_UPDATE, MESSAGE_ANNOUNCEMENT, SESSION_REVOKE, GEO_LIVE_PENDING, OAUTH_REQUEST, VOIP_CALL, READ_HISTORY, READ_STORIES, STORY_DELETED, MESSAGE_DELETED, READ_REACTION, NEW_MESSAGE, UNKNOWN), `PushDecryptStatus` (SUCCESS, INVALID_KEY_ID, INVALID_MAC, DECODE_ERROR, PAYLOAD_CORRUPTED), `PushPayloadModel`, `PushProcessResult`, and `PushListenerState`. Define abstract contract `PushListenerRepository` for reactive state observation (`observeState`, `observeIncomingPushes`), snapshot retrieval (`getState`), payload processing (`processPush`), token registration (`registerToken`), error reporting (`reportDecryptError`), and listening toggling. Implement pure domain logic in `DeterminePushActionTypeUseCase` and `ParsePushJsonPayloadUseCase` with robust regex fallback for headless JVM environments. Provide thread-safe `LegacyPushListenerRepository` and legacy type adapters in `PushListenerMapper`. Encapsulate presentation state and MVI events in `PushListenerViewModel`.
+- **Consequences:** Inbound push notification payload parsing, action routing, token registration lifecycle, and decryption monitoring are cleanly isolated behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `PushListenerController.java`.
 
 ### ADR 087: Isolation of Network Traffic & Data Usage Statistics into feature.networkstats
 - **Context:** In Telegram Android, network data usage statistics across connection types (Mobile, Wi-Fi, Roaming) and traffic categories (Calls, Messages, Videos, Audios, Photos, Files, Total, Music) were tracked by `StatsController.java` (~293 lines). The legacy controller managed 2D long/int arrays (`sentBytes[3][8]`, `receivedBytes[3][8]`, `sentItems[3][8]`, `receivedItems[3][8]`), call duration (`callsTotalTime[3]`), and reset timestamps (`resetStatsDate[3]`), persisting binary data to `stats2.dat` via `RandomAccessFile`. Crucially, messages data volume was not recorded directly but calculated on the fly as `sentBytes[TOTAL] - FILES - AUDIOS - VIDEOS - PHOTOS - MUSIC`. UI classes like `DataUsageActivity.java` directly queried static instance methods of `StatsController`, coupling presentation rendering to legacy raw array indexing and global state.
