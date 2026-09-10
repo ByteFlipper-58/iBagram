@@ -795,6 +795,19 @@ import org.telegram.messenger.feature.sharedmedia.domain.usecase.SelectSharedMed
 import org.telegram.messenger.feature.sharedmedia.domain.usecase.SetSharedMediaFilterUseCase
 import org.telegram.messenger.feature.sharedmedia.domain.usecase.ToggleMediaSelectionUseCase
 import org.telegram.messenger.feature.sharedmedia.presentation.SharedMediaViewModel
+import org.telegram.messenger.feature.contentpreview.data.repository.LegacyContentPreviewRepository
+import org.telegram.messenger.feature.contentpreview.domain.repository.ContentPreviewRepository
+import org.telegram.messenger.feature.contentpreview.domain.usecase.CalculatePreviewDragUseCase
+import org.telegram.messenger.feature.contentpreview.domain.usecase.ClearContentPreviewUseCase
+import org.telegram.messenger.feature.contentpreview.domain.usecase.DismissContentPreviewUseCase
+import org.telegram.messenger.feature.contentpreview.domain.usecase.EvaluatePreviewEligibilityUseCase
+import org.telegram.messenger.feature.contentpreview.domain.usecase.GetContentPreviewStateUseCase
+import org.telegram.messenger.feature.contentpreview.domain.usecase.ObserveContentPreviewStateUseCase
+import org.telegram.messenger.feature.contentpreview.domain.usecase.OpenContentPreviewUseCase
+import org.telegram.messenger.feature.contentpreview.domain.usecase.ResolvePreviewActionsUseCase
+import org.telegram.messenger.feature.contentpreview.domain.usecase.TriggerPreviewActionUseCase
+import org.telegram.messenger.feature.contentpreview.domain.usecase.UpdatePreviewDragUseCase
+import org.telegram.messenger.feature.contentpreview.presentation.ContentPreviewViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4952,6 +4965,71 @@ class AccountFeatureContainer private constructor(val account: Int) {
             toggleMediaSelectionUseCase = toggleMediaSelectionUseCase,
             clearMediaSelectionUseCase = clearMediaSelectionUseCase,
             repository = sharedMediaRepository
+        )
+    }
+
+    fun createContentPreviewRepository(): ContentPreviewRepository {
+        return LegacyContentPreviewRepository()
+    }
+
+    val contentPreviewRepository: ContentPreviewRepository by lazy {
+        LegacyContentPreviewRepository()
+    }
+
+    val evaluatePreviewEligibilityUseCase: EvaluatePreviewEligibilityUseCase
+        get() = EvaluatePreviewEligibilityUseCase()
+
+    val calculatePreviewDragUseCase: CalculatePreviewDragUseCase
+        get() = CalculatePreviewDragUseCase()
+
+    val resolvePreviewActionsUseCase: ResolvePreviewActionsUseCase
+        get() = ResolvePreviewActionsUseCase()
+
+    val observeContentPreviewStateUseCase: ObserveContentPreviewStateUseCase
+        get() = ObserveContentPreviewStateUseCase(contentPreviewRepository)
+
+    val getContentPreviewStateUseCase: GetContentPreviewStateUseCase
+        get() = GetContentPreviewStateUseCase(contentPreviewRepository)
+
+    val openContentPreviewUseCase: OpenContentPreviewUseCase
+        get() = OpenContentPreviewUseCase(
+            contentPreviewRepository,
+            evaluatePreviewEligibilityUseCase,
+            resolvePreviewActionsUseCase
+        )
+
+    val updatePreviewDragUseCase: UpdatePreviewDragUseCase
+        get() = UpdatePreviewDragUseCase(contentPreviewRepository, calculatePreviewDragUseCase)
+
+    val triggerPreviewActionUseCase: TriggerPreviewActionUseCase
+        get() = TriggerPreviewActionUseCase(contentPreviewRepository)
+
+    val dismissContentPreviewUseCase: DismissContentPreviewUseCase
+        get() = DismissContentPreviewUseCase(contentPreviewRepository)
+
+    val clearContentPreviewUseCase: ClearContentPreviewUseCase
+        get() = ClearContentPreviewUseCase(contentPreviewRepository)
+
+    private var cachedContentPreviewViewModel: ContentPreviewViewModel? = null
+
+    val contentPreviewViewModel: ContentPreviewViewModel
+        get() {
+            var vm = cachedContentPreviewViewModel
+            if (vm == null) {
+                vm = createContentPreviewViewModel()
+                cachedContentPreviewViewModel = vm
+            }
+            return vm
+        }
+
+    fun createContentPreviewViewModel(): ContentPreviewViewModel {
+        return ContentPreviewViewModel(
+            observeContentPreviewStateUseCase = observeContentPreviewStateUseCase,
+            openContentPreviewUseCase = openContentPreviewUseCase,
+            updatePreviewDragUseCase = updatePreviewDragUseCase,
+            triggerPreviewActionUseCase = triggerPreviewActionUseCase,
+            dismissContentPreviewUseCase = dismissContentPreviewUseCase,
+            clearContentPreviewUseCase = clearContentPreviewUseCase
         )
     }
 

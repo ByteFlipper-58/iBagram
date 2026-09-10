@@ -2143,6 +2143,40 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── SharedMediaUiState.kt
             ├── SharedMediaEvent.kt
             └── SharedMediaViewModel.kt
+    │
+    └── contentpreview/                    # Content Preview & Long-Press Gestures Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── PreviewContentType.kt
+        │   │   ├── PreviewActionType.kt
+        │   │   ├── PreviewActionItem.kt
+        │   │   ├── ContentPreviewGesture.kt
+        │   │   ├── ContentPreviewItem.kt
+        │   │   └── ContentPreviewState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ContentPreviewRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── EvaluatePreviewEligibilityUseCase.kt
+        │       ├── CalculatePreviewDragUseCase.kt
+        │       ├── ResolvePreviewActionsUseCase.kt
+        │       ├── ObserveContentPreviewStateUseCase.kt
+        │       ├── GetContentPreviewStateUseCase.kt
+        │       ├── OpenContentPreviewUseCase.kt
+        │       ├── UpdatePreviewDragUseCase.kt
+        │       ├── DismissContentPreviewUseCase.kt
+        │       ├── ClearContentPreviewUseCase.kt
+        │       └── TriggerPreviewActionUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers & drag thresholds
+        │   │   └── ContentPreviewMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyContentPreviewRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ContentPreviewUiState.kt
+            ├── ContentPreviewEvent.kt
+            └── ContentPreviewViewModel.kt
 ```
 
 ### Layer Rules
@@ -2618,10 +2652,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ResolveAvailableTabsUseCase`, `FilterSharedMediaUseCase`, `GroupMediaByMonthUseCase`, `CalculateMediaSelectionUseCase`, `ObserveSharedMediaStateUseCase`, `GetSharedMediaStateUseCase`, `SelectSharedMediaTabUseCase`, `SetSharedMediaFilterUseCase`, `ToggleMediaSelectionUseCase`, `ClearMediaSelectionUseCase`
   - [x] Data layer: `SharedMediaMapper`, `LegacySharedMediaRepository` (thread safe, adapting `SharedMediaLayout` and `SharedMediaData`, tab availability rules across dialog types, photo/video filtering, monthly section grouping, fast scroll periods calculation, multi-selection rights)
   - [x] Presentation layer: `SharedMediaUiState`, `SharedMediaEvent`, `SharedMediaViewModel`
+- [x] Content Preview & Long-Press Gestures (`feature.contentpreview`)
+  - [x] Domain entities: `PreviewContentType`, `PreviewActionType`, `PreviewActionItem`, `ContentPreviewGesture`, `ContentPreviewItem`, `ContentPreviewState`
+  - [x] Repository contract: `ContentPreviewRepository`
+  - [x] Use cases: `EvaluatePreviewEligibilityUseCase`, `CalculatePreviewDragUseCase`, `ResolvePreviewActionsUseCase`, `ObserveContentPreviewStateUseCase`, `GetContentPreviewStateUseCase`, `OpenContentPreviewUseCase`, `UpdatePreviewDragUseCase`, `DismissContentPreviewUseCase`, `ClearContentPreviewUseCase`, `TriggerPreviewActionUseCase`
+  - [x] Data layer: `ContentPreviewMapper`, `LegacyContentPreviewRepository` (thread safe, adapting `ContentPreviewViewer`, gesture drag calculations, action resolution for stickers, GIFs, emoji, and haptic feedback thresholds)
+  - [x] Presentation layer: `ContentPreviewUiState`, `ContentPreviewEvent`, `ContentPreviewViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 076: Isolation of Long-Press Content Preview, Gestures, and Action Menus into feature.contentpreview
+- **Context:** In Telegram Android, long-press previewing of stickers, GIFs, emojis, custom animated stickers, and polls was handled by `ContentPreviewViewer.java` (~2423 lines) in `org.telegram.ui`. The viewer coupled low-level Android `MotionEvent` touch interception in `RecyclerListView`, custom window management (`WindowManager.LayoutParams`, `Activity`), Canvas drawing, blur shaders (`BlurredBackgroundSourceBitmap`, `BlurredBackgroundDrawableViewFactory`), `ActionBarPopupWindow` menu inflation, `ReactionsContainerLayout`, `PaintingOverlay`, and `ContentPreviewViewerDelegate` callbacks for sending, favoriting, copying, and scheduling.
+- **Decision:** Introduce pure domain models `PreviewContentType` (NONE, STICKER, GIF, EMOJI, CUSTOM_STICKER), `PreviewActionType`, `PreviewActionItem`, `ContentPreviewGesture` (drag distance, normalized progress 0..1, menu threshold check), `ContentPreviewItem`, and `ContentPreviewState`. Define abstract contract `ContentPreviewRepository` covering state observation (`observeState`), snapshot retrieval (`getState`), preview opening (`openPreview`), drag progress updates (`updateDragProgress`), dismissal (`dismissPreview`), and cleanup (`clear`). Implement pure algorithmic use cases for preview eligibility check (`EvaluatePreviewEligibilityUseCase`), vertical drag progress and menu trigger calculation (`CalculatePreviewDragUseCase`), dynamic action menu resolution for stickers/GIFs/emojis (`ResolvePreviewActionsUseCase`), and action triggering (`TriggerPreviewActionUseCase`). Provide thread-safe `LegacyContentPreviewRepository` and pure mapping/haptic calculations in `ContentPreviewMapper`. Encapsulate presentation state and MVI events in `ContentPreviewViewModel`.
+- **Consequences:** All preview gesture physics, drag progress calculations, action menu resolution, and preview lifecycle operations are cleanly isolated behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `ContentPreviewViewer`.
 
 ### ADR 075: Isolation of Shared Media, Tabs, Filters, Periods, and Selection into feature.sharedmedia
 - **Context:** In Telegram Android, shared media galleries across chats and profiles were implemented in `SharedMediaLayout.java` (~12636 lines) in `org.telegram.ui.Components`. The layout tightly coupled Android UI widgets (`RecyclerView`, `GridLayoutManager`, `ScrollSlidingTextTabStrip`, `FastScroll`, `PhotoViewer`, `ActionBar`), custom gestures, direct database and network requests via `MediaDataController.loadMedia`, internal data holders (`SharedMediaData`, `Period`, `SharedMediaPreloader`), multi-selection management, dialog type permission checks (secret chats, bots, channels, groups), sub-filters (photos vs videos), and month/year sectioning.
