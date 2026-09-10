@@ -2108,6 +2108,41 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── MentionsUiState.kt
             ├── MentionsEvent.kt
             └── MentionsViewModel.kt
+    │
+    └── sharedmedia/                       # Shared Media, Tabs, Filters, FastScroll & Selection Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── SharedMediaTabType.kt
+        │   │   ├── SharedMediaFilterType.kt
+        │   │   ├── SharedMediaItem.kt
+        │   │   ├── SharedMediaPeriod.kt
+        │   │   ├── SharedMediaTabSpec.kt
+        │   │   ├── SharedMediaSelectionState.kt
+        │   │   └── SharedMediaState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── SharedMediaRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ResolveAvailableTabsUseCase.kt
+        │       ├── FilterSharedMediaUseCase.kt
+        │       ├── GroupMediaByMonthUseCase.kt
+        │       ├── CalculateMediaSelectionUseCase.kt
+        │       ├── ObserveSharedMediaStateUseCase.kt
+        │       ├── GetSharedMediaStateUseCase.kt
+        │       ├── SelectSharedMediaTabUseCase.kt
+        │       ├── SetSharedMediaFilterUseCase.kt
+        │       ├── ToggleMediaSelectionUseCase.kt
+        │       └── ClearMediaSelectionUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers & date period calculators
+        │   │   └── SharedMediaMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacySharedMediaRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── SharedMediaUiState.kt
+            ├── SharedMediaEvent.kt
+            └── SharedMediaViewModel.kt
 ```
 
 ### Layer Rules
@@ -2577,10 +2612,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ValidateUsernameUseCase`, `ParseMentionQueryUseCase`, `FilterMentionsUseCase`, `FormatMentionReplacementUseCase`, `ObserveMentionsStateUseCase`, `GetMentionsStateUseCase`, `UpdateMentionQueryUseCase`, `SetMentionCandidatesUseCase`, `DismissMentionsUseCase`, `ClearMentionsUseCase`
   - [x] Data layer: `MentionsMapper`, `LegacyMentionsRepository` (thread safe, adapting `MentionsAdapter`, trigger parsing for @, #, /, :, inline context bots, quick replies, candidate filtering and replacement formatting)
   - [x] Presentation layer: `MentionsUiState`, `MentionsEvent`, `MentionsViewModel`
+- [x] Shared Media, Tabs, Filters, Periods & Selection (`feature.sharedmedia`)
+  - [x] Domain entities: `SharedMediaTabType`, `SharedMediaFilterType`, `SharedMediaItem`, `SharedMediaPeriod`, `SharedMediaTabSpec`, `SharedMediaSelectionState`, `SharedMediaState`
+  - [x] Repository contract: `SharedMediaRepository`
+  - [x] Use cases: `ResolveAvailableTabsUseCase`, `FilterSharedMediaUseCase`, `GroupMediaByMonthUseCase`, `CalculateMediaSelectionUseCase`, `ObserveSharedMediaStateUseCase`, `GetSharedMediaStateUseCase`, `SelectSharedMediaTabUseCase`, `SetSharedMediaFilterUseCase`, `ToggleMediaSelectionUseCase`, `ClearMediaSelectionUseCase`
+  - [x] Data layer: `SharedMediaMapper`, `LegacySharedMediaRepository` (thread safe, adapting `SharedMediaLayout` and `SharedMediaData`, tab availability rules across dialog types, photo/video filtering, monthly section grouping, fast scroll periods calculation, multi-selection rights)
+  - [x] Presentation layer: `SharedMediaUiState`, `SharedMediaEvent`, `SharedMediaViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 075: Isolation of Shared Media, Tabs, Filters, Periods, and Selection into feature.sharedmedia
+- **Context:** In Telegram Android, shared media galleries across chats and profiles were implemented in `SharedMediaLayout.java` (~12636 lines) in `org.telegram.ui.Components`. The layout tightly coupled Android UI widgets (`RecyclerView`, `GridLayoutManager`, `ScrollSlidingTextTabStrip`, `FastScroll`, `PhotoViewer`, `ActionBar`), custom gestures, direct database and network requests via `MediaDataController.loadMedia`, internal data holders (`SharedMediaData`, `Period`, `SharedMediaPreloader`), multi-selection management, dialog type permission checks (secret chats, bots, channels, groups), sub-filters (photos vs videos), and month/year sectioning.
+- **Decision:** Introduce pure domain models `SharedMediaTabType` (16 media tabs), `SharedMediaFilterType` (ALL, PHOTOS_ONLY, VIDEOS_ONLY), `SharedMediaItem`, `SharedMediaPeriod`, `SharedMediaTabSpec`, `SharedMediaSelectionState`, and `SharedMediaState`. Define abstract contract `SharedMediaRepository` covering state observation (`observeState`), snapshot retrieval (`getState`), dialog configuration (`setDialog`), tab selection (`selectTab`), sub-filter mutation (`setFilter`), items updating and pagination (`setItems`, `addItems`), item selection toggling (`toggleItemSelection`), batch selection (`selectAll`, `clearSelection`), item deletion (`deleteSelectedItems`), loading state mutation, and cleanup (`clear`). Implement pure algorithmic use cases for dynamic tab resolution (`ResolveAvailableTabsUseCase`), media filtering (`FilterSharedMediaUseCase`), monthly section grouping (`GroupMediaByMonthUseCase`), and selection action validation (`CalculateMediaSelectionUseCase`). Provide thread-safe `LegacySharedMediaRepository` and clean date/period calculations in `SharedMediaMapper`. Encapsulate presentation state and MVI events in `SharedMediaViewModel`.
+- **Consequences:** All shared media business logic, tab arbitration rules, sub-filter operations, month sectioning, fast scroll periods, and multi-selection rules are decoupled from `SharedMediaLayout` behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's `SharedMediaLayout`.
 
 ### ADR 074: Isolation of Chat Mentions, Hashtags, Bot Commands, and Autocomplete into feature.mentions
 - **Context:** In Telegram Android, inline autocomplete suggestions for user mentions (`@user`), hashtags (`#tag`), bot commands (`/cmd`), emoji keywords (`:emoji`), inline bots (`@gif query`), and quick replies (`/shortcut`) were managed by `MentionsAdapter.java` (~2177 lines) in `org.telegram.ui.Adapters`. The adapter coupled low-level `RecyclerView.Adapter`, `ChatMessageCell`, `ContextLinkCell`, `StickerCell`, `MentionCell`, `BotSwitchCell`, Android `Location` and permissions, `SearchAdapterHelper`, direct `MessagesController`/`MessagesStorage` caches, `MediaDataController` stickers and emoji lookups, and direct UI notification methods.

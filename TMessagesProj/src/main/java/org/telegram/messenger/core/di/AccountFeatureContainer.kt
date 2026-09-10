@@ -782,6 +782,19 @@ import org.telegram.messenger.feature.mentions.domain.usecase.SetMentionCandidat
 import org.telegram.messenger.feature.mentions.domain.usecase.UpdateMentionQueryUseCase
 import org.telegram.messenger.feature.mentions.domain.usecase.ValidateUsernameUseCase
 import org.telegram.messenger.feature.mentions.presentation.MentionsViewModel
+import org.telegram.messenger.feature.sharedmedia.data.repository.LegacySharedMediaRepository
+import org.telegram.messenger.feature.sharedmedia.domain.repository.SharedMediaRepository
+import org.telegram.messenger.feature.sharedmedia.domain.usecase.CalculateMediaSelectionUseCase
+import org.telegram.messenger.feature.sharedmedia.domain.usecase.ClearMediaSelectionUseCase
+import org.telegram.messenger.feature.sharedmedia.domain.usecase.FilterSharedMediaUseCase
+import org.telegram.messenger.feature.sharedmedia.domain.usecase.GetSharedMediaStateUseCase
+import org.telegram.messenger.feature.sharedmedia.domain.usecase.GroupMediaByMonthUseCase
+import org.telegram.messenger.feature.sharedmedia.domain.usecase.ObserveSharedMediaStateUseCase
+import org.telegram.messenger.feature.sharedmedia.domain.usecase.ResolveAvailableTabsUseCase
+import org.telegram.messenger.feature.sharedmedia.domain.usecase.SelectSharedMediaTabUseCase
+import org.telegram.messenger.feature.sharedmedia.domain.usecase.SetSharedMediaFilterUseCase
+import org.telegram.messenger.feature.sharedmedia.domain.usecase.ToggleMediaSelectionUseCase
+import org.telegram.messenger.feature.sharedmedia.presentation.SharedMediaViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4870,6 +4883,75 @@ class AccountFeatureContainer private constructor(val account: Int) {
             formatMentionReplacementUseCase = formatMentionReplacementUseCase,
             dismissMentionsUseCase = dismissMentionsUseCase,
             clearMentionsUseCase = clearMentionsUseCase
+        )
+    }
+
+    fun createSharedMediaRepository(): SharedMediaRepository {
+        return LegacySharedMediaRepository(
+            groupMediaByMonthUseCase = groupMediaByMonthUseCase,
+            calculateMediaSelectionUseCase = calculateMediaSelectionUseCase,
+            filterSharedMediaUseCase = filterSharedMediaUseCase
+        )
+    }
+
+    val sharedMediaRepository: SharedMediaRepository by lazy {
+        LegacySharedMediaRepository(
+            groupMediaByMonthUseCase = groupMediaByMonthUseCase,
+            calculateMediaSelectionUseCase = calculateMediaSelectionUseCase,
+            filterSharedMediaUseCase = filterSharedMediaUseCase
+        )
+    }
+
+    val resolveAvailableTabsUseCase: ResolveAvailableTabsUseCase
+        get() = ResolveAvailableTabsUseCase()
+
+    val filterSharedMediaUseCase: FilterSharedMediaUseCase
+        get() = FilterSharedMediaUseCase()
+
+    val groupMediaByMonthUseCase: GroupMediaByMonthUseCase
+        get() = GroupMediaByMonthUseCase()
+
+    val calculateMediaSelectionUseCase: CalculateMediaSelectionUseCase
+        get() = CalculateMediaSelectionUseCase()
+
+    val observeSharedMediaStateUseCase: ObserveSharedMediaStateUseCase
+        get() = ObserveSharedMediaStateUseCase(sharedMediaRepository)
+
+    val getSharedMediaStateUseCase: GetSharedMediaStateUseCase
+        get() = GetSharedMediaStateUseCase(sharedMediaRepository)
+
+    val selectSharedMediaTabUseCase: SelectSharedMediaTabUseCase
+        get() = SelectSharedMediaTabUseCase(sharedMediaRepository)
+
+    val setSharedMediaFilterUseCase: SetSharedMediaFilterUseCase
+        get() = SetSharedMediaFilterUseCase(sharedMediaRepository)
+
+    val toggleMediaSelectionUseCase: ToggleMediaSelectionUseCase
+        get() = ToggleMediaSelectionUseCase(sharedMediaRepository)
+
+    val clearMediaSelectionUseCase: ClearMediaSelectionUseCase
+        get() = ClearMediaSelectionUseCase(sharedMediaRepository)
+
+    private var cachedSharedMediaViewModel: SharedMediaViewModel? = null
+
+    val sharedMediaViewModel: SharedMediaViewModel
+        get() {
+            var vm = cachedSharedMediaViewModel
+            if (vm == null) {
+                vm = createSharedMediaViewModel()
+                cachedSharedMediaViewModel = vm
+            }
+            return vm
+        }
+
+    fun createSharedMediaViewModel(): SharedMediaViewModel {
+        return SharedMediaViewModel(
+            observeSharedMediaStateUseCase = observeSharedMediaStateUseCase,
+            selectSharedMediaTabUseCase = selectSharedMediaTabUseCase,
+            setSharedMediaFilterUseCase = setSharedMediaFilterUseCase,
+            toggleMediaSelectionUseCase = toggleMediaSelectionUseCase,
+            clearMediaSelectionUseCase = clearMediaSelectionUseCase,
+            repository = sharedMediaRepository
         )
     }
 
