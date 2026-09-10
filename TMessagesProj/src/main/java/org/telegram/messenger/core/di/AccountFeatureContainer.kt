@@ -1098,6 +1098,21 @@ import org.telegram.messenger.feature.storycustomparams.domain.usecase.RemoveSto
 import org.telegram.messenger.feature.storycustomparams.domain.usecase.SaveStoryCustomParamsUseCase
 import org.telegram.messenger.feature.storycustomparams.domain.usecase.UpdateStoryTranslationUseCase
 import org.telegram.messenger.feature.storycustomparams.presentation.StoryCustomParamsViewModel
+import org.telegram.messenger.feature.botguard.data.repository.LegacyBotGuardRepository
+import org.telegram.messenger.feature.botguard.domain.repository.BotGuardRepository
+import org.telegram.messenger.feature.botguard.domain.usecase.ClearAllGuardBotSessionsUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.CloseGuardBotSessionUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.DetermineGuardBotLaunchFlowUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.FormatGuardBotBulletinUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.GetAllActiveGuardBotSessionsUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.GetGuardBotSessionUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.IsGuardBotConfirmationNeededUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.MapJoinChatBotResultUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.ObserveGuardBotDecisionsUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.ObserveGuardBotStateUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.RegisterGuardBotSessionUseCase
+import org.telegram.messenger.feature.botguard.domain.usecase.SetGuardBotConfirmationShownUseCase
+import org.telegram.messenger.feature.botguard.presentation.BotGuardViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6513,6 +6528,74 @@ class AccountFeatureContainer private constructor(val account: Int) {
             removeParamsUseCase = removeStoryCustomParamsUseCase,
             clearAllUseCase = clearAllStoryCustomParamsUseCase,
             checkEmptyUseCase = checkStoryCustomParamsEmptyUseCase
+        )
+    }
+
+    private var customBotGuardRepository: BotGuardRepository? = null
+
+    var botGuardRepository: BotGuardRepository
+        get() = customBotGuardRepository ?: LegacyBotGuardRepository(account)
+        set(value) {
+            customBotGuardRepository = value
+        }
+
+    val isGuardBotConfirmationNeededUseCase: IsGuardBotConfirmationNeededUseCase
+        get() = IsGuardBotConfirmationNeededUseCase(botGuardRepository)
+
+    val determineGuardBotLaunchFlowUseCase: DetermineGuardBotLaunchFlowUseCase
+        get() = DetermineGuardBotLaunchFlowUseCase(isGuardBotConfirmationNeededUseCase)
+
+    val registerGuardBotSessionUseCase: RegisterGuardBotSessionUseCase
+        get() = RegisterGuardBotSessionUseCase(botGuardRepository)
+
+    val getGuardBotSessionUseCase: GetGuardBotSessionUseCase
+        get() = GetGuardBotSessionUseCase(botGuardRepository)
+
+    val getAllActiveGuardBotSessionsUseCase: GetAllActiveGuardBotSessionsUseCase
+        get() = GetAllActiveGuardBotSessionsUseCase(botGuardRepository)
+
+    val closeGuardBotSessionUseCase: CloseGuardBotSessionUseCase
+        get() = CloseGuardBotSessionUseCase(botGuardRepository)
+
+    val setGuardBotConfirmationShownUseCase: SetGuardBotConfirmationShownUseCase
+        get() = SetGuardBotConfirmationShownUseCase(botGuardRepository)
+
+    val clearAllGuardBotSessionsUseCase: ClearAllGuardBotSessionsUseCase
+        get() = ClearAllGuardBotSessionsUseCase(botGuardRepository)
+
+    val observeGuardBotDecisionsUseCase: ObserveGuardBotDecisionsUseCase
+        get() = ObserveGuardBotDecisionsUseCase(botGuardRepository)
+
+    val observeGuardBotStateUseCase: ObserveGuardBotStateUseCase
+        get() = ObserveGuardBotStateUseCase(botGuardRepository)
+
+    val mapJoinChatBotResultUseCase: MapJoinChatBotResultUseCase
+        get() = MapJoinChatBotResultUseCase()
+
+    val formatGuardBotBulletinUseCase: FormatGuardBotBulletinUseCase
+        get() = FormatGuardBotBulletinUseCase()
+
+    private var cachedBotGuardViewModel: BotGuardViewModel? = null
+
+    val botGuardViewModel: BotGuardViewModel
+        get() {
+            var vm = cachedBotGuardViewModel
+            if (vm == null) {
+                vm = createBotGuardViewModel()
+                cachedBotGuardViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBotGuardViewModel(): BotGuardViewModel {
+        return BotGuardViewModel(
+            determineLaunchFlowUseCase = determineGuardBotLaunchFlowUseCase,
+            registerSessionUseCase = registerGuardBotSessionUseCase,
+            closeSessionUseCase = closeGuardBotSessionUseCase,
+            setConfirmationShownUseCase = setGuardBotConfirmationShownUseCase,
+            observeDecisionsUseCase = observeGuardBotDecisionsUseCase,
+            observeStateUseCase = observeGuardBotStateUseCase,
+            formatBulletinUseCase = formatGuardBotBulletinUseCase
         )
     }
 

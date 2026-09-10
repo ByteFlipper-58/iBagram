@@ -2837,6 +2837,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── StoryCustomParamsUiState.kt
             ├── StoryCustomParamsEvent.kt
             └── StoryCustomParamsViewModel.kt
+    │
+    └── botguard/                         # Bot Guard WebApp Verification, Sessions & Decisions Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (BotGuardDecisionStatus, BotGuardDecisionResult, BotGuardSession, BotGuardState, etc.)
+        │   │   └── BotGuardModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BotGuardRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── IsGuardBotConfirmationNeededUseCase.kt
+        │       ├── DetermineGuardBotLaunchFlowUseCase.kt
+        │       ├── RegisterGuardBotSessionUseCase.kt
+        │       ├── GetGuardBotSessionUseCase.kt
+        │       ├── GetAllActiveGuardBotSessionsUseCase.kt
+        │       ├── CloseGuardBotSessionUseCase.kt
+        │       ├── SetGuardBotConfirmationShownUseCase.kt
+        │       ├── ClearAllGuardBotSessionsUseCase.kt
+        │       ├── ObserveGuardBotDecisionsUseCase.kt
+        │       ├── ObserveGuardBotStateUseCase.kt
+        │       ├── MapJoinChatBotResultUseCase.kt
+        │       └── FormatGuardBotBulletinUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (TLRPC.JoinChatBotResult <-> Domain)
+        │   │   └── BotGuardMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBotGuardRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BotGuardUiState.kt
+            ├── BotGuardEvent.kt
+            └── BotGuardViewModel.kt
 ```
 
 
@@ -3440,10 +3471,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `CheckStoryCustomParamsEmptyUseCase`, `ComputeStoryCustomParamsFlagsUseCase`, `ObserveStoryCustomParamsStateUseCase`, `GetStoryCustomParamsStateUseCase`, `GetStoryCustomParamsUseCase`, `SaveStoryCustomParamsUseCase`, `UpdateStoryTranslationUseCase`, `CopyStoryCustomParamsUseCase`, `RemoveStoryCustomParamsUseCase`, `ClearAllStoryCustomParamsUseCase`
   - [x] Data layer: `StoryCustomParamsMapper`, `LegacyStoryCustomParamsRepository` (thread-safe StateFlow engine adapting `StoryCustomParamsHelper.java`'s 100 lines, Params_v1 binary serialization, SQLite stories storage caching, and copy/clear operations)
   - [x] Presentation layer: `StoryCustomParamsUiState`, `StoryCustomParamsEvent`, `StoryCustomParamsViewModel`
+- [x] Bot Guard WebApp Verification, Sessions & Decisions (`feature.botguard`)
+  - [x] Domain entities: `BotGuardDecisionStatus`, `BotGuardDecisionResult`, `BotGuardSession`, `BotGuardLaunchDecision`, `BotGuardBulletinType`, `BotGuardBulletinInfo`, `BotGuardState`
+  - [x] Repository contract: `BotGuardRepository`
+  - [x] Use cases: `IsGuardBotConfirmationNeededUseCase`, `DetermineGuardBotLaunchFlowUseCase`, `RegisterGuardBotSessionUseCase`, `GetGuardBotSessionUseCase`, `GetAllActiveGuardBotSessionsUseCase`, `CloseGuardBotSessionUseCase`, `SetGuardBotConfirmationShownUseCase`, `ClearAllGuardBotSessionsUseCase`, `ObserveGuardBotDecisionsUseCase`, `ObserveGuardBotStateUseCase`, `MapJoinChatBotResultUseCase`, `FormatGuardBotBulletinUseCase`
+  - [x] Data layer: `BotGuardMapper`, `LegacyBotGuardRepository` (thread-safe StateFlow and SharedFlow engine adapting `BotGuardHelper.java`'s 119 lines, `SharedPrefsHelper` webview confirmation flags, `MessagesController.whitelistedBots`, active sheet dismissals, and `NotificationCenter.guardBotDecisionResult`)
+  - [x] Presentation layer: `BotGuardUiState`, `BotGuardEvent`, `BotGuardViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 097: Isolation of Bot Guard WebApp Verification, Sessions & Decisions into feature.botguard
+- **Context:** In Telegram Android, bot guard verification for joining chats, channels, or viewing protected resources was coordinated through `BotGuardHelper.java` (~119 lines). The helper tracked in-flight query-to-bot mappings (`queryIdToBotId`), evaluated confirmation prerequisites via `SharedPrefsHelper.isWebViewConfirmShown` and `MessagesController.whitelistedBots`, launched guard webapps via `BotWebViewSheet` with `TYPE_WEB_VIEW_GUARD`, received asynchronous decisions via `TL_updateJoinChatWebViewDecision` (`TLRPC.JoinChatBotResult`), dispatched global `NotificationCenter.guardBotDecisionResult` notifications, and dismissed active webview sheets. Because `MessagesController`, `LaunchActivity`, `JoinGroupAlert`, and `ArticleViewer` interacted directly with static controller instances and global event buses, testing session lifecycle, launch confirmation decision logic, and bulletin formatting was difficult.
+- **Decision:** Introduce pure domain models `BotGuardDecisionStatus` (`Approved`, `Declined`, `Queued`, `WebView`, `Dismissed`, `Unknown`), `BotGuardDecisionResult`, `BotGuardSession`, `BotGuardLaunchDecision`, and `BotGuardState`. Define abstract contract `BotGuardRepository` covering reactive state observation (`observeState`), snapshot queries, session lifecycle (`registerSession`, `getSession`, `getAllActiveSessions`, `removeSession`, `clearAllSessions`), confirmation state persistence, whitelist verification, and decision flows (`observeDecisions`, `postDecision`). Implement pure domain use cases for confirmation requirements (`IsGuardBotConfirmationNeededUseCase`), launch flow decisions (`DetermineGuardBotLaunchFlowUseCase`), session close/dispatch (`CloseGuardBotSessionUseCase`), constructor result mapping (`MapJoinChatBotResultUseCase`), and bulletin formatting (`FormatGuardBotBulletinUseCase`). Provide thread-safe `LegacyBotGuardRepository` and bidirectional conversion in `BotGuardMapper`. Encapsulate presentation state and MVI events in `BotGuardViewModel`.
+- **Consequences:** All bot guard webapp verification sessions, confirmation prompts, decision processing, and result banners are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `BotGuardHelper.java`, `SharedPrefsHelper.java`, and MTProto join chat protocols.
 
 ### ADR 096: Isolation of Story Custom Parameters & Local Story Translation State into feature.storycustomparams
 - **Context:** In Telegram Android, local story-level parameters such as story translation flags, detected language, translated text with formatting entities, and target translation language were stored in SQLite database blobs (`StoriesStorage.java`) via `StoryCustomParamsHelper.java` (~100 lines). The helper handled reading and writing versioned binary payloads (`Params_v1`) to/from `NativeByteBuffer`, inspecting emptiness via `isEmpty()`, and copying fields between stories via `copyParams()`. Because `StoriesStorage` and story viewer components directly manipulated mutable fields on `TL_stories.StoryItem`, testing story parameter persistence, emptiness checks, and reactive state observation was difficult.
