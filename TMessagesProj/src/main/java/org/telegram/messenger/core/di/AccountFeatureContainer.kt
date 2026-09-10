@@ -1014,6 +1014,20 @@ import org.telegram.messenger.feature.litemode.domain.usecase.SetLiteModePresetU
 import org.telegram.messenger.feature.litemode.domain.usecase.ToggleLiteModeFlagUseCase
 import org.telegram.messenger.feature.litemode.domain.usecase.UpdatePowerSaverThresholdUseCase
 import org.telegram.messenger.feature.litemode.presentation.LiteModeViewModel
+import org.telegram.messenger.feature.appconfig.data.repository.LegacyAppConfigRepository
+import org.telegram.messenger.feature.appconfig.domain.repository.AppConfigRepository
+import org.telegram.messenger.feature.appconfig.domain.usecase.GetAiComposeConfigUseCase
+import org.telegram.messenger.feature.appconfig.domain.usecase.GetAppConfigUseCase
+import org.telegram.messenger.feature.appconfig.domain.usecase.GetAppLimitsUseCase
+import org.telegram.messenger.feature.appconfig.domain.usecase.GetMessageLimitsUseCase
+import org.telegram.messenger.feature.appconfig.domain.usecase.GetPollsConfigUseCase
+import org.telegram.messenger.feature.appconfig.domain.usecase.GetRichMessageLimitsUseCase
+import org.telegram.messenger.feature.appconfig.domain.usecase.GetStarsPricingConfigUseCase
+import org.telegram.messenger.feature.appconfig.domain.usecase.GetTonPricingConfigUseCase
+import org.telegram.messenger.feature.appconfig.domain.usecase.ObserveAppConfigUseCase
+import org.telegram.messenger.feature.appconfig.domain.usecase.ReloadAppConfigUseCase
+import org.telegram.messenger.feature.appconfig.domain.usecase.UpdateAppConfigValueUseCase
+import org.telegram.messenger.feature.appconfig.presentation.AppConfigViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6054,6 +6068,64 @@ class AccountFeatureContainer private constructor(val account: Int) {
             setLiteModePreset = setLiteModePresetUseCase,
             updatePowerSaverThreshold = updatePowerSaverThresholdUseCase,
             repository = liteModeRepository
+        )
+    }
+
+    val appConfigRepository: AppConfigRepository by lazy {
+        LegacyAppConfigRepository(account)
+    }
+
+    val getAppConfigUseCase: GetAppConfigUseCase
+        get() = GetAppConfigUseCase(appConfigRepository)
+
+    val observeAppConfigUseCase: ObserveAppConfigUseCase
+        get() = ObserveAppConfigUseCase(appConfigRepository)
+
+    val getMessageLimitsUseCase: GetMessageLimitsUseCase
+        get() = GetMessageLimitsUseCase(appConfigRepository)
+
+    val getStarsPricingConfigUseCase: GetStarsPricingConfigUseCase
+        get() = GetStarsPricingConfigUseCase(appConfigRepository)
+
+    val getTonPricingConfigUseCase: GetTonPricingConfigUseCase
+        get() = GetTonPricingConfigUseCase(appConfigRepository)
+
+    val getRichMessageLimitsUseCase: GetRichMessageLimitsUseCase
+        get() = GetRichMessageLimitsUseCase(appConfigRepository)
+
+    val getPollsConfigUseCase: GetPollsConfigUseCase
+        get() = GetPollsConfigUseCase(appConfigRepository)
+
+    val getAiComposeConfigUseCase: GetAiComposeConfigUseCase
+        get() = GetAiComposeConfigUseCase(appConfigRepository)
+
+    val getAppLimitsUseCase: GetAppLimitsUseCase
+        get() = GetAppLimitsUseCase(appConfigRepository)
+
+    val reloadAppConfigUseCase: ReloadAppConfigUseCase
+        get() = ReloadAppConfigUseCase(appConfigRepository)
+
+    val updateAppConfigValueUseCase: UpdateAppConfigValueUseCase
+        get() = UpdateAppConfigValueUseCase(appConfigRepository)
+
+    private var cachedAppConfigViewModel: AppConfigViewModel? = null
+
+    val appConfigViewModel: AppConfigViewModel
+        get() {
+            var vm = cachedAppConfigViewModel
+            if (vm == null) {
+                vm = createAppConfigViewModel()
+                cachedAppConfigViewModel = vm
+            }
+            return vm
+        }
+
+    fun createAppConfigViewModel(): AppConfigViewModel {
+        return AppConfigViewModel(
+            observeAppConfig = observeAppConfigUseCase,
+            reloadAppConfig = reloadAppConfigUseCase,
+            updateAppConfigValue = updateAppConfigValueUseCase,
+            repository = appConfigRepository
         )
     }
 

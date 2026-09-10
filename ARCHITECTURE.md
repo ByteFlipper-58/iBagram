@@ -2660,6 +2660,36 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── LiteModeUiState.kt
             ├── LiteModeEvent.kt
             └── LiteModeViewModel.kt
+    │
+    └── appconfig/                        # Global Server Limits, Stars/TON Configuration & Feature Flags
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (StarsConfigModel, TonConfigModel, PollsConfigModel, RichMessageConfigModel, AiComposeConfigModel, AppLimitsConfigModel, AppGlobalConfigState)
+        │   │   └── AppConfigModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── AppConfigRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── GetAppConfigUseCase.kt
+        │       ├── ObserveAppConfigUseCase.kt
+        │       ├── GetMessageLimitsUseCase.kt
+        │       ├── GetStarsPricingConfigUseCase.kt
+        │       ├── GetTonPricingConfigUseCase.kt
+        │       ├── GetRichMessageLimitsUseCase.kt
+        │       ├── GetPollsConfigUseCase.kt
+        │       ├── GetAiComposeConfigUseCase.kt
+        │       ├── GetAppLimitsUseCase.kt
+        │       ├── ReloadAppConfigUseCase.kt
+        │       └── UpdateAppConfigValueUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (AppGlobalConfig & MessagesController <-> Domain)
+        │   │   └── AppConfigMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyAppConfigRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── AppConfigUiState.kt
+            ├── AppConfigEvent.kt
+            └── AppConfigViewModel.kt
 ```
 
 
@@ -3227,10 +3257,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `CalculateEffectiveFlagsUseCase`, `CheckLiteModeFlagUseCase`, `ResolvePresetUseCase`, `ObserveLiteModeStateUseCase`, `GetLiteModeStateUseCase`, `ToggleLiteModeFlagUseCase`, `SetLiteModePresetUseCase`, `UpdatePowerSaverThresholdUseCase`
   - [x] Data layer: `LiteModeMapper`, `LegacyLiteModeRepository` (thread-safe StateFlow engine adapting `LiteMode.java`'s 365 lines, battery capacity monitoring, power-saver auto-activation, premium emoji flag preprocessing, and tablet layout overrides)
   - [x] Presentation layer: `LiteModeUiState`, `LiteModeEvent`, `LiteModeViewModel`
+- [x] Global Server Limits, Stars/TON Configuration & Feature Flags (`feature.appconfig`)
+  - [x] Domain entities: `StarsConfigModel`, `TonConfigModel`, `PollsConfigModel`, `RichMessageConfigModel`, `AiComposeConfigModel`, `AppLimitsConfigModel`, `AppGlobalConfigState`
+  - [x] Repository contract: `AppConfigRepository`
+  - [x] Use cases: `GetAppConfigUseCase`, `ObserveAppConfigUseCase`, `GetMessageLimitsUseCase`, `GetStarsPricingConfigUseCase`, `GetTonPricingConfigUseCase`, `GetRichMessageLimitsUseCase`, `GetPollsConfigUseCase`, `GetAiComposeConfigUseCase`, `GetAppLimitsUseCase`, `ReloadAppConfigUseCase`, `UpdateAppConfigValueUseCase`
+  - [x] Data layer: `AppConfigMapper`, `LegacyAppConfigRepository` (thread-safe StateFlow engine adapting `AppGlobalConfig.java`'s 411 lines and `MessagesController.java` config fields, reactive to `NotificationCenter.appConfigUpdated`)
+  - [x] Presentation layer: `AppConfigUiState`, `AppConfigEvent`, `AppConfigViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 091: Isolation of Global Server Limits, Stars/TON Configuration & Feature Flags into feature.appconfig
+- **Context:** In Telegram Android, global limits, financial parameters, and server-controlled feature flags from `TL_help.appConfig` were managed across `AppGlobalConfig.java` (~411 lines, 16.6KB) and `MessagesController.java` (`applyAppConfig()`). The subsystem manages dozens of essential client parameters: character limits for messages (4096 standard, 8192 Premium), polls configuration (max answers = 12, max length = 100), Rich Message formatting limits (32KB, 500 blocks, 20 table columns), AI Compose tone rewriting rules, channel/group call participant ceilings, as well as critical financial rules for Telegram Stars and TON (commission permilles, minimum/maximum suggested post and resale amounts, TON-USD exchange rates, rating URLs). In legacy code, these values were loaded from SharedPreferences into untyped internal config handlers and accessed by directly querying `MessagesController.getInstance(account).config` or global controller fields, creating hidden coupling across UI and background workers.
+- **Decision:** Introduce pure domain models `StarsConfigModel`, `TonConfigModel`, `PollsConfigModel`, `RichMessageConfigModel`, `AiComposeConfigModel`, `AppLimitsConfigModel`, and aggregated `AppGlobalConfigState`. Define abstract contract `AppConfigRepository` covering reactive configuration observation (`observeConfig`), snapshots (`getConfig`), forced reload (`reloadConfig`), and in-memory/custom key overrides (`updateConfigValue`). Implement domain use cases (`GetMessageLimitsUseCase`, `GetStarsPricingConfigUseCase`, `GetTonPricingConfigUseCase`, `GetRichMessageLimitsUseCase`, `GetPollsConfigUseCase`, `GetAiComposeConfigUseCase`, `GetAppLimitsUseCase`, etc.) to provide typed access to limits and pricing logic. Provide thread-safe `LegacyAppConfigRepository` listening to `NotificationCenter.appConfigUpdated` via StateFlow, and safe extraction in `AppConfigMapper`. Encapsulate presentation state and MVI events in `AppConfigViewModel`.
+- **Consequences:** All global limits, monetization boundaries, and backend-driven feature configurations are decoupled behind clean, testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `AppGlobalConfig.java` and `MessagesController.java`.
 
 ### ADR 090: Isolation of Power Saving, Battery Optimization & Animation Throttling into feature.litemode
 - **Context:** In Telegram Android, battery consumption optimizations, hardware performance presets, and animation throttling flags were controlled globally via `LiteMode.java` (~365 lines) and `LiteModeSettingsActivity.java` (~530 lines). The legacy architecture managed 18 granular rendering bitmasks (animated stickers in keyboard/chat, animated emoji for chat/reactions/keyboard, forum two-column layouts, blur effects, scale transitions, Thanos vaporize animations, liquid glass, calls animations, autoplay videos/GIFs, particles) and 4 presets (`PRESET_LOW`, `PRESET_MEDIUM`, `PRESET_HIGH`, `PRESET_POWER_SAVER`). Battery level polling (`BatteryManager.BATTERY_PROPERTY_CAPACITY`) dynamically clamped all animations to `PRESET_POWER_SAVER` whenever battery dropped below `powerSaverLevel`, while emoji bitmasks required complex preprocessing depending on account Premium status (`UserConfig.hasPremiumOnAccounts()`) and tablet form-factor overrides. Direct coupling to static methods in `LiteMode` throughout UI components made testing performance degradation rules impossible.
