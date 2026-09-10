@@ -1085,6 +1085,19 @@ import org.telegram.messenger.feature.botforum.domain.usecase.SaveIsStreamingTop
 import org.telegram.messenger.feature.botforum.domain.usecase.StopStreamingDraftUseCase
 import org.telegram.messenger.feature.botforum.domain.usecase.UpdateBotForumDraftUseCase
 import org.telegram.messenger.feature.botforum.presentation.BotForumViewModel
+import org.telegram.messenger.feature.storycustomparams.data.repository.LegacyStoryCustomParamsRepository
+import org.telegram.messenger.feature.storycustomparams.domain.repository.StoryCustomParamsRepository
+import org.telegram.messenger.feature.storycustomparams.domain.usecase.CheckStoryCustomParamsEmptyUseCase
+import org.telegram.messenger.feature.storycustomparams.domain.usecase.ClearAllStoryCustomParamsUseCase
+import org.telegram.messenger.feature.storycustomparams.domain.usecase.ComputeStoryCustomParamsFlagsUseCase
+import org.telegram.messenger.feature.storycustomparams.domain.usecase.CopyStoryCustomParamsUseCase
+import org.telegram.messenger.feature.storycustomparams.domain.usecase.GetStoryCustomParamsStateUseCase
+import org.telegram.messenger.feature.storycustomparams.domain.usecase.GetStoryCustomParamsUseCase
+import org.telegram.messenger.feature.storycustomparams.domain.usecase.ObserveStoryCustomParamsStateUseCase
+import org.telegram.messenger.feature.storycustomparams.domain.usecase.RemoveStoryCustomParamsUseCase
+import org.telegram.messenger.feature.storycustomparams.domain.usecase.SaveStoryCustomParamsUseCase
+import org.telegram.messenger.feature.storycustomparams.domain.usecase.UpdateStoryTranslationUseCase
+import org.telegram.messenger.feature.storycustomparams.presentation.StoryCustomParamsViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6437,6 +6450,69 @@ class AccountFeatureContainer private constructor(val account: Int) {
             removeMarkedRemovedDraftsUseCase = removeMarkedRemovedDraftsUseCase,
             checkNewMessageDraftReplacementUseCase = checkNewMessageDraftReplacementUseCase,
             checkHasBotForumDraftsUseCase = checkHasBotForumDraftsUseCase
+        )
+    }
+
+    private var customStoryCustomParamsRepository: StoryCustomParamsRepository? = null
+
+    var storyCustomParamsRepository: StoryCustomParamsRepository
+        get() = customStoryCustomParamsRepository ?: LegacyStoryCustomParamsRepository(account)
+        set(value) {
+            customStoryCustomParamsRepository = value
+        }
+
+    val checkStoryCustomParamsEmptyUseCase: CheckStoryCustomParamsEmptyUseCase
+        get() = CheckStoryCustomParamsEmptyUseCase()
+
+    val computeStoryCustomParamsFlagsUseCase: ComputeStoryCustomParamsFlagsUseCase
+        get() = ComputeStoryCustomParamsFlagsUseCase()
+
+    val observeStoryCustomParamsStateUseCase: ObserveStoryCustomParamsStateUseCase
+        get() = ObserveStoryCustomParamsStateUseCase(storyCustomParamsRepository)
+
+    val getStoryCustomParamsStateUseCase: GetStoryCustomParamsStateUseCase
+        get() = GetStoryCustomParamsStateUseCase(storyCustomParamsRepository)
+
+    val getStoryCustomParamsUseCase: GetStoryCustomParamsUseCase
+        get() = GetStoryCustomParamsUseCase(storyCustomParamsRepository)
+
+    val saveStoryCustomParamsUseCase: SaveStoryCustomParamsUseCase
+        get() = SaveStoryCustomParamsUseCase(storyCustomParamsRepository)
+
+    val updateStoryTranslationUseCase: UpdateStoryTranslationUseCase
+        get() = UpdateStoryTranslationUseCase(storyCustomParamsRepository)
+
+    val copyStoryCustomParamsUseCase: CopyStoryCustomParamsUseCase
+        get() = CopyStoryCustomParamsUseCase(storyCustomParamsRepository)
+
+    val removeStoryCustomParamsUseCase: RemoveStoryCustomParamsUseCase
+        get() = RemoveStoryCustomParamsUseCase(storyCustomParamsRepository)
+
+    val clearAllStoryCustomParamsUseCase: ClearAllStoryCustomParamsUseCase
+        get() = ClearAllStoryCustomParamsUseCase(storyCustomParamsRepository)
+
+    private var cachedStoryCustomParamsViewModel: StoryCustomParamsViewModel? = null
+
+    val storyCustomParamsViewModel: StoryCustomParamsViewModel
+        get() {
+            var vm = cachedStoryCustomParamsViewModel
+            if (vm == null) {
+                vm = createStoryCustomParamsViewModel()
+                cachedStoryCustomParamsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createStoryCustomParamsViewModel(): StoryCustomParamsViewModel {
+        return StoryCustomParamsViewModel(
+            observeStateUseCase = observeStoryCustomParamsStateUseCase,
+            getParamsUseCase = getStoryCustomParamsUseCase,
+            saveParamsUseCase = saveStoryCustomParamsUseCase,
+            updateTranslationUseCase = updateStoryTranslationUseCase,
+            copyParamsUseCase = copyStoryCustomParamsUseCase,
+            removeParamsUseCase = removeStoryCustomParamsUseCase,
+            clearAllUseCase = clearAllStoryCustomParamsUseCase,
+            checkEmptyUseCase = checkStoryCustomParamsEmptyUseCase
         )
     }
 
