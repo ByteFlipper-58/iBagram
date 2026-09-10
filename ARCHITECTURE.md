@@ -2283,6 +2283,42 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── PhotoViewerUiState.kt
             ├── PhotoViewerEvent.kt
             └── PhotoViewerViewModel.kt
+    │
+    └── chatinput/                         # Chat Message Input, Formatting, Voice Recording, Panels & Reply Bar Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── RecordType.kt
+        │   │   ├── RecordStatus.kt
+        │   │   ├── EnterViewPanelMode.kt
+        │   │   ├── TextFormatStyle.kt
+        │   │   ├── ChatInputReplyQuote.kt
+        │   │   ├── ChatInputSendOptions.kt
+        │   │   ├── ChatInputRecordState.kt
+        │   │   └── ChatInputState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ChatInputRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── CalculateSendButtonStateUseCase.kt
+        │       ├── FormatTextSelectionUseCase.kt
+        │       ├── ValidateVoiceRecordActionUseCase.kt
+        │       ├── ResolvePanelVisibilityUseCase.kt
+        │       ├── ObserveChatInputStateUseCase.kt
+        │       ├── GetChatInputStateUseCase.kt
+        │       ├── SetChatInputTextUseCase.kt
+        │       ├── SetChatInputPanelModeUseCase.kt
+        │       ├── SetChatInputReplyUseCase.kt
+        │       └── ClearChatInputReplyUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers & record duration formatters
+        │   │   └── ChatInputMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyChatInputRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ChatInputUiState.kt
+            ├── ChatInputEvent.kt
+            └── ChatInputViewModel.kt
 ```
 
 ### Layer Rules
@@ -2782,10 +2818,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `CalculateMediaPagingUseCase`, `CalculateZoomTransformUseCase`, `ValidateViewerActionsUseCase`, `ResolveMediaQualityUseCase`, `ObservePhotoViewerStateUseCase`, `GetPhotoViewerStateUseCase`, `OpenPhotoViewerUseCase`, `NavigatePhotoViewerUseCase`, `UpdatePlaybackStateUseCase`, `ClosePhotoViewerUseCase`
   - [x] Data layer: `PhotoViewerMapper`, `LegacyPhotoViewerRepository` (thread safe, adapting `PhotoViewer.java`'s 23k+ lines, pinch/zoom clamp math, 90° rotation snapping, video quality resolution, timecode formatters, and select/edit mode conversions)
   - [x] Presentation layer: `PhotoViewerUiState`, `PhotoViewerEvent`, `PhotoViewerViewModel`
+- [x] Chat Message Input, Formatting, Voice Recording, Panels & Reply Bar (`feature.chatinput`)
+  - [x] Domain entities: `RecordType`, `RecordStatus`, `EnterViewPanelMode`, `TextFormatStyle`, `ChatInputReplyQuote`, `ChatInputSendOptions`, `ChatInputRecordState`, `ChatInputState`
+  - [x] Repository contract: `ChatInputRepository`
+  - [x] Use cases: `CalculateSendButtonStateUseCase`, `FormatTextSelectionUseCase`, `ValidateVoiceRecordActionUseCase`, `ResolvePanelVisibilityUseCase`, `ObserveChatInputStateUseCase`, `GetChatInputStateUseCase`, `SetChatInputTextUseCase`, `SetChatInputPanelModeUseCase`, `SetChatInputReplyUseCase`, `ClearChatInputReplyUseCase`
+  - [x] Data layer: `ChatInputMapper`, `LegacyChatInputRepository` (thread safe, adapting `ChatActivityEnterView.java`'s 15k+ lines, recording duration formatters, send button vs mic arbitration, and reply/edit preview quotes)
+  - [x] Presentation layer: `ChatInputUiState`, `ChatInputEvent`, `ChatInputViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 080: Isolation of Chat Message Input, Formatting, Voice Recording, Panels & Reply Bar into feature.chatinput
+- **Context:** In Telegram Android, message text editing, draft state, rich text formatting (bold, italic, mono, spoiler, quote, strike, underline), voice note and round video recording, audio waveform capture, audio recording lock, pause, and preview, send options (silent, scheduled, paid stars, ttl / view-once), reply & edit preview banners, and virtual input panels (keyboard, emoji/stickers, bot keyboard, attachment sheet) were managed by `ChatActivityEnterView.java` (~15,647 lines) in `org.telegram.ui.Components`. The view coupled low-level Android View and window management (`FrameLayout`, `EditTextCaption`, `LinearLayout`, `AnimatedTextView`), touch velocity tracking, audio recording timers, `MediaController` hardware recorder callbacks, direct `NotificationCenter` listeners, and delegate callbacks across `ChatActivity`.
+- **Decision:** Introduce pure domain models `RecordType` (VOICE, ROUND_VIDEO), `RecordStatus` (IDLE, RECORDING, LOCKED, PAUSED, PREVIEW), `EnterViewPanelMode` (NONE, KEYBOARD, EMOJI_STICKER, BOT_KEYBOARD, ATTACH_ALERT), `TextFormatStyle` (BOLD, ITALIC, MONO, STRIKETHROUGH, UNDERLINE, SPOILER, QUOTE), `ChatInputReplyQuote`, `ChatInputSendOptions`, `ChatInputRecordState`, and `ChatInputState`. Define abstract contract `ChatInputRepository` covering state observation (`observeState`), snapshot retrieval (`getState`), text and cursor mutation (`setText`), virtual panel selection (`setPanelMode`), reply/edit quotes management (`setReplyMessage`, `setEditMessage`, `clearReplyOrEdit`), send options mutation (`updateSendOptions`), voice/video recording lifecycle (`startRecording`, `lockRecording`, `pauseRecording`, `resumeRecording`, `cancelRecording`, `stopRecording`), progress updates (`updateRecordProgress`), view-once toggle (`toggleVoiceOnce`), and state reset (`reset`). Implement pure algorithmic use cases for dynamic Send vs Record button arbitration (`CalculateSendButtonStateUseCase`), text selection wrapping with markdown tokens and cursor compensation (`FormatTextSelectionUseCase`), voice recording permission and draft presence validation (`ValidateVoiceRecordActionUseCase`), and panel toggle arbitration (`ResolvePanelVisibilityUseCase`). Provide thread-safe `LegacyChatInputRepository` and duration formatting in `ChatInputMapper`. Encapsulate presentation state and MVI events in `ChatInputViewModel`.
+- **Consequences:** The entire chat message input bar domain logic, recording state machine, text formatting algorithms, send options, and reply/edit quotes are cleanly isolated behind testable domain interfaces with full unit test coverage while remaining 100% backward compatible with Telegram's 15k+ line `ChatActivityEnterView.java`.
 
 ### ADR 079: Isolation of Fullscreen Photo/Video Viewer, Gestures, Playback & Editor into feature.photoviewer
 - **Context:** In Telegram Android, fullscreen photo and video viewing, animated media, stories, avatars, wallpapers, stickers, and GIF inspection were managed by `PhotoViewer.java` (~23,753 lines) in `org.telegram.ui`. The class coupled low-level Android View and window management (`FrameLayout`, `WindowManager`, `SurfaceView`, `TextureView`), hardware video decoding and internal video player instances (`VideoPlayer`, `VideoPlayerRewinder`), gesture detectors (pinch-to-zoom, double-tap zoom, translation dragging, dismiss swipes), PIP mode delegates (`IPipSourceDelegate`), photo/video editor mode switching (`CROP`, `FILTER`, `PAINT`, `STICKER_MASK`, `COVER`), action bar inflation, action routing (forward, share, delete, save to gallery, rotate, set avatar, speed, quality), and legacy integer modes (`SELECT_TYPE_*`, `EDIT_MODE_*`).

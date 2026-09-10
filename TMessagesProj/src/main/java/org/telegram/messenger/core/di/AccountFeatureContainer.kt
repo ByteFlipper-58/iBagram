@@ -847,6 +847,19 @@ import org.telegram.messenger.feature.photoviewer.domain.usecase.ResolveMediaQua
 import org.telegram.messenger.feature.photoviewer.domain.usecase.UpdatePlaybackStateUseCase
 import org.telegram.messenger.feature.photoviewer.domain.usecase.ValidateViewerActionsUseCase
 import org.telegram.messenger.feature.photoviewer.presentation.PhotoViewerViewModel
+import org.telegram.messenger.feature.chatinput.data.repository.LegacyChatInputRepository
+import org.telegram.messenger.feature.chatinput.domain.repository.ChatInputRepository
+import org.telegram.messenger.feature.chatinput.domain.usecase.CalculateSendButtonStateUseCase
+import org.telegram.messenger.feature.chatinput.domain.usecase.ClearChatInputReplyUseCase
+import org.telegram.messenger.feature.chatinput.domain.usecase.FormatTextSelectionUseCase
+import org.telegram.messenger.feature.chatinput.domain.usecase.GetChatInputStateUseCase
+import org.telegram.messenger.feature.chatinput.domain.usecase.ObserveChatInputStateUseCase
+import org.telegram.messenger.feature.chatinput.domain.usecase.ResolvePanelVisibilityUseCase
+import org.telegram.messenger.feature.chatinput.domain.usecase.SetChatInputPanelModeUseCase
+import org.telegram.messenger.feature.chatinput.domain.usecase.SetChatInputReplyUseCase
+import org.telegram.messenger.feature.chatinput.domain.usecase.SetChatInputTextUseCase
+import org.telegram.messenger.feature.chatinput.domain.usecase.ValidateVoiceRecordActionUseCase
+import org.telegram.messenger.feature.chatinput.presentation.ChatInputViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5254,6 +5267,66 @@ class AccountFeatureContainer private constructor(val account: Int) {
     fun createPhotoViewerViewModel(): PhotoViewerViewModel {
         return PhotoViewerViewModel(
             repository = photoViewerRepository
+        )
+    }
+
+    private var customChatInputRepository: ChatInputRepository? = null
+
+    var chatInputRepository: ChatInputRepository
+        get() = customChatInputRepository ?: LegacyChatInputRepository(
+            sendButtonStateUseCase = calculateSendButtonStateUseCase
+        )
+        set(value) {
+            customChatInputRepository = value
+        }
+
+    val calculateSendButtonStateUseCase: CalculateSendButtonStateUseCase
+        get() = CalculateSendButtonStateUseCase()
+
+    val formatTextSelectionUseCase: FormatTextSelectionUseCase
+        get() = FormatTextSelectionUseCase()
+
+    val validateVoiceRecordActionUseCase: ValidateVoiceRecordActionUseCase
+        get() = ValidateVoiceRecordActionUseCase()
+
+    val resolvePanelVisibilityUseCase: ResolvePanelVisibilityUseCase
+        get() = ResolvePanelVisibilityUseCase()
+
+    val observeChatInputStateUseCase: ObserveChatInputStateUseCase
+        get() = ObserveChatInputStateUseCase(chatInputRepository)
+
+    val getChatInputStateUseCase: GetChatInputStateUseCase
+        get() = GetChatInputStateUseCase(chatInputRepository)
+
+    val setChatInputTextUseCase: SetChatInputTextUseCase
+        get() = SetChatInputTextUseCase(chatInputRepository)
+
+    val setChatInputPanelModeUseCase: SetChatInputPanelModeUseCase
+        get() = SetChatInputPanelModeUseCase(chatInputRepository)
+
+    val setChatInputReplyUseCase: SetChatInputReplyUseCase
+        get() = SetChatInputReplyUseCase(chatInputRepository)
+
+    val clearChatInputReplyUseCase: ClearChatInputReplyUseCase
+        get() = ClearChatInputReplyUseCase(chatInputRepository)
+
+    private var cachedChatInputViewModel: ChatInputViewModel? = null
+
+    val chatInputViewModel: ChatInputViewModel
+        get() {
+            var vm = cachedChatInputViewModel
+            if (vm == null) {
+                vm = createChatInputViewModel()
+                cachedChatInputViewModel = vm
+            }
+            return vm
+        }
+
+    fun createChatInputViewModel(): ChatInputViewModel {
+        return ChatInputViewModel(
+            repository = chatInputRepository,
+            formatUseCase = formatTextSelectionUseCase,
+            resolvePanelUseCase = resolvePanelVisibilityUseCase
         )
     }
 
