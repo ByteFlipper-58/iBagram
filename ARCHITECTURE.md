@@ -2428,6 +2428,46 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ImageLoaderUiState.kt
             ├── ImageLoaderEvent.kt
             └── ImageLoaderViewModel.kt
+    │
+    └── downloadmanager/                  # Downloads Queue, Auto-Download Rules & Network Presets Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── AutoDownloadMediaType.kt
+        │   │   ├── AutoDownloadNetwork.kt
+        │   │   ├── PeerTypePreset.kt
+        │   │   ├── DownloadItemStatus.kt
+        │   │   ├── DownloadPresetModel.kt
+        │   │   ├── DownloadItemModel.kt
+        │   │   ├── DownloadManagerStats.kt
+        │   │   └── DownloadManagerState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── DownloadManagerRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── EvaluateAutoDownloadEligibilityUseCase.kt
+        │       ├── ObserveDownloadManagerStateUseCase.kt
+        │       ├── GetDownloadManagerStateUseCase.kt
+        │       ├── EnqueueDownloadUseCase.kt
+        │       ├── PauseDownloadUseCase.kt
+        │       ├── ResumeDownloadUseCase.kt
+        │       ├── CancelDownloadUseCase.kt
+        │       ├── RetryDownloadUseCase.kt
+        │       ├── ClearRecentDownloadsUseCase.kt
+        │       ├── MarkDownloadsAsViewedUseCase.kt
+        │       ├── UpdateDownloadProgressUseCase.kt
+        │       ├── CalculateDownloadSpeedUseCase.kt
+        │       ├── SetDownloadNetworkTypeUseCase.kt
+        │       └── UpdateDownloadPresetUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers, bitmask encoder & speed calculators
+        │   │   └── DownloadManagerMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyDownloadManagerRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── DownloadManagerUiState.kt
+            ├── DownloadManagerEvent.kt
+            └── DownloadManagerViewModel.kt
 ```
 
 ### Layer Rules
@@ -2951,10 +2991,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ParseImageFilterUseCase`, `FormatImageFilterUseCase`, `BuildImageCacheKeyUseCase`, `CalculateImageDownscaleUseCase`, `EvaluateImageCacheEligibilityUseCase`, `ObserveImageLoaderStateUseCase`, `GetImageLoaderStateUseCase`, `EnqueueImageRequestUseCase`, `CancelImageRequestUseCase`, `TrimImageMemoryUseCase`, `ClearImageCacheUseCase`
   - [x] Data layer: `ImageLoaderMapper`, `LegacyImageLoaderRepository` (thread-safe LRU tier caches, memory pressure level trimming, hit/miss tracking, and request deduplication)
   - [x] Presentation layer: `ImageLoaderUiState`, `ImageLoaderEvent`, `ImageLoaderViewModel`
+- [x] Downloads Queue, Auto-Download Rules & Network Presets (`feature.downloadmanager`)
+  - [x] Domain entities: `AutoDownloadMediaType`, `AutoDownloadNetwork`, `PeerTypePreset`, `DownloadItemStatus`, `DownloadPresetModel`, `DownloadItemModel`, `DownloadManagerStats`, `DownloadManagerState`
+  - [x] Repository contract: `DownloadManagerRepository`
+  - [x] Use cases: `EvaluateAutoDownloadEligibilityUseCase`, `ObserveDownloadManagerStateUseCase`, `GetDownloadManagerStateUseCase`, `EnqueueDownloadUseCase`, `PauseDownloadUseCase`, `ResumeDownloadUseCase`, `CancelDownloadUseCase`, `RetryDownloadUseCase`, `ClearRecentDownloadsUseCase`, `MarkDownloadsAsViewedUseCase`, `UpdateDownloadProgressUseCase`, `CalculateDownloadSpeedUseCase`, `SetDownloadNetworkTypeUseCase`, `UpdateDownloadPresetUseCase`
+  - [x] Data layer: `DownloadManagerMapper`, `LegacyDownloadManagerRepository` (thread-safe StateFlow engine adapting `DownloadController.java`'s 1800+ lines, multi-network preset masks, moving speed tracking, and download lifecycle states)
+  - [x] Presentation layer: `DownloadManagerUiState`, `DownloadManagerEvent`, `DownloadManagerViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 084: Isolation of Downloads Queue, Auto-Download Rules & Network Presets into feature.downloadmanager
+- **Context:** In Telegram Android, automatic media downloading, network rules across cellular/Wi-Fi/roaming networks, media size constraints (photos, videos, documents, audio across contacts, private chats, groups, channels), video/music/stories preloading, active download queue monitoring (`downloadingFiles`, `recentDownloadingFiles`, `unviewedDownloads`), and progress notifications were managed by `DownloadController.java` (~1,811 lines) in `org.telegram.messenger`. Direct coupling existed with `ConnectivityManager` network broadcasts, SQLite persistence of auto-download presets, low-level file progress listeners, and UI components (`SearchDownloadsContainer`, `DownloadsInfoBottomSheet`, `DataAutoDownloadActivity`).
+- **Decision:** Introduce pure domain models `AutoDownloadMediaType` (PHOTO, VIDEO, DOCUMENT, AUDIO), `AutoDownloadNetwork` (CELLULAR, WIFI, ROAMING), `PeerTypePreset` (CONTACTS, PRIVATE_CHATS, GROUPS, CHANNELS), `DownloadItemStatus` (QUEUED, DOWNLOADING, PAUSED, COMPLETED, FAILED, CANCELLED), `DownloadPresetModel` (mask, maxSizes, preloading flags, call data, maxVideoBitrate), `DownloadItemModel`, `DownloadManagerStats`, and `DownloadManagerState`. Define abstract contract `DownloadManagerRepository` covering state observation (`observeState`), snapshot retrieval (`getState`), file streams (`observeDownloadingFiles`, `observeRecentFiles`), lifecycle actions (`enqueueDownload`, `pauseDownload`, `resumeDownload`, `cancelDownload`, `retryDownload`, `deleteRecentDownload`, `clearRecentDownloads`, `markDownloadsAsViewed`), progress updating (`updateDownloadProgress`), completion and failure reporting (`completeDownload`, `failDownload`), network switching (`setNetworkType`), eligibility evaluation (`shouldAutoDownload`), and preset management (`getPreset`, `updatePreset`). Implement pure algorithmic use cases for media eligibility evaluation (`EvaluateAutoDownloadEligibilityUseCase`), moving speed calculations (`CalculateDownloadSpeedUseCase`), and state manipulation. Provide thread-safe `LegacyDownloadManagerRepository` and bitmask codecs/formatters in `DownloadManagerMapper`. Encapsulate presentation state and MVI events in `DownloadManagerViewModel`.
+- **Consequences:** All auto-download rules, network switching adaptations, download queue lifecycles, speed calculations, and unviewed download notifications are cleanly decoupled behind testable domain interfaces with full unit test coverage while remaining 100% backward compatible with Telegram's `DownloadController.java`.
 
 ### ADR 083: Isolation of Memory Cache Tiers, Downscaling, Filter Specs & Image Request Pipeline into feature.imageloader
 - **Context:** In Telegram Android, image downloading, bitmap decoding, downsampling, filter string parsing (`100_100_b_f`, `80_80_r`, `g`, `gl`, `firstframe`, `lastframe`, `lastreactframe`, `pframe`, `isc`, `exif`, `ignoreOrientation`), multiple LRU memory cache tiers (`memCache`, `smallImagesMemCache`, `wallpaperMemCache`, `lottieMemCache`), artwork tasks, disk cache paths, and system memory trimming (`TRIM_MEMORY_*`) were centralized in `ImageLoader.java` (~4,650 lines, 225KB) in `org.telegram.messenger`. High coupling existed between low-level Android decoders (`BitmapFactory.Options.inSampleSize`, `MediaMetadataRetriever`), `ImageReceiver` instances across cells and activities, `NotificationCenter` broadcasts, and custom `LruCache` implementations.

@@ -898,6 +898,22 @@ import org.telegram.messenger.feature.imageloader.domain.usecase.ObserveImageLoa
 import org.telegram.messenger.feature.imageloader.domain.usecase.ParseImageFilterUseCase
 import org.telegram.messenger.feature.imageloader.domain.usecase.TrimImageMemoryUseCase
 import org.telegram.messenger.feature.imageloader.presentation.ImageLoaderViewModel
+import org.telegram.messenger.feature.downloadmanager.data.repository.LegacyDownloadManagerRepository
+import org.telegram.messenger.feature.downloadmanager.domain.repository.DownloadManagerRepository
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.CancelDownloadUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.ClearRecentDownloadsUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.EnqueueDownloadUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.EvaluateAutoDownloadEligibilityUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.GetDownloadManagerStateUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.MarkDownloadsAsViewedUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.ObserveDownloadManagerStateUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.PauseDownloadUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.ResumeDownloadUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.RetryDownloadUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.SetDownloadNetworkTypeUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.UpdateDownloadPresetUseCase
+import org.telegram.messenger.feature.downloadmanager.domain.usecase.UpdateDownloadProgressUseCase
+import org.telegram.messenger.feature.downloadmanager.presentation.DownloadManagerViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5542,6 +5558,76 @@ class AccountFeatureContainer private constructor(val account: Int) {
             cancelImageRequestUseCase = cancelImageRequestUseCase,
             trimImageMemoryUseCase = trimImageMemoryUseCase,
             clearImageCacheUseCase = clearImageCacheUseCase
+        )
+    }
+
+    val downloadManagerRepository: DownloadManagerRepository by lazy {
+        LegacyDownloadManagerRepository(account)
+    }
+
+    val evaluateAutoDownloadEligibilityUseCase: EvaluateAutoDownloadEligibilityUseCase
+        get() = EvaluateAutoDownloadEligibilityUseCase(downloadManagerRepository)
+
+    val observeDownloadManagerStateUseCase: ObserveDownloadManagerStateUseCase
+        get() = ObserveDownloadManagerStateUseCase(downloadManagerRepository)
+
+    val getDownloadManagerStateUseCase: GetDownloadManagerStateUseCase
+        get() = GetDownloadManagerStateUseCase(downloadManagerRepository)
+
+    val enqueueDownloadUseCase: EnqueueDownloadUseCase
+        get() = EnqueueDownloadUseCase(downloadManagerRepository)
+
+    val pauseDownloadUseCase: PauseDownloadUseCase
+        get() = PauseDownloadUseCase(downloadManagerRepository)
+
+    val resumeDownloadUseCase: ResumeDownloadUseCase
+        get() = ResumeDownloadUseCase(downloadManagerRepository)
+
+    val cancelDownloadUseCase: CancelDownloadUseCase
+        get() = CancelDownloadUseCase(downloadManagerRepository)
+
+    val retryDownloadUseCase: RetryDownloadUseCase
+        get() = RetryDownloadUseCase(downloadManagerRepository)
+
+    val clearRecentDownloadsUseCase: ClearRecentDownloadsUseCase
+        get() = ClearRecentDownloadsUseCase(downloadManagerRepository)
+
+    val markDownloadsAsViewedUseCase: MarkDownloadsAsViewedUseCase
+        get() = MarkDownloadsAsViewedUseCase(downloadManagerRepository)
+
+    val updateDownloadProgressUseCase: UpdateDownloadProgressUseCase
+        get() = UpdateDownloadProgressUseCase(downloadManagerRepository)
+
+    val setDownloadNetworkTypeUseCase: SetDownloadNetworkTypeUseCase
+        get() = SetDownloadNetworkTypeUseCase(downloadManagerRepository)
+
+    val updateDownloadPresetUseCase: UpdateDownloadPresetUseCase
+        get() = UpdateDownloadPresetUseCase(downloadManagerRepository)
+
+    private var cachedDownloadManagerViewModel: DownloadManagerViewModel? = null
+
+    val downloadManagerViewModel: DownloadManagerViewModel
+        get() {
+            var vm = cachedDownloadManagerViewModel
+            if (vm == null) {
+                vm = createDownloadManagerViewModel()
+                cachedDownloadManagerViewModel = vm
+            }
+            return vm
+        }
+
+    fun createDownloadManagerViewModel(): DownloadManagerViewModel {
+        return DownloadManagerViewModel(
+            observeDownloadManagerStateUseCase = observeDownloadManagerStateUseCase,
+            enqueueDownloadUseCase = enqueueDownloadUseCase,
+            pauseDownloadUseCase = pauseDownloadUseCase,
+            resumeDownloadUseCase = resumeDownloadUseCase,
+            cancelDownloadUseCase = cancelDownloadUseCase,
+            retryDownloadUseCase = retryDownloadUseCase,
+            clearRecentDownloadsUseCase = clearRecentDownloadsUseCase,
+            markDownloadsAsViewedUseCase = markDownloadsAsViewedUseCase,
+            setDownloadNetworkTypeUseCase = setDownloadNetworkTypeUseCase,
+            updateDownloadPresetUseCase = updateDownloadPresetUseCase
         )
     }
 
