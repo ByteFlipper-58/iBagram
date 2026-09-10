@@ -1155,6 +1155,21 @@ import org.telegram.messenger.feature.windowvisibility.domain.usecase.ObserveWin
 import org.telegram.messenger.feature.windowvisibility.domain.usecase.ObserveWindowVisibilityChangesUseCase
 import org.telegram.messenger.feature.windowvisibility.domain.usecase.CreateVisibilityControllerUseCase
 import org.telegram.messenger.feature.windowvisibility.presentation.WindowVisibilityViewModel
+import org.telegram.messenger.feature.countdowntimer.data.repository.LegacyCountdownTimerRepository
+import org.telegram.messenger.feature.countdowntimer.domain.repository.CountdownTimerRepository
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.StartCountdownTimerUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.StopCountdownTimerUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.PauseCountdownTimerUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.ResumeCountdownTimerUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.GetCountdownTimerUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.IsCountdownTimerRunningUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.TickCountdownTimerUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.ClearAllCountdownTimersUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.ObserveCountdownTimerUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.ObserveCountdownStateUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.DecomposeCountdownTimeUseCase
+import org.telegram.messenger.feature.countdowntimer.domain.usecase.FormatCountdownTimeUseCase
+import org.telegram.messenger.feature.countdowntimer.presentation.CountdownTimerViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6833,6 +6848,77 @@ class AccountFeatureContainer private constructor(val account: Int) {
             getActiveHideReasonsUseCase = getActiveHideReasonsUseCase,
             resetWindowVisibilityUseCase = resetWindowVisibilityUseCase,
             observeWindowVisibilityStateUseCase = observeWindowVisibilityStateUseCase
+        )
+    }
+
+    private var customCountdownTimerRepository: CountdownTimerRepository? = null
+
+    var countdownTimerRepository: CountdownTimerRepository
+        get() = customCountdownTimerRepository ?: LegacyCountdownTimerRepository()
+        set(value) {
+            customCountdownTimerRepository = value
+        }
+
+    val startCountdownTimerUseCase: StartCountdownTimerUseCase
+        get() = StartCountdownTimerUseCase(countdownTimerRepository)
+
+    val stopCountdownTimerUseCase: StopCountdownTimerUseCase
+        get() = StopCountdownTimerUseCase(countdownTimerRepository)
+
+    val pauseCountdownTimerUseCase: PauseCountdownTimerUseCase
+        get() = PauseCountdownTimerUseCase(countdownTimerRepository)
+
+    val resumeCountdownTimerUseCase: ResumeCountdownTimerUseCase
+        get() = ResumeCountdownTimerUseCase(countdownTimerRepository)
+
+    val getCountdownTimerUseCase: GetCountdownTimerUseCase
+        get() = GetCountdownTimerUseCase(countdownTimerRepository)
+
+    val isCountdownTimerRunningUseCase: IsCountdownTimerRunningUseCase
+        get() = IsCountdownTimerRunningUseCase(countdownTimerRepository)
+
+    val tickCountdownTimerUseCase: TickCountdownTimerUseCase
+        get() = TickCountdownTimerUseCase(countdownTimerRepository)
+
+    val clearAllCountdownTimersUseCase: ClearAllCountdownTimersUseCase
+        get() = ClearAllCountdownTimersUseCase(countdownTimerRepository)
+
+    val observeCountdownTimerUseCase: ObserveCountdownTimerUseCase
+        get() = ObserveCountdownTimerUseCase(countdownTimerRepository)
+
+    val observeCountdownStateUseCase: ObserveCountdownStateUseCase
+        get() = ObserveCountdownStateUseCase(countdownTimerRepository)
+
+    val decomposeCountdownTimeUseCase: DecomposeCountdownTimeUseCase
+        get() = DecomposeCountdownTimeUseCase()
+
+    val formatCountdownTimeUseCase: FormatCountdownTimeUseCase
+        get() = FormatCountdownTimeUseCase(decomposeCountdownTimeUseCase)
+
+    private var cachedCountdownTimerViewModel: CountdownTimerViewModel? = null
+
+    val countdownTimerViewModel: CountdownTimerViewModel
+        get() {
+            var vm = cachedCountdownTimerViewModel
+            if (vm == null) {
+                vm = createCountdownTimerViewModel()
+                cachedCountdownTimerViewModel = vm
+            }
+            return vm
+        }
+
+    fun createCountdownTimerViewModel(): CountdownTimerViewModel {
+        return CountdownTimerViewModel(
+            startCountdownTimerUseCase = startCountdownTimerUseCase,
+            stopCountdownTimerUseCase = stopCountdownTimerUseCase,
+            pauseCountdownTimerUseCase = pauseCountdownTimerUseCase,
+            resumeCountdownTimerUseCase = resumeCountdownTimerUseCase,
+            getCountdownTimerUseCase = getCountdownTimerUseCase,
+            isCountdownTimerRunningUseCase = isCountdownTimerRunningUseCase,
+            tickCountdownTimerUseCase = tickCountdownTimerUseCase,
+            clearAllCountdownTimersUseCase = clearAllCountdownTimersUseCase,
+            observeCountdownStateUseCase = observeCountdownStateUseCase,
+            formatCountdownTimeUseCase = formatCountdownTimeUseCase
         )
     }
 

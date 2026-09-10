@@ -2949,10 +2949,39 @@ TMessagesProj/src/main/java/org/telegram/messenger/
         │   └── repository/                # Adapter implementing repository
         │       └── LegacyWindowVisibilityRepository.kt
         │
-        └── presentation/                  # UI State & ViewModel
-            ├── WindowVisibilityUiState.kt
             ├── WindowVisibilityEvent.kt
             └── WindowVisibilityViewModel.kt
+    │
+    └── countdowntimer/                   # Countdown Timer Engine & Time Formatting Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (CountdownTimerStatus, CountdownTimeComponents, CountdownTimerTick, CountdownTimerState)
+        │   │   └── CountdownTimerModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── CountdownTimerRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── StartCountdownTimerUseCase.kt
+        │       ├── StopCountdownTimerUseCase.kt
+        │       ├── PauseCountdownTimerUseCase.kt
+        │       ├── ResumeCountdownTimerUseCase.kt
+        │       ├── GetCountdownTimerUseCase.kt
+        │       ├── IsCountdownTimerRunningUseCase.kt
+        │       ├── TickCountdownTimerUseCase.kt
+        │       ├── ClearAllCountdownTimersUseCase.kt
+        │       ├── ObserveCountdownTimerUseCase.kt
+        │       ├── ObserveCountdownStateUseCase.kt
+        │       ├── DecomposeCountdownTimeUseCase.kt
+        │       └── FormatCountdownTimeUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (CountdownTimerMapper)
+        │   │   └── CountdownTimerMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyCountdownTimerRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── CountdownTimerUiState.kt
+            ├── CountdownTimerEvent.kt
+            └── CountdownTimerViewModel.kt
 ```
 
 
@@ -3580,10 +3609,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `RequestHideWindowUseCase`, `ReleaseHideWindowUseCase`, `ToggleWindowHideUseCase`, `CheckIsWindowVisibleUseCase`, `GetWindowVisibilityStateUseCase`, `GetActiveHideReasonsUseCase`, `ResetWindowVisibilityUseCase`, `ObserveWindowVisibilityStateUseCase`, `ObserveWindowVisibilityChangesUseCase`, `CreateVisibilityControllerUseCase`
   - [x] Data layer: `WindowVisibilityMapper`, `LegacyWindowVisibilityRepository` (thread-safe StateFlow engine adapting `WindowVisibilityManager.java`'s 76 lines, reference-counting `reasonsToHide`, `OnVisibilityChangedListener`, and subsystem controllers)
   - [x] Presentation layer: `WindowVisibilityUiState`, `WindowVisibilityEvent`, `WindowVisibilityViewModel`
+- [x] Countdown Timer Engine & Time Formatting (`feature.countdowntimer`)
+  - [x] Domain entities: `CountdownTimerStatus`, `CountdownTimeComponents`, `CountdownTimerTick`, `CountdownTimerState`
+  - [x] Repository contract: `CountdownTimerRepository`
+  - [x] Use cases: `StartCountdownTimerUseCase`, `StopCountdownTimerUseCase`, `PauseCountdownTimerUseCase`, `ResumeCountdownTimerUseCase`, `GetCountdownTimerUseCase`, `IsCountdownTimerRunningUseCase`, `TickCountdownTimerUseCase`, `ClearAllCountdownTimersUseCase`, `ObserveCountdownTimerUseCase`, `ObserveCountdownStateUseCase`, `DecomposeCountdownTimeUseCase`, `FormatCountdownTimeUseCase`
+  - [x] Data layer: `CountdownTimerMapper`, `LegacyCountdownTimerRepository` (thread-safe StateFlow and ticker engine adapting `CountdownTimer.java`'s 62 lines, time component math, and formatted strings)
+  - [x] Presentation layer: `CountdownTimerUiState`, `CountdownTimerEvent`, `CountdownTimerViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 101: Isolation of Countdown Timer Engine & Time Formatting into feature.countdowntimer
+- **Context:** In Telegram Android, countdown timers and time formatting for time-sensitive UI elements (such as closing polls in `ChatMessageCell`, remaining availability of Telegram Star gifts in `StarGiftSheet`, and active auction countdowns in `AuctionBidSheet` and `ActiveAuctionsSheet`) were implemented via `CountdownTimer.java` (~62 lines). The legacy timer relied directly on Android's UI thread looper (`AndroidUtilities.runOnUIThread`, `cancelRunOnUIThread`) and single-listener callbacks (`Callback.onTimerUpdate(long)`). Because it tightly coupled tick intervals, timer state mutation, and time formatting to Android views and platform runnables, multi-timer observation was prone to memory leaks upon sheet dismissal, lack of pause/resume support, and inability to test countdown business logic in unit tests.
+- **Decision:** Introduce pure domain models `CountdownTimerStatus`, `CountdownTimeComponents`, `CountdownTimerTick`, and `CountdownTimerState`. Define abstract contract `CountdownTimerRepository` covering lifecycle operations (`start`, `stop`, `pause`, `resume`, `tick`), snapshots (`getTimer`, `isRunning`, `clearAll`), and reactive streams (`observeTimer`, `observeState`). Implement pure domain algorithms for time component decomposition into days, hours, minutes, and seconds (`DecomposeCountdownTimeUseCase`) and human-readable formatting (`FormatCountdownTimeUseCase`). Provide thread-safe `LegacyCountdownTimerRepository` with coroutine-based timers and `CountdownTimerMapper` for math calculations. Encapsulate presentation state and MVI events in `CountdownTimerViewModel`.
+- **Consequences:** All countdown timers, tick calculations, progress fractions, and duration formatting strings are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `CountdownTimer.java`.
 
 ### ADR 100: Isolation of Window Visibility Arbitration & Reference-Counting Controllers into feature.windowvisibility
 - **Context:** In Telegram Android, window and main activity content visibility coordination across heavy modal overlays (e.g. `BottomSheet`, `PhotoViewer`, `SecretMediaViewer`, `ArticleViewer`, `MessageSendPreview`, `StoryRecorder`, and `LaunchActivity`) was managed through `WindowVisibilityManager.java` (~76 lines). The manager tracked a `reasonsToHide` counter, notified an `OnVisibilityChangedListener` whenever `reasonsToHide > 0` toggled visibility, and supplied `Controller` instances with `setHidden(boolean)` and `destroy()` methods. In `LaunchActivity`, `ActivityVisibilityController` adapted this reference-counting logic for hiding decor views and main content layouts. Because `PhotoViewer` and other viewers directly created or manipulated static controllers and listeners without domain abstraction or reactive state observation, multi-window visibility was prone to orphaned hide locks, race conditions, and lack of testability.
