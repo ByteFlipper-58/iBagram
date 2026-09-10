@@ -2356,6 +2356,41 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── AudioPlayerUiState.kt
             ├── AudioPlayerEvent.kt
             └── AudioPlayerViewModel.kt
+    │
+    └── sendmessages/                      # Message Sending Pipeline, Media Uploads, Albums & Forwards Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── SendMediaType.kt
+        │   │   ├── SendStatus.kt
+        │   │   ├── ForwardMode.kt
+        │   │   ├── SendOptionsModel.kt
+        │   │   ├── SendMediaItem.kt
+        │   │   ├── SendAlbumModel.kt
+        │   │   ├── ForwardRequestModel.kt
+        │   │   ├── PendingSendModel.kt
+        │   │   └── SendMessagesState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── SendMessagesRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── SendTextMessageUseCase.kt
+        │       ├── SendMediaMessageUseCase.kt
+        │       ├── SendMediaAlbumUseCase.kt
+        │       ├── ForwardMessagesUseCase.kt
+        │       ├── RetrySendMessageUseCase.kt
+        │       ├── CancelSendMessageUseCase.kt
+        │       ├── ObservePendingSendsUseCase.kt
+        │       └── ValidateSendEligibilityUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers & size/progress calculators
+        │   │   └── SendMessagesMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacySendMessagesRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── SendMessagesUiState.kt
+            ├── SendMessagesEvent.kt
+            └── SendMessagesViewModel.kt
 ```
 
 ### Layer Rules
@@ -2867,10 +2902,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObservePlaybackStateUseCase`, `GetPlaybackStateUseCase`, `PlayTrackUseCase`, `TogglePlayPauseUseCase`, `SeekAudioUseCase`, `NavigatePlaylistUseCase`, `CyclePlaybackSpeedUseCase`, `CycleRepeatModeUseCase`, `ToggleShuffleUseCase`, `HandleProximitySensorUseCase`, `ConfigureEqualizerUseCase`
   - [x] Data layer: `AudioPlayerMapper`, `LegacyAudioPlayerRepository` (thread safe StateFlow engine adapting `MediaController.java`, playlist shuffle/repeat arbitration, seek clamping, and proximity ear-piece routing)
   - [x] Presentation layer: `AudioPlayerUiState`, `AudioPlayerEvent`, `AudioPlayerViewModel`
+- [x] Message Sending Pipeline, Media Uploads, Albums & Forwards (`feature.sendmessages`)
+  - [x] Domain entities: `SendMediaType`, `SendStatus`, `ForwardMode`, `SendOptionsModel`, `SendMediaItem`, `SendAlbumModel`, `ForwardRequestModel`, `PendingSendModel`, `SendMessagesState`
+  - [x] Repository contract: `SendMessagesRepository`
+  - [x] Use cases: `SendTextMessageUseCase`, `SendMediaMessageUseCase`, `SendMediaAlbumUseCase`, `ForwardMessagesUseCase`, `RetrySendMessageUseCase`, `CancelSendMessageUseCase`, `ObservePendingSendsUseCase`, `ValidateSendEligibilityUseCase`
+  - [x] Data layer: `SendMessagesMapper`, `LegacySendMessagesRepository` (thread-safe StateFlow engine adapting `SendMessagesHelper.java`'s 14k+ lines, batched album constraints, chunked upload tracking, retry/cancellation handling, and forward modes)
+  - [x] Presentation layer: `SendMessagesUiState`, `SendMessagesEvent`, `SendMessagesViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 082: Isolation of Message Sending Pipeline, Media Uploads, Albums & Forwards into feature.sendmessages
+- **Context:** In Telegram Android, message transmission was orchestrated by `SendMessagesHelper.java` (~14,000 lines, 755KB) in `org.telegram.messenger`. It handled preparation of texts, photos, videos, audios, documents, voice notes, stickers, round video notes, contacts, locations, and polls, batched media albums (grouped media up to 10 items), chunked file uploads over MTProto, forwarding mechanisms (`TLRPC.TL_messages_forwardMessages`) with sender name/caption stripping, message scheduling (`scheduleDate`, `scheduleRepeatPeriod`), silent notifications (`notify = false`), paid stars sending (`payStars`), view-once self-destruct timers, retries, network failure backoff, and pending queues. UI components across `ChatActivity`, `PhotoViewer`, `ChatAttachAlert`, and external share receivers directly interacted with `SendMessagesHelper.getInstance(account)`.
+- **Decision:** Introduce pure domain models `SendMediaType` (11 types), `SendStatus` (PENDING, PREPARING, UPLOADING, SENDING, SUCCESS, FAILED, CANCELLED), `ForwardMode` (STANDARD, HIDE_NAMES, HIDE_CAPTIONS), `SendOptionsModel` (notify, scheduleDate, repeatPeriod, ttl, replyToMsgId, topMsgId, payStars, effectId, sendAsPeerId, invertMedia, hasSpoiler), `SendMediaItem`, `SendAlbumModel` (strictly enforced 1..10 items limit), `ForwardRequestModel`, `PendingSendModel`, and `SendMessagesState`. Define abstract contract `SendMessagesRepository` covering pending sends observation (`observePendingSends`), snapshot retrieval (`getPendingSends`), sending operations (`sendText`, `sendMedia`, `sendAlbum`, `forwardMessages`), lifecycle actions (`retrySend`, `cancelSend`, `cancelAll`), progress tracking (`updateProgress`), and completion reporting (`markSuccess`, `markFailed`). Implement pure algorithmic use cases for character limit validation (4096 standard / 8192 premium via `SendTextMessageUseCase`), media size constraints (2GB standard / 4GB premium via `SendMediaMessageUseCase`), batched album validation (`SendMediaAlbumUseCase`), multi-message forwarding (`ForwardMessagesUseCase`), retries and cancellations. Provide thread-safe `LegacySendMessagesRepository` and file size/progress math in `SendMessagesMapper`. Encapsulate presentation state and MVI events in `SendMessagesViewModel`.
+- **Consequences:** The entire message sending pipeline, media upload coordination, album batching, and forwarding modes are decoupled behind clean, testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's 14k+ line `SendMessagesHelper.java`.
 
 ### ADR 081: Isolation of Audio/Voice/Video Note Playback, Playlist Queue, Speed, Repeat & Proximity into feature.audioplayer
 - **Context:** In Telegram Android, audio track, podcast, voice note, and round video playback, playlist queue management, playback speed (0.5x..2.5x), repeat modes (NONE, ALL, CURRENT), shuffle order, proximity sensor routing (switching between loudspeaker and earpiece on raise-to-listen), and equalizer state were handled by `MediaController.java` (~6500 lines) and `AudioPlayerAlert.java` (~1700 lines). The legacy controller directly coupled Android `MediaPlayer`/ExoPlayer hardware decoders, `SensorManager` proximity listener callbacks, `AudioManager` focus changes, `NotificationCenter` broadcasts, and direct `ChatMessageCell`/`ChatActivity` UI state mutations.

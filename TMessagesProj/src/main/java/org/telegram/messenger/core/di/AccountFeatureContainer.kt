@@ -874,6 +874,16 @@ import org.telegram.messenger.feature.audioplayer.domain.usecase.SeekAudioUseCas
 import org.telegram.messenger.feature.audioplayer.domain.usecase.TogglePlayPauseUseCase
 import org.telegram.messenger.feature.audioplayer.domain.usecase.ToggleShuffleUseCase
 import org.telegram.messenger.feature.audioplayer.presentation.AudioPlayerViewModel
+import org.telegram.messenger.feature.sendmessages.data.repository.LegacySendMessagesRepository
+import org.telegram.messenger.feature.sendmessages.domain.repository.SendMessagesRepository
+import org.telegram.messenger.feature.sendmessages.domain.usecase.CancelSendMessageUseCase
+import org.telegram.messenger.feature.sendmessages.domain.usecase.ForwardMessagesUseCase
+import org.telegram.messenger.feature.sendmessages.domain.usecase.ObservePendingSendsUseCase
+import org.telegram.messenger.feature.sendmessages.domain.usecase.RetrySendMessageUseCase
+import org.telegram.messenger.feature.sendmessages.domain.usecase.SendMediaAlbumUseCase
+import org.telegram.messenger.feature.sendmessages.domain.usecase.SendMediaMessageUseCase
+import org.telegram.messenger.feature.sendmessages.domain.usecase.SendTextMessageUseCase
+import org.telegram.messenger.feature.sendmessages.presentation.SendMessagesViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5406,6 +5416,55 @@ class AccountFeatureContainer private constructor(val account: Int) {
             toggleShuffleUseCase = toggleShuffleUseCase,
             handleProximitySensorUseCase = handleProximitySensorUseCase,
             configureEqualizerUseCase = configureEqualizerUseCase
+        )
+    }
+
+    val sendMessagesRepository: SendMessagesRepository by lazy {
+        LegacySendMessagesRepository(account)
+    }
+
+    val sendTextMessageUseCase: SendTextMessageUseCase
+        get() = SendTextMessageUseCase(sendMessagesRepository)
+
+    val sendMediaMessageUseCase: SendMediaMessageUseCase
+        get() = SendMediaMessageUseCase(sendMessagesRepository)
+
+    val sendMediaAlbumUseCase: SendMediaAlbumUseCase
+        get() = SendMediaAlbumUseCase(sendMessagesRepository)
+
+    val forwardMessagesUseCase: ForwardMessagesUseCase
+        get() = ForwardMessagesUseCase(sendMessagesRepository)
+
+    val retrySendMessageUseCase: RetrySendMessageUseCase
+        get() = RetrySendMessageUseCase(sendMessagesRepository)
+
+    val cancelSendMessageUseCase: CancelSendMessageUseCase
+        get() = CancelSendMessageUseCase(sendMessagesRepository)
+
+    val observePendingSendsUseCase: ObservePendingSendsUseCase
+        get() = ObservePendingSendsUseCase(sendMessagesRepository)
+
+    private var cachedSendMessagesViewModel: SendMessagesViewModel? = null
+
+    val sendMessagesViewModel: SendMessagesViewModel
+        get() {
+            var vm = cachedSendMessagesViewModel
+            if (vm == null) {
+                vm = createSendMessagesViewModel()
+                cachedSendMessagesViewModel = vm
+            }
+            return vm
+        }
+
+    fun createSendMessagesViewModel(): SendMessagesViewModel {
+        return SendMessagesViewModel(
+            sendTextMessageUseCase = sendTextMessageUseCase,
+            sendMediaMessageUseCase = sendMediaMessageUseCase,
+            sendMediaAlbumUseCase = sendMediaAlbumUseCase,
+            forwardMessagesUseCase = forwardMessagesUseCase,
+            retrySendMessageUseCase = retrySendMessageUseCase,
+            cancelSendMessageUseCase = cancelSendMessageUseCase,
+            observePendingSendsUseCase = observePendingSendsUseCase
         )
     }
 
