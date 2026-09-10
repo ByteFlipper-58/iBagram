@@ -2687,9 +2687,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
         │       └── LegacyAppConfigRepository.kt
         │
         └── presentation/                  # UI State & ViewModel
-            ├── AppConfigUiState.kt
-            ├── AppConfigEvent.kt
-            └── AppConfigViewModel.kt
+    │
+    └── autodeletemedia/                  # Background Media Cleanup & Cache Eviction Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (CacheLimitConfig, MediaScanFileModel, AutoDeleteRunResult, AutoDeleteTaskState)
+        │   │   └── AutoDeleteMediaModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── AutoDeleteMediaRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── CheckShouldRunCleanupUseCase.kt
+        │       ├── CalculateEvictionCandidatesUseCase.kt
+        │       ├── LockFileUseCase.kt
+        │       ├── UnlockFileUseCase.kt
+        │       ├── IsFileLockedUseCase.kt
+        │       ├── RunAutoDeleteCleanupUseCase.kt
+        │       ├── ObserveAutoDeleteStateUseCase.kt
+        │       └── GetAutoDeleteStateUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (CacheLimitConfig & MediaScanFileModel <-> Domain)
+        │   │   └── AutoDeleteMediaMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyAutoDeleteMediaRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── AutoDeleteMediaUiState.kt
+            ├── AutoDeleteMediaEvent.kt
+            └── AutoDeleteMediaViewModel.kt
 ```
 
 
@@ -3263,10 +3287,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `GetAppConfigUseCase`, `ObserveAppConfigUseCase`, `GetMessageLimitsUseCase`, `GetStarsPricingConfigUseCase`, `GetTonPricingConfigUseCase`, `GetRichMessageLimitsUseCase`, `GetPollsConfigUseCase`, `GetAiComposeConfigUseCase`, `GetAppLimitsUseCase`, `ReloadAppConfigUseCase`, `UpdateAppConfigValueUseCase`
   - [x] Data layer: `AppConfigMapper`, `LegacyAppConfigRepository` (thread-safe StateFlow engine adapting `AppGlobalConfig.java`'s 411 lines and `MessagesController.java` config fields, reactive to `NotificationCenter.appConfigUpdated`)
   - [x] Presentation layer: `AppConfigUiState`, `AppConfigEvent`, `AppConfigViewModel`
+- [x] Background Media Auto-Delete & Cache Eviction (`feature.autodeletemedia`)
+  - [x] Domain entities: `CacheLimitConfig`, `MediaScanFileModel`, `AutoDeleteRunResult`, `AutoDeleteTaskState`
+  - [x] Repository contract: `AutoDeleteMediaRepository`
+  - [x] Use cases: `CheckShouldRunCleanupUseCase`, `CalculateEvictionCandidatesUseCase`, `LockFileUseCase`, `UnlockFileUseCase`, `IsFileLockedUseCase`, `RunAutoDeleteCleanupUseCase`, `ObserveAutoDeleteStateUseCase`, `GetAutoDeleteStateUseCase`
+  - [x] Data layer: `AutoDeleteMediaMapper`, `LegacyAutoDeleteMediaRepository` (thread-safe StateFlow engine adapting `AutoDeleteMediaTask.java`'s 278 lines, LRU file eviction, cache limit threshold calculation, 24-hour interval guards, and in-use file locking)
+  - [x] Presentation layer: `AutoDeleteMediaUiState`, `AutoDeleteMediaEvent`, `AutoDeleteMediaViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 092: Isolation of Background Media Auto-Delete & Cache Eviction Task into feature.autodeletemedia
+- **Context:** In Telegram Android, automatic background media cleanup, LRU disk cache eviction according to user storage limits, 24-hour retention check intervals, and file access locking during ongoing playback/views were managed in `AutoDeleteMediaTask.java` (~278 lines, 12KB) and `CacheByChatsController.java`. The task periodically traverses media directories (`MEDIA_DIR_CACHE`, audio, document, video, photo, stories), evaluates retention policies per dialog type (User, Group, Channel, Stories) against `keep_media_type_*` settings, enforces `cache_limit` gigabyte ceilings via LRU eviction (sorting candidate files by last access time), and protects actively playing or loaded media via static `usingFilePaths` collections (`lockFile` / `unlockFile`). Legacy code directly invoked `AutoDeleteMediaTask.run()`, mutating static state and interacting directly with file paths without a reactive interface, which prevented testing of eviction ordering, size calculation algorithms, and lock management.
+- **Decision:** Introduce pure domain models `CacheLimitConfig`, `MediaScanFileModel`, `AutoDeleteRunResult`, and `AutoDeleteTaskState`. Define abstract contract `AutoDeleteMediaRepository` covering reactive state observation (`observeState`), snapshot retrieval (`getState`), file locking/unlocking/checking (`lockFile`, `unlockFile`, `isFileLocked`, `clearLockedFiles`), and manual/forced cleanup triggering (`runCleanup`). Implement pure domain use cases for execution interval eligibility (`CheckShouldRunCleanupUseCase`) and LRU eviction planning (`CalculateEvictionCandidatesUseCase` respecting file locks and `KEEP_MEDIA_FOREVER` flags). Provide thread-safe `LegacyAutoDeleteMediaRepository` and type conversions in `AutoDeleteMediaMapper`. Encapsulate presentation state and MVI events in `AutoDeleteMediaViewModel`.
+- **Consequences:** All cache size quota calculations, LRU eviction planning, cleanup scheduling, and file locking mechanisms are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `AutoDeleteMediaTask.java`.
 
 ### ADR 091: Isolation of Global Server Limits, Stars/TON Configuration & Feature Flags into feature.appconfig
 - **Context:** In Telegram Android, global limits, financial parameters, and server-controlled feature flags from `TL_help.appConfig` were managed across `AppGlobalConfig.java` (~411 lines, 16.6KB) and `MessagesController.java` (`applyAppConfig()`). The subsystem manages dozens of essential client parameters: character limits for messages (4096 standard, 8192 Premium), polls configuration (max answers = 12, max length = 100), Rich Message formatting limits (32KB, 500 blocks, 20 table columns), AI Compose tone rewriting rules, channel/group call participant ceilings, as well as critical financial rules for Telegram Stars and TON (commission permilles, minimum/maximum suggested post and resale amounts, TON-USD exchange rates, rating URLs). In legacy code, these values were loaded from SharedPreferences into untyped internal config handlers and accessed by directly querying `MessagesController.getInstance(account).config` or global controller fields, creating hidden coupling across UI and background workers.

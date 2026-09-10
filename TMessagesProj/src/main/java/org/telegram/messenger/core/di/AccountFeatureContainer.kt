@@ -1028,6 +1028,17 @@ import org.telegram.messenger.feature.appconfig.domain.usecase.ObserveAppConfigU
 import org.telegram.messenger.feature.appconfig.domain.usecase.ReloadAppConfigUseCase
 import org.telegram.messenger.feature.appconfig.domain.usecase.UpdateAppConfigValueUseCase
 import org.telegram.messenger.feature.appconfig.presentation.AppConfigViewModel
+import org.telegram.messenger.feature.autodeletemedia.data.repository.LegacyAutoDeleteMediaRepository
+import org.telegram.messenger.feature.autodeletemedia.domain.repository.AutoDeleteMediaRepository
+import org.telegram.messenger.feature.autodeletemedia.domain.usecase.CalculateEvictionCandidatesUseCase
+import org.telegram.messenger.feature.autodeletemedia.domain.usecase.CheckShouldRunCleanupUseCase
+import org.telegram.messenger.feature.autodeletemedia.domain.usecase.GetAutoDeleteStateUseCase
+import org.telegram.messenger.feature.autodeletemedia.domain.usecase.IsFileLockedUseCase
+import org.telegram.messenger.feature.autodeletemedia.domain.usecase.LockFileUseCase
+import org.telegram.messenger.feature.autodeletemedia.domain.usecase.ObserveAutoDeleteStateUseCase
+import org.telegram.messenger.feature.autodeletemedia.domain.usecase.RunAutoDeleteCleanupUseCase
+import org.telegram.messenger.feature.autodeletemedia.domain.usecase.UnlockFileUseCase
+import org.telegram.messenger.feature.autodeletemedia.presentation.AutoDeleteMediaViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6126,6 +6137,56 @@ class AccountFeatureContainer private constructor(val account: Int) {
             reloadAppConfig = reloadAppConfigUseCase,
             updateAppConfigValue = updateAppConfigValueUseCase,
             repository = appConfigRepository
+        )
+    }
+
+    val autoDeleteMediaRepository: AutoDeleteMediaRepository by lazy {
+        LegacyAutoDeleteMediaRepository(account)
+    }
+
+    val checkShouldRunCleanupUseCase: CheckShouldRunCleanupUseCase
+        get() = CheckShouldRunCleanupUseCase()
+
+    val calculateEvictionCandidatesUseCase: CalculateEvictionCandidatesUseCase
+        get() = CalculateEvictionCandidatesUseCase()
+
+    val lockFileUseCase: LockFileUseCase
+        get() = LockFileUseCase(autoDeleteMediaRepository)
+
+    val unlockFileUseCase: UnlockFileUseCase
+        get() = UnlockFileUseCase(autoDeleteMediaRepository)
+
+    val isFileLockedUseCase: IsFileLockedUseCase
+        get() = IsFileLockedUseCase(autoDeleteMediaRepository)
+
+    val runAutoDeleteCleanupUseCase: RunAutoDeleteCleanupUseCase
+        get() = RunAutoDeleteCleanupUseCase(autoDeleteMediaRepository)
+
+    val observeAutoDeleteStateUseCase: ObserveAutoDeleteStateUseCase
+        get() = ObserveAutoDeleteStateUseCase(autoDeleteMediaRepository)
+
+    val getAutoDeleteStateUseCase: GetAutoDeleteStateUseCase
+        get() = GetAutoDeleteStateUseCase(autoDeleteMediaRepository)
+
+    private var cachedAutoDeleteMediaViewModel: AutoDeleteMediaViewModel? = null
+
+    val autoDeleteMediaViewModel: AutoDeleteMediaViewModel
+        get() {
+            var vm = cachedAutoDeleteMediaViewModel
+            if (vm == null) {
+                vm = createAutoDeleteMediaViewModel()
+                cachedAutoDeleteMediaViewModel = vm
+            }
+            return vm
+        }
+
+    fun createAutoDeleteMediaViewModel(): AutoDeleteMediaViewModel {
+        return AutoDeleteMediaViewModel(
+            observeAutoDeleteState = observeAutoDeleteStateUseCase,
+            runAutoDeleteCleanup = runAutoDeleteCleanupUseCase,
+            lockFile = lockFileUseCase,
+            unlockFile = unlockFileUseCase,
+            repository = autoDeleteMediaRepository
         )
     }
 
