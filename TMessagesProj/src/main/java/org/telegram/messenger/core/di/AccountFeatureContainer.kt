@@ -992,7 +992,19 @@ import org.telegram.messenger.feature.savedmessages.domain.usecase.GetSavedTagsU
 import org.telegram.messenger.feature.savedmessages.domain.usecase.SearchSavedDialogsUseCase
 import org.telegram.messenger.feature.savedmessages.domain.usecase.TogglePinSavedDialogUseCase
 import org.telegram.messenger.feature.savedmessages.presentation.SavedMessagesViewModel
+import org.telegram.messenger.feature.browser.data.repository.LegacyBrowserRepository
+import org.telegram.messenger.feature.browser.domain.repository.BrowserRepository
+import org.telegram.messenger.feature.browser.domain.usecase.CheckUrlSafetyUseCase
+import org.telegram.messenger.feature.browser.domain.usecase.ClassifyUrlTargetUseCase
+import org.telegram.messenger.feature.browser.domain.usecase.ExtractUsernameFromUrlUseCase
+import org.telegram.messenger.feature.browser.domain.usecase.GetBrowserStateUseCase
+import org.telegram.messenger.feature.browser.domain.usecase.ManageBrowserHistoryUseCase
+import org.telegram.messenger.feature.browser.domain.usecase.ObserveBrowserStateUseCase
+import org.telegram.messenger.feature.browser.domain.usecase.OpenBrowserUrlUseCase
+import org.telegram.messenger.feature.browser.domain.usecase.UpdateBrowserSettingsUseCase
+import org.telegram.messenger.feature.browser.presentation.BrowserViewModel
 import java.util.concurrent.ConcurrentHashMap
+
 
 /**
  * Scoped service container that manages feature dependencies per [account].
@@ -5929,6 +5941,57 @@ class AccountFeatureContainer private constructor(val account: Int) {
             processPushUseCase = processIncomingPushUseCase,
             registerTokenUseCase = registerPushListenerTokenUseCase,
             toggleListeningUseCase = togglePushListeningUseCase
+        )
+    }
+
+    // --- Feature: Browser (Slice #86) ---
+    val browserRepository: BrowserRepository by lazy {
+        LegacyBrowserRepository(account)
+    }
+
+    val classifyUrlTargetUseCase: ClassifyUrlTargetUseCase
+        get() = ClassifyUrlTargetUseCase()
+
+    val extractUsernameFromUrlUseCase: ExtractUsernameFromUrlUseCase
+        get() = ExtractUsernameFromUrlUseCase()
+
+    val checkUrlSafetyUseCase: CheckUrlSafetyUseCase
+        get() = CheckUrlSafetyUseCase(classifyUrlTargetUseCase, extractUsernameFromUrlUseCase)
+
+    val observeBrowserStateUseCase: ObserveBrowserStateUseCase
+        get() = ObserveBrowserStateUseCase(browserRepository)
+
+    val getBrowserStateUseCase: GetBrowserStateUseCase
+        get() = GetBrowserStateUseCase(browserRepository)
+
+    val updateBrowserSettingsUseCase: UpdateBrowserSettingsUseCase
+        get() = UpdateBrowserSettingsUseCase(browserRepository)
+
+    val openBrowserUrlUseCase: OpenBrowserUrlUseCase
+        get() = OpenBrowserUrlUseCase(browserRepository, checkUrlSafetyUseCase)
+
+    val manageBrowserHistoryUseCase: ManageBrowserHistoryUseCase
+        get() = ManageBrowserHistoryUseCase(browserRepository)
+
+    private var cachedBrowserViewModel: BrowserViewModel? = null
+
+    val browserViewModel: BrowserViewModel
+        get() {
+            var vm = cachedBrowserViewModel
+            if (vm == null) {
+                vm = createBrowserViewModel()
+                cachedBrowserViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBrowserViewModel(): BrowserViewModel {
+        return BrowserViewModel(
+            observeBrowserState = observeBrowserStateUseCase,
+            updateBrowserSettings = updateBrowserSettingsUseCase,
+            checkUrlSafety = checkUrlSafetyUseCase,
+            openBrowserUrl = openBrowserUrlUseCase,
+            manageBrowserHistory = manageBrowserHistoryUseCase
         )
     }
 

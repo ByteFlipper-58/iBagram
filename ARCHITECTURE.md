@@ -2606,7 +2606,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── PushListenerUiState.kt
             ├── PushListenerEvent.kt
             └── PushListenerViewModel.kt
+    │
+    └── browser/                          # In-App Web Browser, Custom Tabs & Deep Link Routing Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (BrowserType, UrlTargetType, UrlSafetyCheckResult, BrowserSettingsModel, BrowserHistoryEntryModel, BrowserState)
+        │   │   └── BrowserModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BrowserRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── ClassifyUrlTargetUseCase.kt
+        │       ├── ExtractUsernameFromUrlUseCase.kt
+        │       ├── CheckUrlSafetyUseCase.kt
+        │       ├── ObserveBrowserStateUseCase.kt
+        │       ├── GetBrowserStateUseCase.kt
+        │       ├── UpdateBrowserSettingsUseCase.kt
+        │       ├── OpenBrowserUrlUseCase.kt
+        │       └── ManageBrowserHistoryUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (BrowserHistory.Entry <-> Domain)
+        │   │   └── BrowserMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBrowserRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BrowserUiState.kt
+            ├── BrowserEvent.kt
+            └── BrowserViewModel.kt
 ```
+
 
 ### Layer Rules
 - **Domain Layer (`feature.<name>.domain`):**
@@ -3159,10 +3187,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObservePushListenerStateUseCase`, `ObserveIncomingPushesUseCase`, `GetPushListenerStateUseCase`, `ProcessIncomingPushUseCase`, `RegisterPushTokenUseCase`, `TogglePushListeningUseCase`, `DeterminePushActionTypeUseCase`, `ParsePushJsonPayloadUseCase`
   - [x] Data layer: `PushListenerMapper`, `LegacyPushListenerRepository` (thread-safe StateFlow/SharedFlow engine adapting `PushListenerController.java`'s 1700+ lines, FCM/Huawei multi-provider handling, JSON/TL remote payload parsing, VoIP call triggers, datacenter updates, and decryption error tracking)
   - [x] Presentation layer: `PushListenerUiState`, `PushListenerEvent`, `PushListenerViewModel`
+- [x] In-App Web Browser, Custom Tabs & Deep Link Routing (`feature.browser`)
+  - [x] Domain entities: `BrowserType`, `UrlTargetType`, `UrlSafetyCheckResult`, `BrowserHistoryEntryModel`, `BrowserSettingsModel`, `BrowserState`
+  - [x] Repository contract: `BrowserRepository`
+  - [x] Use cases: `ClassifyUrlTargetUseCase`, `ExtractUsernameFromUrlUseCase`, `CheckUrlSafetyUseCase`, `ObserveBrowserStateUseCase`, `GetBrowserStateUseCase`, `UpdateBrowserSettingsUseCase`, `OpenBrowserUrlUseCase`, `ManageBrowserHistoryUseCase`
+  - [x] Data layer: `BrowserMapper`, `LegacyBrowserRepository` (thread-safe StateFlow engine adapting `Browser.java`'s 870 lines, Custom Tabs service binding, in-app webview mode, anti-phishing IDN homoglyph punycode detection, and browser history)
+  - [x] Presentation layer: `BrowserUiState`, `BrowserEvent`, `BrowserViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 089: Isolation of In-App Web Browser, Custom Tabs & Deep Link Routing into feature.browser
+- **Context:** In Telegram Android, web browsing and URL dispatching were handled across `Browser.java` (~870 lines, 38KB), `WebBrowserSettings.java` (~707 lines), and `BrowserHistory.java` (~184 lines). The legacy subsystem resolved external URLs, Telegram deep links (`tg://`, `t.me/`, `telegram.me/`, `telegram.dog/`), Instant View URLs (`telegra.ph`, `graph.org`, `t.me/iv?`), and TON sites (`ton://`, `.ton`), binding to Chrome Custom Tabs (`CustomTabsClient`, `CustomTabsSession`), managing in-app webview configuration (`TL_account.TL_webBrowserSettings`), and recording browsing history (`webhistory.dat`). Crucially, URL safety verification, anti-phishing protection (preventing IDN homoglyph punycode spoofing), and confirmation dialog logic (`urlMustNotHaveConfirmation`) were tightly coupled with Android UI dialogs and activities, preventing clean unit testing of URL classification and navigation rules.
+- **Decision:** Introduce pure domain models `BrowserType` (IN_APP, CUSTOM_TABS, EXTERNAL_BROWSER), `UrlTargetType` (TELEGRAM_INTERNAL, INSTANT_VIEW, TON_SITE, EXTERNAL_SAFE, EXTERNAL_UNTRUSTED), `UrlSafetyCheckResult` (safety status, confirmation requirements, punycode spoofing flag, extracted username, host), `BrowserHistoryEntryModel`, `BrowserSettingsModel`, and `BrowserState`. Define abstract contract `BrowserRepository` for reactive state observation (`observeBrowserState`), snapshots (`getBrowserState`), settings mutation (`updateBrowserType`, `updateSettings`), URL classification (`classifyUrl`), opening (`openUrl`), and history management (`addHistoryEntry`, `getHistory`, `clearHistory`, `clearCacheAndCookies`). Implement pure domain logic in `ClassifyUrlTargetUseCase`, `ExtractUsernameFromUrlUseCase`, and `CheckUrlSafetyUseCase` with robust detection for mixed-script Cyrillic/Latin homoglyphs and `xn--` punycode spoofing. Provide thread-safe `LegacyBrowserRepository` and codecs in `BrowserMapper`. Encapsulate presentation state and MVI events in `BrowserViewModel`.
+- **Consequences:** All URL classification, anti-phishing validation, browser mode selection, and history tracking are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `Browser.java` and `WebBrowserSettings.java`.
 
 ### ADR 088: Isolation of Inbound Push Notifications, Payloads & Remote Actions into feature.pushlistener
 - **Context:** In Telegram Android, inbound push notification handling, multi-account device token distribution (`sendRegistrationToServer`), encrypted payload unpacking (`aesIgeEncryption`, `computeSHA256` auth key validation), remote payload routing (`loc_key`: `DC_UPDATE`, `MESSAGE_ANNOUNCEMENT`, `SESSION_REVOKE`, `GEO_LIVE_PENDING`, `OAUTH_REQUEST`, `CONF_CALL_REQUEST`, `READ_HISTORY`, `READ_STORIES`, `STORY_DELETED`, `MESSAGE_DELETED`, `READ_REACTION`), and background thread synchronization via `CountDownLatch` were located in `PushListenerController.java` (~1,735 lines, 120KB). Direct coupling with `NotificationsController`, `MessagesController`, `VoIPGroupNotification`, and Android background services made incoming push logic difficult to test and maintain without risking regressions in critical message delivery and incoming VoIP ringing.
