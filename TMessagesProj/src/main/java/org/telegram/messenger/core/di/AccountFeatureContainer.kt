@@ -769,6 +769,19 @@ import org.telegram.messenger.feature.emojieffects.domain.usecase.RecordEmojiTap
 import org.telegram.messenger.feature.emojieffects.domain.usecase.StartEmojiEffectUseCase
 import org.telegram.messenger.feature.emojieffects.domain.usecase.UpdateEmojiEffectProgressUseCase
 import org.telegram.messenger.feature.emojieffects.presentation.EmojiEffectsViewModel
+import org.telegram.messenger.feature.mentions.data.repository.LegacyMentionsRepository
+import org.telegram.messenger.feature.mentions.domain.repository.MentionsRepository
+import org.telegram.messenger.feature.mentions.domain.usecase.ClearMentionsUseCase
+import org.telegram.messenger.feature.mentions.domain.usecase.DismissMentionsUseCase
+import org.telegram.messenger.feature.mentions.domain.usecase.FilterMentionsUseCase
+import org.telegram.messenger.feature.mentions.domain.usecase.FormatMentionReplacementUseCase
+import org.telegram.messenger.feature.mentions.domain.usecase.GetMentionsStateUseCase
+import org.telegram.messenger.feature.mentions.domain.usecase.ObserveMentionsStateUseCase
+import org.telegram.messenger.feature.mentions.domain.usecase.ParseMentionQueryUseCase
+import org.telegram.messenger.feature.mentions.domain.usecase.SetMentionCandidatesUseCase
+import org.telegram.messenger.feature.mentions.domain.usecase.UpdateMentionQueryUseCase
+import org.telegram.messenger.feature.mentions.domain.usecase.ValidateUsernameUseCase
+import org.telegram.messenger.feature.mentions.presentation.MentionsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4796,6 +4809,67 @@ class AccountFeatureContainer private constructor(val account: Int) {
             dismissEmojiEffectUseCase = dismissEmojiEffectUseCase,
             clearEmojiEffectsUseCase = clearEmojiEffectsUseCase,
             repository = emojiEffectsRepository
+        )
+    }
+
+    fun createMentionsRepository(): MentionsRepository {
+        return LegacyMentionsRepository()
+    }
+
+    val mentionsRepository: MentionsRepository by lazy {
+        LegacyMentionsRepository()
+    }
+
+    val validateUsernameUseCase: ValidateUsernameUseCase
+        get() = ValidateUsernameUseCase()
+
+    val parseMentionQueryUseCase: ParseMentionQueryUseCase
+        get() = ParseMentionQueryUseCase(validateUsernameUseCase)
+
+    val filterMentionsUseCase: FilterMentionsUseCase
+        get() = FilterMentionsUseCase()
+
+    val formatMentionReplacementUseCase: FormatMentionReplacementUseCase
+        get() = FormatMentionReplacementUseCase()
+
+    val observeMentionsStateUseCase: ObserveMentionsStateUseCase
+        get() = ObserveMentionsStateUseCase(mentionsRepository)
+
+    val getMentionsStateUseCase: GetMentionsStateUseCase
+        get() = GetMentionsStateUseCase(mentionsRepository)
+
+    val updateMentionQueryUseCase: UpdateMentionQueryUseCase
+        get() = UpdateMentionQueryUseCase(mentionsRepository, parseMentionQueryUseCase)
+
+    val setMentionCandidatesUseCase: SetMentionCandidatesUseCase
+        get() = SetMentionCandidatesUseCase(mentionsRepository, filterMentionsUseCase)
+
+    val dismissMentionsUseCase: DismissMentionsUseCase
+        get() = DismissMentionsUseCase(mentionsRepository)
+
+    val clearMentionsUseCase: ClearMentionsUseCase
+        get() = ClearMentionsUseCase(mentionsRepository)
+
+    private var cachedMentionsViewModel: MentionsViewModel? = null
+
+    val mentionsViewModel: MentionsViewModel
+        get() {
+            var vm = cachedMentionsViewModel
+            if (vm == null) {
+                vm = createMentionsViewModel()
+                cachedMentionsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createMentionsViewModel(): MentionsViewModel {
+        return MentionsViewModel(
+            observeMentionsStateUseCase = observeMentionsStateUseCase,
+            updateMentionQueryUseCase = updateMentionQueryUseCase,
+            setMentionCandidatesUseCase = setMentionCandidatesUseCase,
+            formatMentionReplacementUseCase = formatMentionReplacementUseCase,
+            dismissMentionsUseCase = dismissMentionsUseCase,
+            clearMentionsUseCase = clearMentionsUseCase
         )
     }
 

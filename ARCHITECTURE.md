@@ -2079,6 +2079,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── EmojiEffectsUiState.kt
             ├── EmojiEffectsEvent.kt
             └── EmojiEffectsViewModel.kt
+    │
+    └── mentions/                          # Mentions, Hashtags, Bot Commands & Autocomplete Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (MentionTriggerType, MentionQuery, MentionCandidate, MentionReplacement, MentionsState)
+        │   │   └── MentionsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── MentionsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ValidateUsernameUseCase.kt
+        │       ├── ParseMentionQueryUseCase.kt
+        │       ├── FilterMentionsUseCase.kt
+        │       ├── FormatMentionReplacementUseCase.kt
+        │       ├── ObserveMentionsStateUseCase.kt
+        │       ├── GetMentionsStateUseCase.kt
+        │       ├── UpdateMentionQueryUseCase.kt
+        │       ├── SetMentionCandidatesUseCase.kt
+        │       ├── DismissMentionsUseCase.kt
+        │       └── ClearMentionsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (TLRPC.User / TL_botCommand / Hashtags <-> Domain)
+        │   │   └── MentionsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyMentionsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── MentionsUiState.kt
+            ├── MentionsEvent.kt
+            └── MentionsViewModel.kt
 ```
 
 ### Layer Rules
@@ -2542,10 +2571,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `NormalizeEmojiUseCase`, `EvaluateEmojiSupportUseCase`, `RecordEmojiTapUseCase`, `EncodeEmojiInteractionsJsonUseCase`, `DecodeEmojiInteractionsJsonUseCase`, `CalculateEmojiBoundsUseCase`, `CalculateEmojiOverlayPositionUseCase`, `EvaluateAnimationQuotaUseCase`, `ObserveEmojiEffectsStateUseCase`, `GetEmojiEffectsStateUseCase`, `StartEmojiEffectUseCase`, `UpdateEmojiEffectProgressUseCase`, `DismissEmojiEffectUseCase`, `ClearEmojiEffectsUseCase`
   - [x] Data layer: `EmojiEffectsMapper`, `LegacyEmojiEffectsRepository` (thread safe, adapting `EmojiAnimationsOverlay`, interaction JSON encoding/decoding, quota limits 12 global / 4 per msg, bounds and position calculations, emoji normalization)
   - [x] Presentation layer: `EmojiEffectsUiState`, `EmojiEffectsEvent`, `EmojiEffectsViewModel`
+- [x] Mentions, Hashtags, Bot Commands & Autocomplete (`feature.mentions`)
+  - [x] Domain entities: `MentionTriggerType`, `MentionQuery`, `MentionCandidate`, `MentionReplacement`, `MentionsState`
+  - [x] Repository contract: `MentionsRepository`
+  - [x] Use cases: `ValidateUsernameUseCase`, `ParseMentionQueryUseCase`, `FilterMentionsUseCase`, `FormatMentionReplacementUseCase`, `ObserveMentionsStateUseCase`, `GetMentionsStateUseCase`, `UpdateMentionQueryUseCase`, `SetMentionCandidatesUseCase`, `DismissMentionsUseCase`, `ClearMentionsUseCase`
+  - [x] Data layer: `MentionsMapper`, `LegacyMentionsRepository` (thread safe, adapting `MentionsAdapter`, trigger parsing for @, #, /, :, inline context bots, quick replies, candidate filtering and replacement formatting)
+  - [x] Presentation layer: `MentionsUiState`, `MentionsEvent`, `MentionsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 074: Isolation of Chat Mentions, Hashtags, Bot Commands, and Autocomplete into feature.mentions
+- **Context:** In Telegram Android, inline autocomplete suggestions for user mentions (`@user`), hashtags (`#tag`), bot commands (`/cmd`), emoji keywords (`:emoji`), inline bots (`@gif query`), and quick replies (`/shortcut`) were managed by `MentionsAdapter.java` (~2177 lines) in `org.telegram.ui.Adapters`. The adapter coupled low-level `RecyclerView.Adapter`, `ChatMessageCell`, `ContextLinkCell`, `StickerCell`, `MentionCell`, `BotSwitchCell`, Android `Location` and permissions, `SearchAdapterHelper`, direct `MessagesController`/`MessagesStorage` caches, `MediaDataController` stickers and emoji lookups, and direct UI notification methods.
+- **Decision:** Introduce pure domain models `MentionTriggerType` (NONE, USERNAME, HASHTAG, BOT_COMMAND, EMOJI_KEYWORD, STICKER_SUGGESTION, BOT_CONTEXT), `MentionQuery`, `MentionCandidate` (sealed hierarchy: `UserCandidate`, `HashtagCandidate`, `BotCommandCandidate`, `EmojiKeywordCandidate`, `QuickReplyCandidate`), `MentionReplacement`, and `MentionsState`. Define abstract contract `MentionsRepository` covering state observation (`observeState`), snapshot retrieval (`getState`), query updates (`updateQuery`), candidate assignment (`setCandidates`), search state mutation, and panel visibility control. Implement pure algorithmic use cases for trigger detection (`ParseMentionQueryUseCase`), username character validation (`ValidateUsernameUseCase`), case-insensitive multi-field candidate filtering (`FilterMentionsUseCase`), and token-aware text replacement with cursor calculation (`FormatMentionReplacementUseCase`). Provide thread-safe `LegacyMentionsRepository` and clean mapping in `MentionsMapper`. Encapsulate presentation state and MVI events in `MentionsViewModel`.
+- **Consequences:** All chat autocomplete triggers, mention parsing algorithms, candidate filtering, and text replacement logic are decoupled from Android Views and legacy Telegram caches behind clean domain interfaces with comprehensive unit test coverage while remaining 100% backward compatible with Telegram's `MentionsAdapter`.
 
 ### ADR 073: Isolation of Interactive Emoji Animations, Tap Protocols, and Overlay Geometry into feature.emojieffects
 - **Context:** In Telegram Android, full-screen interactive emoji animations, synchronized taps protocols, and reaction effect overlays were handled by `EmojiAnimationsOverlay.java` (~1139 lines) in `org.telegram.ui`. The overlay tightly coupled Android Views (`ChatMessageCell`, `ChatActionCell`, `RecyclerListView`, `FrameLayout`), custom Canvas rendering (`canvas.draw`, `ImageReceiver`, `RLottieDrawable`), Android `HapticFeedbackConstants`, Telegram network requests (`TL_sendMessageEmojiInteraction`, `TL_messages_setTyping`), direct `MessagesController` calls (`sendTyping`, `getAvailableEffects`), `MediaDataController` sticker loading, and JSON serialization of interaction intervals (`JSONObject`, `JSONArray`). Presentation screens like `ChatActivity`, `StoryViewer`, and custom story reaction widgets directly invoked `EmojiAnimationsOverlay`.
