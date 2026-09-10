@@ -1054,6 +1054,21 @@ import org.telegram.messenger.feature.authtokens.domain.usecase.SaveLoginTokenUs
 import org.telegram.messenger.feature.authtokens.domain.usecase.SaveLogoutTokensUseCase
 import org.telegram.messenger.feature.authtokens.domain.usecase.ValidateAuthTokenFormatUseCase
 import org.telegram.messenger.feature.authtokens.presentation.AuthTokensViewModel
+import org.telegram.messenger.feature.messagecustomparams.data.repository.LegacyMessageCustomParamsRepository
+import org.telegram.messenger.feature.messagecustomparams.domain.repository.MessageCustomParamsRepository
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.CheckMessageCustomParamsEmptyUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.ClearAllMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.CopyMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.GetMessageCustomParamsStateUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.GetMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.MergeMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.ObserveMessageCustomParamsStateUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.RemoveMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.SetMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.UpdateMessageSummaryUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.UpdateMessageTranslationUseCase
+import org.telegram.messenger.feature.messagecustomparams.domain.usecase.UpdateVoiceTranscriptionUseCase
+import org.telegram.messenger.feature.messagecustomparams.presentation.MessageCustomParamsViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6266,6 +6281,73 @@ class AccountFeatureContainer private constructor(val account: Int) {
             clearAllTokens = clearAllTokensUseCase,
             refreshAuthTokens = refreshAuthTokensUseCase,
             repository = authTokensRepository
+        )
+    }
+
+    val messageCustomParamsRepository: MessageCustomParamsRepository by lazy {
+        LegacyMessageCustomParamsRepository(account)
+    }
+
+    val checkMessageCustomParamsEmptyUseCase: CheckMessageCustomParamsEmptyUseCase
+        get() = CheckMessageCustomParamsEmptyUseCase()
+
+    val mergeMessageCustomParamsUseCase: MergeMessageCustomParamsUseCase
+        get() = MergeMessageCustomParamsUseCase()
+
+    val observeMessageCustomParamsStateUseCase: ObserveMessageCustomParamsStateUseCase
+        get() = ObserveMessageCustomParamsStateUseCase(messageCustomParamsRepository)
+
+    val getMessageCustomParamsStateUseCase: GetMessageCustomParamsStateUseCase
+        get() = GetMessageCustomParamsStateUseCase(messageCustomParamsRepository)
+
+    val getMessageCustomParamsUseCase: GetMessageCustomParamsUseCase
+        get() = GetMessageCustomParamsUseCase(messageCustomParamsRepository)
+
+    val setMessageCustomParamsUseCase: SetMessageCustomParamsUseCase
+        get() = SetMessageCustomParamsUseCase(messageCustomParamsRepository, mergeMessageCustomParamsUseCase)
+
+    val updateVoiceTranscriptionUseCase: UpdateVoiceTranscriptionUseCase
+        get() = UpdateVoiceTranscriptionUseCase(messageCustomParamsRepository)
+
+    val updateMessageTranslationUseCase: UpdateMessageTranslationUseCase
+        get() = UpdateMessageTranslationUseCase(messageCustomParamsRepository)
+
+    val updateMessageSummaryUseCase: UpdateMessageSummaryUseCase
+        get() = UpdateMessageSummaryUseCase(messageCustomParamsRepository)
+
+    val copyMessageCustomParamsUseCase: CopyMessageCustomParamsUseCase
+        get() = CopyMessageCustomParamsUseCase(messageCustomParamsRepository)
+
+    val removeMessageCustomParamsUseCase: RemoveMessageCustomParamsUseCase
+        get() = RemoveMessageCustomParamsUseCase(messageCustomParamsRepository)
+
+    val clearAllMessageCustomParamsUseCase: ClearAllMessageCustomParamsUseCase
+        get() = ClearAllMessageCustomParamsUseCase(messageCustomParamsRepository)
+
+    private var cachedMessageCustomParamsViewModel: MessageCustomParamsViewModel? = null
+
+    val messageCustomParamsViewModel: MessageCustomParamsViewModel
+        get() {
+            var vm = cachedMessageCustomParamsViewModel
+            if (vm == null) {
+                vm = createMessageCustomParamsViewModel()
+                cachedMessageCustomParamsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createMessageCustomParamsViewModel(): MessageCustomParamsViewModel {
+        return MessageCustomParamsViewModel(
+            observeState = observeMessageCustomParamsStateUseCase,
+            getParams = getMessageCustomParamsUseCase,
+            setParams = setMessageCustomParamsUseCase,
+            updateVoice = updateVoiceTranscriptionUseCase,
+            updateTranslation = updateMessageTranslationUseCase,
+            updateSummary = updateMessageSummaryUseCase,
+            copyParams = copyMessageCustomParamsUseCase,
+            removeParams = removeMessageCustomParamsUseCase,
+            clearAll = clearAllMessageCustomParamsUseCase,
+            repository = messageCustomParamsRepository
         )
     }
 

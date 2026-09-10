@@ -2745,6 +2745,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── AuthTokensUiState.kt
             ├── AuthTokensEvent.kt
             └── AuthTokensViewModel.kt
+    │
+    └── messagecustomparams/              # Local Message Custom Parameters & Transcription/Summary State Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (VoiceTranscriptionParamsModel, MessageSummaryParamsModel, MessageTranslationParamsModel, StarsErrorParamsModel, MessageCustomParamsModel, MessageCustomParamsState)
+        │   │   └── MessageCustomParamsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── MessageCustomParamsRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── CheckMessageCustomParamsEmptyUseCase.kt
+        │       ├── MergeMessageCustomParamsUseCase.kt
+        │       ├── ObserveMessageCustomParamsStateUseCase.kt
+        │       ├── GetMessageCustomParamsStateUseCase.kt
+        │       ├── GetMessageCustomParamsUseCase.kt
+        │       ├── SetMessageCustomParamsUseCase.kt
+        │       ├── UpdateVoiceTranscriptionUseCase.kt
+        │       ├── UpdateMessageTranslationUseCase.kt
+        │       ├── UpdateMessageSummaryUseCase.kt
+        │       ├── CopyMessageCustomParamsUseCase.kt
+        │       ├── RemoveMessageCustomParamsUseCase.kt
+        │       └── ClearAllMessageCustomParamsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (TLRPC.Message <-> Domain)
+        │   │   └── MessageCustomParamsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyMessageCustomParamsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── MessageCustomParamsUiState.kt
+            ├── MessageCustomParamsEvent.kt
+            └── MessageCustomParamsViewModel.kt
 ```
 
 
@@ -3330,10 +3361,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `PruneTokensListUseCase`, `ValidateAuthTokenFormatUseCase`, `ObserveAuthTokensStateUseCase`, `GetAuthTokensStateUseCase`, `GetSavedLoginTokensUseCase`, `SaveLoginTokenUseCase`, `GetSavedLogoutTokensUseCase`, `SaveLogoutTokensUseCase`, `AddLogoutTokenUseCase`, `RemoveTokenUseCase`, `ClearAllTokensUseCase`, `RefreshAuthTokensUseCase`
   - [x] Data layer: `AuthTokensMapper`, `LegacyAuthTokensRepository` (thread-safe StateFlow engine adapting `AuthTokensHelper.java`'s 129 lines, SharedPreferences persistence `saved_tokens` and `saved_tokens_login`, 20-token ceiling, and BackupAgent synchronization)
   - [x] Presentation layer: `AuthTokensUiState`, `AuthTokensEvent`, `AuthTokensViewModel`
+- [x] Local Message Custom Parameters & Transcription/Summary State (`feature.messagecustomparams`)
+  - [x] Domain entities: `VoiceTranscriptionParamsModel`, `MessageSummaryParamsModel`, `MessageTranslationParamsModel`, `StarsErrorParamsModel`, `MessageCustomParamsModel`, `MessageCustomParamsState`
+  - [x] Repository contract: `MessageCustomParamsRepository`
+  - [x] Use cases: `CheckMessageCustomParamsEmptyUseCase`, `MergeMessageCustomParamsUseCase`, `ObserveMessageCustomParamsStateUseCase`, `GetMessageCustomParamsStateUseCase`, `GetMessageCustomParamsUseCase`, `SetMessageCustomParamsUseCase`, `UpdateVoiceTranscriptionUseCase`, `UpdateMessageTranslationUseCase`, `UpdateMessageSummaryUseCase`, `CopyMessageCustomParamsUseCase`, `RemoveMessageCustomParamsUseCase`, `ClearAllMessageCustomParamsUseCase`
+  - [x] Data layer: `MessageCustomParamsMapper`, `LegacyMessageCustomParamsRepository` (thread-safe StateFlow engine adapting `MessageCustomParamsHelper.java`'s 223 lines, Params_v1 binary serialization, SQLite storage caching, and copy/clear operations)
+  - [x] Presentation layer: `MessageCustomParamsUiState`, `MessageCustomParamsEvent`, `MessageCustomParamsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 094: Isolation of Local Message Custom Parameters & Transcription/Summary State into feature.messagecustomparams
+- **Context:** In Telegram Android, local message-level parameters such as voice transcription text and flags, AI text summarization and translation, message translations, poll translations, Stars price error bounds, and premium effect playback markers were stored in SQLite database blobs via `MessageCustomParamsHelper.java` (~223 lines). The helper handled reading and writing versioned binary payloads (`Params_v1`) to/from `NativeByteBuffer`, inspecting emptiness via `isEmpty()`, and copying fields between messages via `copyParams()`. Because `MessagesStorage` and message rendering adapters directly manipulated mutable fields on `TLRPC.Message`, testing parameter merging, emptiness checks, and reactive state observation was difficult.
+- **Decision:** Introduce pure domain models `VoiceTranscriptionParamsModel`, `MessageSummaryParamsModel`, `MessageTranslationParamsModel`, `StarsErrorParamsModel`, `MessageCustomParamsModel`, and `MessageCustomParamsState`. Define abstract contract `MessageCustomParamsRepository` covering reactive state observation (`observeState`), snapshots (`getState`), individual message parameter access (`getParamsForMessage`, `setParamsForMessage`, `removeParams`), parameter copying (`copyParams`), and global clearing (`clearAll`). Implement pure domain use cases for emptiness detection (`CheckMessageCustomParamsEmptyUseCase`), parameter merging (`MergeMessageCustomParamsUseCase`), and domain-specific mutators for voice transcriptions, summaries, and translations. Provide thread-safe `LegacyMessageCustomParamsRepository` and bidirectional conversion in `MessageCustomParamsMapper`. Encapsulate presentation state and MVI events in `MessageCustomParamsViewModel`.
+- **Consequences:** All voice transcription flags, AI summarization data, message translation state, and Stars pricing errors are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `MessageCustomParamsHelper.java` and `MessagesStorage.java`.
 
 ### ADR 093: Isolation of Fast Re-Login & Session Logout Tokens into feature.authtokens
 - **Context:** In Telegram Android, persistent credentials used for quick re-login (`saved_tokens_login`) and tracking invalidated session states (`saved_tokens`) were managed statically in `AuthTokensHelper.java` (~129 lines). The helper handled hex serialization and deserialization of MTProto binary structures `TLRPC.TL_auth_authorization` and `TLRPC.TL_auth_loggedOut`, enforced a 20-item ceiling, and triggered system cloud backups via `BackupAgent.requestBackup()`. Because it was directly accessed by `LoginActivity`, `SettingsActivity`, `ProfileActivity`, and `MessagesController` as a static utility without interface boundaries or thread-safe state emission, token storage could not be observed reactively or tested in isolation.
