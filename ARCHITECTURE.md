@@ -2319,6 +2319,43 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ChatInputUiState.kt
             ├── ChatInputEvent.kt
             └── ChatInputViewModel.kt
+    │
+    └── audioplayer/                       # Audio & Voice/Video Playback, Playlist Queue, Speed & Proximity Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── AudioTrackType.kt
+        │   │   ├── AudioPlaybackStatus.kt
+        │   │   ├── RepeatMode.kt
+        │   │   ├── AudioOutputRoute.kt
+        │   │   ├── AudioTrackModel.kt
+        │   │   ├── EqualizerBand.kt
+        │   │   ├── EqualizerState.kt
+        │   │   └── AudioPlaybackState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── AudioPlayerRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObservePlaybackStateUseCase.kt
+        │       ├── GetPlaybackStateUseCase.kt
+        │       ├── PlayTrackUseCase.kt
+        │       ├── TogglePlayPauseUseCase.kt
+        │       ├── SeekAudioUseCase.kt
+        │       ├── NavigatePlaylistUseCase.kt
+        │       ├── CyclePlaybackSpeedUseCase.kt
+        │       ├── CycleRepeatModeUseCase.kt
+        │       ├── ToggleShuffleUseCase.kt
+        │       ├── HandleProximitySensorUseCase.kt
+        │       └── ConfigureEqualizerUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers, timecode formatters & playlist index calculators
+        │   │   └── AudioPlayerMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyAudioPlayerRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── AudioPlayerUiState.kt
+            ├── AudioPlayerEvent.kt
+            └── AudioPlayerViewModel.kt
 ```
 
 ### Layer Rules
@@ -2824,10 +2861,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `CalculateSendButtonStateUseCase`, `FormatTextSelectionUseCase`, `ValidateVoiceRecordActionUseCase`, `ResolvePanelVisibilityUseCase`, `ObserveChatInputStateUseCase`, `GetChatInputStateUseCase`, `SetChatInputTextUseCase`, `SetChatInputPanelModeUseCase`, `SetChatInputReplyUseCase`, `ClearChatInputReplyUseCase`
   - [x] Data layer: `ChatInputMapper`, `LegacyChatInputRepository` (thread safe, adapting `ChatActivityEnterView.java`'s 15k+ lines, recording duration formatters, send button vs mic arbitration, and reply/edit preview quotes)
   - [x] Presentation layer: `ChatInputUiState`, `ChatInputEvent`, `ChatInputViewModel`
+- [x] Audio & Voice/Video Playback, Playlist Queue, Speed & Proximity (`feature.audioplayer`)
+  - [x] Domain entities: `AudioTrackType`, `AudioPlaybackStatus`, `RepeatMode`, `AudioOutputRoute`, `AudioTrackModel`, `EqualizerBand`, `EqualizerState`, `AudioPlaybackState`
+  - [x] Repository contract: `AudioPlayerRepository`
+  - [x] Use cases: `ObservePlaybackStateUseCase`, `GetPlaybackStateUseCase`, `PlayTrackUseCase`, `TogglePlayPauseUseCase`, `SeekAudioUseCase`, `NavigatePlaylistUseCase`, `CyclePlaybackSpeedUseCase`, `CycleRepeatModeUseCase`, `ToggleShuffleUseCase`, `HandleProximitySensorUseCase`, `ConfigureEqualizerUseCase`
+  - [x] Data layer: `AudioPlayerMapper`, `LegacyAudioPlayerRepository` (thread safe StateFlow engine adapting `MediaController.java`, playlist shuffle/repeat arbitration, seek clamping, and proximity ear-piece routing)
+  - [x] Presentation layer: `AudioPlayerUiState`, `AudioPlayerEvent`, `AudioPlayerViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 081: Isolation of Audio/Voice/Video Note Playback, Playlist Queue, Speed, Repeat & Proximity into feature.audioplayer
+- **Context:** In Telegram Android, audio track, podcast, voice note, and round video playback, playlist queue management, playback speed (0.5x..2.5x), repeat modes (NONE, ALL, CURRENT), shuffle order, proximity sensor routing (switching between loudspeaker and earpiece on raise-to-listen), and equalizer state were handled by `MediaController.java` (~6500 lines) and `AudioPlayerAlert.java` (~1700 lines). The legacy controller directly coupled Android `MediaPlayer`/ExoPlayer hardware decoders, `SensorManager` proximity listener callbacks, `AudioManager` focus changes, `NotificationCenter` broadcasts, and direct `ChatMessageCell`/`ChatActivity` UI state mutations.
+- **Decision:** Introduce pure domain models `AudioTrackType`, `AudioPlaybackStatus`, `RepeatMode`, `AudioOutputRoute`, `AudioTrackModel`, `EqualizerBand`, `EqualizerState`, and `AudioPlaybackState`. Define abstract contract `AudioPlayerRepository` covering state observation (`observePlaybackState`), snapshot retrieval (`getPlaybackState`), playback controls (`play`, `resume`, `pause`, `stop`, `seekTo`, `seekToProgress`, `next`, `previous`), speed configuration (`setPlaybackSpeed`), repeat/shuffle toggles (`toggleRepeatMode`, `toggleShuffle`), proximity and audio routing (`setProximityNear`, `setOutputRoute`), and equalizer configuration (`setEqualizerEnabled`, `setEqualizerBandGain`, `setBassBoost`). Implement pure algorithmic use cases for playback transitions (`PlayTrackUseCase`, `TogglePlayPauseUseCase`), boundary-clamped seek (`SeekAudioUseCase`), repeat- and shuffle-aware playlist navigation with 3-second rewind rule (`NavigatePlaylistUseCase`), stepped speed cycling (`CyclePlaybackSpeedUseCase`), repeat mode cycling (`CycleRepeatModeUseCase`), proximity-aware audio routing to earpiece (`HandleProximitySensorUseCase`), and equalizer management (`ConfigureEqualizerUseCase`). Provide thread-safe `LegacyAudioPlayerRepository` with standalone state machine and pure formatting/math in `AudioPlayerMapper`. Encapsulate presentation state and MVI events in `AudioPlayerViewModel`.
+- **Consequences:** Audio and voice note playback, playlist navigation, seek progress, speed cycling, repeat/shuffle logic, and proximity routing are isolated behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `MediaController.java`.
 
 ### ADR 080: Isolation of Chat Message Input, Formatting, Voice Recording, Panels & Reply Bar into feature.chatinput
 - **Context:** In Telegram Android, message text editing, draft state, rich text formatting (bold, italic, mono, spoiler, quote, strike, underline), voice note and round video recording, audio waveform capture, audio recording lock, pause, and preview, send options (silent, scheduled, paid stars, ttl / view-once), reply & edit preview banners, and virtual input panels (keyboard, emoji/stickers, bot keyboard, attachment sheet) were managed by `ChatActivityEnterView.java` (~15,647 lines) in `org.telegram.ui.Components`. The view coupled low-level Android View and window management (`FrameLayout`, `EditTextCaption`, `LinearLayout`, `AnimatedTextView`), touch velocity tracking, audio recording timers, `MediaController` hardware recorder callbacks, direct `NotificationCenter` listeners, and delegate callbacks across `ChatActivity`.

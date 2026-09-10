@@ -860,6 +860,20 @@ import org.telegram.messenger.feature.chatinput.domain.usecase.SetChatInputReply
 import org.telegram.messenger.feature.chatinput.domain.usecase.SetChatInputTextUseCase
 import org.telegram.messenger.feature.chatinput.domain.usecase.ValidateVoiceRecordActionUseCase
 import org.telegram.messenger.feature.chatinput.presentation.ChatInputViewModel
+import org.telegram.messenger.feature.audioplayer.data.repository.LegacyAudioPlayerRepository
+import org.telegram.messenger.feature.audioplayer.domain.repository.AudioPlayerRepository
+import org.telegram.messenger.feature.audioplayer.domain.usecase.ConfigureEqualizerUseCase
+import org.telegram.messenger.feature.audioplayer.domain.usecase.CyclePlaybackSpeedUseCase
+import org.telegram.messenger.feature.audioplayer.domain.usecase.CycleRepeatModeUseCase
+import org.telegram.messenger.feature.audioplayer.domain.usecase.GetPlaybackStateUseCase
+import org.telegram.messenger.feature.audioplayer.domain.usecase.HandleProximitySensorUseCase
+import org.telegram.messenger.feature.audioplayer.domain.usecase.NavigatePlaylistUseCase
+import org.telegram.messenger.feature.audioplayer.domain.usecase.ObservePlaybackStateUseCase
+import org.telegram.messenger.feature.audioplayer.domain.usecase.PlayTrackUseCase
+import org.telegram.messenger.feature.audioplayer.domain.usecase.SeekAudioUseCase
+import org.telegram.messenger.feature.audioplayer.domain.usecase.TogglePlayPauseUseCase
+import org.telegram.messenger.feature.audioplayer.domain.usecase.ToggleShuffleUseCase
+import org.telegram.messenger.feature.audioplayer.presentation.AudioPlayerViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5327,6 +5341,71 @@ class AccountFeatureContainer private constructor(val account: Int) {
             repository = chatInputRepository,
             formatUseCase = formatTextSelectionUseCase,
             resolvePanelUseCase = resolvePanelVisibilityUseCase
+        )
+    }
+
+    val audioPlayerRepository: AudioPlayerRepository by lazy {
+        LegacyAudioPlayerRepository(account)
+    }
+
+    val observeAudioPlaybackStateUseCase: ObservePlaybackStateUseCase
+        get() = ObservePlaybackStateUseCase(audioPlayerRepository)
+
+    val getAudioPlaybackStateUseCase: GetPlaybackStateUseCase
+        get() = GetPlaybackStateUseCase(audioPlayerRepository)
+
+    val playTrackUseCase: PlayTrackUseCase
+        get() = PlayTrackUseCase(audioPlayerRepository)
+
+    val toggleAudioPlayPauseUseCase: TogglePlayPauseUseCase
+        get() = TogglePlayPauseUseCase(audioPlayerRepository)
+
+    val seekAudioUseCase: SeekAudioUseCase
+        get() = SeekAudioUseCase(audioPlayerRepository)
+
+    val navigatePlaylistUseCase: NavigatePlaylistUseCase
+        get() = NavigatePlaylistUseCase(audioPlayerRepository)
+
+    val cyclePlaybackSpeedUseCase: CyclePlaybackSpeedUseCase
+        get() = CyclePlaybackSpeedUseCase(audioPlayerRepository)
+
+    val cycleRepeatModeUseCase: CycleRepeatModeUseCase
+        get() = CycleRepeatModeUseCase(audioPlayerRepository)
+
+    val toggleShuffleUseCase: ToggleShuffleUseCase
+        get() = ToggleShuffleUseCase(audioPlayerRepository)
+
+    val handleProximitySensorUseCase: HandleProximitySensorUseCase
+        get() = HandleProximitySensorUseCase(audioPlayerRepository)
+
+    val configureEqualizerUseCase: ConfigureEqualizerUseCase
+        get() = ConfigureEqualizerUseCase(audioPlayerRepository)
+
+    private var cachedAudioPlayerViewModel: AudioPlayerViewModel? = null
+
+    val audioPlayerViewModel: AudioPlayerViewModel
+        get() {
+            var vm = cachedAudioPlayerViewModel
+            if (vm == null) {
+                vm = createAudioPlayerViewModel()
+                cachedAudioPlayerViewModel = vm
+            }
+            return vm
+        }
+
+    fun createAudioPlayerViewModel(): AudioPlayerViewModel {
+        return AudioPlayerViewModel(
+            observePlaybackStateUseCase = observeAudioPlaybackStateUseCase,
+            getPlaybackStateUseCase = getAudioPlaybackStateUseCase,
+            playTrackUseCase = playTrackUseCase,
+            togglePlayPauseUseCase = toggleAudioPlayPauseUseCase,
+            seekAudioUseCase = seekAudioUseCase,
+            navigatePlaylistUseCase = navigatePlaylistUseCase,
+            cyclePlaybackSpeedUseCase = cyclePlaybackSpeedUseCase,
+            cycleRepeatModeUseCase = cycleRepeatModeUseCase,
+            toggleShuffleUseCase = toggleShuffleUseCase,
+            handleProximitySensorUseCase = handleProximitySensorUseCase,
+            configureEqualizerUseCase = configureEqualizerUseCase
         )
     }
 
