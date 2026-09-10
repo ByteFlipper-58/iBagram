@@ -673,6 +673,17 @@ import org.telegram.messenger.feature.maintabs.domain.usecase.SetShowCallsTabUse
 import org.telegram.messenger.feature.maintabs.domain.usecase.UpdateChatsUnreadCountUseCase
 import org.telegram.messenger.feature.maintabs.presentation.MainTabsViewModel
 import org.telegram.ui.MainTabsActivityController
+import org.telegram.messenger.feature.richcaption.data.repository.LegacyRichCaptionRepository
+import org.telegram.messenger.feature.richcaption.domain.repository.RichCaptionRepository
+import org.telegram.messenger.feature.richcaption.domain.usecase.CalculateCaptionMeasureWidthUseCase
+import org.telegram.messenger.feature.richcaption.domain.usecase.CheckCaptionPressHitUseCase
+import org.telegram.messenger.feature.richcaption.domain.usecase.ClearRichCaptionUseCase
+import org.telegram.messenger.feature.richcaption.domain.usecase.GetRichCaptionUseCase
+import org.telegram.messenger.feature.richcaption.domain.usecase.ObserveRichCaptionUseCase
+import org.telegram.messenger.feature.richcaption.domain.usecase.SetRichCaptionCreditUseCase
+import org.telegram.messenger.feature.richcaption.domain.usecase.SetRichCaptionLockedUseCase
+import org.telegram.messenger.feature.richcaption.domain.usecase.SetRichCaptionTextUseCase
+import org.telegram.messenger.feature.richcaption.presentation.RichCaptionViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4235,6 +4246,61 @@ class AccountFeatureContainer private constructor(val account: Int) {
             setShowCallsTabUseCase = SetShowCallsTabUseCase(repo),
             updateChatsUnreadCountUseCase = UpdateChatsUnreadCountUseCase(repo),
             setContactsPermissionWarningUseCase = SetContactsPermissionWarningUseCase(repo)
+        )
+    }
+
+    fun createRichCaptionRepository(): RichCaptionRepository {
+        return LegacyRichCaptionRepository()
+    }
+
+    val richCaptionRepository: RichCaptionRepository by lazy {
+        LegacyRichCaptionRepository()
+    }
+
+    val observeRichCaptionUseCase: ObserveRichCaptionUseCase
+        get() = ObserveRichCaptionUseCase(richCaptionRepository)
+
+    val getRichCaptionUseCase: GetRichCaptionUseCase
+        get() = GetRichCaptionUseCase(richCaptionRepository)
+
+    val setRichCaptionTextUseCase: SetRichCaptionTextUseCase
+        get() = SetRichCaptionTextUseCase(richCaptionRepository)
+
+    val setRichCaptionCreditUseCase: SetRichCaptionCreditUseCase
+        get() = SetRichCaptionCreditUseCase(richCaptionRepository)
+
+    val setRichCaptionLockedUseCase: SetRichCaptionLockedUseCase
+        get() = SetRichCaptionLockedUseCase(richCaptionRepository)
+
+    val calculateCaptionMeasureWidthUseCase: CalculateCaptionMeasureWidthUseCase
+        get() = CalculateCaptionMeasureWidthUseCase(richCaptionRepository)
+
+    val checkCaptionPressHitUseCase: CheckCaptionPressHitUseCase
+        get() = CheckCaptionPressHitUseCase(richCaptionRepository)
+
+    val clearRichCaptionUseCase: ClearRichCaptionUseCase
+        get() = ClearRichCaptionUseCase(richCaptionRepository)
+
+    private var cachedRichCaptionViewModel: RichCaptionViewModel? = null
+
+    val richCaptionViewModel: RichCaptionViewModel
+        get() {
+            var vm = cachedRichCaptionViewModel
+            if (vm == null) {
+                vm = createRichCaptionViewModel()
+                cachedRichCaptionViewModel = vm
+            }
+            return vm
+        }
+
+    fun createRichCaptionViewModel(): RichCaptionViewModel {
+        return RichCaptionViewModel(
+            observeRichCaptionUseCase = observeRichCaptionUseCase,
+            getRichCaptionUseCase = getRichCaptionUseCase,
+            setRichCaptionTextUseCase = setRichCaptionTextUseCase,
+            setRichCaptionCreditUseCase = setRichCaptionCreditUseCase,
+            setRichCaptionLockedUseCase = setRichCaptionLockedUseCase,
+            clearRichCaptionUseCase = clearRichCaptionUseCase
         )
     }
 

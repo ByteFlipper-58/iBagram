@@ -1871,6 +1871,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── MainTabsUiState.kt
             ├── MainTabsEvent.kt
             └── MainTabsViewModel.kt
+    │
+    └── richcaption/                       # Instant View Rich Caption Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (CaptionSpanType, CaptionEntitySpan, RichCaptionModel, CaptionMeasureSpec)
+        │   │   └── RichCaptionModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── RichCaptionRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveRichCaptionUseCase.kt
+        │       ├── GetRichCaptionUseCase.kt
+        │       ├── SetRichCaptionTextUseCase.kt
+        │       ├── SetRichCaptionCreditUseCase.kt
+        │       ├── SetRichCaptionLockedUseCase.kt
+        │       ├── CalculateCaptionMeasureWidthUseCase.kt
+        │       ├── CheckCaptionPressHitUseCase.kt
+        │       └── ClearRichCaptionUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers (Span sanitization & mapping <-> Domain)
+        │   │   └── RichCaptionMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyRichCaptionRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── RichCaptionUiState.kt
+            ├── RichCaptionEvent.kt
+            └── RichCaptionViewModel.kt
 ```
 
 ### Layer Rules
@@ -2292,10 +2319,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveMainTabsConfigUseCase`, `GetMainTabsConfigUseCase`, `SetMainTabsVisibleUseCase`, `SelectMainTabUseCase`, `SetShowCallsTabUseCase`, `UpdateChatsUnreadCountUseCase`, `SetContactsPermissionWarningUseCase`
   - [x] Data layer: `MainTabsMapper`, `LegacyMainTabsRepository` (thread safe, adapting `MainTabsActivityController`, tab positioning, showCallsTab arbitration, badges, headless in-memory fallback)
   - [x] Presentation layer: `MainTabsUiState`, `MainTabsEvent`, `MainTabsViewModel`
+- [x] Instant View Rich Captions & Formatting (`feature.richcaption`)
+  - [x] Domain entities: `CaptionSpanType`, `CaptionEntitySpan`, `RichCaptionModel`, `CaptionMeasureSpec`, `CaptionHitResult`
+  - [x] Repository contract: `RichCaptionRepository`
+  - [x] Use cases: `ObserveRichCaptionUseCase`, `GetRichCaptionUseCase`, `SetRichCaptionTextUseCase`, `SetRichCaptionCreditUseCase`, `SetRichCaptionLockedUseCase`, `CalculateCaptionMeasureWidthUseCase`, `CheckCaptionPressHitUseCase`, `ClearRichCaptionUseCase`
+  - [x] Data layer: `RichCaptionMapper`, `LegacyRichCaptionRepository` (thread safe, adapting `RichCaptionController`, available width calculation, press hit detection, headless in-memory fallback)
+  - [x] Presentation layer: `RichCaptionUiState`, `RichCaptionEvent`, `RichCaptionViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 067: Isolation of Instant View Rich Captions & Formatting into feature.richcaption
+- **Context:** In Telegram Android, formatted captions, credits, and interactive text spans attached to Instant View article blocks (`TL_iv.PageBlock`, `TL_iv.PageCaption`) were managed by `RichCaptionController.java` (~202 lines) in `org.telegram.ui.iv`. The controller coupled low-level `RichEditText`, direct layout measurements (`measure(leftInset, rightInset, parentWidthPx)`), touch hit testing on text layouts (`isPressOnCaption`), selection hijacking (`TextSelectionHelper.ArticleTextSelectionHelper`), and `TL_iv.RichText` serialization. Host delegates like `RichCaptionHost.java` directly invoked internal controller methods, making unit testing and headless validation impossible.
+- **Decision:** Introduce pure domain models `CaptionSpanType` (BOLD, ITALIC, UNDERLINE, STRIKE, CODE, URL), `CaptionEntitySpan`, `RichCaptionModel` (with plainText, credit, and validated spans), and `CaptionMeasureSpec`. Define abstract contract `RichCaptionRepository` covering text/spans mutation (`setCaptionText`), credit management (`setCaptionCredit`), lock status (`setLocked`), available width calculations (`calculateAvailableWidth`), and hit detection (`isPressWithinBounds`). Implement `LegacyRichCaptionRepository` providing thread-safe adapter functionality with standalone in-memory headless capability for JVM testing. Encapsulate presentation state and MVI events in `RichCaptionViewModel`.
+- **Consequences:** All Instant View caption formatting, span sanitization, available width measurements, and touch hit testing are cleanly decoupled behind testable domain interfaces with complete unit test coverage while preserving 100% backward compatibility with Telegram's Instant View article renderer and `RichCaptionController`.
 
 ### ADR 066: Isolation of Main Navigation Tabs into feature.maintabs
 - **Context:** In Telegram Android, the bottom navigation bar and tab arbitration across primary top-level screens (Chats, Contacts, Settings or Calls, and Profile) was managed by `MainTabsActivity.java` (~1244 lines) with tab visibility controlled via the single-method interface `MainTabsActivityController.java` (`setTabsVisible(boolean visible)`). UI components like `DialogsActivity.java` (~14436 lines) directly held `MainTabsActivityController` instances and called `setTabsVisible(!searching && blurredView == null)` during search mode or dialog overlays. In addition, tab positions, calls/settings tab mutual exclusion (`UserConfig.showCallsTab`), and badge counts (unread dialogs and contacts permission warnings) were tightly bound to legacy view hierarchies.
