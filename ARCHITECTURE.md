@@ -3070,6 +3070,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── FpsContentUiState.kt
             ├── FpsContentEvent.kt
             └── FpsContentViewModel.kt
+    │
+    └── anrwatchdog/                      # Main Thread ANR Watchdog & UI Freeze Diagnostics Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (AnrSeverity, AppLifecycleState, PingRecord, AnrIncident, AnrWatchdogConfig, AnrWatchdogState)
+        │   │   └── AnrWatchdogModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── AnrWatchdogRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── StartAnrMonitoringUseCase.kt
+        │       ├── StopAnrMonitoringUseCase.kt
+        │       ├── SetAppForegroundStatusUseCase.kt
+        │       ├── SendMainThreadPingUseCase.kt
+        │       ├── AcknowledgePingUseCase.kt
+        │       ├── CheckMainThreadFreezeUseCase.kt
+        │       ├── ResolveIncidentUseCase.kt
+        │       ├── GetAnrWatchdogStateUseCase.kt
+        │       ├── GetAnrIncidentsUseCase.kt
+        │       ├── ClearAnrHistoryUseCase.kt
+        │       ├── ObserveAnrWatchdogStateUseCase.kt
+        │       └── ObserveAnrIncidentsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (AnrWatchdogMapper)
+        │   │   └── AnrWatchdogMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyAnrWatchdogRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── AnrWatchdogUiState.kt
+            ├── AnrWatchdogEvent.kt
+            └── AnrWatchdogViewModel.kt
 ```
 
 
@@ -3721,10 +3752,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `RegisterFrameCallbackUseCase`, `RegisterRunnableCallbackUseCase`, `UnregisterCallbackUseCase`, `RequestViewInvalidationUseCase`, `RequestDrawableInvalidationUseCase`, `DispatchVsyncTickUseCase`, `CalculateFpsTimingUseCase`, `GetFpsContentStatsUseCase`, `GetFpsSubscriptionsUseCase`, `ObserveFpsContentStatsUseCase`, `ObserveFpsTicksUseCase`, `ResetFpsContentUseCase`
   - [x] Data layer: `FpsContentMapper`, `LegacyFpsContentRepository` (thread-safe StateFlow and ticker engine adapting `Choreographer60FpsContent.java`'s 360 lines, stride groups for 60/30/20/15 fps, accumulator groups for arbitrary rates, and view/drawable invalidation scheduling)
   - [x] Presentation layer: `FpsContentUiState`, `FpsContentEvent`, `FpsContentViewModel`
+- [x] Main Thread ANR Watchdog & UI Freeze Diagnostics (`feature.anrwatchdog`)
+  - [x] Domain entities: `AnrSeverity`, `AppLifecycleState`, `PingRecord`, `AnrIncident`, `AnrWatchdogConfig`, `AnrWatchdogState`
+  - [x] Repository contract: `AnrWatchdogRepository`
+  - [x] Use cases: `StartAnrMonitoringUseCase`, `StopAnrMonitoringUseCase`, `SetAppForegroundStatusUseCase`, `SendMainThreadPingUseCase`, `AcknowledgePingUseCase`, `CheckMainThreadFreezeUseCase`, `ResolveIncidentUseCase`, `GetAnrWatchdogStateUseCase`, `GetAnrIncidentsUseCase`, `ClearAnrHistoryUseCase`, `ObserveAnrWatchdogStateUseCase`, `ObserveAnrIncidentsUseCase`
+  - [x] Data layer: `AnrWatchdogMapper`, `LegacyAnrWatchdogRepository` (thread-safe generation tracking, timeout evaluation, and deduplication adapting `ANRDetector.java`'s 224 lines)
+  - [x] Presentation layer: `AnrWatchdogUiState`, `AnrWatchdogEvent`, `AnrWatchdogViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 105: Isolation of Main Thread ANR Watchdog & UI Freeze Diagnostics into feature.anrwatchdog
+- **Context:** In Telegram Android, main thread responsiveness and Application Not Responding (ANR) detection were monitored through `ANRDetector.java` (~224 lines). The component ran a dedicated background thread (`ANRDetector`), periodically posted ping messages (`MSG_UI_PING`) to `Looper.getMainLooper()` with monotonic IDs, and waited for up to `TIMEOUT_MS = 5000L` for the main thread to acknowledge execution. It monitored application foreground/background transitions via `ForegroundDetector.Listener`, paused execution in background via `lock.wait()` to eliminate CPU overhead, incremented generation counters upon state changes, and deduplicated ANR alerts (`anrReported`) until the UI thread recovered. However, `ANRDetector` was tightly coupled to Android's `Handler`, `Looper`, `Message`, `Thread.sleep()`, and single-runnable callback (`Runnable anrDetected`), preventing unit testing without OS looper infrastructure, dynamic timeouts, or reactive incident observation in modern monitoring dashboards.
+- **Decision:** Introduce pure domain models `AnrSeverity`, `AppLifecycleState`, `PingRecord`, `AnrIncident`, `AnrWatchdogConfig`, and `AnrWatchdogState`. Define abstract contract `AnrWatchdogRepository` covering lifecycle monitoring (`startMonitoring`, `stopMonitoring`, `setForeground`), ping operations (`sendPing`, `acknowledgePing`), freeze detection (`checkFreeze`, `resolveIncident`), history snapshots (`getState`, `getIncidentHistory`, `clearHistory`), and reactive streams (`observeState`, `observeIncidents`). Implement pure domain use cases for monitoring lifecycle, ping processing, freeze checks, and incident streams. Provide thread-safe `LegacyAnrWatchdogRepository` adapting `ANRDetector`'s generation and ping deduplication logic alongside pure mapping in `AnrWatchdogMapper`. Encapsulate presentation state and MVI events in `AnrWatchdogViewModel`.
+- **Consequences:** All main thread ANR watchdog monitoring, ping/acknowledgment tracking, freeze detection thresholds, recovery arbitration, and incident history are decoupled behind clean, testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `ANRDetector.java`.
 
 ### ADR 104: Isolation of Frame Rate Adaptation & 60 FPS V-Sync Content Arbitration into feature.fpscontent
 - **Context:** In Telegram Android, animation tick dispatching, display refresh rate decoupling, and screen invalidation wave batching were handled through `Choreographer60FpsContent.java` (~360 lines). The component acted as an Android `Choreographer.FrameCallback` delivering animation callbacks at stable ~60 fps regardless of physical screen refresh rate (90Hz, 120Hz, 144Hz displays). Callbacks sharing the same FPS shared a single accumulator or stride index (`TARGET_FPS / fps`), guaranteeing that N animations at 60/30/20 fps produce exactly one invalidation wave per period. It also maintained lists of Views and Drawables (`mViewsToInvalidate`, `mDrawablesToInvalidate`, `mDrawablesToInvalidate30fps`) and one-shot runnables. However, `Choreographer60FpsContent` was tightly coupled to the Android `Choreographer` singleton, `android.os.Looper.getMainLooper()`, `me.vkryl.core.reference.ReferenceList`, and direct `View.invalidate()` / `Drawable.invalidateSelf()` invocations, preventing unit testing and observability into active animation subscribers and frame pacing metrics.

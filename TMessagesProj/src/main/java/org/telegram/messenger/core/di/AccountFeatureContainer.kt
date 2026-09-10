@@ -7117,6 +7117,80 @@ class AccountFeatureContainer private constructor(val account: Int) {
         )
     }
 
+    // --- Main Thread ANR Watchdog & UI Freeze Diagnostics (feature.anrwatchdog) ---
+    private var customAnrWatchdogRepository: org.telegram.messenger.feature.anrwatchdog.domain.repository.AnrWatchdogRepository? = null
+
+    var anrWatchdogRepository: org.telegram.messenger.feature.anrwatchdog.domain.repository.AnrWatchdogRepository
+        get() = customAnrWatchdogRepository ?: org.telegram.messenger.feature.anrwatchdog.data.repository.LegacyAnrWatchdogRepository()
+        set(value) {
+            customAnrWatchdogRepository = value
+        }
+
+    val startAnrMonitoringUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.StartAnrMonitoringUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.StartAnrMonitoringUseCase(anrWatchdogRepository)
+
+    val stopAnrMonitoringUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.StopAnrMonitoringUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.StopAnrMonitoringUseCase(anrWatchdogRepository)
+
+    val setAppForegroundStatusUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.SetAppForegroundStatusUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.SetAppForegroundStatusUseCase(anrWatchdogRepository)
+
+    val sendMainThreadPingUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.SendMainThreadPingUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.SendMainThreadPingUseCase(anrWatchdogRepository)
+
+    val acknowledgePingUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.AcknowledgePingUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.AcknowledgePingUseCase(anrWatchdogRepository)
+
+    val checkMainThreadFreezeUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.CheckMainThreadFreezeUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.CheckMainThreadFreezeUseCase(anrWatchdogRepository)
+
+    val resolveIncidentUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.ResolveIncidentUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.ResolveIncidentUseCase(anrWatchdogRepository)
+
+    val getAnrWatchdogStateUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.GetAnrWatchdogStateUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.GetAnrWatchdogStateUseCase(anrWatchdogRepository)
+
+    val getAnrIncidentsUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.GetAnrIncidentsUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.GetAnrIncidentsUseCase(anrWatchdogRepository)
+
+    val clearAnrHistoryUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.ClearAnrHistoryUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.ClearAnrHistoryUseCase(anrWatchdogRepository)
+
+    val observeAnrWatchdogStateUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.ObserveAnrWatchdogStateUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.ObserveAnrWatchdogStateUseCase(anrWatchdogRepository)
+
+    val observeAnrIncidentsUseCase: org.telegram.messenger.feature.anrwatchdog.domain.usecase.ObserveAnrIncidentsUseCase
+        get() = org.telegram.messenger.feature.anrwatchdog.domain.usecase.ObserveAnrIncidentsUseCase(anrWatchdogRepository)
+
+    private var cachedAnrWatchdogViewModel: org.telegram.messenger.feature.anrwatchdog.presentation.AnrWatchdogViewModel? = null
+
+    val anrWatchdogViewModel: org.telegram.messenger.feature.anrwatchdog.presentation.AnrWatchdogViewModel
+        get() {
+            var vm = cachedAnrWatchdogViewModel
+            if (vm == null) {
+                vm = createAnrWatchdogViewModel()
+                cachedAnrWatchdogViewModel = vm
+            }
+            return vm
+        }
+
+    fun createAnrWatchdogViewModel(): org.telegram.messenger.feature.anrwatchdog.presentation.AnrWatchdogViewModel {
+        return org.telegram.messenger.feature.anrwatchdog.presentation.AnrWatchdogViewModel(
+            startAnrMonitoringUseCase = startAnrMonitoringUseCase,
+            stopAnrMonitoringUseCase = stopAnrMonitoringUseCase,
+            setAppForegroundStatusUseCase = setAppForegroundStatusUseCase,
+            sendMainThreadPingUseCase = sendMainThreadPingUseCase,
+            acknowledgePingUseCase = acknowledgePingUseCase,
+            checkMainThreadFreezeUseCase = checkMainThreadFreezeUseCase,
+            resolveIncidentUseCase = resolveIncidentUseCase,
+            getAnrWatchdogStateUseCase = getAnrWatchdogStateUseCase,
+            getAnrIncidentsUseCase = getAnrIncidentsUseCase,
+            clearAnrHistoryUseCase = clearAnrHistoryUseCase,
+            observeAnrWatchdogStateUseCase = observeAnrWatchdogStateUseCase,
+            observeAnrIncidentsUseCase = observeAnrIncidentsUseCase
+        )
+    }
+
     companion object {
         private val instances = ConcurrentHashMap<Int, AccountFeatureContainer>()
 
