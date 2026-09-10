@@ -6980,6 +6980,70 @@ class AccountFeatureContainer private constructor(val account: Int) {
         )
     }
 
+    private var customLeakDetectorRepository: org.telegram.messenger.feature.leakdetector.domain.repository.LeakDetectorRepository? = null
+
+    var leakDetectorRepository: org.telegram.messenger.feature.leakdetector.domain.repository.LeakDetectorRepository
+        get() = customLeakDetectorRepository ?: org.telegram.messenger.feature.leakdetector.data.repository.LegacyLeakDetectorRepository()
+        set(value) {
+            customLeakDetectorRepository = value
+        }
+
+    val startLeakDetectionUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.StartLeakDetectionUseCase
+        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.StartLeakDetectionUseCase(leakDetectorRepository)
+
+    val stopLeakDetectionUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.StopLeakDetectionUseCase
+        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.StopLeakDetectionUseCase(leakDetectorRepository)
+
+    val trackInstanceUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.TrackInstanceUseCase
+        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.TrackInstanceUseCase(leakDetectorRepository)
+
+    val triggerLeakCheckUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.TriggerLeakCheckUseCase
+        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.TriggerLeakCheckUseCase(leakDetectorRepository)
+
+    val confirmLeakUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.ConfirmLeakUseCase
+        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.ConfirmLeakUseCase(leakDetectorRepository)
+
+    val getTrackedClassesStatsUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.GetTrackedClassesStatsUseCase
+        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.GetTrackedClassesStatsUseCase(leakDetectorRepository)
+
+    val getConfirmedLeaksUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.GetConfirmedLeaksUseCase
+        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.GetConfirmedLeaksUseCase(leakDetectorRepository)
+
+    val resetLeakDetectorUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.ResetLeakDetectorUseCase
+        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.ResetLeakDetectorUseCase(leakDetectorRepository)
+
+    val observeLeakDetectorStateUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.ObserveLeakDetectorStateUseCase
+        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.ObserveLeakDetectorStateUseCase(leakDetectorRepository)
+
+    val observeConfirmedLeaksUseCase: org.telegram.messenger.feature.leakdetector.domain.usecase.ObserveConfirmedLeaksUseCase
+        get() = org.telegram.messenger.feature.leakdetector.domain.usecase.ObserveConfirmedLeaksUseCase(leakDetectorRepository)
+
+    private var cachedLeakDetectorViewModel: org.telegram.messenger.feature.leakdetector.presentation.LeakDetectorViewModel? = null
+
+    val leakDetectorViewModel: org.telegram.messenger.feature.leakdetector.presentation.LeakDetectorViewModel
+        get() {
+            var vm = cachedLeakDetectorViewModel
+            if (vm == null) {
+                vm = createLeakDetectorViewModel()
+                cachedLeakDetectorViewModel = vm
+            }
+            return vm
+        }
+
+    fun createLeakDetectorViewModel(): org.telegram.messenger.feature.leakdetector.presentation.LeakDetectorViewModel {
+        return org.telegram.messenger.feature.leakdetector.presentation.LeakDetectorViewModel(
+            startLeakDetectionUseCase = startLeakDetectionUseCase,
+            stopLeakDetectionUseCase = stopLeakDetectionUseCase,
+            trackInstanceUseCase = trackInstanceUseCase,
+            triggerLeakCheckUseCase = triggerLeakCheckUseCase,
+            confirmLeakUseCase = confirmLeakUseCase,
+            getTrackedClassesStatsUseCase = getTrackedClassesStatsUseCase,
+            getConfirmedLeaksUseCase = getConfirmedLeaksUseCase,
+            resetLeakDetectorUseCase = resetLeakDetectorUseCase,
+            observeLeakDetectorStateUseCase = observeLeakDetectorStateUseCase
+        )
+    }
+
     companion object {
         private val instances = ConcurrentHashMap<Int, AccountFeatureContainer>()
 

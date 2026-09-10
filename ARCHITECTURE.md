@@ -3010,6 +3010,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── TextHtmlUiState.kt
             ├── TextHtmlEvent.kt
             └── TextHtmlViewModel.kt
+    │
+    └── leakdetector/                     # Memory Leak Detection & Instance Reference Tracking Engine Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (TrackedClassStats, LeakReport, LeakDetectorConfig, LeakDetectorState)
+        │   │   └── LeakDetectorModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── LeakDetectorRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── StartLeakDetectionUseCase.kt
+        │       ├── StopLeakDetectionUseCase.kt
+        │       ├── TrackInstanceUseCase.kt
+        │       ├── TriggerLeakCheckUseCase.kt
+        │       ├── ConfirmLeakUseCase.kt
+        │       ├── GetTrackedClassesStatsUseCase.kt
+        │       ├── GetConfirmedLeaksUseCase.kt
+        │       ├── ResetLeakDetectorUseCase.kt
+        │       ├── ObserveLeakDetectorStateUseCase.kt
+        │       └── ObserveConfirmedLeaksUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (LeakDetectorMapper)
+        │   │   └── LeakDetectorMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyLeakDetectorRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── LeakDetectorUiState.kt
+            ├── LeakDetectorEvent.kt
+            └── LeakDetectorViewModel.kt
 ```
 
 
@@ -3649,10 +3678,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ConvertToHtmlUseCase`, `ParseFromHtmlUseCase`, `EscapeHtmlUseCase`, `UnescapeHtmlUseCase`, `StripHtmlFormattingUseCase`, `ExtractHtmlSpansUseCase`, `HasRichFormattingUseCase`, `ObserveTextHtmlStateUseCase`, `ClearTextHtmlStateUseCase`
   - [x] Data layer: `TextHtmlMapper`, `LegacyTextHtmlRepository` (thread-safe StateFlow and bidirectional HTML/rich text converter adapting `CustomHtml.java`'s 294 lines, `CopyUtilities.java`'s 386 lines, and SAX tag attributes)
   - [x] Presentation layer: `TextHtmlUiState`, `TextHtmlEvent`, `TextHtmlViewModel`
+- [x] Memory Leak Detection & Instance Reference Tracking Engine (`feature.leakdetector`)
+  - [x] Domain entities: `TrackedClassStats`, `LeakReport`, `LeakDetectorConfig`, `LeakDetectorState`
+  - [x] Repository contract: `LeakDetectorRepository`
+  - [x] Use cases: `StartLeakDetectionUseCase`, `StopLeakDetectionUseCase`, `TrackInstanceUseCase`, `TriggerLeakCheckUseCase`, `ConfirmLeakUseCase`, `GetTrackedClassesStatsUseCase`, `GetConfirmedLeaksUseCase`, `ResetLeakDetectorUseCase`, `ObserveLeakDetectorStateUseCase`, `ObserveConfirmedLeaksUseCase`
+  - [x] Data layer: `LeakDetectorMapper`, `LegacyLeakDetectorRepository` (thread-safe WeakReference tracking, coroutine periodic scanning, and two-phase GC confirmation adapting `LeakDetector.java`'s 215 lines)
+  - [x] Presentation layer: `LeakDetectorUiState`, `LeakDetectorEvent`, `LeakDetectorViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 103: Isolation of Memory Leak Detection & Instance Reference Tracking Engine into feature.leakdetector
+- **Context:** In Telegram Android, runtime memory leak diagnostics and activity/fragment/view reference tracking were implemented via singleton `LeakDetector.java` (~215 lines). The detector used `me.vkryl.core.reference.ReferenceMap` to store weak references to tracked class instances, periodically scanned the registry via `AndroidUtilities.runOnUIThread` every 1,000 ms, compared instance counts against a threshold (`LEAK_THRESHOLD = 5`), requested garbage collection (`System.gc()`), and scheduled confirmation re-checks after a 2,000 ms debounce window (`GC_RECHECK_DELAY_MS`) to eliminate false positives. Confirmed leaks were posted to `NotificationCenter.memoryLeakFoundException`. Because `LeakDetector` relied on Android UI looper runnables, singleton global state, and direct `NotificationCenter` posts, leak detection could not be observed reactively in modern UI dashboards, configured with dynamic thresholds, or tested in unit tests without Android runtime components.
+- **Decision:** Introduce pure domain models `TrackedClassStats`, `LeakReport`, `LeakDetectorConfig`, and `LeakDetectorState`. Define abstract contract `LeakDetectorRepository` covering lifecycle controls (`start`, `stop`), registration (`track`), manual/periodic triggers (`triggerCheck`, `confirmLeak`), stats and count queries (`getLiveCount`, `getReportedLeaks`, `getTrackedStats`, `reset`), and reactive streams (`observeState`, `observeLeaks`). Implement pure domain use cases for scanning, confirmation, tracking, and leak streams. Provide thread-safe `LegacyLeakDetectorRepository` using Kotlin `WeakReference` and Coroutines alongside pure mapping in `LeakDetectorMapper`. Encapsulate presentation state and MVI events in `LeakDetectorViewModel`.
+- **Consequences:** All memory leak tracking, threshold checks, GC confirmation windows, and leak reporting streams are decoupled behind clean, testable domain interfaces with full unit test coverage while remaining 100% backward compatible with Telegram's `LeakDetector.java`.
 
 ### ADR 102: Isolation of Text & HTML Entity Conversion Engine into feature.texthtml
 - **Context:** In Telegram Android, clipboard copy-paste operations, rich text formatting, and HTML entity conversion were tightly coupled across `CustomHtml.java` (~294 lines), `CopyUtilities.java` (~386 lines), `AndroidUtilities.java`, `EditTextCaption.java`, `MediaDataController.java`, and various message viewers. `CustomHtml` converted Telegram Spanned objects (such as `QuoteSpan`, `TextStyleSpan`, `CodeHighlighting.Span`, `AnimatedEmojiSpan`, `URLSpanReplacement`, `URLSpanMono`) into HTML markup (`<b>`, `<i>`, `<u>`, `<s>`, `<spoiler>`, `<pre lang="...">`, `<blockquote>`, `<animated-emoji data-document-id="...">`, `<a href="...">`). Conversely, `CopyUtilities` parsed clipboard HTML back into Telegram spans and entities via custom SAX handlers (`HTMLTagAttributesHandler`). Because both classes mixed low-level XML/HTML parsing, Android `Spanned`/`Spannable` spans, and raw static helper calls, rich text conversion could not be tested without Android framework dependencies or reused across modern domain workflows.
