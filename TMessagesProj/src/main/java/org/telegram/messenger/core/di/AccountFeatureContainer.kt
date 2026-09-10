@@ -6922,6 +6922,64 @@ class AccountFeatureContainer private constructor(val account: Int) {
         )
     }
 
+    private var customTextHtmlRepository: org.telegram.messenger.feature.texthtml.domain.repository.TextHtmlRepository? = null
+
+    var textHtmlRepository: org.telegram.messenger.feature.texthtml.domain.repository.TextHtmlRepository
+        get() = customTextHtmlRepository ?: org.telegram.messenger.feature.texthtml.data.repository.LegacyTextHtmlRepository()
+        set(value) {
+            customTextHtmlRepository = value
+        }
+
+    val convertToHtmlUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.ConvertToHtmlUseCase
+        get() = org.telegram.messenger.feature.texthtml.domain.usecase.ConvertToHtmlUseCase(textHtmlRepository)
+
+    val parseFromHtmlUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.ParseFromHtmlUseCase
+        get() = org.telegram.messenger.feature.texthtml.domain.usecase.ParseFromHtmlUseCase(textHtmlRepository)
+
+    val escapeHtmlUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.EscapeHtmlUseCase
+        get() = org.telegram.messenger.feature.texthtml.domain.usecase.EscapeHtmlUseCase(textHtmlRepository)
+
+    val unescapeHtmlUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.UnescapeHtmlUseCase
+        get() = org.telegram.messenger.feature.texthtml.domain.usecase.UnescapeHtmlUseCase(textHtmlRepository)
+
+    val stripHtmlFormattingUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.StripHtmlFormattingUseCase
+        get() = org.telegram.messenger.feature.texthtml.domain.usecase.StripHtmlFormattingUseCase(textHtmlRepository)
+
+    val extractHtmlSpansUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.ExtractHtmlSpansUseCase
+        get() = org.telegram.messenger.feature.texthtml.domain.usecase.ExtractHtmlSpansUseCase()
+
+    val hasRichFormattingUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.HasRichFormattingUseCase
+        get() = org.telegram.messenger.feature.texthtml.domain.usecase.HasRichFormattingUseCase()
+
+    val observeTextHtmlStateUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.ObserveTextHtmlStateUseCase
+        get() = org.telegram.messenger.feature.texthtml.domain.usecase.ObserveTextHtmlStateUseCase(textHtmlRepository)
+
+    val clearTextHtmlStateUseCase: org.telegram.messenger.feature.texthtml.domain.usecase.ClearTextHtmlStateUseCase
+        get() = org.telegram.messenger.feature.texthtml.domain.usecase.ClearTextHtmlStateUseCase(textHtmlRepository)
+
+    private var cachedTextHtmlViewModel: org.telegram.messenger.feature.texthtml.presentation.TextHtmlViewModel? = null
+
+    val textHtmlViewModel: org.telegram.messenger.feature.texthtml.presentation.TextHtmlViewModel
+        get() {
+            var vm = cachedTextHtmlViewModel
+            if (vm == null) {
+                vm = createTextHtmlViewModel()
+                cachedTextHtmlViewModel = vm
+            }
+            return vm
+        }
+
+    fun createTextHtmlViewModel(): org.telegram.messenger.feature.texthtml.presentation.TextHtmlViewModel {
+        return org.telegram.messenger.feature.texthtml.presentation.TextHtmlViewModel(
+            convertToHtmlUseCase = convertToHtmlUseCase,
+            parseFromHtmlUseCase = parseFromHtmlUseCase,
+            escapeHtmlUseCase = escapeHtmlUseCase,
+            stripHtmlFormattingUseCase = stripHtmlFormattingUseCase,
+            observeTextHtmlStateUseCase = observeTextHtmlStateUseCase,
+            clearTextHtmlStateUseCase = clearTextHtmlStateUseCase
+        )
+    }
+
     companion object {
         private val instances = ConcurrentHashMap<Int, AccountFeatureContainer>()
 

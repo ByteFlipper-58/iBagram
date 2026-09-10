@@ -2982,6 +2982,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── CountdownTimerUiState.kt
             ├── CountdownTimerEvent.kt
             └── CountdownTimerViewModel.kt
+    │
+    └── texthtml/                         # Text & HTML Entity Conversion Engine Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (HtmlTextSpanType, HtmlTextSpan, RichFormattedText, TextHtmlConversionResult, TextHtmlState)
+        │   │   └── TextHtmlModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── TextHtmlRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── ConvertToHtmlUseCase.kt
+        │       ├── ParseFromHtmlUseCase.kt
+        │       ├── EscapeHtmlUseCase.kt
+        │       ├── UnescapeHtmlUseCase.kt
+        │       ├── StripHtmlFormattingUseCase.kt
+        │       ├── ExtractHtmlSpansUseCase.kt
+        │       ├── HasRichFormattingUseCase.kt
+        │       ├── ObserveTextHtmlStateUseCase.kt
+        │       └── ClearTextHtmlStateUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (TextHtmlMapper)
+        │   │   └── TextHtmlMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyTextHtmlRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── TextHtmlUiState.kt
+            ├── TextHtmlEvent.kt
+            └── TextHtmlViewModel.kt
 ```
 
 
@@ -3615,10 +3643,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `StartCountdownTimerUseCase`, `StopCountdownTimerUseCase`, `PauseCountdownTimerUseCase`, `ResumeCountdownTimerUseCase`, `GetCountdownTimerUseCase`, `IsCountdownTimerRunningUseCase`, `TickCountdownTimerUseCase`, `ClearAllCountdownTimersUseCase`, `ObserveCountdownTimerUseCase`, `ObserveCountdownStateUseCase`, `DecomposeCountdownTimeUseCase`, `FormatCountdownTimeUseCase`
   - [x] Data layer: `CountdownTimerMapper`, `LegacyCountdownTimerRepository` (thread-safe StateFlow and ticker engine adapting `CountdownTimer.java`'s 62 lines, time component math, and formatted strings)
   - [x] Presentation layer: `CountdownTimerUiState`, `CountdownTimerEvent`, `CountdownTimerViewModel`
+- [x] Text & HTML Entity Conversion Engine (`feature.texthtml`)
+  - [x] Domain entities: `HtmlTextSpanType`, `HtmlTextSpan`, `RichFormattedText`, `TextHtmlConversionResult`, `TextHtmlState`
+  - [x] Repository contract: `TextHtmlRepository`
+  - [x] Use cases: `ConvertToHtmlUseCase`, `ParseFromHtmlUseCase`, `EscapeHtmlUseCase`, `UnescapeHtmlUseCase`, `StripHtmlFormattingUseCase`, `ExtractHtmlSpansUseCase`, `HasRichFormattingUseCase`, `ObserveTextHtmlStateUseCase`, `ClearTextHtmlStateUseCase`
+  - [x] Data layer: `TextHtmlMapper`, `LegacyTextHtmlRepository` (thread-safe StateFlow and bidirectional HTML/rich text converter adapting `CustomHtml.java`'s 294 lines, `CopyUtilities.java`'s 386 lines, and SAX tag attributes)
+  - [x] Presentation layer: `TextHtmlUiState`, `TextHtmlEvent`, `TextHtmlViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 102: Isolation of Text & HTML Entity Conversion Engine into feature.texthtml
+- **Context:** In Telegram Android, clipboard copy-paste operations, rich text formatting, and HTML entity conversion were tightly coupled across `CustomHtml.java` (~294 lines), `CopyUtilities.java` (~386 lines), `AndroidUtilities.java`, `EditTextCaption.java`, `MediaDataController.java`, and various message viewers. `CustomHtml` converted Telegram Spanned objects (such as `QuoteSpan`, `TextStyleSpan`, `CodeHighlighting.Span`, `AnimatedEmojiSpan`, `URLSpanReplacement`, `URLSpanMono`) into HTML markup (`<b>`, `<i>`, `<u>`, `<s>`, `<spoiler>`, `<pre lang="...">`, `<blockquote>`, `<animated-emoji data-document-id="...">`, `<a href="...">`). Conversely, `CopyUtilities` parsed clipboard HTML back into Telegram spans and entities via custom SAX handlers (`HTMLTagAttributesHandler`). Because both classes mixed low-level XML/HTML parsing, Android `Spanned`/`Spannable` spans, and raw static helper calls, rich text conversion could not be tested without Android framework dependencies or reused across modern domain workflows.
+- **Decision:** Introduce pure domain models `HtmlTextSpanType`, `HtmlTextSpan`, `RichFormattedText`, `TextHtmlConversionResult`, and `TextHtmlState`. Define abstract contract `TextHtmlRepository` covering bidirectional conversions (`convertToHtml`, `parseFromHtml`), escaping/unescaping (`escapeHtml`, `unescapeHtml`), tag stripping (`stripFormatting`), and reactive state streams (`observeState`, `clearState`). Implement pure domain use cases for conversion, parsing, escaping, unescaping, format stripping, span extraction, and rich formatting detection. Provide thread-safe `LegacyTextHtmlRepository` and pure bidirectional regex-and-stack parsing in `TextHtmlMapper`. Encapsulate presentation state and MVI events in `TextHtmlViewModel`.
+- **Consequences:** All rich text and HTML entity conversion, formatting span serialization/deserialization, HTML escaping, and markup stripping are cleanly decoupled behind testable domain interfaces with full unit test coverage while remaining 100% backward compatible with Telegram's `CustomHtml.java` and `CopyUtilities.java`.
 
 ### ADR 101: Isolation of Countdown Timer Engine & Time Formatting into feature.countdowntimer
 - **Context:** In Telegram Android, countdown timers and time formatting for time-sensitive UI elements (such as closing polls in `ChatMessageCell`, remaining availability of Telegram Star gifts in `StarGiftSheet`, and active auction countdowns in `AuctionBidSheet` and `ActiveAuctionsSheet`) were implemented via `CountdownTimer.java` (~62 lines). The legacy timer relied directly on Android's UI thread looper (`AndroidUtilities.runOnUIThread`, `cancelRunOnUIThread`) and single-listener callbacks (`Callback.onTimerUpdate(long)`). Because it tightly coupled tick intervals, timer state mutation, and time formatting to Android views and platform runnables, multi-timer observation was prone to memory leaks upon sheet dismissal, lack of pause/resume support, and inability to test countdown business logic in unit tests.
