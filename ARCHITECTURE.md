@@ -3160,6 +3160,36 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── FlagSecureUiState.kt
             ├── FlagSecureEvent.kt
             └── FlagSecureViewModel.kt
+    │
+    └── animationlocker/                  # Animation Notifications Locker & UI Stutter Prevention Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (LockScope, AnimationLockRecord, AnimationLockerState, AnimationLockerConfig, AnimationLockEvaluator)
+        │   │   └── AnimationLockerModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── AnimationLockerRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── AcquireAnimationLockUseCase.kt
+        │       ├── ReleaseAnimationLockUseCase.kt
+        │       ├── ReleaseAllAnimationLocksUseCase.kt
+        │       ├── SetAnimationLockerDisabledUseCase.kt
+        │       ├── IsAnimationLockedUseCase.kt
+        │       ├── IsNotificationAllowedUseCase.kt
+        │       ├── GetAnimationLockerStateUseCase.kt
+        │       ├── GetAnimationLockerConfigUseCase.kt
+        │       ├── UpdateAnimationLockerConfigUseCase.kt
+        │       ├── ObserveAnimationLockerStateUseCase.kt
+        │       └── ObserveIsAnimationLockedUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (AnimationLockerMapper)
+        │   │   └── AnimationLockerMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyAnimationLockerRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── AnimationLockerUiState.kt
+            ├── AnimationLockerEvent.kt
+            └── AnimationLockerViewModel.kt
 ```
 
 
@@ -3829,10 +3859,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `AttachSecurityReasonUseCase`, `DetachSecurityReasonUseCase`, `InvalidateWindowSecurityUseCase`, `IsWindowSecuredUseCase`, `GetWindowSecurityStateUseCase`, `GetAllWindowStatesUseCase`, `ResetWindowSecurityUseCase`, `ObserveWindowStateUseCase`, `ObserveAllWindowStatesUseCase`, `EvaluateSecurityRuleUseCase`
   - [x] Data layer: `FlagSecureMapper`, `LegacyFlagSecureRepository` (thread-safe reference-counting engine adapting `FlagSecureReason.java`'s 85 lines, dynamic condition evaluation, and window security state flows)
   - [x] Presentation layer: `FlagSecureUiState`, `FlagSecureEvent`, `FlagSecureViewModel`
+- [x] Animation Notifications Locker & UI Stutter Prevention (`feature.animationlocker`)
+  - [x] Domain entities: `LockScope`, `AnimationLockRecord`, `AnimationLockerState`, `AnimationLockerConfig`, `AnimationLockEvaluator`
+  - [x] Repository contract: `AnimationLockerRepository`
+  - [x] Use cases: `AcquireAnimationLockUseCase`, `ReleaseAnimationLockUseCase`, `ReleaseAllAnimationLocksUseCase`, `SetAnimationLockerDisabledUseCase`, `IsAnimationLockedUseCase`, `IsNotificationAllowedUseCase`, `GetAnimationLockerStateUseCase`, `GetAnimationLockerConfigUseCase`, `UpdateAnimationLockerConfigUseCase`, `ObserveAnimationLockerStateUseCase`, `ObserveIsAnimationLockedUseCase`
+  - [x] Data layer: `AnimationLockerMapper`, `LegacyAnimationLockerRepository` (thread-safe lock registry adapting `AnimationNotificationsLocker.java`'s 48 lines, multi-account and global notification suspension, and allowed notifications whitelist)
+  - [x] Presentation layer: `AnimationLockerUiState`, `AnimationLockerEvent`, `AnimationLockerViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 108: Isolation of Animation Notifications Locker & UI Stutter Prevention into feature.animationlocker
+- **Context:** In Telegram Android, UI jank and frame drops during transitions (such as opening chats in `DialogsActivity`, expanding photos in `PhotoViewer`, transitioning between tabs in `LaunchActivity`, viewing topics in `TopicsFragment`, and reading articles in `ArticleViewer`) were prevented using `AnimationNotificationsLocker.java` (~48 lines). The locker suppressed non-critical `NotificationCenter` broadcasts during active screen animations by invoking `NotificationCenter.setAnimationInProgress(handle, allowedNotifications)` on account and global instances. While simple, `AnimationNotificationsLocker` was instantiated ad-hoc in 14 distinct UI components, relied on raw integer array handles, lacked timeout protection against abandoned animations, and had no state observability or decoupled presentation binding for modern ViewModels.
+- **Decision:** Introduce pure domain models `LockScope` (ACCOUNT, GLOBAL, ALL), `AnimationLockRecord`, `AnimationLockerState`, `AnimationLockerConfig`, and `AnimationLockEvaluator`. Define abstract contract `AnimationLockerRepository` covering lock acquisition (`acquireLock`), selective and bulk release (`releaseLock`, `releaseAllLocks`), temporary disabling (`setDisabled`), status queries (`isLocked`, `isNotificationAllowed`, `getState`, `getConfig`, `updateConfig`), and reactive state streams (`observeState`, `observeIsLocked`). Implement pure domain use cases for lock arbitration and notification filtering. Provide thread-safe `LegacyAnimationLockerRepository` with multi-account/global notification suspension and whitelist calculation in `AnimationLockerMapper`. Encapsulate presentation state and MVI events in `AnimationLockerViewModel`.
+- **Consequences:** All animation notification locking, UI stutter prevention, whitelist filtering, and multi-scope lock arbitration are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `AnimationNotificationsLocker.java` and `NotificationCenter.java`.
 
 ### ADR 107: Isolation of Window Security & FLAG_SECURE Arbitration into feature.flagsecure
 - **Context:** In Telegram Android, window security and screenshot/screen recording prevention (`WindowManager.LayoutParams.FLAG_SECURE`) were managed through `FlagSecureReason.java` (~85 lines), referenced across `LaunchActivity`, `ChatActivity`, and `ProfileActivity`. The component managed a static map of reasons per `Window` (`currentSecureReasons = HashMap<Window, Integer>`), allowing conditions (`FlagSecureCondition`) to attach, detach, and invalidate. When the count of active reasons exceeded zero, `window.addFlags(FLAG_SECURE)` was called; when the count reached zero, `window.clearFlags(FLAG_SECURE)` was called. Conditions were driven by diverse app states: passcode lock (`SharedConfig.passcodeHash.length() > 0 && !SharedConfig.allowScreenCapture`), secret chats (`currentEncryptedChat != null`), protected channels/groups (`isPeerNoForwards()`), and payment screens. However, `FlagSecureReason` was tightly coupled to `android.view.Window`, `WindowManager.LayoutParams`, and static global state, preventing unit testing, observability into why a window is secured, or decoupled state management across ViewModels.

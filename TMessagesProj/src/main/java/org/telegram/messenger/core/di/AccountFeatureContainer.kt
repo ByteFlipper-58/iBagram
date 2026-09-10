@@ -7308,6 +7308,73 @@ class AccountFeatureContainer private constructor(val account: Int) {
         )
     }
 
+    // --- AnimationLocker ---
+    private var customAnimationLockerRepository: org.telegram.messenger.feature.animationlocker.domain.repository.AnimationLockerRepository? = null
+
+    var animationLockerRepository: org.telegram.messenger.feature.animationlocker.domain.repository.AnimationLockerRepository
+        get() = customAnimationLockerRepository ?: org.telegram.messenger.feature.animationlocker.data.repository.LegacyAnimationLockerRepository(account)
+        set(value) {
+            customAnimationLockerRepository = value
+        }
+
+    val acquireAnimationLockUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.AcquireAnimationLockUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.AcquireAnimationLockUseCase(animationLockerRepository)
+
+    val releaseAnimationLockUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.ReleaseAnimationLockUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.ReleaseAnimationLockUseCase(animationLockerRepository)
+
+    val releaseAllAnimationLocksUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.ReleaseAllAnimationLocksUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.ReleaseAllAnimationLocksUseCase(animationLockerRepository)
+
+    val setAnimationLockerDisabledUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.SetAnimationLockerDisabledUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.SetAnimationLockerDisabledUseCase(animationLockerRepository)
+
+    val isAnimationLockedUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.IsAnimationLockedUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.IsAnimationLockedUseCase(animationLockerRepository)
+
+    val isNotificationAllowedUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.IsNotificationAllowedUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.IsNotificationAllowedUseCase(animationLockerRepository)
+
+    val getAnimationLockerStateUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.GetAnimationLockerStateUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.GetAnimationLockerStateUseCase(animationLockerRepository)
+
+    val getAnimationLockerConfigUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.GetAnimationLockerConfigUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.GetAnimationLockerConfigUseCase(animationLockerRepository)
+
+    val updateAnimationLockerConfigUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.UpdateAnimationLockerConfigUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.UpdateAnimationLockerConfigUseCase(animationLockerRepository)
+
+    val observeAnimationLockerStateUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.ObserveAnimationLockerStateUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.ObserveAnimationLockerStateUseCase(animationLockerRepository)
+
+    val observeIsAnimationLockedUseCase: org.telegram.messenger.feature.animationlocker.domain.usecase.ObserveIsAnimationLockedUseCase
+        get() = org.telegram.messenger.feature.animationlocker.domain.usecase.ObserveIsAnimationLockedUseCase(animationLockerRepository)
+
+    private var cachedAnimationLockerViewModel: org.telegram.messenger.feature.animationlocker.presentation.AnimationLockerViewModel? = null
+
+    val animationLockerViewModel: org.telegram.messenger.feature.animationlocker.presentation.AnimationLockerViewModel
+        get() {
+            var vm = cachedAnimationLockerViewModel
+            if (vm == null) {
+                vm = createAnimationLockerViewModel()
+                cachedAnimationLockerViewModel = vm
+            }
+            return vm
+        }
+
+    fun createAnimationLockerViewModel(): org.telegram.messenger.feature.animationlocker.presentation.AnimationLockerViewModel {
+        return org.telegram.messenger.feature.animationlocker.presentation.AnimationLockerViewModel(
+            acquireAnimationLockUseCase = acquireAnimationLockUseCase,
+            releaseAnimationLockUseCase = releaseAnimationLockUseCase,
+            releaseAllAnimationLocksUseCase = releaseAllAnimationLocksUseCase,
+            setAnimationLockerDisabledUseCase = setAnimationLockerDisabledUseCase,
+            getAnimationLockerStateUseCase = getAnimationLockerStateUseCase,
+            getAnimationLockerConfigUseCase = getAnimationLockerConfigUseCase,
+            updateAnimationLockerConfigUseCase = updateAnimationLockerConfigUseCase,
+            observeAnimationLockerStateUseCase = observeAnimationLockerStateUseCase
+        )
+    }
+
     companion object {
         private val instances = ConcurrentHashMap<Int, AccountFeatureContainer>()
 
