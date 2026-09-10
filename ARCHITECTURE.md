@@ -2016,6 +2016,36 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── PinchToZoomUiState.kt
             ├── PinchToZoomEvent.kt
             └── PinchToZoomViewModel.kt
+    │
+    └── recyclerscroll/                    # Recycler List Animated Scroll & Transitions Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (ScrollDirection, ScrollAnimationSpec, ScrollAnimationPlan, ScrollViewTranslation, ScrollEligibility, RecyclerScrollState)
+        │   │   └── RecyclerScrollModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── RecyclerScrollRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveRecyclerScrollStateUseCase.kt
+        │       ├── GetRecyclerScrollStateUseCase.kt
+        │       ├── EvaluateScrollEligibilityUseCase.kt
+        │       ├── CalculateScrollAnimationPlanUseCase.kt
+        │       ├── CalculateScrollLengthUseCase.kt
+        │       ├── ComputeScrollViewTranslationsUseCase.kt
+        │       ├── StartRecyclerScrollUseCase.kt
+        │       ├── UpdateRecyclerScrollProgressUseCase.kt
+        │       ├── FinishRecyclerScrollUseCase.kt
+        │       ├── CancelRecyclerScrollUseCase.kt
+        │       └── ResetRecyclerScrollUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure scroll physics, duration calculation, and translation formulas
+        │   │   └── RecyclerScrollMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyRecyclerScrollRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── RecyclerScrollUiState.kt
+            ├── RecyclerScrollEvent.kt
+            └── RecyclerScrollViewModel.kt
 ```
 
 ### Layer Rules
@@ -2467,10 +2497,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObservePinchZoomStateUseCase`, `GetPinchZoomStateUseCase`, `CalculatePinchScaleUseCase`, `CalculatePinchTranslationUseCase`, `CalculatePinchTransformUseCase`, `CalculatePinchImageBoundsUseCase`, `EvaluatePinchGestureUseCase`, `StartPinchZoomUseCase`, `UpdatePinchZoomUseCase`, `FinishPinchZoomUseCase`, `ResetPinchZoomUseCase`
   - [x] Data layer: `PinchToZoomMapper`, `LegacyPinchToZoomRepository` (thread safe, adapting `PinchToZoomHelper`, gesture detection threshold 1.005f, 2D transform calculations, aspect ratio padding interpolation)
   - [x] Presentation layer: `PinchToZoomUiState`, `PinchToZoomEvent`, `PinchToZoomViewModel`
+- [x] Recycler List Animated Scroll & Transitions (`feature.recyclerscroll`)
+  - [x] Domain entities: `ScrollDirection`, `ScrollAnimationSpec`, `ScrollAnimationPlan`, `ScrollViewTranslation`, `ScrollEligibility`, `RecyclerScrollState`
+  - [x] Repository contract: `RecyclerScrollRepository`
+  - [x] Use cases: `ObserveRecyclerScrollStateUseCase`, `GetRecyclerScrollStateUseCase`, `EvaluateScrollEligibilityUseCase`, `CalculateScrollAnimationPlanUseCase`, `CalculateScrollLengthUseCase`, `ComputeScrollViewTranslationsUseCase`, `StartRecyclerScrollUseCase`, `UpdateRecyclerScrollProgressUseCase`, `FinishRecyclerScrollUseCase`, `CancelRecyclerScrollUseCase`, `ResetRecyclerScrollUseCase`
+  - [x] Data layer: `RecyclerScrollMapper`, `LegacyRecyclerScrollRepository` (thread safe, adapting `RecyclerAnimationScrollHelper`, duration formulas 150ms/600ms/dynamic 300..1300ms, scrollLength and translation math, eligibility rules)
+  - [x] Presentation layer: `RecyclerScrollUiState`, `RecyclerScrollEvent`, `RecyclerScrollViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 072: Isolation of Recycler Animation Scroll Calculations and Transitions into feature.recyclerscroll
+- **Context:** In Telegram Android, animated fast-scroll and view transitions for recycler lists were managed by `RecyclerAnimationScrollHelper.java` (~502 lines) in `org.telegram.ui.Components`. The helper tightly coupled Android `ValueAnimator`, `View.OnLayoutChangeListener`, Android views (`RecyclerListView`, `IMessageCell`, `ChatMessageCell`), direct view hierarchy hierarchy manipulations (`layoutManager.ignoreView`, `layoutManager.stopIgnoringView`, `recyclerView.addView`, `recyclerView.removeView`), child view translation updates, and `MessagesController.getGlobalMainSettings()` flags. Components across `ChatActivity`, `DialogsActivity`, `TopicsFragment`, `ContactsActivity`, `ChannelAdminLogActivity`, `CallLogActivity`, `SharedMediaLayout`, and emoji pickers directly relied on `RecyclerAnimationScrollHelper`.
+- **Decision:** Introduce pure domain models `ScrollDirection` (UNSET, DOWN, UP), `ScrollAnimationSpec`, `ScrollAnimationPlan`, `ScrollViewTranslation`, `ScrollEligibility` (precondition checks for fast-scroll, animator running, child counts, animation settings), and `RecyclerScrollState`. Define abstract contract `RecyclerScrollRepository` covering eligibility evaluation (`evaluateEligibility`), animation plan calculation (`calculatePlan`), scroll length derivation (`calculateScrollLength`), dynamic translation calculations for old and incoming views (`computeViewTranslations`), state observation (`observeState`), and lifecycle operations (`startScroll`, `updateProgress`, `finishScroll`, `cancelScroll`, `reset`). Implement pure mathematical algorithms in `RecyclerScrollMapper` and a thread-safe adapter `LegacyRecyclerScrollRepository`. Encapsulate presentation state and MVI events in `RecyclerScrollViewModel`.
+- **Consequences:** All list scroll physics, duration calculations (150ms/600ms and dynamic height-based formulas clamped between 300ms and 1300ms), scroll length derivation, and view translation matrices are decoupled into clean domain interfaces with comprehensive unit test coverage while remaining 100% backward compatible with Telegram's `RecyclerAnimationScrollHelper`.
 
 ### ADR 071: Isolation of Pinch-To-Zoom Gestures, Geometry, and Overlay into feature.pinchtozoom
 - **Context:** In Telegram Android, gesture-driven pinch-to-zoom for photos, video messages, and media was implemented in `PinchToZoomHelper.java` (~834 lines) in `org.telegram.ui`. The helper coupled low-level Android `MotionEvent` handling, multi-touch pointer ID mapping, custom Canvas transforms (`canvas.scale`, `canvas.translate`), dynamic view hierarchy offset calculations (`updateViewsLocation`), `SpoilerEffect`/`SpoilerEffect2` shaders, `ValueAnimator` finish transitions (`CubicBezierInterpolator.DEFAULT`), and direct `MediaController` hardware video texture view hijacking (`setTextureView`). Media viewer components across `ChatMessageCell`, `ChatActivity`, `ArticleViewer`, `PeerStoriesView`, `ProfileActivity`, `ProfileGalleryView`, `ChannelAdminLogActivity`, and `GroupCallActivity` directly relied on `PinchToZoomHelper`.

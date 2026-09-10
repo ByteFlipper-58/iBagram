@@ -738,6 +738,20 @@ import org.telegram.messenger.feature.pinchtozoom.domain.usecase.ResetPinchZoomU
 import org.telegram.messenger.feature.pinchtozoom.domain.usecase.StartPinchZoomUseCase
 import org.telegram.messenger.feature.pinchtozoom.domain.usecase.UpdatePinchZoomUseCase
 import org.telegram.messenger.feature.pinchtozoom.presentation.PinchToZoomViewModel
+import org.telegram.messenger.feature.recyclerscroll.data.repository.LegacyRecyclerScrollRepository
+import org.telegram.messenger.feature.recyclerscroll.domain.repository.RecyclerScrollRepository
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.CalculateScrollAnimationPlanUseCase
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.CalculateScrollLengthUseCase
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.CancelRecyclerScrollUseCase
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.ComputeScrollViewTranslationsUseCase
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.EvaluateScrollEligibilityUseCase
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.FinishRecyclerScrollUseCase
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.GetRecyclerScrollStateUseCase
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.ObserveRecyclerScrollStateUseCase
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.ResetRecyclerScrollUseCase
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.StartRecyclerScrollUseCase
+import org.telegram.messenger.feature.recyclerscroll.domain.usecase.UpdateRecyclerScrollProgressUseCase
+import org.telegram.messenger.feature.recyclerscroll.presentation.RecyclerScrollViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4622,6 +4636,75 @@ class AccountFeatureContainer private constructor(val account: Int) {
             updateZoomUseCase = updatePinchZoomUseCase,
             finishZoomUseCase = finishPinchZoomUseCase,
             resetUseCase = resetPinchZoomUseCase
+        )
+    }
+
+    fun createRecyclerScrollRepository(): RecyclerScrollRepository {
+        return LegacyRecyclerScrollRepository()
+    }
+
+    val recyclerScrollRepository: RecyclerScrollRepository by lazy {
+        LegacyRecyclerScrollRepository()
+    }
+
+    val observeRecyclerScrollStateUseCase: ObserveRecyclerScrollStateUseCase
+        get() = ObserveRecyclerScrollStateUseCase(recyclerScrollRepository)
+
+    val getRecyclerScrollStateUseCase: GetRecyclerScrollStateUseCase
+        get() = GetRecyclerScrollStateUseCase(recyclerScrollRepository)
+
+    val evaluateScrollEligibilityUseCase: EvaluateScrollEligibilityUseCase
+        get() = EvaluateScrollEligibilityUseCase(recyclerScrollRepository)
+
+    val calculateScrollAnimationPlanUseCase: CalculateScrollAnimationPlanUseCase
+        get() = CalculateScrollAnimationPlanUseCase(recyclerScrollRepository)
+
+    val calculateScrollLengthUseCase: CalculateScrollLengthUseCase
+        get() = CalculateScrollLengthUseCase(recyclerScrollRepository)
+
+    val computeScrollViewTranslationsUseCase: ComputeScrollViewTranslationsUseCase
+        get() = ComputeScrollViewTranslationsUseCase(recyclerScrollRepository)
+
+    val startRecyclerScrollUseCase: StartRecyclerScrollUseCase
+        get() = StartRecyclerScrollUseCase(recyclerScrollRepository)
+
+    val updateRecyclerScrollProgressUseCase: UpdateRecyclerScrollProgressUseCase
+        get() = UpdateRecyclerScrollProgressUseCase(recyclerScrollRepository)
+
+    val finishRecyclerScrollUseCase: FinishRecyclerScrollUseCase
+        get() = FinishRecyclerScrollUseCase(recyclerScrollRepository)
+
+    val cancelRecyclerScrollUseCase: CancelRecyclerScrollUseCase
+        get() = CancelRecyclerScrollUseCase(recyclerScrollRepository)
+
+    val resetRecyclerScrollUseCase: ResetRecyclerScrollUseCase
+        get() = ResetRecyclerScrollUseCase(recyclerScrollRepository)
+
+    private var cachedRecyclerScrollViewModel: RecyclerScrollViewModel? = null
+
+    val recyclerScrollViewModel: RecyclerScrollViewModel
+        get() {
+            var vm = cachedRecyclerScrollViewModel
+            if (vm == null) {
+                vm = createRecyclerScrollViewModel()
+                cachedRecyclerScrollViewModel = vm
+            }
+            return vm
+        }
+
+    fun createRecyclerScrollViewModel(): RecyclerScrollViewModel {
+        return RecyclerScrollViewModel(
+            observeScrollStateUseCase = observeRecyclerScrollStateUseCase,
+            getScrollStateUseCase = getRecyclerScrollStateUseCase,
+            evaluateScrollEligibilityUseCase = evaluateScrollEligibilityUseCase,
+            calculateScrollAnimationPlanUseCase = calculateScrollAnimationPlanUseCase,
+            calculateScrollLengthUseCase = calculateScrollLengthUseCase,
+            computeScrollViewTranslationsUseCase = computeScrollViewTranslationsUseCase,
+            startRecyclerScrollUseCase = startRecyclerScrollUseCase,
+            updateRecyclerScrollProgressUseCase = updateRecyclerScrollProgressUseCase,
+            finishRecyclerScrollUseCase = finishRecyclerScrollUseCase,
+            cancelRecyclerScrollUseCase = cancelRecyclerScrollUseCase,
+            resetRecyclerScrollUseCase = resetRecyclerScrollUseCase
         )
     }
 
