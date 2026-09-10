@@ -1926,6 +1926,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── AdjustPanUiState.kt
             ├── AdjustPanEvent.kt
             └── AdjustPanViewModel.kt
+    │
+    └── keyboardhide/                      # Interactive Pull-Down Keyboard Hide Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (KeyboardDragSpec, KeyboardDismissDecision, KeyboardHideProgressResult, KeyboardHideState)
+        │   │   └── KeyboardHideModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── KeyboardHideRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── CalculateKeyboardHideProgressUseCase.kt
+        │       ├── EvaluateKeyboardDismissDecisionUseCase.kt
+        │       ├── ObserveKeyboardHideStateUseCase.kt
+        │       ├── GetKeyboardHideStateUseCase.kt
+        │       ├── SetKeyboardHideEnabledUseCase.kt
+        │       ├── StartKeyboardHideMovingUseCase.kt
+        │       ├── UpdateKeyboardHideMovingUseCase.kt
+        │       ├── EndKeyboardHideMovingUseCase.kt
+        │       ├── FinishKeyboardHideDismissUseCase.kt
+        │       └── ResetKeyboardHideUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure gesture progress and threshold math
+        │   │   └── KeyboardHideMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyKeyboardHideRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── KeyboardHideUiState.kt
+            ├── KeyboardHideEvent.kt
+            └── KeyboardHideViewModel.kt
 ```
 
 ### Layer Rules
@@ -2359,10 +2388,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `CalculatePanTransitionPlanUseCase`, `ComputePanProgressUseCase`, `ObserveAdjustPanStateUseCase`, `GetAdjustPanStateUseCase`, `SetAdjustPanEnabledUseCase`, `StartAdjustPanTransitionUseCase`, `UpdateAdjustPanTransitionUseCase`, `StopAdjustPanTransitionUseCase`, `ResetAdjustPanUseCase`
   - [x] Data layer: `AdjustPanMapper`, `LegacyAdjustPanRepository` (thread safe, adapting `AdjustPanLayoutHelper` math, trajectory calculation, headless in-memory fallback)
   - [x] Presentation layer: `AdjustPanUiState`, `AdjustPanEvent`, `AdjustPanViewModel`
+- [x] Interactive Pull-Down Keyboard Dismissal (`feature.keyboardhide`)
+  - [x] Domain entities: `KeyboardDragSpec`, `KeyboardDismissDecision`, `KeyboardHideProgressResult`, `KeyboardHideState`
+  - [x] Repository contract: `KeyboardHideRepository`
+  - [x] Use cases: `CalculateKeyboardHideProgressUseCase`, `EvaluateKeyboardDismissDecisionUseCase`, `ObserveKeyboardHideStateUseCase`, `GetKeyboardHideStateUseCase`, `SetKeyboardHideEnabledUseCase`, `StartKeyboardHideMovingUseCase`, `UpdateKeyboardHideMovingUseCase`, `EndKeyboardHideMovingUseCase`, `FinishKeyboardHideDismissUseCase`, `ResetKeyboardHideUseCase`
+  - [x] Data layer: `KeyboardHideMapper`, `LegacyKeyboardHideRepository` (thread safe, adapting `KeyboardHideHelper`, threshold evaluation, scroll arbitration, headless in-memory fallback)
+  - [x] Presentation layer: `KeyboardHideUiState`, `KeyboardHideEvent`, `KeyboardHideViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 069: Isolation of Interactive Pull-Down Keyboard Dismissal into feature.keyboardhide
+- **Context:** In Telegram Android, gesture-driven keyboard pull-down dismissal and scroll arbitration were handled by `KeyboardHideHelper.java` (~193 lines) in `org.telegram.ui`. The helper coupled low-level `MotionEvent` handling, Android `VelocityTracker`, Android 11+ `WindowInsetsAnimationController` control calls (`controlWindowInsetsAnimation`, `setInsetsAndAlpha`), direct `ChatActivityEnterView` geometry queries, `AdjustPanLayoutHelper` synchronization (`OnPanTranslationUpdate`, `OnTransitionStart`, `OnTransitionEnd`), and list scroll cancellation. Components across `ChatActivity` directly depended on internal static state (`KeyboardHideHelper.ENABLED`) and direct touch interception.
+- **Decision:** Introduce pure domain models `KeyboardDragSpec` (with touch coordinates, keyboard/navbar dimensions, and keyboard/popup type), `KeyboardDismissDecision` (with dismiss recommendation and target progress), `KeyboardHideProgressResult` (with clamped progress, navbar-compensated translationY, inset height, and alpha), and `KeyboardHideState` (with scroll arbitration property `disableScrolling`). Define abstract contract `KeyboardHideRepository` covering drag progress calculation (`calculateProgress`), threshold decision evaluation (`evaluateDismissDecision`), state observation (`observeState`), and lifecycle tracking (`startMoving`, `updateMoving`, `endMoving`, `finishDismiss`). Implement `LegacyKeyboardHideRepository` with thread-safe `StateFlow` and pure math calculations in `KeyboardHideMapper`, providing deterministic headless execution for tests while cleanly isolating legacy `KeyboardHideHelper` mechanics. Encapsulate presentation state and MVI events in `KeyboardHideViewModel`.
+- **Consequences:** All pull-down gesture calculations, dismissal decision thresholds, scroll blocking rules, and keyboard animation tracking are cleanly isolated behind testable domain boundaries with complete unit test coverage while preserving 100% backward compatibility with Telegram's `KeyboardHideHelper`.
 
 ### ADR 068: Isolation of AdjustPan Layout Animation & Geometry into feature.adjustpan
 - **Context:** In Telegram Android, window resize and pan translations when displaying or hiding the soft keyboard were managed by `AdjustPanLayoutHelper.java` (~447 lines) located in `org.telegram.ui.ActionBar`. The helper tightly coupled view tree pre-draw listeners (`ViewTreeObserver.OnPreDrawListener`), view hierarchy traversal (`getViewsToSetHeight`), dynamic decor view inspection (`Window.ID_ANDROID_CONTENT`), Android 11 `WindowInsetsAnimation.Callback`, `LaunchActivity.instance.getBottomSheetTabs()` height offsets, and Android `ValueAnimator` executions with custom interpolators. Presentations across hundreds of UI components (`BottomSheet`, `StoryViewer`, `PaintView`, `PeerStoriesView`, `PollCreateActivity`, `ChatActivity`) directly relied on `AdjustPanLayoutHelper`.

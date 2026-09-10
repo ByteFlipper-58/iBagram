@@ -696,6 +696,19 @@ import org.telegram.messenger.feature.adjustpan.domain.usecase.StartAdjustPanTra
 import org.telegram.messenger.feature.adjustpan.domain.usecase.StopAdjustPanTransitionUseCase
 import org.telegram.messenger.feature.adjustpan.domain.usecase.UpdateAdjustPanTransitionUseCase
 import org.telegram.messenger.feature.adjustpan.presentation.AdjustPanViewModel
+import org.telegram.messenger.feature.keyboardhide.data.repository.LegacyKeyboardHideRepository
+import org.telegram.messenger.feature.keyboardhide.domain.repository.KeyboardHideRepository
+import org.telegram.messenger.feature.keyboardhide.domain.usecase.CalculateKeyboardHideProgressUseCase
+import org.telegram.messenger.feature.keyboardhide.domain.usecase.EndKeyboardHideMovingUseCase
+import org.telegram.messenger.feature.keyboardhide.domain.usecase.EvaluateKeyboardDismissDecisionUseCase
+import org.telegram.messenger.feature.keyboardhide.domain.usecase.FinishKeyboardHideDismissUseCase
+import org.telegram.messenger.feature.keyboardhide.domain.usecase.GetKeyboardHideStateUseCase
+import org.telegram.messenger.feature.keyboardhide.domain.usecase.ObserveKeyboardHideStateUseCase
+import org.telegram.messenger.feature.keyboardhide.domain.usecase.ResetKeyboardHideUseCase
+import org.telegram.messenger.feature.keyboardhide.domain.usecase.SetKeyboardHideEnabledUseCase
+import org.telegram.messenger.feature.keyboardhide.domain.usecase.StartKeyboardHideMovingUseCase
+import org.telegram.messenger.feature.keyboardhide.domain.usecase.UpdateKeyboardHideMovingUseCase
+import org.telegram.messenger.feature.keyboardhide.presentation.KeyboardHideViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4373,6 +4386,71 @@ class AccountFeatureContainer private constructor(val account: Int) {
             updateTransitionUseCase = updateAdjustPanTransitionUseCase,
             stopTransitionUseCase = stopAdjustPanTransitionUseCase,
             resetUseCase = resetAdjustPanUseCase
+        )
+    }
+
+    fun createKeyboardHideRepository(): KeyboardHideRepository {
+        return LegacyKeyboardHideRepository()
+    }
+
+    val keyboardHideRepository: KeyboardHideRepository by lazy {
+        LegacyKeyboardHideRepository()
+    }
+
+    val calculateKeyboardHideProgressUseCase: CalculateKeyboardHideProgressUseCase
+        get() = CalculateKeyboardHideProgressUseCase(keyboardHideRepository)
+
+    val evaluateKeyboardDismissDecisionUseCase: EvaluateKeyboardDismissDecisionUseCase
+        get() = EvaluateKeyboardDismissDecisionUseCase(keyboardHideRepository)
+
+    val observeKeyboardHideStateUseCase: ObserveKeyboardHideStateUseCase
+        get() = ObserveKeyboardHideStateUseCase(keyboardHideRepository)
+
+    val getKeyboardHideStateUseCase: GetKeyboardHideStateUseCase
+        get() = GetKeyboardHideStateUseCase(keyboardHideRepository)
+
+    val setKeyboardHideEnabledUseCase: SetKeyboardHideEnabledUseCase
+        get() = SetKeyboardHideEnabledUseCase(keyboardHideRepository)
+
+    val startKeyboardHideMovingUseCase: StartKeyboardHideMovingUseCase
+        get() = StartKeyboardHideMovingUseCase(keyboardHideRepository)
+
+    val updateKeyboardHideMovingUseCase: UpdateKeyboardHideMovingUseCase
+        get() = UpdateKeyboardHideMovingUseCase(keyboardHideRepository)
+
+    val endKeyboardHideMovingUseCase: EndKeyboardHideMovingUseCase
+        get() = EndKeyboardHideMovingUseCase(keyboardHideRepository)
+
+    val finishKeyboardHideDismissUseCase: FinishKeyboardHideDismissUseCase
+        get() = FinishKeyboardHideDismissUseCase(keyboardHideRepository)
+
+    val resetKeyboardHideUseCase: ResetKeyboardHideUseCase
+        get() = ResetKeyboardHideUseCase(keyboardHideRepository)
+
+    private var cachedKeyboardHideViewModel: KeyboardHideViewModel? = null
+
+    val keyboardHideViewModel: KeyboardHideViewModel
+        get() {
+            var vm = cachedKeyboardHideViewModel
+            if (vm == null) {
+                vm = createKeyboardHideViewModel()
+                cachedKeyboardHideViewModel = vm
+            }
+            return vm
+        }
+
+    fun createKeyboardHideViewModel(): KeyboardHideViewModel {
+        return KeyboardHideViewModel(
+            calculateProgressUseCase = calculateKeyboardHideProgressUseCase,
+            evaluateDismissDecisionUseCase = evaluateKeyboardDismissDecisionUseCase,
+            observeStateUseCase = observeKeyboardHideStateUseCase,
+            getStateUseCase = getKeyboardHideStateUseCase,
+            setEnabledUseCase = setKeyboardHideEnabledUseCase,
+            startMovingUseCase = startKeyboardHideMovingUseCase,
+            updateMovingUseCase = updateKeyboardHideMovingUseCase,
+            endMovingUseCase = endKeyboardHideMovingUseCase,
+            finishDismissUseCase = finishKeyboardHideDismissUseCase,
+            resetUseCase = resetKeyboardHideUseCase
         )
     }
 
