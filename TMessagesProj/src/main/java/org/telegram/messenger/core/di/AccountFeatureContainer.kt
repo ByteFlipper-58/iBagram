@@ -1003,6 +1003,17 @@ import org.telegram.messenger.feature.browser.domain.usecase.ObserveBrowserState
 import org.telegram.messenger.feature.browser.domain.usecase.OpenBrowserUrlUseCase
 import org.telegram.messenger.feature.browser.domain.usecase.UpdateBrowserSettingsUseCase
 import org.telegram.messenger.feature.browser.presentation.BrowserViewModel
+import org.telegram.messenger.feature.litemode.data.repository.LegacyLiteModeRepository
+import org.telegram.messenger.feature.litemode.domain.repository.LiteModeRepository
+import org.telegram.messenger.feature.litemode.domain.usecase.CalculateEffectiveFlagsUseCase
+import org.telegram.messenger.feature.litemode.domain.usecase.CheckLiteModeFlagUseCase
+import org.telegram.messenger.feature.litemode.domain.usecase.GetLiteModeStateUseCase
+import org.telegram.messenger.feature.litemode.domain.usecase.ObserveLiteModeStateUseCase
+import org.telegram.messenger.feature.litemode.domain.usecase.ResolvePresetUseCase
+import org.telegram.messenger.feature.litemode.domain.usecase.SetLiteModePresetUseCase
+import org.telegram.messenger.feature.litemode.domain.usecase.ToggleLiteModeFlagUseCase
+import org.telegram.messenger.feature.litemode.domain.usecase.UpdatePowerSaverThresholdUseCase
+import org.telegram.messenger.feature.litemode.presentation.LiteModeViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -5992,6 +6003,57 @@ class AccountFeatureContainer private constructor(val account: Int) {
             checkUrlSafety = checkUrlSafetyUseCase,
             openBrowserUrl = openBrowserUrlUseCase,
             manageBrowserHistory = manageBrowserHistoryUseCase
+        )
+    }
+
+    // --- Feature: LiteMode (Slice #87) ---
+    val liteModeRepository: LiteModeRepository by lazy {
+        LegacyLiteModeRepository(account)
+    }
+
+    val calculateEffectiveFlagsUseCase: CalculateEffectiveFlagsUseCase
+        get() = CalculateEffectiveFlagsUseCase()
+
+    val checkLiteModeFlagUseCase: CheckLiteModeFlagUseCase
+        get() = CheckLiteModeFlagUseCase(calculateEffectiveFlagsUseCase)
+
+    val resolvePresetUseCase: ResolvePresetUseCase
+        get() = ResolvePresetUseCase()
+
+    val observeLiteModeStateUseCase: ObserveLiteModeStateUseCase
+        get() = ObserveLiteModeStateUseCase(liteModeRepository)
+
+    val getLiteModeStateUseCase: GetLiteModeStateUseCase
+        get() = GetLiteModeStateUseCase(liteModeRepository)
+
+    val toggleLiteModeFlagUseCase: ToggleLiteModeFlagUseCase
+        get() = ToggleLiteModeFlagUseCase(liteModeRepository)
+
+    val setLiteModePresetUseCase: SetLiteModePresetUseCase
+        get() = SetLiteModePresetUseCase(liteModeRepository)
+
+    val updatePowerSaverThresholdUseCase: UpdatePowerSaverThresholdUseCase
+        get() = UpdatePowerSaverThresholdUseCase(liteModeRepository)
+
+    private var cachedLiteModeViewModel: LiteModeViewModel? = null
+
+    val liteModeViewModel: LiteModeViewModel
+        get() {
+            var vm = cachedLiteModeViewModel
+            if (vm == null) {
+                vm = createLiteModeViewModel()
+                cachedLiteModeViewModel = vm
+            }
+            return vm
+        }
+
+    fun createLiteModeViewModel(): LiteModeViewModel {
+        return LiteModeViewModel(
+            observeLiteModeState = observeLiteModeStateUseCase,
+            toggleLiteModeFlag = toggleLiteModeFlagUseCase,
+            setLiteModePreset = setLiteModePresetUseCase,
+            updatePowerSaverThreshold = updatePowerSaverThresholdUseCase,
+            repository = liteModeRepository
         )
     }
 

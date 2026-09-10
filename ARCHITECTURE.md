@@ -2633,7 +2633,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BrowserUiState.kt
             ├── BrowserEvent.kt
             └── BrowserViewModel.kt
+    │
+    └── litemode/                         # Power Saving, Battery Optimization & Animation Throttling Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (LiteModeFlag, LiteModePreset, LiteModeState)
+        │   │   └── LiteModeModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── LiteModeRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── CalculateEffectiveFlagsUseCase.kt
+        │       ├── CheckLiteModeFlagUseCase.kt
+        │       ├── ResolvePresetUseCase.kt
+        │       ├── ObserveLiteModeStateUseCase.kt
+        │       ├── GetLiteModeStateUseCase.kt
+        │       ├── ToggleLiteModeFlagUseCase.kt
+        │       ├── SetLiteModePresetUseCase.kt
+        │       └── UpdatePowerSaverThresholdUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (Legacy LiteMode.FLAG_* <-> Domain)
+        │   │   └── LiteModeMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyLiteModeRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── LiteModeUiState.kt
+            ├── LiteModeEvent.kt
+            └── LiteModeViewModel.kt
 ```
+
 
 
 ### Layer Rules
@@ -3193,10 +3221,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ClassifyUrlTargetUseCase`, `ExtractUsernameFromUrlUseCase`, `CheckUrlSafetyUseCase`, `ObserveBrowserStateUseCase`, `GetBrowserStateUseCase`, `UpdateBrowserSettingsUseCase`, `OpenBrowserUrlUseCase`, `ManageBrowserHistoryUseCase`
   - [x] Data layer: `BrowserMapper`, `LegacyBrowserRepository` (thread-safe StateFlow engine adapting `Browser.java`'s 870 lines, Custom Tabs service binding, in-app webview mode, anti-phishing IDN homoglyph punycode detection, and browser history)
   - [x] Presentation layer: `BrowserUiState`, `BrowserEvent`, `BrowserViewModel`
+- [x] Power Saving, Battery Optimization & Animation Throttling (`feature.litemode`)
+  - [x] Domain entities: `LiteModeFlag`, `LiteModePreset`, `LiteModeState`
+  - [x] Repository contract: `LiteModeRepository`
+  - [x] Use cases: `CalculateEffectiveFlagsUseCase`, `CheckLiteModeFlagUseCase`, `ResolvePresetUseCase`, `ObserveLiteModeStateUseCase`, `GetLiteModeStateUseCase`, `ToggleLiteModeFlagUseCase`, `SetLiteModePresetUseCase`, `UpdatePowerSaverThresholdUseCase`
+  - [x] Data layer: `LiteModeMapper`, `LegacyLiteModeRepository` (thread-safe StateFlow engine adapting `LiteMode.java`'s 365 lines, battery capacity monitoring, power-saver auto-activation, premium emoji flag preprocessing, and tablet layout overrides)
+  - [x] Presentation layer: `LiteModeUiState`, `LiteModeEvent`, `LiteModeViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 090: Isolation of Power Saving, Battery Optimization & Animation Throttling into feature.litemode
+- **Context:** In Telegram Android, battery consumption optimizations, hardware performance presets, and animation throttling flags were controlled globally via `LiteMode.java` (~365 lines) and `LiteModeSettingsActivity.java` (~530 lines). The legacy architecture managed 18 granular rendering bitmasks (animated stickers in keyboard/chat, animated emoji for chat/reactions/keyboard, forum two-column layouts, blur effects, scale transitions, Thanos vaporize animations, liquid glass, calls animations, autoplay videos/GIFs, particles) and 4 presets (`PRESET_LOW`, `PRESET_MEDIUM`, `PRESET_HIGH`, `PRESET_POWER_SAVER`). Battery level polling (`BatteryManager.BATTERY_PROPERTY_CAPACITY`) dynamically clamped all animations to `PRESET_POWER_SAVER` whenever battery dropped below `powerSaverLevel`, while emoji bitmasks required complex preprocessing depending on account Premium status (`UserConfig.hasPremiumOnAccounts()`) and tablet form-factor overrides. Direct coupling to static methods in `LiteMode` throughout UI components made testing performance degradation rules impossible.
+- **Decision:** Introduce pure domain models `LiteModeFlag` (with bitmasks and flag clusters for stickers, emoji, and chat), `LiteModePreset` (POWER_SAVER, LOW, MEDIUM, HIGH, CUSTOM), and `LiteModeState`. Define abstract contract `LiteModeRepository` for reactive state observation (`observeLiteModeState`), snapshots (`getLiteModeState`), flag toggling (`setFlagEnabled`), batch flag setting (`setAllFlags`), preset application (`applyPreset`), power saver battery threshold configuration (`setPowerSaverThreshold`), battery capacity simulation (`updateBatteryLevel`), and Premium state synchronization (`setHasPremium`). Implement pure algorithmic use cases for effective flag computation (`CalculateEffectiveFlagsUseCase` handling power-saver zeroing, premium emoji bit redirection, and tablet two-column guarantees), flag checking (`CheckLiteModeFlagUseCase`), and preset resolution (`ResolvePresetUseCase`). Provide thread-safe `LegacyLiteModeRepository` and integer codecs in `LiteModeMapper`. Encapsulate presentation state and MVI events in `LiteModeViewModel`.
+- **Consequences:** All power saving policies, battery threshold automations, animation throttling masks, and performance preset logic are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `LiteMode.java`.
 
 ### ADR 089: Isolation of In-App Web Browser, Custom Tabs & Deep Link Routing into feature.browser
 - **Context:** In Telegram Android, web browsing and URL dispatching were handled across `Browser.java` (~870 lines, 38KB), `WebBrowserSettings.java` (~707 lines), and `BrowserHistory.java` (~184 lines). The legacy subsystem resolved external URLs, Telegram deep links (`tg://`, `t.me/`, `telegram.me/`, `telegram.dog/`), Instant View URLs (`telegra.ph`, `graph.org`, `t.me/iv?`), and TON sites (`ton://`, `.ton`), binding to Chrome Custom Tabs (`CustomTabsClient`, `CustomTabsSession`), managing in-app webview configuration (`TL_account.TL_webBrowserSettings`), and recording browsing history (`webhistory.dat`). Crucially, URL safety verification, anti-phishing protection (preventing IDN homoglyph punycode spoofing), and confirmation dialog logic (`urlMustNotHaveConfirmation`) were tightly coupled with Android UI dialogs and activities, preventing clean unit testing of URL classification and navigation rules.
