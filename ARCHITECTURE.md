@@ -2539,6 +2539,41 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── RingtoneUiState.kt
             ├── RingtoneEvent.kt
             └── RingtoneViewModel.kt
+    │
+    └── networkstats/                     # Network Traffic & Data Usage Statistics Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── NetworkType.kt
+        │   │   ├── TrafficCategory.kt
+        │   │   ├── TrafficItemModel.kt
+        │   │   ├── NetworkStatsSummaryModel.kt
+        │   │   └── NetworkStatsState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── NetworkStatsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveNetworkStatsUseCase.kt
+        │       ├── ObserveAllNetworkStatsUseCase.kt
+        │       ├── GetNetworkStatsUseCase.kt
+        │       ├── GetAllNetworkStatsUseCase.kt
+        │       ├── IncrementTrafficBytesUseCase.kt
+        │       ├── IncrementTrafficItemsUseCase.kt
+        │       ├── IncrementCallsTimeUseCase.kt
+        │       ├── ResetNetworkStatsUseCase.kt
+        │       ├── RefreshNetworkStatsUseCase.kt
+        │       ├── CalculateMessagesTrafficUseCase.kt
+        │       ├── FormatTrafficBytesUseCase.kt
+        │       └── FormatCallsDurationUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure category mapping & legacy type codecs
+        │   │   └── NetworkStatsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyNetworkStatsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── NetworkStatsUiState.kt
+            ├── NetworkStatsEvent.kt
+            └── NetworkStatsViewModel.kt
 ```
 
 ### Layer Rules
@@ -3080,10 +3115,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ValidateRingtoneEligibilityUseCase`, `ObserveRingtonesUseCase`, `ObserveRingtoneStateUseCase`, `GetRingtonesUseCase`, `GetRingtoneByIdUseCase`, `GetRingtoneSoundPathUseCase`, `AddRingtoneUseCase`, `RemoveRingtoneUseCase`, `SaveRingtoneFromDocumentUseCase`, `UploadRingtoneUseCase`, `CancelRingtoneUploadUseCase`, `RefreshRingtonesUseCase`, `SelectRingtoneUseCase`
   - [x] Data layer: `RingtoneMapper`, `LegacyRingtoneRepository` (thread-safe StateFlow engine adapting `RingtoneDataStore.java` and `RingtoneUploader.java`, custom ringtone duration & size limits, sound path resolution, and upload cancellation)
   - [x] Presentation layer: `RingtoneUiState`, `RingtoneEvent`, `RingtoneViewModel`
+- [x] Network Traffic & Data Usage Statistics (`feature.networkstats`)
+  - [x] Domain entities: `NetworkType`, `TrafficCategory`, `TrafficItemModel`, `NetworkStatsSummaryModel`, `NetworkStatsState`
+  - [x] Repository contract: `NetworkStatsRepository`
+  - [x] Use cases: `ObserveNetworkStatsUseCase`, `ObserveAllNetworkStatsUseCase`, `GetNetworkStatsUseCase`, `GetAllNetworkStatsUseCase`, `IncrementTrafficBytesUseCase`, `IncrementTrafficItemsUseCase`, `IncrementCallsTimeUseCase`, `ResetNetworkStatsUseCase`, `RefreshNetworkStatsUseCase`, `CalculateMessagesTrafficUseCase`, `FormatTrafficBytesUseCase`, `FormatCallsDurationUseCase`
+  - [x] Data layer: `NetworkStatsMapper`, `LegacyNetworkStatsRepository` (thread-safe StateFlow engine adapting `StatsController.java`'s cellular/WiFi/roaming tracking, sent/received bytes & items counters, total call duration, messages traffic deduction formula, and stats resetting)
+  - [x] Presentation layer: `NetworkStatsUiState`, `NetworkStatsEvent`, `NetworkStatsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 087: Isolation of Network Traffic & Data Usage Statistics into feature.networkstats
+- **Context:** In Telegram Android, network data usage statistics across connection types (Mobile, Wi-Fi, Roaming) and traffic categories (Calls, Messages, Videos, Audios, Photos, Files, Total, Music) were tracked by `StatsController.java` (~293 lines). The legacy controller managed 2D long/int arrays (`sentBytes[3][8]`, `receivedBytes[3][8]`, `sentItems[3][8]`, `receivedItems[3][8]`), call duration (`callsTotalTime[3]`), and reset timestamps (`resetStatsDate[3]`), persisting binary data to `stats2.dat` via `RandomAccessFile`. Crucially, messages data volume was not recorded directly but calculated on the fly as `sentBytes[TOTAL] - FILES - AUDIOS - VIDEOS - PHOTOS - MUSIC`. UI classes like `DataUsageActivity.java` directly queried static instance methods of `StatsController`, coupling presentation rendering to legacy raw array indexing and global state.
+- **Decision:** Introduce pure domain models `NetworkType` (MOBILE, WIFI, ROAMING), `TrafficCategory` (CALLS, MESSAGES, VIDEOS, AUDIOS, PHOTOS, FILES, TOTAL, MUSIC), `TrafficItemModel` (category, sentBytes, receivedBytes, sentItems, receivedItems), `NetworkStatsSummaryModel` (networkType, items map, callsTotalTimeSec, resetStatsDateMs), and `NetworkStatsState`. Define abstract contract `NetworkStatsRepository` for reactive flow observation (`observeStats`, `observeAllStats`), snapshots (`getStats`, `getAllStats`), granular increments (`incrementSentBytes`, `incrementReceivedBytes`, `incrementSentItems`, `incrementReceivedItems`, `incrementCallsTotalTime`), stats resetting (`resetStats`), and refreshing. Implement pure domain logic in `CalculateMessagesTrafficUseCase` (subtracting media traffic from total with zero-clamping), `FormatTrafficBytesUseCase` (B, KB, MB, GB, TB with `Locale.US`), and `FormatCallsDurationUseCase`. Provide thread-safe `LegacyNetworkStatsRepository` and legacy type codecs in `NetworkStatsMapper`. Encapsulate presentation state and MVI events in `NetworkStatsViewModel`.
+- **Consequences:** All network traffic calculations, data usage accumulation, call duration tracking, and reset operations are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `StatsController.java`.
 
 ### ADR 086: Isolation of Custom Notification Sounds, Ringtones & Cloud Uploader into feature.ringtones
 - **Context:** In Telegram Android, custom notification sounds and ringtones management, cloud synchronization (`TL_account.getSavedRingtones`, `TL_account.saveRingtone`, `TL_account.uploadRingtone`), local binary document caching in preferences (`ringtones_pref_<userId>`), format and constraint validation (maximum 5 seconds duration, 300 KB max size, supported MIME types: `audio/mpeg`, `audio/ogg`, `audio/m4a`), upload tracking, and sound path resolution were split across `RingtoneDataStore.java` (~331 lines), `RingtoneUploader.java` (~99 lines), and `MediaDataController.java` (`uploadRingtone`, `saveToRingtones`, `onRingtoneUploaded`). UI activities like `NotificationsCustomSettingsActivity`, `ChatActivity`, and notification sound pickers directly interacted with these legacy classes and posted global `NotificationCenter` broadcasts (`onUserRingtonesUpdated`, `showBulletin`).

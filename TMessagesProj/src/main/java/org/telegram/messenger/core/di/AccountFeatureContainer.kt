@@ -943,6 +943,21 @@ import org.telegram.messenger.feature.ringtones.domain.usecase.SelectRingtoneUse
 import org.telegram.messenger.feature.ringtones.domain.usecase.UploadRingtoneUseCase
 import org.telegram.messenger.feature.ringtones.domain.usecase.ValidateRingtoneEligibilityUseCase
 import org.telegram.messenger.feature.ringtones.presentation.RingtoneViewModel
+import org.telegram.messenger.feature.networkstats.data.repository.LegacyNetworkStatsRepository
+import org.telegram.messenger.feature.networkstats.domain.repository.NetworkStatsRepository
+import org.telegram.messenger.feature.networkstats.domain.usecase.CalculateMessagesTrafficUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.FormatCallsDurationUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.FormatTrafficBytesUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.GetAllNetworkStatsUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.GetNetworkStatsUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.IncrementCallsTimeUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.IncrementTrafficBytesUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.IncrementTrafficItemsUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.ObserveAllNetworkStatsUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.ObserveNetworkStatsUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.RefreshNetworkStatsUseCase
+import org.telegram.messenger.feature.networkstats.domain.usecase.ResetNetworkStatsUseCase
+import org.telegram.messenger.feature.networkstats.presentation.NetworkStatsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5780,6 +5795,76 @@ class AccountFeatureContainer private constructor(val account: Int) {
             saveRingtoneFromDocumentUseCase = saveRingtoneFromDocumentUseCase,
             uploadRingtoneUseCase = uploadRingtoneUseCase,
             cancelRingtoneUploadUseCase = cancelRingtoneUploadUseCase
+        )
+    }
+
+    private var customNetworkStatsRepository: NetworkStatsRepository? = null
+
+    var networkStatsRepository: NetworkStatsRepository
+        get() = customNetworkStatsRepository ?: LegacyNetworkStatsRepository(account)
+        set(value) {
+            customNetworkStatsRepository = value
+        }
+
+    val observeNetworkStatsUseCase: ObserveNetworkStatsUseCase
+        get() = ObserveNetworkStatsUseCase(networkStatsRepository)
+
+    val observeAllNetworkStatsUseCase: ObserveAllNetworkStatsUseCase
+        get() = ObserveAllNetworkStatsUseCase(networkStatsRepository)
+
+    val getNetworkStatsUseCase: GetNetworkStatsUseCase
+        get() = GetNetworkStatsUseCase(networkStatsRepository)
+
+    val getAllNetworkStatsUseCase: GetAllNetworkStatsUseCase
+        get() = GetAllNetworkStatsUseCase(networkStatsRepository)
+
+    val incrementTrafficBytesUseCase: IncrementTrafficBytesUseCase
+        get() = IncrementTrafficBytesUseCase(networkStatsRepository)
+
+    val incrementTrafficItemsUseCase: IncrementTrafficItemsUseCase
+        get() = IncrementTrafficItemsUseCase(networkStatsRepository)
+
+    val incrementCallsTimeUseCase: IncrementCallsTimeUseCase
+        get() = IncrementCallsTimeUseCase(networkStatsRepository)
+
+    val resetNetworkStatsUseCase: ResetNetworkStatsUseCase
+        get() = ResetNetworkStatsUseCase(networkStatsRepository)
+
+    val refreshNetworkStatsUseCase: RefreshNetworkStatsUseCase
+        get() = RefreshNetworkStatsUseCase(networkStatsRepository)
+
+    val calculateMessagesTrafficUseCase: CalculateMessagesTrafficUseCase
+        get() = CalculateMessagesTrafficUseCase()
+
+    val formatTrafficBytesUseCase: FormatTrafficBytesUseCase
+        get() = FormatTrafficBytesUseCase()
+
+    val formatCallsDurationUseCase: FormatCallsDurationUseCase
+        get() = FormatCallsDurationUseCase()
+
+    private var cachedNetworkStatsViewModel: NetworkStatsViewModel? = null
+
+    val networkStatsViewModel: NetworkStatsViewModel
+        get() {
+            var vm = cachedNetworkStatsViewModel
+            if (vm == null) {
+                vm = createNetworkStatsViewModel()
+                cachedNetworkStatsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createNetworkStatsViewModel(): NetworkStatsViewModel {
+        return NetworkStatsViewModel(
+            observeAllNetworkStatsUseCase = observeAllNetworkStatsUseCase,
+            getNetworkStatsUseCase = getNetworkStatsUseCase,
+            resetNetworkStatsUseCase = resetNetworkStatsUseCase,
+            refreshNetworkStatsUseCase = refreshNetworkStatsUseCase,
+            incrementTrafficBytesUseCase = incrementTrafficBytesUseCase,
+            incrementTrafficItemsUseCase = incrementTrafficItemsUseCase,
+            incrementCallsTimeUseCase = incrementCallsTimeUseCase,
+            formatTrafficBytesUseCase = formatTrafficBytesUseCase,
+            formatCallsDurationUseCase = formatCallsDurationUseCase
         )
     }
 
