@@ -1898,6 +1898,34 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── RichCaptionUiState.kt
             ├── RichCaptionEvent.kt
             └── RichCaptionViewModel.kt
+    │
+    └── adjustpan/                         # AdjustPan Layout Animation & Geometry Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (PanCalculationSpec, PanTransitionPlan, PanProgressResult, PanTransitionState)
+        │   │   └── AdjustPanModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── AdjustPanRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── CalculatePanTransitionPlanUseCase.kt
+        │       ├── ComputePanProgressUseCase.kt
+        │       ├── ObserveAdjustPanStateUseCase.kt
+        │       ├── GetAdjustPanStateUseCase.kt
+        │       ├── SetAdjustPanEnabledUseCase.kt
+        │       ├── StartAdjustPanTransitionUseCase.kt
+        │       ├── UpdateAdjustPanTransitionUseCase.kt
+        │       ├── StopAdjustPanTransitionUseCase.kt
+        │       └── ResetAdjustPanUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure geometry and interpolation math
+        │   │   └── AdjustPanMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyAdjustPanRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── AdjustPanUiState.kt
+            ├── AdjustPanEvent.kt
+            └── AdjustPanViewModel.kt
 ```
 
 ### Layer Rules
@@ -2325,10 +2353,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveRichCaptionUseCase`, `GetRichCaptionUseCase`, `SetRichCaptionTextUseCase`, `SetRichCaptionCreditUseCase`, `SetRichCaptionLockedUseCase`, `CalculateCaptionMeasureWidthUseCase`, `CheckCaptionPressHitUseCase`, `ClearRichCaptionUseCase`
   - [x] Data layer: `RichCaptionMapper`, `LegacyRichCaptionRepository` (thread safe, adapting `RichCaptionController`, available width calculation, press hit detection, headless in-memory fallback)
   - [x] Presentation layer: `RichCaptionUiState`, `RichCaptionEvent`, `RichCaptionViewModel`
+- [x] AdjustPan Layout Animation & Geometry (`feature.adjustpan`)
+  - [x] Domain entities: `PanCalculationSpec`, `PanTransitionPlan`, `PanProgressResult`, `PanTransitionState`
+  - [x] Repository contract: `AdjustPanRepository`
+  - [x] Use cases: `CalculatePanTransitionPlanUseCase`, `ComputePanProgressUseCase`, `ObserveAdjustPanStateUseCase`, `GetAdjustPanStateUseCase`, `SetAdjustPanEnabledUseCase`, `StartAdjustPanTransitionUseCase`, `UpdateAdjustPanTransitionUseCase`, `StopAdjustPanTransitionUseCase`, `ResetAdjustPanUseCase`
+  - [x] Data layer: `AdjustPanMapper`, `LegacyAdjustPanRepository` (thread safe, adapting `AdjustPanLayoutHelper` math, trajectory calculation, headless in-memory fallback)
+  - [x] Presentation layer: `AdjustPanUiState`, `AdjustPanEvent`, `AdjustPanViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 068: Isolation of AdjustPan Layout Animation & Geometry into feature.adjustpan
+- **Context:** In Telegram Android, window resize and pan translations when displaying or hiding the soft keyboard were managed by `AdjustPanLayoutHelper.java` (~447 lines) located in `org.telegram.ui.ActionBar`. The helper tightly coupled view tree pre-draw listeners (`ViewTreeObserver.OnPreDrawListener`), view hierarchy traversal (`getViewsToSetHeight`), dynamic decor view inspection (`Window.ID_ANDROID_CONTENT`), Android 11 `WindowInsetsAnimation.Callback`, `LaunchActivity.instance.getBottomSheetTabs()` height offsets, and Android `ValueAnimator` executions with custom interpolators. Presentations across hundreds of UI components (`BottomSheet`, `StoryViewer`, `PaintView`, `PeerStoriesView`, `PollCreateActivity`, `ChatActivity`) directly relied on `AdjustPanLayoutHelper`.
+- **Decision:** Introduce pure domain models `PanCalculationSpec` (with previous/current height, start offsets, content view bottom, tabs height, and threshold), `PanTransitionPlan` (with animation flags, trajectory bounds `fromY`/`toY`, inverse flag, target height, keyboard visibility), `PanProgressResult`, and `PanTransitionState`. Define abstract contract `AdjustPanRepository` covering plan calculation (`calculatePlan`), trajectory interpolation (`computeProgress`), state observation (`observeState`), lifecycle transition tracking (`startTransition`, `updateTransition`, `stopTransition`), and enabled mutation (`setEnabled`). Implement `LegacyAdjustPanRepository` with thread-safe `StateFlow` and pure math calculations in `AdjustPanMapper`, providing deterministic headless execution for tests while cleanly isolating legacy `AdjustPanLayoutHelper` mechanics. Encapsulate presentation state and MVI events in `AdjustPanViewModel`.
+- **Consequences:** Layout pan animations, translation formulas, tab offset compensations, and keyboard transition arbitration are fully decoupled behind pure domain contracts with comprehensive unit test coverage, preserving 100% backward compatibility with Telegram's `AdjustPanLayoutHelper`.
 
 ### ADR 067: Isolation of Instant View Rich Captions & Formatting into feature.richcaption
 - **Context:** In Telegram Android, formatted captions, credits, and interactive text spans attached to Instant View article blocks (`TL_iv.PageBlock`, `TL_iv.PageCaption`) were managed by `RichCaptionController.java` (~202 lines) in `org.telegram.ui.iv`. The controller coupled low-level `RichEditText`, direct layout measurements (`measure(leftInset, rightInset, parentWidthPx)`), touch hit testing on text layouts (`isPressOnCaption`), selection hijacking (`TextSelectionHelper.ArticleTextSelectionHelper`), and `TL_iv.RichText` serialization. Host delegates like `RichCaptionHost.java` directly invoked internal controller methods, making unit testing and headless validation impossible.

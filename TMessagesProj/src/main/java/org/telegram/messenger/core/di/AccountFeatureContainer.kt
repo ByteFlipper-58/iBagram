@@ -684,6 +684,18 @@ import org.telegram.messenger.feature.richcaption.domain.usecase.SetRichCaptionC
 import org.telegram.messenger.feature.richcaption.domain.usecase.SetRichCaptionLockedUseCase
 import org.telegram.messenger.feature.richcaption.domain.usecase.SetRichCaptionTextUseCase
 import org.telegram.messenger.feature.richcaption.presentation.RichCaptionViewModel
+import org.telegram.messenger.feature.adjustpan.data.repository.LegacyAdjustPanRepository
+import org.telegram.messenger.feature.adjustpan.domain.repository.AdjustPanRepository
+import org.telegram.messenger.feature.adjustpan.domain.usecase.CalculatePanTransitionPlanUseCase
+import org.telegram.messenger.feature.adjustpan.domain.usecase.ComputePanProgressUseCase
+import org.telegram.messenger.feature.adjustpan.domain.usecase.GetAdjustPanStateUseCase
+import org.telegram.messenger.feature.adjustpan.domain.usecase.ObserveAdjustPanStateUseCase
+import org.telegram.messenger.feature.adjustpan.domain.usecase.ResetAdjustPanUseCase
+import org.telegram.messenger.feature.adjustpan.domain.usecase.SetAdjustPanEnabledUseCase
+import org.telegram.messenger.feature.adjustpan.domain.usecase.StartAdjustPanTransitionUseCase
+import org.telegram.messenger.feature.adjustpan.domain.usecase.StopAdjustPanTransitionUseCase
+import org.telegram.messenger.feature.adjustpan.domain.usecase.UpdateAdjustPanTransitionUseCase
+import org.telegram.messenger.feature.adjustpan.presentation.AdjustPanViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4301,6 +4313,66 @@ class AccountFeatureContainer private constructor(val account: Int) {
             setRichCaptionCreditUseCase = setRichCaptionCreditUseCase,
             setRichCaptionLockedUseCase = setRichCaptionLockedUseCase,
             clearRichCaptionUseCase = clearRichCaptionUseCase
+        )
+    }
+
+    fun createAdjustPanRepository(): AdjustPanRepository {
+        return LegacyAdjustPanRepository()
+    }
+
+    val adjustPanRepository: AdjustPanRepository by lazy {
+        LegacyAdjustPanRepository()
+    }
+
+    val calculatePanTransitionPlanUseCase: CalculatePanTransitionPlanUseCase
+        get() = CalculatePanTransitionPlanUseCase(adjustPanRepository)
+
+    val computePanProgressUseCase: ComputePanProgressUseCase
+        get() = ComputePanProgressUseCase(adjustPanRepository)
+
+    val observeAdjustPanStateUseCase: ObserveAdjustPanStateUseCase
+        get() = ObserveAdjustPanStateUseCase(adjustPanRepository)
+
+    val getAdjustPanStateUseCase: GetAdjustPanStateUseCase
+        get() = GetAdjustPanStateUseCase(adjustPanRepository)
+
+    val setAdjustPanEnabledUseCase: SetAdjustPanEnabledUseCase
+        get() = SetAdjustPanEnabledUseCase(adjustPanRepository)
+
+    val startAdjustPanTransitionUseCase: StartAdjustPanTransitionUseCase
+        get() = StartAdjustPanTransitionUseCase(adjustPanRepository)
+
+    val updateAdjustPanTransitionUseCase: UpdateAdjustPanTransitionUseCase
+        get() = UpdateAdjustPanTransitionUseCase(adjustPanRepository)
+
+    val stopAdjustPanTransitionUseCase: StopAdjustPanTransitionUseCase
+        get() = StopAdjustPanTransitionUseCase(adjustPanRepository)
+
+    val resetAdjustPanUseCase: ResetAdjustPanUseCase
+        get() = ResetAdjustPanUseCase(adjustPanRepository)
+
+    private var cachedAdjustPanViewModel: AdjustPanViewModel? = null
+
+    val adjustPanViewModel: AdjustPanViewModel
+        get() {
+            var vm = cachedAdjustPanViewModel
+            if (vm == null) {
+                vm = createAdjustPanViewModel()
+                cachedAdjustPanViewModel = vm
+            }
+            return vm
+        }
+
+    fun createAdjustPanViewModel(): AdjustPanViewModel {
+        return AdjustPanViewModel(
+            calculatePlanUseCase = calculatePanTransitionPlanUseCase,
+            observeStateUseCase = observeAdjustPanStateUseCase,
+            getAdjustPanStateUseCase = getAdjustPanStateUseCase,
+            setEnabledUseCase = setAdjustPanEnabledUseCase,
+            startTransitionUseCase = startAdjustPanTransitionUseCase,
+            updateTransitionUseCase = updateAdjustPanTransitionUseCase,
+            stopTransitionUseCase = stopAdjustPanTransitionUseCase,
+            resetUseCase = resetAdjustPanUseCase
         )
     }
 
