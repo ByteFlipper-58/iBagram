@@ -7250,6 +7250,64 @@ class AccountFeatureContainer private constructor(val account: Int) {
         )
     }
 
+    // --- FlagSecure ---
+    private var customFlagSecureRepository: org.telegram.messenger.feature.flagsecure.domain.repository.FlagSecureRepository? = null
+
+    var flagSecureRepository: org.telegram.messenger.feature.flagsecure.domain.repository.FlagSecureRepository
+        get() = customFlagSecureRepository ?: org.telegram.messenger.feature.flagsecure.data.repository.LegacyFlagSecureRepository()
+        set(value) {
+            customFlagSecureRepository = value
+        }
+
+    val attachSecurityReasonUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.AttachSecurityReasonUseCase
+        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.AttachSecurityReasonUseCase(flagSecureRepository)
+
+    val detachSecurityReasonUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.DetachSecurityReasonUseCase
+        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.DetachSecurityReasonUseCase(flagSecureRepository)
+
+    val invalidateWindowSecurityUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.InvalidateWindowSecurityUseCase
+        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.InvalidateWindowSecurityUseCase(flagSecureRepository)
+
+    val isWindowSecuredUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.IsWindowSecuredUseCase
+        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.IsWindowSecuredUseCase(flagSecureRepository)
+
+    val getWindowSecurityStateUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.GetWindowSecurityStateUseCase
+        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.GetWindowSecurityStateUseCase(flagSecureRepository)
+
+    val getAllWindowStatesUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.GetAllWindowStatesUseCase
+        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.GetAllWindowStatesUseCase(flagSecureRepository)
+
+    val resetWindowSecurityUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.ResetWindowSecurityUseCase
+        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.ResetWindowSecurityUseCase(flagSecureRepository)
+
+    val observeWindowStateUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.ObserveWindowStateUseCase
+        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.ObserveWindowStateUseCase(flagSecureRepository)
+
+    val observeAllWindowStatesUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.ObserveAllWindowStatesUseCase
+        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.ObserveAllWindowStatesUseCase(flagSecureRepository)
+
+    val evaluateSecurityRuleUseCase: org.telegram.messenger.feature.flagsecure.domain.usecase.EvaluateSecurityRuleUseCase
+        get() = org.telegram.messenger.feature.flagsecure.domain.usecase.EvaluateSecurityRuleUseCase()
+
+    private val cachedFlagSecureViewModels = ConcurrentHashMap<String, org.telegram.messenger.feature.flagsecure.presentation.FlagSecureViewModel>()
+
+    fun getFlagSecureViewModel(windowId: String = "main"): org.telegram.messenger.feature.flagsecure.presentation.FlagSecureViewModel {
+        return cachedFlagSecureViewModels.computeIfAbsent(windowId) { createFlagSecureViewModel(it) }
+    }
+
+    fun createFlagSecureViewModel(windowId: String = "main"): org.telegram.messenger.feature.flagsecure.presentation.FlagSecureViewModel {
+        return org.telegram.messenger.feature.flagsecure.presentation.FlagSecureViewModel(
+            initialWindowId = windowId,
+            attachSecurityReasonUseCase = attachSecurityReasonUseCase,
+            detachSecurityReasonUseCase = detachSecurityReasonUseCase,
+            invalidateWindowSecurityUseCase = invalidateWindowSecurityUseCase,
+            getWindowSecurityStateUseCase = getWindowSecurityStateUseCase,
+            resetWindowSecurityUseCase = resetWindowSecurityUseCase,
+            observeWindowStateUseCase = observeWindowStateUseCase,
+            observeAllWindowStatesUseCase = observeAllWindowStatesUseCase
+        )
+    }
+
     companion object {
         private val instances = ConcurrentHashMap<Int, AccountFeatureContainer>()
 

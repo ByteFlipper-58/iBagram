@@ -3131,6 +3131,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── EmuDetectorUiState.kt
             ├── EmuDetectorEvent.kt
             └── EmuDetectorViewModel.kt
+    │
+    └── flagsecure/                       # Window Security & FLAG_SECURE Arbitration Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (SecurityReasonType, WindowSecurityState, SecurityRuleSpec, SecurityEvaluationResult, SecurityRulesEvaluator)
+        │   │   └── FlagSecureModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── FlagSecureRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── AttachSecurityReasonUseCase.kt
+        │       ├── DetachSecurityReasonUseCase.kt
+        │       ├── InvalidateWindowSecurityUseCase.kt
+        │       ├── IsWindowSecuredUseCase.kt
+        │       ├── GetWindowSecurityStateUseCase.kt
+        │       ├── GetAllWindowStatesUseCase.kt
+        │       ├── ResetWindowSecurityUseCase.kt
+        │       ├── ObserveWindowStateUseCase.kt
+        │       ├── ObserveAllWindowStatesUseCase.kt
+        │       └── EvaluateSecurityRuleUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (FlagSecureMapper)
+        │   │   └── FlagSecureMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyFlagSecureRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── FlagSecureUiState.kt
+            ├── FlagSecureEvent.kt
+            └── FlagSecureViewModel.kt
 ```
 
 
@@ -3794,10 +3823,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `DetectEnvironmentUseCase`, `IsEmulatorUseCase`, `GetCachedDiagnosticsUseCase`, `ObserveDiagnosticsUseCase`, `ObserveIsEmulatorUseCase`, `GetDetectorConfigUseCase`, `UpdateDetectorConfigUseCase`, `AddCustomPackageNameUseCase`, `ClearDetectorCacheUseCase`, `CalculateConfidenceScoreUseCase`, `EvaluateEnvironmentVerdictUseCase`
   - [x] Data layer: `EmuDetectorMapper`, `LegacyEmuDetectorRepository` (thread-safe detection engine adapting `EmuDetector.java`'s 434 lines, `EmuInputDevicesDetector.java`'s 64 lines, weighted multi-factor heuristic, and in-memory test provider)
   - [x] Presentation layer: `EmuDetectorUiState`, `EmuDetectorEvent`, `EmuDetectorViewModel`
+- [x] Window Security & FLAG_SECURE Arbitration (`feature.flagsecure`)
+  - [x] Domain entities: `SecurityReasonType`, `WindowSecurityState`, `SecurityRuleSpec`, `SecurityEvaluationResult`, `SecurityRulesEvaluator`
+  - [x] Repository contract: `FlagSecureRepository`
+  - [x] Use cases: `AttachSecurityReasonUseCase`, `DetachSecurityReasonUseCase`, `InvalidateWindowSecurityUseCase`, `IsWindowSecuredUseCase`, `GetWindowSecurityStateUseCase`, `GetAllWindowStatesUseCase`, `ResetWindowSecurityUseCase`, `ObserveWindowStateUseCase`, `ObserveAllWindowStatesUseCase`, `EvaluateSecurityRuleUseCase`
+  - [x] Data layer: `FlagSecureMapper`, `LegacyFlagSecureRepository` (thread-safe reference-counting engine adapting `FlagSecureReason.java`'s 85 lines, dynamic condition evaluation, and window security state flows)
+  - [x] Presentation layer: `FlagSecureUiState`, `FlagSecureEvent`, `FlagSecureViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 107: Isolation of Window Security & FLAG_SECURE Arbitration into feature.flagsecure
+- **Context:** In Telegram Android, window security and screenshot/screen recording prevention (`WindowManager.LayoutParams.FLAG_SECURE`) were managed through `FlagSecureReason.java` (~85 lines), referenced across `LaunchActivity`, `ChatActivity`, and `ProfileActivity`. The component managed a static map of reasons per `Window` (`currentSecureReasons = HashMap<Window, Integer>`), allowing conditions (`FlagSecureCondition`) to attach, detach, and invalidate. When the count of active reasons exceeded zero, `window.addFlags(FLAG_SECURE)` was called; when the count reached zero, `window.clearFlags(FLAG_SECURE)` was called. Conditions were driven by diverse app states: passcode lock (`SharedConfig.passcodeHash.length() > 0 && !SharedConfig.allowScreenCapture`), secret chats (`currentEncryptedChat != null`), protected channels/groups (`isPeerNoForwards()`), and payment screens. However, `FlagSecureReason` was tightly coupled to `android.view.Window`, `WindowManager.LayoutParams`, and static global state, preventing unit testing, observability into why a window is secured, or decoupled state management across ViewModels.
+- **Decision:** Introduce pure domain models `SecurityReasonType`, `WindowSecurityState`, `SecurityRuleSpec`, `SecurityEvaluationResult`, and `SecurityRulesEvaluator`. Define abstract contract `FlagSecureRepository` covering reason attachment (`attachReason`), detachment (`detachReason`), condition invalidation (`invalidateWindow`), state queries (`isWindowSecured`, `getWindowState`, `getAllWindowStates`, `resetWindow`), and reactive state streams (`observeWindowState`, `observeAllWindowStates`). Implement pure domain use cases for attachment, detachment, invalidation, security checks, and rule evaluation. Provide `LegacyFlagSecureRepository` with thread-safe reference counting, condition tracking, and pure mapping in `FlagSecureMapper`. Encapsulate presentation state and MVI events in `FlagSecureViewModel`.
+- **Consequences:** All window security arbitration, screenshot protection logic, reference-counted conditions, and multi-window security states are decoupled behind clean, testable domain interfaces with full unit test coverage while remaining 100% backward compatible with Telegram's `FlagSecureReason.java`.
 
 ### ADR 106: Isolation of Hardware & Emulator / Virtual Environment Detection into feature.emudetector
 - **Context:** In Telegram Android, client environment integrity and emulator detection were implemented in `EmuDetector.java` (~434 lines) and `EmuInputDevicesDetector.java` (~64 lines), called during MTProto initial handshake in `ConnectionsManager.getInitFlags()`. The detection engine checked multiple indicators: basic build properties (hardware goldfish/ranchu/nox, generic fingerprints, product/model strings), filesystem markers (Genymotion sockets, Andy/Nox/BlueStacks files, QEMU drivers and pipes), kernel input devices (`/proc/bus/input/devices`), telephony characteristics (known test phone numbers, dummy IMEI/IMSI, network operator "android"), and system properties via reflection on `android.os.SystemProperties`. However, `EmuDetector` was tightly coupled to `android.content.Context`, `PackageManager`, `TelephonyManager`, `Build`, and static singletons, preventing unit testing without Android devices or emulators, dynamic threshold adjustments, or detailed diagnostic reporting.
