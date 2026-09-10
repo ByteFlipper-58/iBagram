@@ -724,6 +724,20 @@ import org.telegram.messenger.feature.businessrecipients.domain.usecase.ToggleEx
 import org.telegram.messenger.feature.businessrecipients.domain.usecase.ToggleRecipientFilterUseCase
 import org.telegram.messenger.feature.businessrecipients.domain.usecase.ValidateBusinessRecipientsUseCase
 import org.telegram.messenger.feature.businessrecipients.presentation.BusinessRecipientsViewModel
+import org.telegram.messenger.feature.pinchtozoom.data.repository.LegacyPinchToZoomRepository
+import org.telegram.messenger.feature.pinchtozoom.domain.repository.PinchToZoomRepository
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.CalculatePinchImageBoundsUseCase
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.CalculatePinchScaleUseCase
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.CalculatePinchTransformUseCase
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.CalculatePinchTranslationUseCase
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.EvaluatePinchGestureUseCase
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.FinishPinchZoomUseCase
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.GetPinchZoomStateUseCase
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.ObservePinchZoomStateUseCase
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.ResetPinchZoomUseCase
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.StartPinchZoomUseCase
+import org.telegram.messenger.feature.pinchtozoom.domain.usecase.UpdatePinchZoomUseCase
+import org.telegram.messenger.feature.pinchtozoom.presentation.PinchToZoomViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4539,6 +4553,75 @@ class AccountFeatureContainer private constructor(val account: Int) {
             checkChangesUseCase = checkRecipientsChangesUseCase,
             validateUseCase = validateBusinessRecipientsUseCase,
             resetUseCase = resetBusinessRecipientsUseCase
+        )
+    }
+
+    fun createPinchToZoomRepository(): PinchToZoomRepository {
+        return LegacyPinchToZoomRepository()
+    }
+
+    val pinchToZoomRepository: PinchToZoomRepository by lazy {
+        LegacyPinchToZoomRepository()
+    }
+
+    val observePinchZoomStateUseCase: ObservePinchZoomStateUseCase
+        get() = ObservePinchZoomStateUseCase(pinchToZoomRepository)
+
+    val getPinchZoomStateUseCase: GetPinchZoomStateUseCase
+        get() = GetPinchZoomStateUseCase(pinchToZoomRepository)
+
+    val calculatePinchScaleUseCase: CalculatePinchScaleUseCase
+        get() = CalculatePinchScaleUseCase(pinchToZoomRepository)
+
+    val calculatePinchTranslationUseCase: CalculatePinchTranslationUseCase
+        get() = CalculatePinchTranslationUseCase(pinchToZoomRepository)
+
+    val calculatePinchTransformUseCase: CalculatePinchTransformUseCase
+        get() = CalculatePinchTransformUseCase(pinchToZoomRepository)
+
+    val calculatePinchImageBoundsUseCase: CalculatePinchImageBoundsUseCase
+        get() = CalculatePinchImageBoundsUseCase(pinchToZoomRepository)
+
+    val evaluatePinchGestureUseCase: EvaluatePinchGestureUseCase
+        get() = EvaluatePinchGestureUseCase(pinchToZoomRepository)
+
+    val startPinchZoomUseCase: StartPinchZoomUseCase
+        get() = StartPinchZoomUseCase(pinchToZoomRepository)
+
+    val updatePinchZoomUseCase: UpdatePinchZoomUseCase
+        get() = UpdatePinchZoomUseCase(pinchToZoomRepository)
+
+    val finishPinchZoomUseCase: FinishPinchZoomUseCase
+        get() = FinishPinchZoomUseCase(pinchToZoomRepository)
+
+    val resetPinchZoomUseCase: ResetPinchZoomUseCase
+        get() = ResetPinchZoomUseCase(pinchToZoomRepository)
+
+    private var cachedPinchToZoomViewModel: PinchToZoomViewModel? = null
+
+    val pinchToZoomViewModel: PinchToZoomViewModel
+        get() {
+            var vm = cachedPinchToZoomViewModel
+            if (vm == null) {
+                vm = createPinchToZoomViewModel()
+                cachedPinchToZoomViewModel = vm
+            }
+            return vm
+        }
+
+    fun createPinchToZoomViewModel(): PinchToZoomViewModel {
+        return PinchToZoomViewModel(
+            observeZoomStateUseCase = observePinchZoomStateUseCase,
+            getZoomStateUseCase = getPinchZoomStateUseCase,
+            calculateScaleUseCase = calculatePinchScaleUseCase,
+            calculateTranslationUseCase = calculatePinchTranslationUseCase,
+            calculateTransformUseCase = calculatePinchTransformUseCase,
+            calculateImageBoundsUseCase = calculatePinchImageBoundsUseCase,
+            evaluatePinchGestureUseCase = evaluatePinchGestureUseCase,
+            startZoomUseCase = startPinchZoomUseCase,
+            updateZoomUseCase = updatePinchZoomUseCase,
+            finishZoomUseCase = finishPinchZoomUseCase,
+            resetUseCase = resetPinchZoomUseCase
         )
     }
 

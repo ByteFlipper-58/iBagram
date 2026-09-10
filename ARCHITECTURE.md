@@ -1986,6 +1986,36 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BusinessRecipientsUiState.kt
             ├── BusinessRecipientsEvent.kt
             └── BusinessRecipientsViewModel.kt
+    │
+    └── pinchtozoom/                       # Interactive Pinch-To-Zoom Media Gestures & Overlay Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (PinchTouchPoint, PinchGestureSpec, PinchGestureDecision, PinchTransform, PinchImageDimensions, PinchBoundsResult, PinchZoomState)
+        │   │   └── PinchToZoomModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── PinchToZoomRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObservePinchZoomStateUseCase.kt
+        │       ├── GetPinchZoomStateUseCase.kt
+        │       ├── CalculatePinchScaleUseCase.kt
+        │       ├── CalculatePinchTranslationUseCase.kt
+        │       ├── CalculatePinchTransformUseCase.kt
+        │       ├── CalculatePinchImageBoundsUseCase.kt
+        │       ├── EvaluatePinchGestureUseCase.kt
+        │       ├── StartPinchZoomUseCase.kt
+        │       ├── UpdatePinchZoomUseCase.kt
+        │       ├── FinishPinchZoomUseCase.kt
+        │       └── ResetPinchZoomUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure gesture progress, 2D transform & aspect ratio interpolation
+        │   │   └── PinchToZoomMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyPinchToZoomRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── PinchToZoomUiState.kt
+            ├── PinchToZoomEvent.kt
+            └── PinchToZoomViewModel.kt
 ```
 
 ### Layer Rules
@@ -2431,10 +2461,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveBusinessRecipientsUseCase`, `GetBusinessRecipientsUseCase`, `SetBusinessRecipientsUseCase`, `ToggleExcludeSelectedUseCase`, `ToggleRecipientFilterUseCase`, `AddSelectedUsersUseCase`, `RemoveSelectedUserUseCase`, `AddExcludedUsersUseCase`, `RemoveExcludedUserUseCase`, `CheckRecipientsChangesUseCase`, `ValidateBusinessRecipientsUseCase`, `ResetBusinessRecipientsUseCase`
   - [x] Data layer: `BusinessRecipientsMapper`, `LegacyBusinessRecipientsRepository` (thread safe, adapting `BusinessRecipientsHelper`, bitmask flags, mutual exclusion, validation, change detection)
   - [x] Presentation layer: `BusinessRecipientsUiState`, `BusinessRecipientsEvent`, `BusinessRecipientsViewModel`
+- [x] Interactive Pinch-To-Zoom Media Gestures & Overlay (`feature.pinchtozoom`)
+  - [x] Domain entities: `PinchTouchPoint`, `PinchGestureSpec`, `PinchGestureDecision`, `PinchTransform`, `PinchImageDimensions`, `PinchBoundsResult`, `PinchZoomState`
+  - [x] Repository contract: `PinchToZoomRepository`
+  - [x] Use cases: `ObservePinchZoomStateUseCase`, `GetPinchZoomStateUseCase`, `CalculatePinchScaleUseCase`, `CalculatePinchTranslationUseCase`, `CalculatePinchTransformUseCase`, `CalculatePinchImageBoundsUseCase`, `EvaluatePinchGestureUseCase`, `StartPinchZoomUseCase`, `UpdatePinchZoomUseCase`, `FinishPinchZoomUseCase`, `ResetPinchZoomUseCase`
+  - [x] Data layer: `PinchToZoomMapper`, `LegacyPinchToZoomRepository` (thread safe, adapting `PinchToZoomHelper`, gesture detection threshold 1.005f, 2D transform calculations, aspect ratio padding interpolation)
+  - [x] Presentation layer: `PinchToZoomUiState`, `PinchToZoomEvent`, `PinchToZoomViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 071: Isolation of Pinch-To-Zoom Gestures, Geometry, and Overlay into feature.pinchtozoom
+- **Context:** In Telegram Android, gesture-driven pinch-to-zoom for photos, video messages, and media was implemented in `PinchToZoomHelper.java` (~834 lines) in `org.telegram.ui`. The helper coupled low-level Android `MotionEvent` handling, multi-touch pointer ID mapping, custom Canvas transforms (`canvas.scale`, `canvas.translate`), dynamic view hierarchy offset calculations (`updateViewsLocation`), `SpoilerEffect`/`SpoilerEffect2` shaders, `ValueAnimator` finish transitions (`CubicBezierInterpolator.DEFAULT`), and direct `MediaController` hardware video texture view hijacking (`setTextureView`). Media viewer components across `ChatMessageCell`, `ChatActivity`, `ArticleViewer`, `PeerStoriesView`, `ProfileActivity`, `ProfileGalleryView`, `ChannelAdminLogActivity`, and `GroupCallActivity` directly relied on `PinchToZoomHelper`.
+- **Decision:** Introduce pure domain models `PinchTouchPoint`, `PinchGestureSpec`, `PinchGestureDecision` (with activation trigger at scale > 1.005f), `PinchTransform` (scale, pivotX, pivotY, translationX, translationY), `PinchImageDimensions`, `PinchBoundsResult` (with 1.0f..1.4f full-view padding interpolation), and `PinchZoomState`. Define abstract contract `PinchToZoomRepository` covering scale calculation (`calculateScale`), translation compensation (`calculateTranslation`), transform composition (`calculateTransform`), full-view padding interpolation (`calculateImageBounds`), gesture evaluation (`evaluatePinchGesture`), state observation (`observeState`), lifecycle mutations (`startZoom`, `updateZoom`, `finishZoom`, `reset`). Implement pure mathematical formulas in `PinchToZoomMapper` and thread-safe adapter `LegacyPinchToZoomRepository`. Encapsulate presentation state and MVI events in `PinchToZoomViewModel`.
+- **Consequences:** All pinch gesture distance/scale calculations, focal point translation formulas, canvas transform matrices, and aspect ratio padding adjustments are cleanly decoupled behind testable domain interfaces with full unit test coverage while remaining 100% backward compatible with Telegram's `PinchToZoomHelper`.
 
 ### ADR 070: Isolation of Business Recipients Configuration and Targeting into feature.businessrecipients
 - **Context:** In Telegram Android, targeting rules for business features (Away Messages via `AwayMessagesActivity`, Greeting Messages via `GreetingMessagesActivity`, Business Chatbots via `ChatbotsActivity`, and custom user picker `UsersSelectActivity`) were implemented in `BusinessRecipientsHelper.java` (~245 lines) in `org.telegram.ui.Business`. The helper tightly coupled Android Views (`BaseFragment`, `View`, `TextView`, `UItem`, `UniversalRecyclerView`), TLRPC peer objects (`TL_account.businessChatRecipients`), static UserConfig account indices, and bitmask manipulations with direct UI mutation callbacks (`update()`).
