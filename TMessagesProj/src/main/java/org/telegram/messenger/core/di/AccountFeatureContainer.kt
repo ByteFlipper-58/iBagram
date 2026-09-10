@@ -1069,6 +1069,22 @@ import org.telegram.messenger.feature.messagecustomparams.domain.usecase.UpdateM
 import org.telegram.messenger.feature.messagecustomparams.domain.usecase.UpdateMessageTranslationUseCase
 import org.telegram.messenger.feature.messagecustomparams.domain.usecase.UpdateVoiceTranscriptionUseCase
 import org.telegram.messenger.feature.messagecustomparams.presentation.MessageCustomParamsViewModel
+import org.telegram.messenger.feature.botforum.data.repository.LegacyBotForumRepository
+import org.telegram.messenger.feature.botforum.domain.repository.BotForumRepository
+import org.telegram.messenger.feature.botforum.domain.usecase.CheckHasBotForumDraftsUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.CheckIsBotForumUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.CheckIsStreamingTopicUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.CheckNewMessageDraftReplacementUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.DeriveTopicNameFromMessageUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.GetBotForumStateUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.GetStreamingSendButtonStateUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.ObserveBotForumStateUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.RemoveMarkedRemovedDraftsUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.ResolveStreamingButtonStateUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.SaveIsStreamingTopicUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.StopStreamingDraftUseCase
+import org.telegram.messenger.feature.botforum.domain.usecase.UpdateBotForumDraftUseCase
+import org.telegram.messenger.feature.botforum.presentation.BotForumViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6348,6 +6364,79 @@ class AccountFeatureContainer private constructor(val account: Int) {
             removeParams = removeMessageCustomParamsUseCase,
             clearAll = clearAllMessageCustomParamsUseCase,
             repository = messageCustomParamsRepository
+        )
+    }
+
+    private var customBotForumRepository: BotForumRepository? = null
+
+    var botForumRepository: BotForumRepository
+        get() = customBotForumRepository ?: LegacyBotForumRepository(account)
+        set(value) {
+            customBotForumRepository = value
+        }
+
+    val deriveTopicNameFromMessageUseCase: DeriveTopicNameFromMessageUseCase
+        get() = DeriveTopicNameFromMessageUseCase()
+
+    val resolveStreamingButtonStateUseCase: ResolveStreamingButtonStateUseCase
+        get() = ResolveStreamingButtonStateUseCase()
+
+    val observeBotForumStateUseCase: ObserveBotForumStateUseCase
+        get() = ObserveBotForumStateUseCase(botForumRepository)
+
+    val getBotForumStateUseCase: GetBotForumStateUseCase
+        get() = GetBotForumStateUseCase(botForumRepository)
+
+    val getStreamingSendButtonStateUseCase: GetStreamingSendButtonStateUseCase
+        get() = GetStreamingSendButtonStateUseCase(botForumRepository)
+
+    val checkIsStreamingTopicUseCase: CheckIsStreamingTopicUseCase
+        get() = CheckIsStreamingTopicUseCase(botForumRepository)
+
+    val saveIsStreamingTopicUseCase: SaveIsStreamingTopicUseCase
+        get() = SaveIsStreamingTopicUseCase(botForumRepository)
+
+    val checkHasBotForumDraftsUseCase: CheckHasBotForumDraftsUseCase
+        get() = CheckHasBotForumDraftsUseCase(botForumRepository)
+
+    val stopStreamingDraftUseCase: StopStreamingDraftUseCase
+        get() = StopStreamingDraftUseCase(botForumRepository)
+
+    val updateBotForumDraftUseCase: UpdateBotForumDraftUseCase
+        get() = UpdateBotForumDraftUseCase(botForumRepository)
+
+    val removeMarkedRemovedDraftsUseCase: RemoveMarkedRemovedDraftsUseCase
+        get() = RemoveMarkedRemovedDraftsUseCase(botForumRepository)
+
+    val checkNewMessageDraftReplacementUseCase: CheckNewMessageDraftReplacementUseCase
+        get() = CheckNewMessageDraftReplacementUseCase(botForumRepository)
+
+    val checkIsBotForumUseCase: CheckIsBotForumUseCase
+        get() = CheckIsBotForumUseCase(botForumRepository)
+
+    private var cachedBotForumViewModel: BotForumViewModel? = null
+
+    val botForumViewModel: BotForumViewModel
+        get() {
+            var vm = cachedBotForumViewModel
+            if (vm == null) {
+                vm = createBotForumViewModel()
+                cachedBotForumViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBotForumViewModel(): BotForumViewModel {
+        return BotForumViewModel(
+            observeBotForumStateUseCase = observeBotForumStateUseCase,
+            getStreamingSendButtonStateUseCase = getStreamingSendButtonStateUseCase,
+            checkIsStreamingTopicUseCase = checkIsStreamingTopicUseCase,
+            saveIsStreamingTopicUseCase = saveIsStreamingTopicUseCase,
+            stopStreamingDraftUseCase = stopStreamingDraftUseCase,
+            updateBotForumDraftUseCase = updateBotForumDraftUseCase,
+            removeMarkedRemovedDraftsUseCase = removeMarkedRemovedDraftsUseCase,
+            checkNewMessageDraftReplacementUseCase = checkNewMessageDraftReplacementUseCase,
+            checkHasBotForumDraftsUseCase = checkHasBotForumDraftsUseCase
         )
     }
 

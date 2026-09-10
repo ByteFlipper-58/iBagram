@@ -2776,6 +2776,38 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── MessageCustomParamsUiState.kt
             ├── MessageCustomParamsEvent.kt
             └── MessageCustomParamsViewModel.kt
+    │
+    └── botforum/                         # Bot Forum Topics & AI Streaming Drafts Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (StreamingSendButtonState, BotDraftMessageModel, BotForumTopicModel, BotForumState, Notifications)
+        │   │   └── BotForumModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BotForumRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── DeriveTopicNameFromMessageUseCase.kt
+        │       ├── ResolveStreamingButtonStateUseCase.kt
+        │       ├── ObserveBotForumStateUseCase.kt
+        │       ├── GetBotForumStateUseCase.kt
+        │       ├── GetStreamingSendButtonStateUseCase.kt
+        │       ├── CheckIsStreamingTopicUseCase.kt
+        │       ├── SaveIsStreamingTopicUseCase.kt
+        │       ├── CheckHasBotForumDraftsUseCase.kt
+        │       ├── StopStreamingDraftUseCase.kt
+        │       ├── UpdateBotForumDraftUseCase.kt
+        │       ├── RemoveMarkedRemovedDraftsUseCase.kt
+        │       ├── CheckNewMessageDraftReplacementUseCase.kt
+        │       └── CheckIsBotForumUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (Legacy BotForumHelper <-> Domain)
+        │   │   └── BotForumMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBotForumRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BotForumUiState.kt
+            ├── BotForumEvent.kt
+            └── BotForumViewModel.kt
 ```
 
 
@@ -3367,10 +3399,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `CheckMessageCustomParamsEmptyUseCase`, `MergeMessageCustomParamsUseCase`, `ObserveMessageCustomParamsStateUseCase`, `GetMessageCustomParamsStateUseCase`, `GetMessageCustomParamsUseCase`, `SetMessageCustomParamsUseCase`, `UpdateVoiceTranscriptionUseCase`, `UpdateMessageTranslationUseCase`, `UpdateMessageSummaryUseCase`, `CopyMessageCustomParamsUseCase`, `RemoveMessageCustomParamsUseCase`, `ClearAllMessageCustomParamsUseCase`
   - [x] Data layer: `MessageCustomParamsMapper`, `LegacyMessageCustomParamsRepository` (thread-safe StateFlow engine adapting `MessageCustomParamsHelper.java`'s 223 lines, Params_v1 binary serialization, SQLite storage caching, and copy/clear operations)
   - [x] Presentation layer: `MessageCustomParamsUiState`, `MessageCustomParamsEvent`, `MessageCustomParamsViewModel`
+- [x] Bot Forum Topics & AI Streaming Drafts (`feature.botforum`)
+  - [x] Domain entities: `StreamingSendButtonState`, `BotDraftMessageModel`, `BotForumTopicModel`, `BotForumState`, notification models
+  - [x] Repository contract: `BotForumRepository`
+  - [x] Use cases: `DeriveTopicNameFromMessageUseCase`, `ResolveStreamingButtonStateUseCase`, `ObserveBotForumStateUseCase`, `GetBotForumStateUseCase`, `GetStreamingSendButtonStateUseCase`, `CheckIsStreamingTopicUseCase`, `SaveIsStreamingTopicUseCase`, `CheckHasBotForumDraftsUseCase`, `StopStreamingDraftUseCase`, `UpdateBotForumDraftUseCase`, `RemoveMarkedRemovedDraftsUseCase`, `CheckNewMessageDraftReplacementUseCase`, `CheckIsBotForumUseCase`
+  - [x] Data layer: `BotForumMapper`, `LegacyBotForumRepository` (thread-safe StateFlow engine adapting `BotForumHelper.java`'s 787 lines, draft timeouts, blocklists, auto-topic creation, and streaming send button states)
+  - [x] Presentation layer: `BotForumUiState`, `BotForumEvent`, `BotForumViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 095: Isolation of Bot Forum Topics & AI Streaming Drafts into feature.botforum
+- **Context:** In Telegram Android, bot forum topics and real-time AI response streaming drafts were coordinated across `BotForumHelper.java` (~787 lines, 30.3KB), `ChatActivity.java`, `ChatActivityEnterView.java`, `ChatMessageCell.java`, `SendMessagesHelper.java`, and `MessagesController.java`. The helper managed live draft streaming text/rich actions (`TL_sendMessageTextDraftAction`, `TL_sendMessageRichMessageDraftAction`), draft lifecycle (TTL timeout self-destruct runnables, blocklists for manually stopped drafts), streaming send button states (`NO_STREAMING`, `BLOCKING`, `STOP`), auto-creation of forum topics for bot chats with editable topics via `beforeSendingFinalRequest` (`TL_messages_createForumTopic`), and topic draft replacement detection upon final message delivery. Direct interaction with static helper instances, SharedPreferences (`bot_drafts<account>`), and UI thread runnables tightly coupled chat rendering, input controls, and message dispatching to Telegram's legacy singleton state.
+- **Decision:** Introduce pure domain models `StreamingSendButtonState`, `BotDraftMessageModel`, `BotForumTopicModel`, `BotForumDraftUpdateNotificationModel`, `BotForumDraftDeleteNotificationModel`, `BotForumTopicCreateNotificationModel`, and `BotForumState`. Define abstract contract `BotForumRepository` covering reactive state observation (`observeState`), snapshots (`getState`), button state evaluation (`getStreamingSendButtonState`), streaming persistence (`isStreamingTopic`, `saveIsStreamingTopic`), active draft queries (`hasBotForumDrafts`), draft stopping (`stopStreaming`), removed draft garbage collection (`removeAllMarkedAsRemovedMessages`), draft replacement detection (`checkNewMessageDraftReplacement`), and MTProto draft event handlers. Implement pure domain algorithms `DeriveTopicNameFromMessageUseCase` (first 16 characters + ellipsis or fallback title) and `ResolveStreamingButtonStateUseCase`. Provide thread-safe `LegacyBotForumRepository` and type conversions in `BotForumMapper`. Encapsulate presentation state and MVI events in `BotForumViewModel`.
+- **Consequences:** All AI draft streaming, send button state transitions, topic name truncation logic, and bot forum topic lifecycles are decoupled behind clean, testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `BotForumHelper.java`.
 
 ### ADR 094: Isolation of Local Message Custom Parameters & Transcription/Summary State into feature.messagecustomparams
 - **Context:** In Telegram Android, local message-level parameters such as voice transcription text and flags, AI text summarization and translation, message translations, poll translations, Stars price error bounds, and premium effect playback markers were stored in SQLite database blobs via `MessageCustomParamsHelper.java` (~223 lines). The helper handled reading and writing versioned binary payloads (`Params_v1`) to/from `NativeByteBuffer`, inspecting emptiness via `isEmpty()`, and copying fields between messages via `copyParams()`. Because `MessagesStorage` and message rendering adapters directly manipulated mutable fields on `TLRPC.Message`, testing parameter merging, emptiness checks, and reactive state observation was difficult.
