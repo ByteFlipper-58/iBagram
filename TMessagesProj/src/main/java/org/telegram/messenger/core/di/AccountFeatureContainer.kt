@@ -914,6 +914,19 @@ import org.telegram.messenger.feature.downloadmanager.domain.usecase.SetDownload
 import org.telegram.messenger.feature.downloadmanager.domain.usecase.UpdateDownloadPresetUseCase
 import org.telegram.messenger.feature.downloadmanager.domain.usecase.UpdateDownloadProgressUseCase
 import org.telegram.messenger.feature.downloadmanager.presentation.DownloadManagerViewModel
+import org.telegram.messenger.feature.localization.data.repository.LegacyLocalizationRepository
+import org.telegram.messenger.feature.localization.domain.repository.LocalizationRepository
+import org.telegram.messenger.feature.localization.domain.usecase.ApplyLocaleUseCase
+import org.telegram.messenger.feature.localization.domain.usecase.DetectRtlLanguageUseCase
+import org.telegram.messenger.feature.localization.domain.usecase.FormatFullNameUseCase
+import org.telegram.messenger.feature.localization.domain.usecase.FormatNumberWithSuffixUseCase
+import org.telegram.messenger.feature.localization.domain.usecase.FormatRelativeTimestampUseCase
+import org.telegram.messenger.feature.localization.domain.usecase.GetLocalizationStateUseCase
+import org.telegram.messenger.feature.localization.domain.usecase.ObserveLocalizationStateUseCase
+import org.telegram.messenger.feature.localization.domain.usecase.ResolvePluralQuantityUseCase
+import org.telegram.messenger.feature.localization.domain.usecase.SetNameDisplayOrderUseCase
+import org.telegram.messenger.feature.localization.domain.usecase.Toggle24HourFormatUseCase
+import org.telegram.messenger.feature.localization.presentation.LocalizationViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5628,6 +5641,62 @@ class AccountFeatureContainer private constructor(val account: Int) {
             markDownloadsAsViewedUseCase = markDownloadsAsViewedUseCase,
             setDownloadNetworkTypeUseCase = setDownloadNetworkTypeUseCase,
             updateDownloadPresetUseCase = updateDownloadPresetUseCase
+        )
+    }
+
+    val localizationRepository: LocalizationRepository by lazy {
+        LegacyLocalizationRepository(account)
+    }
+
+    val resolvePluralQuantityUseCase: ResolvePluralQuantityUseCase
+        get() = ResolvePluralQuantityUseCase()
+
+    val formatRelativeTimestampUseCase: FormatRelativeTimestampUseCase
+        get() = FormatRelativeTimestampUseCase()
+
+    val formatFullNameUseCase: FormatFullNameUseCase
+        get() = FormatFullNameUseCase()
+
+    val formatNumberWithSuffixUseCase: FormatNumberWithSuffixUseCase
+        get() = FormatNumberWithSuffixUseCase()
+
+    val detectRtlLanguageUseCase: DetectRtlLanguageUseCase
+        get() = DetectRtlLanguageUseCase()
+
+    val observeLocalizationStateUseCase: ObserveLocalizationStateUseCase
+        get() = ObserveLocalizationStateUseCase(localizationRepository)
+
+    val getLocalizationStateUseCase: GetLocalizationStateUseCase
+        get() = GetLocalizationStateUseCase(localizationRepository)
+
+    val applyLocaleUseCase: ApplyLocaleUseCase
+        get() = ApplyLocaleUseCase(localizationRepository, detectRtlLanguageUseCase)
+
+    val toggle24HourFormatUseCase: Toggle24HourFormatUseCase
+        get() = Toggle24HourFormatUseCase(localizationRepository)
+
+    val setNameDisplayOrderUseCase: SetNameDisplayOrderUseCase
+        get() = SetNameDisplayOrderUseCase(localizationRepository)
+
+    private var cachedLocalizationViewModel: LocalizationViewModel? = null
+
+    val localizationViewModel: LocalizationViewModel
+        get() {
+            var vm = cachedLocalizationViewModel
+            if (vm == null) {
+                vm = createLocalizationViewModel()
+                cachedLocalizationViewModel = vm
+            }
+            return vm
+        }
+
+    fun createLocalizationViewModel(): LocalizationViewModel {
+        return LocalizationViewModel(
+            observeLocalizationStateUseCase = observeLocalizationStateUseCase,
+            applyLocaleUseCase = applyLocaleUseCase,
+            toggle24HourFormatUseCase = toggle24HourFormatUseCase,
+            setNameDisplayOrderUseCase = setNameDisplayOrderUseCase,
+            repository = localizationRepository
         )
     }
 

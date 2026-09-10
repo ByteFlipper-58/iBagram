@@ -2468,6 +2468,40 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── DownloadManagerUiState.kt
             ├── DownloadManagerEvent.kt
             └── DownloadManagerViewModel.kt
+    │
+    └── localization/                     # Language Packs, Pluralization, Relative Timestamps & RTL Detection Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── PluralQuantity.kt
+        │   │   ├── NameDisplayOrder.kt
+        │   │   ├── LocaleModel.kt
+        │   │   ├── RelativeTimeModel.kt
+        │   │   ├── LocalizationConfigModel.kt
+        │   │   └── LocalizationState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── LocalizationRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ResolvePluralQuantityUseCase.kt
+        │       ├── FormatRelativeTimestampUseCase.kt
+        │       ├── FormatFullNameUseCase.kt
+        │       ├── FormatNumberWithSuffixUseCase.kt
+        │       ├── DetectRtlLanguageUseCase.kt
+        │       ├── ObserveLocalizationStateUseCase.kt
+        │       ├── GetLocalizationStateUseCase.kt
+        │       ├── ApplyLocaleUseCase.kt
+        │       ├── Toggle24HourFormatUseCase.kt
+        │       └── SetNameDisplayOrderUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure string & plural formatters with Locale.US
+        │   │   └── LocalizationMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyLocalizationRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── LocalizationUiState.kt
+            ├── LocalizationEvent.kt
+            └── LocalizationViewModel.kt
 ```
 
 ### Layer Rules
@@ -2997,10 +3031,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `EvaluateAutoDownloadEligibilityUseCase`, `ObserveDownloadManagerStateUseCase`, `GetDownloadManagerStateUseCase`, `EnqueueDownloadUseCase`, `PauseDownloadUseCase`, `ResumeDownloadUseCase`, `CancelDownloadUseCase`, `RetryDownloadUseCase`, `ClearRecentDownloadsUseCase`, `MarkDownloadsAsViewedUseCase`, `UpdateDownloadProgressUseCase`, `CalculateDownloadSpeedUseCase`, `SetDownloadNetworkTypeUseCase`, `UpdateDownloadPresetUseCase`
   - [x] Data layer: `DownloadManagerMapper`, `LegacyDownloadManagerRepository` (thread-safe StateFlow engine adapting `DownloadController.java`'s 1800+ lines, multi-network preset masks, moving speed tracking, and download lifecycle states)
   - [x] Presentation layer: `DownloadManagerUiState`, `DownloadManagerEvent`, `DownloadManagerViewModel`
+- [x] Language Packs, Pluralization, Relative Timestamps & RTL Detection (`feature.localization`)
+  - [x] Domain entities: `PluralQuantity`, `NameDisplayOrder`, `LocaleModel`, `RelativeTimeModel`, `LocalizationConfigModel`, `LocalizationState`
+  - [x] Repository contract: `LocalizationRepository`
+  - [x] Use cases: `ResolvePluralQuantityUseCase`, `FormatRelativeTimestampUseCase`, `FormatFullNameUseCase`, `FormatNumberWithSuffixUseCase`, `DetectRtlLanguageUseCase`, `ObserveLocalizationStateUseCase`, `GetLocalizationStateUseCase`, `ApplyLocaleUseCase`, `Toggle24HourFormatUseCase`, `SetNameDisplayOrderUseCase`
+  - [x] Data layer: `LocalizationMapper`, `LegacyLocalizationRepository` (thread-safe StateFlow engine adapting `LocaleController.java`'s 4,500+ lines, pluralization rules for Slavic/Polish/Arabic/Germanic languages, string overrides, and RTL detection)
+  - [x] Presentation layer: `LocalizationUiState`, `LocalizationEvent`, `LocalizationViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 085: Isolation of Language Packs, Pluralization, Relative Timestamps & RTL Detection into feature.localization
+- **Context:** In Telegram Android, language pack downloading, plural form rules across diverse language families (English, Slavic, Polish, Arabic, etc.), string formatting (`LocaleController.getString`, `formatPluralString`), relative timestamps ("just now", "Xm ago", "Xh ago", "Xd ago"), name ordering (`FIRST_LAST` vs `LAST_FIRST`), 24-hour vs 12-hour time preferences, number abbreviations (1.2K, 3.4M), and right-to-left (RTL) language detection were governed by `LocaleController.java` (~4,517 lines, 199KB) in `org.telegram.messenger`. Direct coupling existed between Android `Context`, `Configuration`, `Resources`, raw XML language pack parsing, SQLite storage of language dictionaries (`loadRemoteLanguages`, `applyLanguageFile`), and global event broadcasts (`NotificationCenter.reloadInterface`, `suggestedLangpack`).
+- **Decision:** Introduce pure domain models `PluralQuantity` (ZERO, ONE, TWO, FEW, MANY, OTHER), `NameDisplayOrder` (FIRST_LAST, LAST_FIRST), `LocaleModel`, `RelativeTimeModel`, `LocalizationConfigModel`, and `LocalizationState`. Define abstract contract `LocalizationRepository` covering reactive state observation (`observeState`), snapshot retrieval (`getState`), current locale get/set (`getCurrentLocale`, `setCurrentLocale`), available locales querying/updating (`getAvailableLocales`, `setAvailableLocales`), string resolution with override lookups (`getString`), custom string overrides manipulation (`setCustomStrings`, `clearCustomStrings`), 24-hour format configuration (`set24HourFormat`), and name display order (`setNameDisplayOrder`). Implement pure algorithmic use cases for plural quantity resolution supporting Slavic (ru, uk, be), Polish (pl), and Arabic (ar) grammar rules (`ResolvePluralQuantityUseCase`), relative timestamp formatting (`FormatRelativeTimestampUseCase`), name ordering (`FormatFullNameUseCase`), metric suffix abbreviation (`FormatNumberWithSuffixUseCase` using `Locale.US`), and right-to-left script detection (`DetectRtlLanguageUseCase`). Provide thread-safe `LegacyLocalizationRepository` and string substitution mappers in `LocalizationMapper`. Encapsulate presentation state and MVI events in `LocalizationViewModel`.
+- **Consequences:** All localization rules, plural category resolutions, relative timestamp calculations, RTL detection, and string overrides are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `LocaleController.java`.
 
 ### ADR 084: Isolation of Downloads Queue, Auto-Download Rules & Network Presets into feature.downloadmanager
 - **Context:** In Telegram Android, automatic media downloading, network rules across cellular/Wi-Fi/roaming networks, media size constraints (photos, videos, documents, audio across contacts, private chats, groups, channels), video/music/stories preloading, active download queue monitoring (`downloadingFiles`, `recentDownloadingFiles`, `unviewedDownloads`), and progress notifications were managed by `DownloadController.java` (~1,811 lines) in `org.telegram.messenger`. Direct coupling existed with `ConnectivityManager` network broadcasts, SQLite persistence of auto-download presets, low-level file progress listeners, and UI components (`SearchDownloadsContainer`, `DownloadsInfoBottomSheet`, `DataAutoDownloadActivity`).
