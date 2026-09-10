@@ -2868,6 +2868,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── BotGuardUiState.kt
             ├── BotGuardEvent.kt
             └── BotGuardViewModel.kt
+    │
+    └── ephemeralmessages/                # Ephemeral Bot Messages, Commands & Welcome Anchors Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (EphemeralBotCommandInfo, EphemeralMessageItem, WelcomeAnchorBinding, EphemeralMessagesState)
+        │   │   └── EphemeralMessageModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── EphemeralMessagesRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── ParseBotCommandUseCase.kt
+        │       ├── GetEphemeralCommandBotIdUseCase.kt
+        │       ├── IsEphemeralCommandUseCase.kt
+        │       ├── PackEphemeralMessageIdUseCase.kt
+        │       ├── UnpackEphemeralMessageIdUseCase.kt
+        │       ├── IsEphemeralMessageIdUseCase.kt
+        │       ├── PutWelcomeAnchorBindingUseCase.kt
+        │       ├── RemoveWelcomeAnchorBindingUseCase.kt
+        │       ├── GetWelcomeAnchorBindingsUseCase.kt
+        │       ├── ClearAllWelcomeAnchorBindingsUseCase.kt
+        │       ├── ObserveEphemeralMessagesStateUseCase.kt
+        │       └── GetEphemeralMessagesStateUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (TL_ephemeral.EphemeralMessage <-> Domain)
+        │   │   └── EphemeralMessagesMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyEphemeralMessagesRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── EphemeralMessagesUiState.kt
+            ├── EphemeralMessagesEvent.kt
+            └── EphemeralMessagesViewModel.kt
 ```
 
 
@@ -3477,10 +3508,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `IsGuardBotConfirmationNeededUseCase`, `DetermineGuardBotLaunchFlowUseCase`, `RegisterGuardBotSessionUseCase`, `GetGuardBotSessionUseCase`, `GetAllActiveGuardBotSessionsUseCase`, `CloseGuardBotSessionUseCase`, `SetGuardBotConfirmationShownUseCase`, `ClearAllGuardBotSessionsUseCase`, `ObserveGuardBotDecisionsUseCase`, `ObserveGuardBotStateUseCase`, `MapJoinChatBotResultUseCase`, `FormatGuardBotBulletinUseCase`
   - [x] Data layer: `BotGuardMapper`, `LegacyBotGuardRepository` (thread-safe StateFlow and SharedFlow engine adapting `BotGuardHelper.java`'s 119 lines, `SharedPrefsHelper` webview confirmation flags, `MessagesController.whitelistedBots`, active sheet dismissals, and `NotificationCenter.guardBotDecisionResult`)
   - [x] Presentation layer: `BotGuardUiState`, `BotGuardEvent`, `BotGuardViewModel`
+- [x] Ephemeral Bot Messages, Commands & Welcome Anchors (`feature.ephemeralmessages`)
+  - [x] Domain entities: `EphemeralBotCommandInfo`, `EphemeralMessageItem`, `WelcomeAnchorBinding`, `EphemeralMessagesState`, `EphemeralMessageIdHelper`
+  - [x] Repository contract: `EphemeralMessagesRepository`
+  - [x] Use cases: `ParseBotCommandUseCase`, `GetEphemeralCommandBotIdUseCase`, `IsEphemeralCommandUseCase`, `PackEphemeralMessageIdUseCase`, `UnpackEphemeralMessageIdUseCase`, `IsEphemeralMessageIdUseCase`, `PutWelcomeAnchorBindingUseCase`, `RemoveWelcomeAnchorBindingUseCase`, `GetWelcomeAnchorBindingsUseCase`, `ClearAllWelcomeAnchorBindingsUseCase`, `ObserveEphemeralMessagesStateUseCase`, `GetEphemeralMessagesStateUseCase`
+  - [x] Data layer: `EphemeralMessagesMapper`, `LegacyEphemeralMessagesRepository` (thread-safe StateFlow engine adapting `EphemeralMessagesHelper.java`'s 489 lines, request transformation `beforeSendingFinalRequest` to `TL_ephemeral.TL_sendMessage`, ID bitmasking, and `WelcomeAnchorsState`)
+  - [x] Presentation layer: `EphemeralMessagesUiState`, `EphemeralMessagesEvent`, `EphemeralMessagesViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 098: Isolation of Ephemeral Bot Messages, Commands & Welcome Anchors into feature.ephemeralmessages
+- **Context:** In Telegram Android, ephemeral bot messages, ephemeral command detection, and welcome anchor bindings were coordinated across `EphemeralMessagesHelper.java` (~489 lines, 21.5KB), `SendMessagesHelper.java`, `MessagesController.java`, `MessagesStorage.java`, `MediaDataController.java`, and `ChatActivityEnterView.java`. The helper parsed commands (`/command@botusername`), determined whether commands were ephemeral via `TLRPC.BotCommand.ephemeral`, converted regular sending requests (`TL_messages_sendMessage`, `TL_messages_sendMedia`) to ephemeral requests (`TL_ephemeral.TL_sendMessage`) via `beforeSendingFinalRequest`, packed/unpacked ephemeral message IDs with bitmasks (`0x40000000`), converted between `TL_ephemeral.EphemeralMessage` and `TLRPC.Message`, batched incoming ephemeral updates (`EphemeralUpdates`), and tracked anchor bindings via `WelcomeAnchorsState`. Direct interaction with static instances and unsynchronized data structures tightly coupled chat input views, message dispatchers, and SQLite storage to Telegram's legacy singleton state.
+- **Decision:** Introduce pure domain models `EphemeralBotCommandInfo`, `EphemeralMessageItem`, `WelcomeAnchorBinding`, `EphemeralMessagesState`, and `EphemeralMessageIdHelper`. Define abstract contract `EphemeralMessagesRepository` covering command parsing, ephemeral detection (`isEphemeralCommand`, `getEphemeralCommandBotId`), anchor binding lifecycle (`putAnchorBinding`, `removeAnchorBinding`, `getAnchorBindings`, `clearAnchorBindings`, `clearAllAnchorBindings`), and reactive state observation (`observeState`). Implement pure algorithmic use cases for command parsing (`ParseBotCommandUseCase`), ID packing/unpacking (`PackEphemeralMessageIdUseCase`, `UnpackEphemeralMessageIdUseCase`, `IsEphemeralMessageIdUseCase`), and anchor mutators. Provide thread-safe `LegacyEphemeralMessagesRepository` and bidirectional conversion in `EphemeralMessagesMapper`. Encapsulate presentation state and MVI events in `EphemeralMessagesViewModel`.
+- **Consequences:** All ephemeral bot commands, ID packing, request interception, and welcome anchor bindings are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `EphemeralMessagesHelper.java`, `SendMessagesHelper.java`, and MTProto ephemeral update protocols.
 
 ### ADR 097: Isolation of Bot Guard WebApp Verification, Sessions & Decisions into feature.botguard
 - **Context:** In Telegram Android, bot guard verification for joining chats, channels, or viewing protected resources was coordinated through `BotGuardHelper.java` (~119 lines). The helper tracked in-flight query-to-bot mappings (`queryIdToBotId`), evaluated confirmation prerequisites via `SharedPrefsHelper.isWebViewConfirmShown` and `MessagesController.whitelistedBots`, launched guard webapps via `BotWebViewSheet` with `TYPE_WEB_VIEW_GUARD`, received asynchronous decisions via `TL_updateJoinChatWebViewDecision` (`TLRPC.JoinChatBotResult`), dispatched global `NotificationCenter.guardBotDecisionResult` notifications, and dismissed active webview sheets. Because `MessagesController`, `LaunchActivity`, `JoinGroupAlert`, and `ArticleViewer` interacted directly with static controller instances and global event buses, testing session lifecycle, launch confirmation decision logic, and bulletin formatting was difficult.

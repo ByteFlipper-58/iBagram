@@ -1113,6 +1113,21 @@ import org.telegram.messenger.feature.botguard.domain.usecase.ObserveGuardBotSta
 import org.telegram.messenger.feature.botguard.domain.usecase.RegisterGuardBotSessionUseCase
 import org.telegram.messenger.feature.botguard.domain.usecase.SetGuardBotConfirmationShownUseCase
 import org.telegram.messenger.feature.botguard.presentation.BotGuardViewModel
+import org.telegram.messenger.feature.ephemeralmessages.data.repository.LegacyEphemeralMessagesRepository
+import org.telegram.messenger.feature.ephemeralmessages.domain.repository.EphemeralMessagesRepository
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.ClearAllWelcomeAnchorBindingsUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.GetEphemeralCommandBotIdUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.GetEphemeralMessagesStateUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.GetWelcomeAnchorBindingsUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.IsEphemeralCommandUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.IsEphemeralMessageIdUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.ObserveEphemeralMessagesStateUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.PackEphemeralMessageIdUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.ParseBotCommandUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.PutWelcomeAnchorBindingUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.RemoveWelcomeAnchorBindingUseCase
+import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.UnpackEphemeralMessageIdUseCase
+import org.telegram.messenger.feature.ephemeralmessages.presentation.EphemeralMessagesViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6596,6 +6611,74 @@ class AccountFeatureContainer private constructor(val account: Int) {
             observeDecisionsUseCase = observeGuardBotDecisionsUseCase,
             observeStateUseCase = observeGuardBotStateUseCase,
             formatBulletinUseCase = formatGuardBotBulletinUseCase
+        )
+    }
+
+    private var customEphemeralMessagesRepository: EphemeralMessagesRepository? = null
+
+    var ephemeralMessagesRepository: EphemeralMessagesRepository
+        get() = customEphemeralMessagesRepository ?: LegacyEphemeralMessagesRepository(account)
+        set(value) {
+            customEphemeralMessagesRepository = value
+        }
+
+    val parseBotCommandUseCase: ParseBotCommandUseCase
+        get() = ParseBotCommandUseCase()
+
+    val getEphemeralCommandBotIdUseCase: GetEphemeralCommandBotIdUseCase
+        get() = GetEphemeralCommandBotIdUseCase(ephemeralMessagesRepository)
+
+    val isEphemeralCommandUseCase: IsEphemeralCommandUseCase
+        get() = IsEphemeralCommandUseCase(ephemeralMessagesRepository)
+
+    val packEphemeralMessageIdUseCase: PackEphemeralMessageIdUseCase
+        get() = PackEphemeralMessageIdUseCase()
+
+    val unpackEphemeralMessageIdUseCase: UnpackEphemeralMessageIdUseCase
+        get() = UnpackEphemeralMessageIdUseCase()
+
+    val isEphemeralMessageIdUseCase: IsEphemeralMessageIdUseCase
+        get() = IsEphemeralMessageIdUseCase()
+
+    val putWelcomeAnchorBindingUseCase: PutWelcomeAnchorBindingUseCase
+        get() = PutWelcomeAnchorBindingUseCase(ephemeralMessagesRepository)
+
+    val removeWelcomeAnchorBindingUseCase: RemoveWelcomeAnchorBindingUseCase
+        get() = RemoveWelcomeAnchorBindingUseCase(ephemeralMessagesRepository)
+
+    val getWelcomeAnchorBindingsUseCase: GetWelcomeAnchorBindingsUseCase
+        get() = GetWelcomeAnchorBindingsUseCase(ephemeralMessagesRepository)
+
+    val clearAllWelcomeAnchorBindingsUseCase: ClearAllWelcomeAnchorBindingsUseCase
+        get() = ClearAllWelcomeAnchorBindingsUseCase(ephemeralMessagesRepository)
+
+    val observeEphemeralMessagesStateUseCase: ObserveEphemeralMessagesStateUseCase
+        get() = ObserveEphemeralMessagesStateUseCase(ephemeralMessagesRepository)
+
+    val getEphemeralMessagesStateUseCase: GetEphemeralMessagesStateUseCase
+        get() = GetEphemeralMessagesStateUseCase(ephemeralMessagesRepository)
+
+    private var cachedEphemeralMessagesViewModel: EphemeralMessagesViewModel? = null
+
+    val ephemeralMessagesViewModel: EphemeralMessagesViewModel
+        get() {
+            var vm = cachedEphemeralMessagesViewModel
+            if (vm == null) {
+                vm = createEphemeralMessagesViewModel()
+                cachedEphemeralMessagesViewModel = vm
+            }
+            return vm
+        }
+
+    fun createEphemeralMessagesViewModel(): EphemeralMessagesViewModel {
+        return EphemeralMessagesViewModel(
+            parseBotCommandUseCase = parseBotCommandUseCase,
+            isEphemeralCommandUseCase = isEphemeralCommandUseCase,
+            putWelcomeAnchorBindingUseCase = putWelcomeAnchorBindingUseCase,
+            removeWelcomeAnchorBindingUseCase = removeWelcomeAnchorBindingUseCase,
+            getWelcomeAnchorBindingsUseCase = getWelcomeAnchorBindingsUseCase,
+            clearAllWelcomeAnchorBindingsUseCase = clearAllWelcomeAnchorBindingsUseCase,
+            observeStateUseCase = observeEphemeralMessagesStateUseCase
         )
     }
 
