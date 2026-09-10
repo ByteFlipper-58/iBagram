@@ -752,6 +752,23 @@ import org.telegram.messenger.feature.recyclerscroll.domain.usecase.ResetRecycle
 import org.telegram.messenger.feature.recyclerscroll.domain.usecase.StartRecyclerScrollUseCase
 import org.telegram.messenger.feature.recyclerscroll.domain.usecase.UpdateRecyclerScrollProgressUseCase
 import org.telegram.messenger.feature.recyclerscroll.presentation.RecyclerScrollViewModel
+import org.telegram.messenger.feature.emojieffects.data.repository.LegacyEmojiEffectsRepository
+import org.telegram.messenger.feature.emojieffects.domain.repository.EmojiEffectsRepository
+import org.telegram.messenger.feature.emojieffects.domain.usecase.CalculateEmojiBoundsUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.CalculateEmojiOverlayPositionUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.ClearEmojiEffectsUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.DecodeEmojiInteractionsJsonUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.DismissEmojiEffectUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.EncodeEmojiInteractionsJsonUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.EvaluateAnimationQuotaUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.EvaluateEmojiSupportUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.GetEmojiEffectsStateUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.NormalizeEmojiUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.ObserveEmojiEffectsStateUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.RecordEmojiTapUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.StartEmojiEffectUseCase
+import org.telegram.messenger.feature.emojieffects.domain.usecase.UpdateEmojiEffectProgressUseCase
+import org.telegram.messenger.feature.emojieffects.presentation.EmojiEffectsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4705,6 +4722,80 @@ class AccountFeatureContainer private constructor(val account: Int) {
             finishRecyclerScrollUseCase = finishRecyclerScrollUseCase,
             cancelRecyclerScrollUseCase = cancelRecyclerScrollUseCase,
             resetRecyclerScrollUseCase = resetRecyclerScrollUseCase
+        )
+    }
+
+    fun createEmojiEffectsRepository(): EmojiEffectsRepository {
+        return LegacyEmojiEffectsRepository()
+    }
+
+    val emojiEffectsRepository: EmojiEffectsRepository by lazy {
+        LegacyEmojiEffectsRepository()
+    }
+
+    val normalizeEmojiUseCase: NormalizeEmojiUseCase
+        get() = NormalizeEmojiUseCase()
+
+    val evaluateEmojiSupportUseCase: EvaluateEmojiSupportUseCase
+        get() = EvaluateEmojiSupportUseCase(normalizeEmojiUseCase)
+
+    val recordEmojiTapUseCase: RecordEmojiTapUseCase
+        get() = RecordEmojiTapUseCase(emojiEffectsRepository, normalizeEmojiUseCase)
+
+    val encodeEmojiInteractionsJsonUseCase: EncodeEmojiInteractionsJsonUseCase
+        get() = EncodeEmojiInteractionsJsonUseCase()
+
+    val decodeEmojiInteractionsJsonUseCase: DecodeEmojiInteractionsJsonUseCase
+        get() = DecodeEmojiInteractionsJsonUseCase()
+
+    val calculateEmojiBoundsUseCase: CalculateEmojiBoundsUseCase
+        get() = CalculateEmojiBoundsUseCase()
+
+    val calculateEmojiOverlayPositionUseCase: CalculateEmojiOverlayPositionUseCase
+        get() = CalculateEmojiOverlayPositionUseCase()
+
+    val evaluateAnimationQuotaUseCase: EvaluateAnimationQuotaUseCase
+        get() = EvaluateAnimationQuotaUseCase()
+
+    val observeEmojiEffectsStateUseCase: ObserveEmojiEffectsStateUseCase
+        get() = ObserveEmojiEffectsStateUseCase(emojiEffectsRepository)
+
+    val getEmojiEffectsStateUseCase: GetEmojiEffectsStateUseCase
+        get() = GetEmojiEffectsStateUseCase(emojiEffectsRepository)
+
+    val startEmojiEffectUseCase: StartEmojiEffectUseCase
+        get() = StartEmojiEffectUseCase(emojiEffectsRepository, evaluateAnimationQuotaUseCase)
+
+    val updateEmojiEffectProgressUseCase: UpdateEmojiEffectProgressUseCase
+        get() = UpdateEmojiEffectProgressUseCase(emojiEffectsRepository)
+
+    val dismissEmojiEffectUseCase: DismissEmojiEffectUseCase
+        get() = DismissEmojiEffectUseCase(emojiEffectsRepository)
+
+    val clearEmojiEffectsUseCase: ClearEmojiEffectsUseCase
+        get() = ClearEmojiEffectsUseCase(emojiEffectsRepository)
+
+    private var cachedEmojiEffectsViewModel: EmojiEffectsViewModel? = null
+
+    val emojiEffectsViewModel: EmojiEffectsViewModel
+        get() {
+            var vm = cachedEmojiEffectsViewModel
+            if (vm == null) {
+                vm = createEmojiEffectsViewModel()
+                cachedEmojiEffectsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createEmojiEffectsViewModel(): EmojiEffectsViewModel {
+        return EmojiEffectsViewModel(
+            observeEmojiEffectsStateUseCase = observeEmojiEffectsStateUseCase,
+            recordEmojiTapUseCase = recordEmojiTapUseCase,
+            startEmojiEffectUseCase = startEmojiEffectUseCase,
+            updateEmojiEffectProgressUseCase = updateEmojiEffectProgressUseCase,
+            dismissEmojiEffectUseCase = dismissEmojiEffectUseCase,
+            clearEmojiEffectsUseCase = clearEmojiEffectsUseCase,
+            repository = emojiEffectsRepository
         )
     }
 

@@ -2046,6 +2046,39 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── RecyclerScrollUiState.kt
             ├── RecyclerScrollEvent.kt
             └── RecyclerScrollViewModel.kt
+    │
+    └── emojieffects/                      # Interactive Emoji Animations, Tap Protocols & Overlay Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (EmojiInteractionAction, EmojiInteractionSession, EmojiAnimationQuotaResult, EmojiOverlayGeometry, EmojiEffectItem, EmojiEffectsState)
+        │   │   └── EmojiEffectsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── EmojiEffectsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── NormalizeEmojiUseCase.kt
+        │       ├── EvaluateEmojiSupportUseCase.kt
+        │       ├── RecordEmojiTapUseCase.kt
+        │       ├── EncodeEmojiInteractionsJsonUseCase.kt
+        │       ├── DecodeEmojiInteractionsJsonUseCase.kt
+        │       ├── CalculateEmojiBoundsUseCase.kt
+        │       ├── CalculateEmojiOverlayPositionUseCase.kt
+        │       ├── EvaluateAnimationQuotaUseCase.kt
+        │       ├── ObserveEmojiEffectsStateUseCase.kt
+        │       ├── GetEmojiEffectsStateUseCase.kt
+        │       ├── StartEmojiEffectUseCase.kt
+        │       ├── UpdateEmojiEffectProgressUseCase.kt
+        │       ├── DismissEmojiEffectUseCase.kt
+        │       └── ClearEmojiEffectsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure codecs (JSON payload <-> Domain, TLRPC interaction mapper)
+        │   │   └── EmojiEffectsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyEmojiEffectsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── EmojiEffectsUiState.kt
+            ├── EmojiEffectsEvent.kt
+            └── EmojiEffectsViewModel.kt
 ```
 
 ### Layer Rules
@@ -2503,10 +2536,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ObserveRecyclerScrollStateUseCase`, `GetRecyclerScrollStateUseCase`, `EvaluateScrollEligibilityUseCase`, `CalculateScrollAnimationPlanUseCase`, `CalculateScrollLengthUseCase`, `ComputeScrollViewTranslationsUseCase`, `StartRecyclerScrollUseCase`, `UpdateRecyclerScrollProgressUseCase`, `FinishRecyclerScrollUseCase`, `CancelRecyclerScrollUseCase`, `ResetRecyclerScrollUseCase`
   - [x] Data layer: `RecyclerScrollMapper`, `LegacyRecyclerScrollRepository` (thread safe, adapting `RecyclerAnimationScrollHelper`, duration formulas 150ms/600ms/dynamic 300..1300ms, scrollLength and translation math, eligibility rules)
   - [x] Presentation layer: `RecyclerScrollUiState`, `RecyclerScrollEvent`, `RecyclerScrollViewModel`
+- [x] Interactive Emoji Animations, Tap Protocols & Overlay (`feature.emojieffects`)
+  - [x] Domain entities: `EmojiInteractionAction`, `EmojiInteractionSession`, `EmojiAnimationQuotaStatus`, `EmojiAnimationQuotaResult`, `EmojiOverlayGeometry`, `EmojiEffectItem`, `EmojiEffectsState`
+  - [x] Repository contract: `EmojiEffectsRepository`
+  - [x] Use cases: `NormalizeEmojiUseCase`, `EvaluateEmojiSupportUseCase`, `RecordEmojiTapUseCase`, `EncodeEmojiInteractionsJsonUseCase`, `DecodeEmojiInteractionsJsonUseCase`, `CalculateEmojiBoundsUseCase`, `CalculateEmojiOverlayPositionUseCase`, `EvaluateAnimationQuotaUseCase`, `ObserveEmojiEffectsStateUseCase`, `GetEmojiEffectsStateUseCase`, `StartEmojiEffectUseCase`, `UpdateEmojiEffectProgressUseCase`, `DismissEmojiEffectUseCase`, `ClearEmojiEffectsUseCase`
+  - [x] Data layer: `EmojiEffectsMapper`, `LegacyEmojiEffectsRepository` (thread safe, adapting `EmojiAnimationsOverlay`, interaction JSON encoding/decoding, quota limits 12 global / 4 per msg, bounds and position calculations, emoji normalization)
+  - [x] Presentation layer: `EmojiEffectsUiState`, `EmojiEffectsEvent`, `EmojiEffectsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 073: Isolation of Interactive Emoji Animations, Tap Protocols, and Overlay Geometry into feature.emojieffects
+- **Context:** In Telegram Android, full-screen interactive emoji animations, synchronized taps protocols, and reaction effect overlays were handled by `EmojiAnimationsOverlay.java` (~1139 lines) in `org.telegram.ui`. The overlay tightly coupled Android Views (`ChatMessageCell`, `ChatActionCell`, `RecyclerListView`, `FrameLayout`), custom Canvas rendering (`canvas.draw`, `ImageReceiver`, `RLottieDrawable`), Android `HapticFeedbackConstants`, Telegram network requests (`TL_sendMessageEmojiInteraction`, `TL_messages_setTyping`), direct `MessagesController` calls (`sendTyping`, `getAvailableEffects`), `MediaDataController` sticker loading, and JSON serialization of interaction intervals (`JSONObject`, `JSONArray`). Presentation screens like `ChatActivity`, `StoryViewer`, and custom story reaction widgets directly invoked `EmojiAnimationsOverlay`.
+- **Decision:** Introduce pure domain models `EmojiInteractionAction`, `EmojiInteractionSession`, `EmojiAnimationQuotaResult`, `EmojiOverlayGeometry`, `EmojiEffectItem`, and `EmojiEffectsState`. Define abstract contract `EmojiEffectsRepository` covering state observation (`observeState`), snapshot retrieval (`getState`), tap recording with relative millisecond offsets (`recordTap`), tap session draining (`drainCurrentSession`), effect lifecycle (`startEffect`, `updateEffectProgress`, `dismissEffect`, `removeEffect`, `cancelAllEffects`, `clear`), and document animation variant tracking (`updateLastAnimationIndex`, `getLastAnimationIndex`). Implement clean algorithms for emoji normalization (stripping tone modifiers `\uD83C\uDFFB..\uDFFF`, ZWJ gender variations `\u200D\u2640/\u2642`, and variation selector `\uFE0F`), emoji support evaluation (excluding keycaps, expanding colored hearts for `"❤"`), interaction JSON payload encoding/decoding, screen-aware overlay bounds calculations (tablet 40%, smartphone 50%), geometry calculations for incoming/outgoing messages, and animation quota rules (max 12 global, max 4 per message, lottie cache generation locks). Provide thread-safe repository `LegacyEmojiEffectsRepository` and pure mapper `EmojiEffectsMapper`. Encapsulate presentation state and MVI events in `EmojiEffectsViewModel`.
+- **Consequences:** All interactive emoji animation logic, tap synchronization codecs, quota arbitration, and screen overlay layout geometry are cleanly decoupled into testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `EmojiAnimationsOverlay`.
 
 ### ADR 072: Isolation of Recycler Animation Scroll Calculations and Transitions into feature.recyclerscroll
 - **Context:** In Telegram Android, animated fast-scroll and view transitions for recycler lists were managed by `RecyclerAnimationScrollHelper.java` (~502 lines) in `org.telegram.ui.Components`. The helper tightly coupled Android `ValueAnimator`, `View.OnLayoutChangeListener`, Android views (`RecyclerListView`, `IMessageCell`, `ChatMessageCell`), direct view hierarchy hierarchy manipulations (`layoutManager.ignoreView`, `layoutManager.stopIgnoringView`, `recyclerView.addView`, `recyclerView.removeView`), child view translation updates, and `MessagesController.getGlobalMainSettings()` flags. Components across `ChatActivity`, `DialogsActivity`, `TopicsFragment`, `ContactsActivity`, `ChannelAdminLogActivity`, `CallLogActivity`, `SharedMediaLayout`, and emoji pickers directly relied on `RecyclerAnimationScrollHelper`.
