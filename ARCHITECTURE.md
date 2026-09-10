@@ -1955,6 +1955,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── KeyboardHideUiState.kt
             ├── KeyboardHideEvent.kt
             └── KeyboardHideViewModel.kt
+    │
+    └── businessrecipients/                # Business Recipients Targeting & Configuration Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (RecipientFilterType, BusinessRecipientsModel, RecipientValidationResult)
+        │   │   └── BusinessRecipientsModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BusinessRecipientsRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ObserveBusinessRecipientsUseCase.kt
+        │       ├── GetBusinessRecipientsUseCase.kt
+        │       ├── SetBusinessRecipientsUseCase.kt
+        │       ├── ToggleExcludeSelectedUseCase.kt
+        │       ├── ToggleRecipientFilterUseCase.kt
+        │       ├── AddSelectedUsersUseCase.kt
+        │       ├── RemoveSelectedUserUseCase.kt
+        │       ├── AddExcludedUsersUseCase.kt
+        │       ├── RemoveExcludedUserUseCase.kt
+        │       ├── CheckRecipientsChangesUseCase.kt
+        │       ├── ValidateBusinessRecipientsUseCase.kt
+        │       └── ResetBusinessRecipientsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure bitmask flags and validation rules
+        │   │   └── BusinessRecipientsMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBusinessRecipientsRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BusinessRecipientsUiState.kt
+            ├── BusinessRecipientsEvent.kt
+            └── BusinessRecipientsViewModel.kt
 ```
 
 ### Layer Rules
@@ -2394,10 +2425,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `CalculateKeyboardHideProgressUseCase`, `EvaluateKeyboardDismissDecisionUseCase`, `ObserveKeyboardHideStateUseCase`, `GetKeyboardHideStateUseCase`, `SetKeyboardHideEnabledUseCase`, `StartKeyboardHideMovingUseCase`, `UpdateKeyboardHideMovingUseCase`, `EndKeyboardHideMovingUseCase`, `FinishKeyboardHideDismissUseCase`, `ResetKeyboardHideUseCase`
   - [x] Data layer: `KeyboardHideMapper`, `LegacyKeyboardHideRepository` (thread safe, adapting `KeyboardHideHelper`, threshold evaluation, scroll arbitration, headless in-memory fallback)
   - [x] Presentation layer: `KeyboardHideUiState`, `KeyboardHideEvent`, `KeyboardHideViewModel`
+- [x] Business Recipients Configuration & Targeting (`feature.businessrecipients`)
+  - [x] Domain entities: `RecipientFilterType`, `BusinessRecipientsModel`, `RecipientValidationResult`
+  - [x] Repository contract: `BusinessRecipientsRepository`
+  - [x] Use cases: `ObserveBusinessRecipientsUseCase`, `GetBusinessRecipientsUseCase`, `SetBusinessRecipientsUseCase`, `ToggleExcludeSelectedUseCase`, `ToggleRecipientFilterUseCase`, `AddSelectedUsersUseCase`, `RemoveSelectedUserUseCase`, `AddExcludedUsersUseCase`, `RemoveExcludedUserUseCase`, `CheckRecipientsChangesUseCase`, `ValidateBusinessRecipientsUseCase`, `ResetBusinessRecipientsUseCase`
+  - [x] Data layer: `BusinessRecipientsMapper`, `LegacyBusinessRecipientsRepository` (thread safe, adapting `BusinessRecipientsHelper`, bitmask flags, mutual exclusion, validation, change detection)
+  - [x] Presentation layer: `BusinessRecipientsUiState`, `BusinessRecipientsEvent`, `BusinessRecipientsViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 070: Isolation of Business Recipients Configuration and Targeting into feature.businessrecipients
+- **Context:** In Telegram Android, targeting rules for business features (Away Messages via `AwayMessagesActivity`, Greeting Messages via `GreetingMessagesActivity`, Business Chatbots via `ChatbotsActivity`, and custom user picker `UsersSelectActivity`) were implemented in `BusinessRecipientsHelper.java` (~245 lines) in `org.telegram.ui.Business`. The helper tightly coupled Android Views (`BaseFragment`, `View`, `TextView`, `UItem`, `UniversalRecyclerView`), TLRPC peer objects (`TL_account.businessChatRecipients`), static UserConfig account indices, and bitmask manipulations with direct UI mutation callbacks (`update()`).
+- **Decision:** Introduce pure domain models `RecipientFilterType` (EXISTING_CHATS = 1, NEW_CHATS = 2, CONTACTS = 4, NON_CONTACTS = 8), `BusinessRecipientsModel` (with `excludeSelected`, filter flags, `selectedUserIds`, `excludedUserIds`, `isBot`), and `RecipientValidationResult`. Define abstract contract `BusinessRecipientsRepository` covering observation (`observeRecipients`), getters/setters, filter toggling (`toggleFilter`), mode toggling (`toggleExcludeSelected`), user selection/exclusion management with mutual exclusion guarantees (`addSelectedUsers`, `removeSelectedUser`, `addExcludedUsers`, `removeExcludedUser`), change detection (`hasChanges`), and validation (`validate`). Implement pure mapping and validation algorithms in `BusinessRecipientsMapper` and a thread-safe adapter `LegacyBusinessRecipientsRepository`. Encapsulate presentation state and MVI events in `BusinessRecipientsViewModel`.
+- **Consequences:** All business recipient targeting logic, bitmask encoding/decoding, user exclusion rules, and validation checks are decoupled into pure domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `BusinessRecipientsHelper`.
 
 ### ADR 069: Isolation of Interactive Pull-Down Keyboard Dismissal into feature.keyboardhide
 - **Context:** In Telegram Android, gesture-driven keyboard pull-down dismissal and scroll arbitration were handled by `KeyboardHideHelper.java` (~193 lines) in `org.telegram.ui`. The helper coupled low-level `MotionEvent` handling, Android `VelocityTracker`, Android 11+ `WindowInsetsAnimationController` control calls (`controlWindowInsetsAnimation`, `setInsetsAndAlpha`), direct `ChatActivityEnterView` geometry queries, `AdjustPanLayoutHelper` synchronization (`OnPanTranslationUpdate`, `OnTransitionStart`, `OnTransitionEnd`), and list scroll cancellation. Components across `ChatActivity` directly depended on internal static state (`KeyboardHideHelper.ENABLED`) and direct touch interception.

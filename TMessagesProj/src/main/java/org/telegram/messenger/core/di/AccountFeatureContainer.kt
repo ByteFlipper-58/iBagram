@@ -709,6 +709,21 @@ import org.telegram.messenger.feature.keyboardhide.domain.usecase.SetKeyboardHid
 import org.telegram.messenger.feature.keyboardhide.domain.usecase.StartKeyboardHideMovingUseCase
 import org.telegram.messenger.feature.keyboardhide.domain.usecase.UpdateKeyboardHideMovingUseCase
 import org.telegram.messenger.feature.keyboardhide.presentation.KeyboardHideViewModel
+import org.telegram.messenger.feature.businessrecipients.data.repository.LegacyBusinessRecipientsRepository
+import org.telegram.messenger.feature.businessrecipients.domain.repository.BusinessRecipientsRepository
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.AddExcludedUsersUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.AddSelectedUsersUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.CheckRecipientsChangesUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.GetBusinessRecipientsUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.ObserveBusinessRecipientsUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.RemoveExcludedUserUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.RemoveSelectedUserUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.ResetBusinessRecipientsUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.SetBusinessRecipientsUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.ToggleExcludeSelectedUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.ToggleRecipientFilterUseCase
+import org.telegram.messenger.feature.businessrecipients.domain.usecase.ValidateBusinessRecipientsUseCase
+import org.telegram.messenger.feature.businessrecipients.presentation.BusinessRecipientsViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -4451,6 +4466,79 @@ class AccountFeatureContainer private constructor(val account: Int) {
             endMovingUseCase = endKeyboardHideMovingUseCase,
             finishDismissUseCase = finishKeyboardHideDismissUseCase,
             resetUseCase = resetKeyboardHideUseCase
+        )
+    }
+
+    fun createBusinessRecipientsRepository(): BusinessRecipientsRepository {
+        return LegacyBusinessRecipientsRepository()
+    }
+
+    val businessRecipientsRepository: BusinessRecipientsRepository by lazy {
+        LegacyBusinessRecipientsRepository()
+    }
+
+    val observeBusinessRecipientsUseCase: ObserveBusinessRecipientsUseCase
+        get() = ObserveBusinessRecipientsUseCase(businessRecipientsRepository)
+
+    val getBusinessRecipientsUseCase: GetBusinessRecipientsUseCase
+        get() = GetBusinessRecipientsUseCase(businessRecipientsRepository)
+
+    val setBusinessRecipientsUseCase: SetBusinessRecipientsUseCase
+        get() = SetBusinessRecipientsUseCase(businessRecipientsRepository)
+
+    val toggleExcludeSelectedUseCase: ToggleExcludeSelectedUseCase
+        get() = ToggleExcludeSelectedUseCase(businessRecipientsRepository)
+
+    val toggleRecipientFilterUseCase: ToggleRecipientFilterUseCase
+        get() = ToggleRecipientFilterUseCase(businessRecipientsRepository)
+
+    val addSelectedUsersUseCase: AddSelectedUsersUseCase
+        get() = AddSelectedUsersUseCase(businessRecipientsRepository)
+
+    val removeSelectedUserUseCase: RemoveSelectedUserUseCase
+        get() = RemoveSelectedUserUseCase(businessRecipientsRepository)
+
+    val addExcludedUsersUseCase: AddExcludedUsersUseCase
+        get() = AddExcludedUsersUseCase(businessRecipientsRepository)
+
+    val removeExcludedUserUseCase: RemoveExcludedUserUseCase
+        get() = RemoveExcludedUserUseCase(businessRecipientsRepository)
+
+    val checkRecipientsChangesUseCase: CheckRecipientsChangesUseCase
+        get() = CheckRecipientsChangesUseCase(businessRecipientsRepository)
+
+    val validateBusinessRecipientsUseCase: ValidateBusinessRecipientsUseCase
+        get() = ValidateBusinessRecipientsUseCase(businessRecipientsRepository)
+
+    val resetBusinessRecipientsUseCase: ResetBusinessRecipientsUseCase
+        get() = ResetBusinessRecipientsUseCase(businessRecipientsRepository)
+
+    private var cachedBusinessRecipientsViewModel: BusinessRecipientsViewModel? = null
+
+    val businessRecipientsViewModel: BusinessRecipientsViewModel
+        get() {
+            var vm = cachedBusinessRecipientsViewModel
+            if (vm == null) {
+                vm = createBusinessRecipientsViewModel()
+                cachedBusinessRecipientsViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBusinessRecipientsViewModel(): BusinessRecipientsViewModel {
+        return BusinessRecipientsViewModel(
+            observeRecipientsUseCase = observeBusinessRecipientsUseCase,
+            getRecipientsUseCase = getBusinessRecipientsUseCase,
+            setRecipientsUseCase = setBusinessRecipientsUseCase,
+            toggleExcludeSelectedUseCase = toggleExcludeSelectedUseCase,
+            toggleRecipientFilterUseCase = toggleRecipientFilterUseCase,
+            addSelectedUsersUseCase = addSelectedUsersUseCase,
+            removeSelectedUserUseCase = removeSelectedUserUseCase,
+            addExcludedUsersUseCase = addExcludedUsersUseCase,
+            removeExcludedUserUseCase = removeExcludedUserUseCase,
+            checkChangesUseCase = checkRecipientsChangesUseCase,
+            validateUseCase = validateBusinessRecipientsUseCase,
+            resetUseCase = resetBusinessRecipientsUseCase
         )
     }
 
