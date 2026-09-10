@@ -7191,6 +7191,65 @@ class AccountFeatureContainer private constructor(val account: Int) {
         )
     }
 
+    // --- EmuDetector ---
+    private var customEmuDetectorRepository: org.telegram.messenger.feature.emudetector.domain.repository.EmuDetectorRepository? = null
+
+    var emuDetectorRepository: org.telegram.messenger.feature.emudetector.domain.repository.EmuDetectorRepository
+        get() = customEmuDetectorRepository ?: org.telegram.messenger.feature.emudetector.data.repository.LegacyEmuDetectorRepository()
+        set(value) {
+            customEmuDetectorRepository = value
+        }
+
+    val detectEnvironmentUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.DetectEnvironmentUseCase
+        get() = org.telegram.messenger.feature.emudetector.domain.usecase.DetectEnvironmentUseCase(emuDetectorRepository)
+
+    val isEmulatorUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.IsEmulatorUseCase
+        get() = org.telegram.messenger.feature.emudetector.domain.usecase.IsEmulatorUseCase(emuDetectorRepository)
+
+    val getCachedDiagnosticsUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.GetCachedDiagnosticsUseCase
+        get() = org.telegram.messenger.feature.emudetector.domain.usecase.GetCachedDiagnosticsUseCase(emuDetectorRepository)
+
+    val observeDiagnosticsUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.ObserveDiagnosticsUseCase
+        get() = org.telegram.messenger.feature.emudetector.domain.usecase.ObserveDiagnosticsUseCase(emuDetectorRepository)
+
+    val observeIsEmulatorUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.ObserveIsEmulatorUseCase
+        get() = org.telegram.messenger.feature.emudetector.domain.usecase.ObserveIsEmulatorUseCase(emuDetectorRepository)
+
+    val getDetectorConfigUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.GetDetectorConfigUseCase
+        get() = org.telegram.messenger.feature.emudetector.domain.usecase.GetDetectorConfigUseCase(emuDetectorRepository)
+
+    val updateDetectorConfigUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.UpdateDetectorConfigUseCase
+        get() = org.telegram.messenger.feature.emudetector.domain.usecase.UpdateDetectorConfigUseCase(emuDetectorRepository)
+
+    val addCustomPackageNameUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.AddCustomPackageNameUseCase
+        get() = org.telegram.messenger.feature.emudetector.domain.usecase.AddCustomPackageNameUseCase(emuDetectorRepository)
+
+    val clearDetectorCacheUseCase: org.telegram.messenger.feature.emudetector.domain.usecase.ClearDetectorCacheUseCase
+        get() = org.telegram.messenger.feature.emudetector.domain.usecase.ClearDetectorCacheUseCase(emuDetectorRepository)
+
+    private var cachedEmuDetectorViewModel: org.telegram.messenger.feature.emudetector.presentation.EmuDetectorViewModel? = null
+
+    val emuDetectorViewModel: org.telegram.messenger.feature.emudetector.presentation.EmuDetectorViewModel
+        get() {
+            var vm = cachedEmuDetectorViewModel
+            if (vm == null) {
+                vm = createEmuDetectorViewModel()
+                cachedEmuDetectorViewModel = vm
+            }
+            return vm
+        }
+
+    fun createEmuDetectorViewModel(): org.telegram.messenger.feature.emudetector.presentation.EmuDetectorViewModel {
+        return org.telegram.messenger.feature.emudetector.presentation.EmuDetectorViewModel(
+            detectEnvironmentUseCase = detectEnvironmentUseCase,
+            observeDiagnosticsUseCase = observeDiagnosticsUseCase,
+            getDetectorConfigUseCase = getDetectorConfigUseCase,
+            updateDetectorConfigUseCase = updateDetectorConfigUseCase,
+            addCustomPackageNameUseCase = addCustomPackageNameUseCase,
+            clearDetectorCacheUseCase = clearDetectorCacheUseCase
+        )
+    }
+
     companion object {
         private val instances = ConcurrentHashMap<Int, AccountFeatureContainer>()
 

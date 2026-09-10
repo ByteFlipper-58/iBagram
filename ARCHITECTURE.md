@@ -3101,6 +3101,36 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── AnrWatchdogUiState.kt
             ├── AnrWatchdogEvent.kt
             └── AnrWatchdogViewModel.kt
+    │
+    └── emudetector/                      # Hardware & Emulator / Virtual Environment Detection Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (EmulatorType, DetectionCategory, DetectionIndicator, EnvironmentVerdict, EmulatorDiagnostics, EmulatorDetectorConfig, EmulatorHeuristics)
+        │   │   └── EmuDetectorModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── EmuDetectorRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── DetectEnvironmentUseCase.kt
+        │       ├── IsEmulatorUseCase.kt
+        │       ├── GetCachedDiagnosticsUseCase.kt
+        │       ├── ObserveDiagnosticsUseCase.kt
+        │       ├── ObserveIsEmulatorUseCase.kt
+        │       ├── GetDetectorConfigUseCase.kt
+        │       ├── UpdateDetectorConfigUseCase.kt
+        │       ├── AddCustomPackageNameUseCase.kt
+        │       ├── ClearDetectorCacheUseCase.kt
+        │       ├── CalculateConfidenceScoreUseCase.kt
+        │       └── EvaluateEnvironmentVerdictUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (EmuDetectorMapper)
+        │   │   └── EmuDetectorMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyEmuDetectorRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── EmuDetectorUiState.kt
+            ├── EmuDetectorEvent.kt
+            └── EmuDetectorViewModel.kt
 ```
 
 
@@ -3758,10 +3788,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `StartAnrMonitoringUseCase`, `StopAnrMonitoringUseCase`, `SetAppForegroundStatusUseCase`, `SendMainThreadPingUseCase`, `AcknowledgePingUseCase`, `CheckMainThreadFreezeUseCase`, `ResolveIncidentUseCase`, `GetAnrWatchdogStateUseCase`, `GetAnrIncidentsUseCase`, `ClearAnrHistoryUseCase`, `ObserveAnrWatchdogStateUseCase`, `ObserveAnrIncidentsUseCase`
   - [x] Data layer: `AnrWatchdogMapper`, `LegacyAnrWatchdogRepository` (thread-safe generation tracking, timeout evaluation, and deduplication adapting `ANRDetector.java`'s 224 lines)
   - [x] Presentation layer: `AnrWatchdogUiState`, `AnrWatchdogEvent`, `AnrWatchdogViewModel`
+- [x] Hardware & Emulator / Virtual Environment Detection (`feature.emudetector`)
+  - [x] Domain entities: `EmulatorType`, `DetectionCategory`, `DetectionIndicator`, `EnvironmentVerdict`, `EmulatorDiagnostics`, `EmulatorDetectorConfig`, `EmulatorHeuristics`
+  - [x] Repository contract: `EmuDetectorRepository`
+  - [x] Use cases: `DetectEnvironmentUseCase`, `IsEmulatorUseCase`, `GetCachedDiagnosticsUseCase`, `ObserveDiagnosticsUseCase`, `ObserveIsEmulatorUseCase`, `GetDetectorConfigUseCase`, `UpdateDetectorConfigUseCase`, `AddCustomPackageNameUseCase`, `ClearDetectorCacheUseCase`, `CalculateConfidenceScoreUseCase`, `EvaluateEnvironmentVerdictUseCase`
+  - [x] Data layer: `EmuDetectorMapper`, `LegacyEmuDetectorRepository` (thread-safe detection engine adapting `EmuDetector.java`'s 434 lines, `EmuInputDevicesDetector.java`'s 64 lines, weighted multi-factor heuristic, and in-memory test provider)
+  - [x] Presentation layer: `EmuDetectorUiState`, `EmuDetectorEvent`, `EmuDetectorViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 106: Isolation of Hardware & Emulator / Virtual Environment Detection into feature.emudetector
+- **Context:** In Telegram Android, client environment integrity and emulator detection were implemented in `EmuDetector.java` (~434 lines) and `EmuInputDevicesDetector.java` (~64 lines), called during MTProto initial handshake in `ConnectionsManager.getInitFlags()`. The detection engine checked multiple indicators: basic build properties (hardware goldfish/ranchu/nox, generic fingerprints, product/model strings), filesystem markers (Genymotion sockets, Andy/Nox/BlueStacks files, QEMU drivers and pipes), kernel input devices (`/proc/bus/input/devices`), telephony characteristics (known test phone numbers, dummy IMEI/IMSI, network operator "android"), and system properties via reflection on `android.os.SystemProperties`. However, `EmuDetector` was tightly coupled to `android.content.Context`, `PackageManager`, `TelephonyManager`, `Build`, and static singletons, preventing unit testing without Android devices or emulators, dynamic threshold adjustments, or detailed diagnostic reporting.
+- **Decision:** Introduce pure domain models `EmulatorType`, `DetectionCategory`, `DetectionIndicator`, `EnvironmentVerdict`, `EmulatorDiagnostics`, `EmulatorDetectorConfig`, and `EmulatorHeuristics`. Define abstract contract `EmuDetectorRepository` covering environment scanning (`detectEnvironment`), synchronous status checks (`isEmulator`), cached diagnostics (`getCachedDiagnostics`), configuration management (`getConfig`, `updateConfig`, `addCustomPackage`, `clearCache`), and reactive state streams (`observeDiagnostics`, `observeIsEmulator`). Implement pure domain use cases for detection, verdict evaluation, confidence scoring, and configuration. Provide `LegacyEmuDetectorRepository` adapting `EmuDetector` and `EmuInputDevicesDetector` with pluggable test detection and pure mapping in `EmuDetectorMapper`. Encapsulate presentation state and MVI events in `EmuDetectorViewModel`.
+- **Consequences:** All hardware/virtualization checks, weighted confidence scores, emulator classification, and diagnostic reports are decoupled behind clean, testable domain interfaces with full unit test coverage while remaining 100% backward compatible with Telegram's `EmuDetector.java` and `ConnectionsManager.java`.
 
 ### ADR 105: Isolation of Main Thread ANR Watchdog & UI Freeze Diagnostics into feature.anrwatchdog
 - **Context:** In Telegram Android, main thread responsiveness and Application Not Responding (ANR) detection were monitored through `ANRDetector.java` (~224 lines). The component ran a dedicated background thread (`ANRDetector`), periodically posted ping messages (`MSG_UI_PING`) to `Looper.getMainLooper()` with monotonic IDs, and waited for up to `TIMEOUT_MS = 5000L` for the main thread to acknowledge execution. It monitored application foreground/background transitions via `ForegroundDetector.Listener`, paused execution in background via `lock.wait()` to eliminate CPU overhead, incremented generation counters upon state changes, and deduplicated ANR alerts (`anrReported`) until the UI thread recovered. However, `ANRDetector` was tightly coupled to Android's `Handler`, `Looper`, `Message`, `Thread.sleep()`, and single-runnable callback (`Runnable anrDetected`), preventing unit testing without OS looper infrastructure, dynamic timeouts, or reactive incident observation in modern monitoring dashboards.
