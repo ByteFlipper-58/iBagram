@@ -7044,6 +7044,79 @@ class AccountFeatureContainer private constructor(val account: Int) {
         )
     }
 
+    // --- 60 FPS Frame Rate & V-Sync Content Arbitration (feature.fpscontent) ---
+    private var customFpsContentRepository: org.telegram.messenger.feature.fpscontent.domain.repository.FpsContentRepository? = null
+
+    var fpsContentRepository: org.telegram.messenger.feature.fpscontent.domain.repository.FpsContentRepository
+        get() = customFpsContentRepository ?: org.telegram.messenger.feature.fpscontent.data.repository.LegacyFpsContentRepository()
+        set(value) {
+            customFpsContentRepository = value
+        }
+
+    val registerFrameCallbackUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.RegisterFrameCallbackUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.RegisterFrameCallbackUseCase(fpsContentRepository)
+
+    val registerRunnableCallbackUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.RegisterRunnableCallbackUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.RegisterRunnableCallbackUseCase(fpsContentRepository)
+
+    val unregisterCallbackUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.UnregisterCallbackUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.UnregisterCallbackUseCase(fpsContentRepository)
+
+    val requestViewInvalidationUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.RequestViewInvalidationUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.RequestViewInvalidationUseCase(fpsContentRepository)
+
+    val requestDrawableInvalidationUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.RequestDrawableInvalidationUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.RequestDrawableInvalidationUseCase(fpsContentRepository)
+
+    val dispatchVsyncTickUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.DispatchVsyncTickUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.DispatchVsyncTickUseCase(fpsContentRepository)
+
+    val calculateFpsTimingUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.CalculateFpsTimingUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.CalculateFpsTimingUseCase()
+
+    val getFpsContentStatsUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.GetFpsContentStatsUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.GetFpsContentStatsUseCase(fpsContentRepository)
+
+    val getFpsSubscriptionsUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.GetFpsSubscriptionsUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.GetFpsSubscriptionsUseCase(fpsContentRepository)
+
+    val observeFpsContentStatsUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.ObserveFpsContentStatsUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.ObserveFpsContentStatsUseCase(fpsContentRepository)
+
+    val observeFpsTicksUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.ObserveFpsTicksUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.ObserveFpsTicksUseCase(fpsContentRepository)
+
+    val resetFpsContentUseCase: org.telegram.messenger.feature.fpscontent.domain.usecase.ResetFpsContentUseCase
+        get() = org.telegram.messenger.feature.fpscontent.domain.usecase.ResetFpsContentUseCase(fpsContentRepository)
+
+    private var cachedFpsContentViewModel: org.telegram.messenger.feature.fpscontent.presentation.FpsContentViewModel? = null
+
+    val fpsContentViewModel: org.telegram.messenger.feature.fpscontent.presentation.FpsContentViewModel
+        get() {
+            var vm = cachedFpsContentViewModel
+            if (vm == null) {
+                vm = createFpsContentViewModel()
+                cachedFpsContentViewModel = vm
+            }
+            return vm
+        }
+
+    fun createFpsContentViewModel(): org.telegram.messenger.feature.fpscontent.presentation.FpsContentViewModel {
+        return org.telegram.messenger.feature.fpscontent.presentation.FpsContentViewModel(
+            registerFrameCallbackUseCase = registerFrameCallbackUseCase,
+            registerRunnableCallbackUseCase = registerRunnableCallbackUseCase,
+            unregisterCallbackUseCase = unregisterCallbackUseCase,
+            requestViewInvalidationUseCase = requestViewInvalidationUseCase,
+            requestDrawableInvalidationUseCase = requestDrawableInvalidationUseCase,
+            dispatchVsyncTickUseCase = dispatchVsyncTickUseCase,
+            getFpsContentStatsUseCase = getFpsContentStatsUseCase,
+            getFpsSubscriptionsUseCase = getFpsSubscriptionsUseCase,
+            observeFpsContentStatsUseCase = observeFpsContentStatsUseCase,
+            observeFpsTicksUseCase = observeFpsTicksUseCase,
+            resetFpsContentUseCase = resetFpsContentUseCase
+        )
+    }
+
     companion object {
         private val instances = ConcurrentHashMap<Int, AccountFeatureContainer>()
 

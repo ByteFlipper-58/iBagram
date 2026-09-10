@@ -3039,6 +3039,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── LeakDetectorUiState.kt
             ├── LeakDetectorEvent.kt
             └── LeakDetectorViewModel.kt
+    │
+    └── fpscontent/                       # Frame Rate Adaptation & 60 FPS V-Sync Content Arbitration Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (FrameCallbackType, FpsGroupConfig, FrameTick, FrameCallbackSubscription, FpsContentStats, FpsTimingUtils)
+        │   │   └── FpsContentModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── FpsContentRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── RegisterFrameCallbackUseCase.kt
+        │       ├── RegisterRunnableCallbackUseCase.kt
+        │       ├── UnregisterCallbackUseCase.kt
+        │       ├── RequestViewInvalidationUseCase.kt
+        │       ├── RequestDrawableInvalidationUseCase.kt
+        │       ├── DispatchVsyncTickUseCase.kt
+        │       ├── CalculateFpsTimingUseCase.kt
+        │       ├── GetFpsContentStatsUseCase.kt
+        │       ├── GetFpsSubscriptionsUseCase.kt
+        │       ├── ObserveFpsContentStatsUseCase.kt
+        │       ├── ObserveFpsTicksUseCase.kt
+        │       └── ResetFpsContentUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (FpsContentMapper)
+        │   │   └── FpsContentMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyFpsContentRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── FpsContentUiState.kt
+            ├── FpsContentEvent.kt
+            └── FpsContentViewModel.kt
 ```
 
 
@@ -3684,10 +3715,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `StartLeakDetectionUseCase`, `StopLeakDetectionUseCase`, `TrackInstanceUseCase`, `TriggerLeakCheckUseCase`, `ConfirmLeakUseCase`, `GetTrackedClassesStatsUseCase`, `GetConfirmedLeaksUseCase`, `ResetLeakDetectorUseCase`, `ObserveLeakDetectorStateUseCase`, `ObserveConfirmedLeaksUseCase`
   - [x] Data layer: `LeakDetectorMapper`, `LegacyLeakDetectorRepository` (thread-safe WeakReference tracking, coroutine periodic scanning, and two-phase GC confirmation adapting `LeakDetector.java`'s 215 lines)
   - [x] Presentation layer: `LeakDetectorUiState`, `LeakDetectorEvent`, `LeakDetectorViewModel`
+- [x] Frame Rate Adaptation & 60 FPS V-Sync Content Arbitration (`feature.fpscontent`)
+  - [x] Domain entities: `FrameCallbackType`, `FpsGroupConfig`, `FrameTick`, `FrameCallbackSubscription`, `FpsContentStats`, `FpsTimingUtils`
+  - [x] Repository contract: `FpsContentRepository`
+  - [x] Use cases: `RegisterFrameCallbackUseCase`, `RegisterRunnableCallbackUseCase`, `UnregisterCallbackUseCase`, `RequestViewInvalidationUseCase`, `RequestDrawableInvalidationUseCase`, `DispatchVsyncTickUseCase`, `CalculateFpsTimingUseCase`, `GetFpsContentStatsUseCase`, `GetFpsSubscriptionsUseCase`, `ObserveFpsContentStatsUseCase`, `ObserveFpsTicksUseCase`, `ResetFpsContentUseCase`
+  - [x] Data layer: `FpsContentMapper`, `LegacyFpsContentRepository` (thread-safe StateFlow and ticker engine adapting `Choreographer60FpsContent.java`'s 360 lines, stride groups for 60/30/20/15 fps, accumulator groups for arbitrary rates, and view/drawable invalidation scheduling)
+  - [x] Presentation layer: `FpsContentUiState`, `FpsContentEvent`, `FpsContentViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 104: Isolation of Frame Rate Adaptation & 60 FPS V-Sync Content Arbitration into feature.fpscontent
+- **Context:** In Telegram Android, animation tick dispatching, display refresh rate decoupling, and screen invalidation wave batching were handled through `Choreographer60FpsContent.java` (~360 lines). The component acted as an Android `Choreographer.FrameCallback` delivering animation callbacks at stable ~60 fps regardless of physical screen refresh rate (90Hz, 120Hz, 144Hz displays). Callbacks sharing the same FPS shared a single accumulator or stride index (`TARGET_FPS / fps`), guaranteeing that N animations at 60/30/20 fps produce exactly one invalidation wave per period. It also maintained lists of Views and Drawables (`mViewsToInvalidate`, `mDrawablesToInvalidate`, `mDrawablesToInvalidate30fps`) and one-shot runnables. However, `Choreographer60FpsContent` was tightly coupled to the Android `Choreographer` singleton, `android.os.Looper.getMainLooper()`, `me.vkryl.core.reference.ReferenceList`, and direct `View.invalidate()` / `Drawable.invalidateSelf()` invocations, preventing unit testing and observability into active animation subscribers and frame pacing metrics.
+- **Decision:** Introduce pure domain models `FrameCallbackType`, `FpsGroupConfig`, `FrameTick`, `FrameCallbackSubscription`, `FpsContentStats`, and `FpsTimingUtils`. Define abstract contract `FpsContentRepository` covering callback subscription (`addFrameCallback`, `addRunnableCallback`, `removeCallback`), invalidation requests (`postInvalidateView`, `postInvalidateDrawable`), V-Sync tick dispatch (`dispatchVsync`), metrics snapshots (`getStats`, `getSubscriptions`, `reset`), and reactive streams (`observeStats`, `observeTicks`). Implement pure domain use cases for callback registration, unregistration, view/drawable invalidation scheduling, V-Sync dispatch, timing calculation, and state observation. Provide thread-safe `LegacyFpsContentRepository` adapting `Choreographer60FpsContent` logic with stride calculation and accumulator math. Encapsulate presentation state and MVI events in `FpsContentViewModel`.
+- **Consequences:** All frame rate arbitration, stride calculations, V-Sync tick dispatching, one-shot actions, and batched view/drawable invalidation schedules are decoupled behind clean, testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `Choreographer60FpsContent.java`.
 
 ### ADR 103: Isolation of Memory Leak Detection & Instance Reference Tracking Engine into feature.leakdetector
 - **Context:** In Telegram Android, runtime memory leak diagnostics and activity/fragment/view reference tracking were implemented via singleton `LeakDetector.java` (~215 lines). The detector used `me.vkryl.core.reference.ReferenceMap` to store weak references to tracked class instances, periodically scanned the registry via `AndroidUtilities.runOnUIThread` every 1,000 ms, compared instance counts against a threshold (`LEAK_THRESHOLD = 5`), requested garbage collection (`System.gc()`), and scheduled confirmation re-checks after a 2,000 ms debounce window (`GC_RECHECK_DELAY_MS`) to eliminate false positives. Confirmed leaks were posted to `NotificationCenter.memoryLeakFoundException`. Because `LeakDetector` relied on Android UI looper runnables, singleton global state, and direct `NotificationCenter` posts, leak detection could not be observed reactively in modern UI dashboards, configured with dynamic thresholds, or tested in unit tests without Android runtime components.
