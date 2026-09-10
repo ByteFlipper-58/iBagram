@@ -2391,6 +2391,43 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── SendMessagesUiState.kt
             ├── SendMessagesEvent.kt
             └── SendMessagesViewModel.kt
+    │
+    └── imageloader/                      # Memory Cache Tiers, Downscaling, Filter Specs & Request Pipeline Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── ImageCacheTier.kt
+        │   │   ├── ImageLoadingStatus.kt
+        │   │   ├── FrameExtractType.kt
+        │   │   ├── ImageFilterSpec.kt
+        │   │   ├── ImageDownscaleSpec.kt
+        │   │   ├── ImageRequestModel.kt
+        │   │   ├── ImageCacheStatsModel.kt
+        │   │   └── ImageLoaderState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ImageLoaderRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ParseImageFilterUseCase.kt
+        │       ├── FormatImageFilterUseCase.kt
+        │       ├── BuildImageCacheKeyUseCase.kt
+        │       ├── CalculateImageDownscaleUseCase.kt
+        │       ├── EvaluateImageCacheEligibilityUseCase.kt
+        │       ├── ObserveImageLoaderStateUseCase.kt
+        │       ├── GetImageLoaderStateUseCase.kt
+        │       ├── EnqueueImageRequestUseCase.kt
+        │       ├── CancelImageRequestUseCase.kt
+        │       ├── TrimImageMemoryUseCase.kt
+        │       └── ClearImageCacheUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers, filter string parser & downscale math
+        │   │   └── ImageLoaderMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyImageLoaderRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ImageLoaderUiState.kt
+            ├── ImageLoaderEvent.kt
+            └── ImageLoaderViewModel.kt
 ```
 
 ### Layer Rules
@@ -2908,10 +2945,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `SendTextMessageUseCase`, `SendMediaMessageUseCase`, `SendMediaAlbumUseCase`, `ForwardMessagesUseCase`, `RetrySendMessageUseCase`, `CancelSendMessageUseCase`, `ObservePendingSendsUseCase`, `ValidateSendEligibilityUseCase`
   - [x] Data layer: `SendMessagesMapper`, `LegacySendMessagesRepository` (thread-safe StateFlow engine adapting `SendMessagesHelper.java`'s 14k+ lines, batched album constraints, chunked upload tracking, retry/cancellation handling, and forward modes)
   - [x] Presentation layer: `SendMessagesUiState`, `SendMessagesEvent`, `SendMessagesViewModel`
+- [x] Memory Cache Tiers, Downscaling, Filter Specs & Request Pipeline (`feature.imageloader`)
+  - [x] Domain entities: `ImageCacheTier`, `ImageLoadingStatus`, `FrameExtractType`, `ImageFilterSpec`, `ImageDownscaleSpec`, `ImageRequestModel`, `ImageCacheStatsModel`, `ImageLoaderState`
+  - [x] Repository contract: `ImageLoaderRepository`
+  - [x] Use cases: `ParseImageFilterUseCase`, `FormatImageFilterUseCase`, `BuildImageCacheKeyUseCase`, `CalculateImageDownscaleUseCase`, `EvaluateImageCacheEligibilityUseCase`, `ObserveImageLoaderStateUseCase`, `GetImageLoaderStateUseCase`, `EnqueueImageRequestUseCase`, `CancelImageRequestUseCase`, `TrimImageMemoryUseCase`, `ClearImageCacheUseCase`
+  - [x] Data layer: `ImageLoaderMapper`, `LegacyImageLoaderRepository` (thread-safe LRU tier caches, memory pressure level trimming, hit/miss tracking, and request deduplication)
+  - [x] Presentation layer: `ImageLoaderUiState`, `ImageLoaderEvent`, `ImageLoaderViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 083: Isolation of Memory Cache Tiers, Downscaling, Filter Specs & Image Request Pipeline into feature.imageloader
+- **Context:** In Telegram Android, image downloading, bitmap decoding, downsampling, filter string parsing (`100_100_b_f`, `80_80_r`, `g`, `gl`, `firstframe`, `lastframe`, `lastreactframe`, `pframe`, `isc`, `exif`, `ignoreOrientation`), multiple LRU memory cache tiers (`memCache`, `smallImagesMemCache`, `wallpaperMemCache`, `lottieMemCache`), artwork tasks, disk cache paths, and system memory trimming (`TRIM_MEMORY_*`) were centralized in `ImageLoader.java` (~4,650 lines, 225KB) in `org.telegram.messenger`. High coupling existed between low-level Android decoders (`BitmapFactory.Options.inSampleSize`, `MediaMetadataRetriever`), `ImageReceiver` instances across cells and activities, `NotificationCenter` broadcasts, and custom `LruCache` implementations.
+- **Decision:** Introduce pure domain models `ImageCacheTier` (DEFAULT, SMALL, WALLPAPER, LOTTIE), `ImageLoadingStatus` (IDLE, QUEUED, LOADING, LOADED, FAILED, CANCELLED), `FrameExtractType` (NONE, FIRST_FRAME, LAST_FRAME, LAST_REACT_FRAME, PREVIEW_FRAME), `ImageFilterSpec`, `ImageDownscaleSpec`, `ImageRequestModel`, `TierCacheStats`, `ImageCacheStatsModel`, and `ImageLoaderState`. Define abstract contract `ImageLoaderRepository` covering state observation (`observeState`), snapshot retrieval (`getState`), cache metrics (`observeCacheStats`, `getCacheStats`), presence checking (`hasInCache`), cache mutation (`putCacheEntry`, `removeCacheEntry`, `clearCache`), memory pressure responses (`trimMemory`), request coordination (`enqueueRequest`, `cancelRequest`, `updateRequestStatus`), and hit/miss auditing (`recordCacheHit`, `recordCacheMiss`). Implement pure algorithmic use cases for parsing and serializing Telegram filter strings (`ParseImageFilterUseCase`, `FormatImageFilterUseCase`), canonical cache key construction (`BuildImageCacheKeyUseCase`), power-of-2 `inSampleSize` calculations and aspect-ratio downscaling (`CalculateImageDownscaleUseCase`), cache tier arbitration (`EvaluateImageCacheEligibilityUseCase`), request lifecycle orchestration (`EnqueueImageRequestUseCase`, `CancelImageRequestUseCase`), and memory trimming (`TrimImageMemoryUseCase`, `ClearImageCacheUseCase`). Provide thread-safe `LegacyImageLoaderRepository` with LRU tier stores and pure size formatters in `ImageLoaderMapper`. Encapsulate presentation state and MVI events in `ImageLoaderViewModel`.
+- **Consequences:** All image caching policies, filter string parsing, downscaling geometry, cache tier resolution, request lifecycle management, and memory pressure responses are isolated behind testable domain interfaces with full unit test coverage while remaining 100% backward compatible with Telegram's `ImageLoader.java`.
 
 ### ADR 082: Isolation of Message Sending Pipeline, Media Uploads, Albums & Forwards into feature.sendmessages
 - **Context:** In Telegram Android, message transmission was orchestrated by `SendMessagesHelper.java` (~14,000 lines, 755KB) in `org.telegram.messenger`. It handled preparation of texts, photos, videos, audios, documents, voice notes, stickers, round video notes, contacts, locations, and polls, batched media albums (grouped media up to 10 items), chunked file uploads over MTProto, forwarding mechanisms (`TLRPC.TL_messages_forwardMessages`) with sender name/caption stripping, message scheduling (`scheduleDate`, `scheduleRepeatPeriod`), silent notifications (`notify = false`), paid stars sending (`payStars`), view-once self-destruct timers, retries, network failure backoff, and pending queues. UI components across `ChatActivity`, `PhotoViewer`, `ChatAttachAlert`, and external share receivers directly interacted with `SendMessagesHelper.getInstance(account)`.

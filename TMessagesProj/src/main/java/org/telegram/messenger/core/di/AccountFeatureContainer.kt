@@ -884,6 +884,20 @@ import org.telegram.messenger.feature.sendmessages.domain.usecase.SendMediaAlbum
 import org.telegram.messenger.feature.sendmessages.domain.usecase.SendMediaMessageUseCase
 import org.telegram.messenger.feature.sendmessages.domain.usecase.SendTextMessageUseCase
 import org.telegram.messenger.feature.sendmessages.presentation.SendMessagesViewModel
+import org.telegram.messenger.feature.imageloader.data.repository.LegacyImageLoaderRepository
+import org.telegram.messenger.feature.imageloader.domain.repository.ImageLoaderRepository
+import org.telegram.messenger.feature.imageloader.domain.usecase.BuildImageCacheKeyUseCase
+import org.telegram.messenger.feature.imageloader.domain.usecase.CalculateImageDownscaleUseCase
+import org.telegram.messenger.feature.imageloader.domain.usecase.CancelImageRequestUseCase
+import org.telegram.messenger.feature.imageloader.domain.usecase.ClearImageCacheUseCase
+import org.telegram.messenger.feature.imageloader.domain.usecase.EnqueueImageRequestUseCase
+import org.telegram.messenger.feature.imageloader.domain.usecase.EvaluateImageCacheEligibilityUseCase
+import org.telegram.messenger.feature.imageloader.domain.usecase.FormatImageFilterUseCase
+import org.telegram.messenger.feature.imageloader.domain.usecase.GetImageLoaderStateUseCase
+import org.telegram.messenger.feature.imageloader.domain.usecase.ObserveImageLoaderStateUseCase
+import org.telegram.messenger.feature.imageloader.domain.usecase.ParseImageFilterUseCase
+import org.telegram.messenger.feature.imageloader.domain.usecase.TrimImageMemoryUseCase
+import org.telegram.messenger.feature.imageloader.presentation.ImageLoaderViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5465,6 +5479,69 @@ class AccountFeatureContainer private constructor(val account: Int) {
             retrySendMessageUseCase = retrySendMessageUseCase,
             cancelSendMessageUseCase = cancelSendMessageUseCase,
             observePendingSendsUseCase = observePendingSendsUseCase
+        )
+    }
+
+    val imageLoaderRepository: ImageLoaderRepository by lazy {
+        LegacyImageLoaderRepository(account)
+    }
+
+    val parseImageFilterUseCase: ParseImageFilterUseCase
+        get() = ParseImageFilterUseCase()
+
+    val formatImageFilterUseCase: FormatImageFilterUseCase
+        get() = FormatImageFilterUseCase()
+
+    val buildImageCacheKeyUseCase: BuildImageCacheKeyUseCase
+        get() = BuildImageCacheKeyUseCase()
+
+    val calculateImageDownscaleUseCase: CalculateImageDownscaleUseCase
+        get() = CalculateImageDownscaleUseCase()
+
+    val evaluateImageCacheEligibilityUseCase: EvaluateImageCacheEligibilityUseCase
+        get() = EvaluateImageCacheEligibilityUseCase()
+
+    val observeImageLoaderStateUseCase: ObserveImageLoaderStateUseCase
+        get() = ObserveImageLoaderStateUseCase(imageLoaderRepository)
+
+    val getImageLoaderStateUseCase: GetImageLoaderStateUseCase
+        get() = GetImageLoaderStateUseCase(imageLoaderRepository)
+
+    val enqueueImageRequestUseCase: EnqueueImageRequestUseCase
+        get() = EnqueueImageRequestUseCase(
+            repository = imageLoaderRepository,
+            evaluateTier = evaluateImageCacheEligibilityUseCase,
+            buildKey = buildImageCacheKeyUseCase
+        )
+
+    val cancelImageRequestUseCase: CancelImageRequestUseCase
+        get() = CancelImageRequestUseCase(imageLoaderRepository)
+
+    val trimImageMemoryUseCase: TrimImageMemoryUseCase
+        get() = TrimImageMemoryUseCase(imageLoaderRepository)
+
+    val clearImageCacheUseCase: ClearImageCacheUseCase
+        get() = ClearImageCacheUseCase(imageLoaderRepository)
+
+    private var cachedImageLoaderViewModel: ImageLoaderViewModel? = null
+
+    val imageLoaderViewModel: ImageLoaderViewModel
+        get() {
+            var vm = cachedImageLoaderViewModel
+            if (vm == null) {
+                vm = createImageLoaderViewModel()
+                cachedImageLoaderViewModel = vm
+            }
+            return vm
+        }
+
+    fun createImageLoaderViewModel(): ImageLoaderViewModel {
+        return ImageLoaderViewModel(
+            observeImageLoaderStateUseCase = observeImageLoaderStateUseCase,
+            enqueueImageRequestUseCase = enqueueImageRequestUseCase,
+            cancelImageRequestUseCase = cancelImageRequestUseCase,
+            trimImageMemoryUseCase = trimImageMemoryUseCase,
+            clearImageCacheUseCase = clearImageCacheUseCase
         )
     }
 
