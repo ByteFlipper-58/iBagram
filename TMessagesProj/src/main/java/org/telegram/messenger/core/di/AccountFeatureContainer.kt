@@ -808,6 +808,19 @@ import org.telegram.messenger.feature.contentpreview.domain.usecase.ResolvePrevi
 import org.telegram.messenger.feature.contentpreview.domain.usecase.TriggerPreviewActionUseCase
 import org.telegram.messenger.feature.contentpreview.domain.usecase.UpdatePreviewDragUseCase
 import org.telegram.messenger.feature.contentpreview.presentation.ContentPreviewViewModel
+import org.telegram.messenger.feature.emojipicker.data.repository.LegacyEmojiPickerRepository
+import org.telegram.messenger.feature.emojipicker.domain.repository.EmojiPickerRepository
+import org.telegram.messenger.feature.emojipicker.domain.usecase.ClearRecentPickerItemsUseCase
+import org.telegram.messenger.feature.emojipicker.domain.usecase.FilterEmojiItemsUseCase
+import org.telegram.messenger.feature.emojipicker.domain.usecase.FilterGifsUseCase
+import org.telegram.messenger.feature.emojipicker.domain.usecase.FilterStickersUseCase
+import org.telegram.messenger.feature.emojipicker.domain.usecase.GetEmojiPickerStateUseCase
+import org.telegram.messenger.feature.emojipicker.domain.usecase.ObserveEmojiPickerStateUseCase
+import org.telegram.messenger.feature.emojipicker.domain.usecase.ResolveAvailablePickerTabsUseCase
+import org.telegram.messenger.feature.emojipicker.domain.usecase.SelectPickerTabUseCase
+import org.telegram.messenger.feature.emojipicker.domain.usecase.ToggleStickerFavoriteUseCase
+import org.telegram.messenger.feature.emojipicker.domain.usecase.UpdatePickerSearchQueryUseCase
+import org.telegram.messenger.feature.emojipicker.presentation.EmojiPickerViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5030,6 +5043,68 @@ class AccountFeatureContainer private constructor(val account: Int) {
             triggerPreviewActionUseCase = triggerPreviewActionUseCase,
             dismissContentPreviewUseCase = dismissContentPreviewUseCase,
             clearContentPreviewUseCase = clearContentPreviewUseCase
+        )
+    }
+
+    fun createEmojiPickerRepository(): EmojiPickerRepository {
+        return LegacyEmojiPickerRepository(resolveAvailablePickerTabsUseCase)
+    }
+
+    val emojiPickerRepository: EmojiPickerRepository by lazy {
+        createEmojiPickerRepository()
+    }
+
+    val resolveAvailablePickerTabsUseCase: ResolveAvailablePickerTabsUseCase
+        get() = ResolveAvailablePickerTabsUseCase()
+
+    val filterEmojiItemsUseCase: FilterEmojiItemsUseCase
+        get() = FilterEmojiItemsUseCase()
+
+    val filterStickersUseCase: FilterStickersUseCase
+        get() = FilterStickersUseCase()
+
+    val filterGifsUseCase: FilterGifsUseCase
+        get() = FilterGifsUseCase()
+
+    val observeEmojiPickerStateUseCase: ObserveEmojiPickerStateUseCase
+        get() = ObserveEmojiPickerStateUseCase(emojiPickerRepository)
+
+    val getEmojiPickerStateUseCase: GetEmojiPickerStateUseCase
+        get() = GetEmojiPickerStateUseCase(emojiPickerRepository)
+
+    val selectPickerTabUseCase: SelectPickerTabUseCase
+        get() = SelectPickerTabUseCase(emojiPickerRepository)
+
+    val updatePickerSearchQueryUseCase: UpdatePickerSearchQueryUseCase
+        get() = UpdatePickerSearchQueryUseCase(emojiPickerRepository)
+
+    val toggleStickerFavoriteUseCase: ToggleStickerFavoriteUseCase
+        get() = ToggleStickerFavoriteUseCase(emojiPickerRepository)
+
+    val clearRecentPickerItemsUseCase: ClearRecentPickerItemsUseCase
+        get() = ClearRecentPickerItemsUseCase(emojiPickerRepository)
+
+    private var cachedEmojiPickerViewModel: EmojiPickerViewModel? = null
+
+    val emojiPickerViewModel: EmojiPickerViewModel
+        get() {
+            var vm = cachedEmojiPickerViewModel
+            if (vm == null) {
+                vm = createEmojiPickerViewModel()
+                cachedEmojiPickerViewModel = vm
+            }
+            return vm
+        }
+
+    fun createEmojiPickerViewModel(): EmojiPickerViewModel {
+        return EmojiPickerViewModel(
+            observeStateUseCase = observeEmojiPickerStateUseCase,
+            getStateUseCase = getEmojiPickerStateUseCase,
+            selectTabUseCase = selectPickerTabUseCase,
+            updateSearchQueryUseCase = updatePickerSearchQueryUseCase,
+            toggleFavoriteUseCase = toggleStickerFavoriteUseCase,
+            clearRecentUseCase = clearRecentPickerItemsUseCase,
+            repository = emojiPickerRepository
         )
     }
 

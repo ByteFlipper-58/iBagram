@@ -2177,6 +2177,42 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ContentPreviewUiState.kt
             ├── ContentPreviewEvent.kt
             └── ContentPreviewViewModel.kt
+    │
+    └── emojipicker/                       # Emoji, Sticker & GIF Picker Keyboard Panel Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── EmojiPickerTabType.kt
+        │   │   ├── EmojiCategoryType.kt
+        │   │   ├── EmojiItem.kt
+        │   │   ├── StickerItem.kt
+        │   │   ├── GifItem.kt
+        │   │   ├── StickerPackItem.kt
+        │   │   ├── EmojiPickerFilter.kt
+        │   │   └── EmojiPickerState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── EmojiPickerRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ResolveAvailablePickerTabsUseCase.kt
+        │       ├── FilterEmojiItemsUseCase.kt
+        │       ├── FilterStickersUseCase.kt
+        │       ├── FilterGifsUseCase.kt
+        │       ├── ObserveEmojiPickerStateUseCase.kt
+        │       ├── GetEmojiPickerStateUseCase.kt
+        │       ├── SelectPickerTabUseCase.kt
+        │       ├── UpdatePickerSearchQueryUseCase.kt
+        │       ├── ToggleStickerFavoriteUseCase.kt
+        │       └── ClearRecentPickerItemsUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers & tab conversions
+        │   │   └── EmojiPickerMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyEmojiPickerRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── EmojiPickerUiState.kt
+            ├── EmojiPickerEvent.kt
+            └── EmojiPickerViewModel.kt
 ```
 
 ### Layer Rules
@@ -2658,10 +2694,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `EvaluatePreviewEligibilityUseCase`, `CalculatePreviewDragUseCase`, `ResolvePreviewActionsUseCase`, `ObserveContentPreviewStateUseCase`, `GetContentPreviewStateUseCase`, `OpenContentPreviewUseCase`, `UpdatePreviewDragUseCase`, `DismissContentPreviewUseCase`, `ClearContentPreviewUseCase`, `TriggerPreviewActionUseCase`
   - [x] Data layer: `ContentPreviewMapper`, `LegacyContentPreviewRepository` (thread safe, adapting `ContentPreviewViewer`, gesture drag calculations, action resolution for stickers, GIFs, emoji, and haptic feedback thresholds)
   - [x] Presentation layer: `ContentPreviewUiState`, `ContentPreviewEvent`, `ContentPreviewViewModel`
+- [x] Emoji, Sticker & GIF Picker Keyboard Panel (`feature.emojipicker`)
+  - [x] Domain entities: `EmojiPickerTabType`, `EmojiCategoryType`, `EmojiItem`, `StickerItem`, `GifItem`, `StickerPackItem`, `EmojiPickerFilter`, `EmojiPickerState`
+  - [x] Repository contract: `EmojiPickerRepository`
+  - [x] Use cases: `ResolveAvailablePickerTabsUseCase`, `FilterEmojiItemsUseCase`, `FilterStickersUseCase`, `FilterGifsUseCase`, `ObserveEmojiPickerStateUseCase`, `GetEmojiPickerStateUseCase`, `SelectPickerTabUseCase`, `UpdatePickerSearchQueryUseCase`, `ToggleStickerFavoriteUseCase`, `ClearRecentPickerItemsUseCase`
+  - [x] Data layer: `EmojiPickerMapper`, `LegacyEmojiPickerRepository` (thread safe, adapting `EmojiView`, tab configuration, item searching & filtering, sticker favorites toggle, and clear recent history)
+  - [x] Presentation layer: `EmojiPickerUiState`, `EmojiPickerEvent`, `EmojiPickerViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 077: Isolation of Emoji, Sticker & GIF Picker Keyboard Panel into feature.emojipicker
+- **Context:** In Telegram Android, the bottom keyboard panel for selecting emojis, stickers, and GIFs was implemented in `EmojiView.java` (~10266 lines) in `org.telegram.ui.Components`. The view coupled complex Android UI widgets (`ViewPager`, `PagerSlidingTabStrip`, `ScrollSlidingTextTabStrip`, `EmojiGridView`, `RecyclerListView`, `GridLayoutManager`, `GifLayoutManager`), custom background blur shaders (`BlurredBackgroundSourceColor`, `BlurredBackgroundDrawableViewFactory`), low-level keyboard insets (`InAppKeyboardInsetView`), direct database/network requests via `MediaDataController`, search adapters (`EmojiSearchAdapter`, `GifSearchAdapter`, `StickersGridAdapter`), recent/favorite caches (`Emoji.recentEmoji`, `MediaDataController`), and delegate callbacks in `EmojiViewDelegate`.
+- **Decision:** Introduce pure domain models `EmojiPickerTabType` (EMOJI, GIFS, STICKERS), `EmojiCategoryType`, `EmojiItem`, `StickerItem`, `GifItem`, `StickerPackItem`, `EmojiPickerFilter`, and `EmojiPickerState`. Define abstract contract `EmojiPickerRepository` covering state observation (`observeState`), snapshot retrieval (`getState`), filter configuration (`configureFilter`), tab selection (`selectTab`), search query updates (`setSearchQuery`, `setSearchActive`), item/pack updating (`setRecentEmojis`, `setStickerPacks`, `setRecentStickers`, `setFavoriteStickers`, `setRecentGifs`, `setTrendingGifs`), sticker favorite toggling (`toggleStickerFavorite`), clearing recent items by tab (`clearRecent`), and lifecycle cleanup (`clear`). Implement pure algorithmic use cases for dynamic available tabs resolution based on allowed modes (`ResolveAvailablePickerTabsUseCase`), item filtering (`FilterEmojiItemsUseCase`, `FilterStickersUseCase`, `FilterGifsUseCase`), and state manipulation. Provide thread-safe `LegacyEmojiPickerRepository` and clean integer-to-enum conversions in `EmojiPickerMapper`. Encapsulate presentation state and MVI events in `EmojiPickerViewModel`.
+- **Consequences:** The entire emoji, sticker, and GIF keyboard selection business logic, tab arbitration, search queries, favorites, and recent history are cleanly separated behind testable domain interfaces with full unit test coverage, completely decoupled from `EmojiView.java`'s 10k-line view hierarchy while preserving 100% backward compatibility.
 
 ### ADR 076: Isolation of Long-Press Content Preview, Gestures, and Action Menus into feature.contentpreview
 - **Context:** In Telegram Android, long-press previewing of stickers, GIFs, emojis, custom animated stickers, and polls was handled by `ContentPreviewViewer.java` (~2423 lines) in `org.telegram.ui`. The viewer coupled low-level Android `MotionEvent` touch interception in `RecyclerListView`, custom window management (`WindowManager.LayoutParams`, `Activity`), Canvas drawing, blur shaders (`BlurredBackgroundSourceBitmap`, `BlurredBackgroundDrawableViewFactory`), `ActionBarPopupWindow` menu inflation, `ReactionsContainerLayout`, `PaintingOverlay`, and `ContentPreviewViewerDelegate` callbacks for sending, favoriting, copying, and scheduling.
