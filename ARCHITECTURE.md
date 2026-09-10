@@ -2213,6 +2213,40 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── EmojiPickerUiState.kt
             ├── EmojiPickerEvent.kt
             └── EmojiPickerViewModel.kt
+    │
+    └── chatattach/                        # Chat Attachment Dialog & Layouts Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── ChatAttachLayoutType.kt
+        │   │   ├── ChatAttachItem.kt
+        │   │   ├── ChatAttachSendOptions.kt
+        │   │   ├── ChatAttachPermissions.kt
+        │   │   ├── CaptionLimitInfo.kt
+        │   │   └── ChatAttachState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── ChatAttachRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ResolveAvailableAttachLayoutsUseCase.kt
+        │       ├── CalculateAttachCaptionLimitUseCase.kt
+        │       ├── ToggleAttachItemSelectionUseCase.kt
+        │       ├── ValidateSendOptionsUseCase.kt
+        │       ├── ObserveChatAttachStateUseCase.kt
+        │       ├── GetChatAttachStateUseCase.kt
+        │       ├── SelectAttachLayoutUseCase.kt
+        │       ├── UpdateAttachSendOptionsUseCase.kt
+        │       ├── ClearAttachSelectionUseCase.kt
+        │       └── OpenChatAttachAlertUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers & layout conversions
+        │   │   └── ChatAttachMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyChatAttachRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── ChatAttachUiState.kt
+            ├── ChatAttachEvent.kt
+            └── ChatAttachViewModel.kt
 ```
 
 ### Layer Rules
@@ -2700,10 +2734,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ResolveAvailablePickerTabsUseCase`, `FilterEmojiItemsUseCase`, `FilterStickersUseCase`, `FilterGifsUseCase`, `ObserveEmojiPickerStateUseCase`, `GetEmojiPickerStateUseCase`, `SelectPickerTabUseCase`, `UpdatePickerSearchQueryUseCase`, `ToggleStickerFavoriteUseCase`, `ClearRecentPickerItemsUseCase`
   - [x] Data layer: `EmojiPickerMapper`, `LegacyEmojiPickerRepository` (thread safe, adapting `EmojiView`, tab configuration, item searching & filtering, sticker favorites toggle, and clear recent history)
   - [x] Presentation layer: `EmojiPickerUiState`, `EmojiPickerEvent`, `EmojiPickerViewModel`
+- [x] Chat Attachment Dialog & Layouts (`feature.chatattach`)
+  - [x] Domain entities: `ChatAttachLayoutType`, `ChatAttachItem`, `ChatAttachSendOptions`, `ChatAttachPermissions`, `CaptionLimitInfo`, `ChatAttachState`
+  - [x] Repository contract: `ChatAttachRepository`
+  - [x] Use cases: `ResolveAvailableAttachLayoutsUseCase`, `CalculateAttachCaptionLimitUseCase`, `ToggleAttachItemSelectionUseCase`, `ValidateSendOptionsUseCase`, `ObserveChatAttachStateUseCase`, `GetChatAttachStateUseCase`, `SelectAttachLayoutUseCase`, `UpdateAttachSendOptionsUseCase`, `ClearAttachSelectionUseCase`, `OpenChatAttachAlertUseCase`
+  - [x] Data layer: `ChatAttachMapper`, `LegacyChatAttachRepository` (thread safe, adapting `ChatAttachAlert`, layout permissions arbitration, multi-selection ordering, caption limit calculations, and send options)
+  - [x] Presentation layer: `ChatAttachUiState`, `ChatAttachEvent`, `ChatAttachViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 078: Isolation of Chat Attachment Dialog & Layouts into feature.chatattach
+- **Context:** In Telegram Android, the chat attachment modal bottom sheet and its sub-layouts were managed by `ChatAttachAlert.java` (~7273 lines) and associated classes (`ChatAttachAlertPhotoLayout`, `ChatAttachAlertDocumentLayout`, `ChatAttachAlertAudioLayout`, `ChatAttachAlertLocationLayout`, `ChatAttachAlertContactsLayout`, `ChatAttachAlertPollLayout`, etc.) in `org.telegram.ui.Components`. The alert tightly coupled Android Views (`BottomSheet`, `RecyclerView`, `EditTextBoldCursor`, `AnimatedTextView`), low-level animator frameworks (`ReplaceAnimator`, `BoolAnimator`), custom camera and gallery triggers (`ImageUpdater`), direct `NotificationCenter` event dispatching, media multi-selection indexing, caption length limit calculations (standard 1024 vs premium 2048), spoilered media toggles, and send-as-file configuration.
+- **Decision:** Introduce pure domain models `ChatAttachLayoutType` (PHOTO, MUSIC, DOCUMENTS, CONTACTS, LOCATION, POLL, REPLIES, TODO, STICKERS, EMOJI, LINK, RICH), `ChatAttachItem`, `ChatAttachSendOptions`, `ChatAttachPermissions`, `CaptionLimitInfo`, and `ChatAttachState`. Define abstract contract `ChatAttachRepository` covering state observation (`observeState`), snapshot retrieval (`getState`), bottom sheet presentation (`openAlert`), layout tab selection (`selectLayout`), available layouts configuration (`setAvailableLayouts`), item selection and re-ordering (`toggleItemSelection`, `setSelectedItems`, `clearSelection`), options mutation (`updateSendOptions`), permission updates (`setPermissions`), and alert dismissal (`dismissAlert`, `clear`). Implement pure algorithmic use cases for permission-based tab resolution (`ResolveAvailableAttachLayoutsUseCase`), codepoint-based caption limit checking (`CalculateAttachCaptionLimitUseCase`), selection bounds and order arbitration (`ToggleAttachItemSelectionUseCase`), and options validation (`ValidateSendOptionsUseCase`). Provide thread-safe `LegacyChatAttachRepository` and clean integer-to-enum layout conversions in `ChatAttachMapper`. Encapsulate presentation state and MVI events in `ChatAttachViewModel`.
+- **Consequences:** All chat attachment arbitration, layout resolution, caption limits, multi-selection ordering, and send modifier validation are decoupled behind clean, testable domain interfaces with full unit test coverage while remaining 100% backward compatible with Telegram's `ChatAttachAlert`.
 
 ### ADR 077: Isolation of Emoji, Sticker & GIF Picker Keyboard Panel into feature.emojipicker
 - **Context:** In Telegram Android, the bottom keyboard panel for selecting emojis, stickers, and GIFs was implemented in `EmojiView.java` (~10266 lines) in `org.telegram.ui.Components`. The view coupled complex Android UI widgets (`ViewPager`, `PagerSlidingTabStrip`, `ScrollSlidingTextTabStrip`, `EmojiGridView`, `RecyclerListView`, `GridLayoutManager`, `GifLayoutManager`), custom background blur shaders (`BlurredBackgroundSourceColor`, `BlurredBackgroundDrawableViewFactory`), low-level keyboard insets (`InAppKeyboardInsetView`), direct database/network requests via `MediaDataController`, search adapters (`EmojiSearchAdapter`, `GifSearchAdapter`, `StickersGridAdapter`), recent/favorite caches (`Emoji.recentEmoji`, `MediaDataController`), and delegate callbacks in `EmojiViewDelegate`.

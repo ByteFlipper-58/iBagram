@@ -821,6 +821,19 @@ import org.telegram.messenger.feature.emojipicker.domain.usecase.SelectPickerTab
 import org.telegram.messenger.feature.emojipicker.domain.usecase.ToggleStickerFavoriteUseCase
 import org.telegram.messenger.feature.emojipicker.domain.usecase.UpdatePickerSearchQueryUseCase
 import org.telegram.messenger.feature.emojipicker.presentation.EmojiPickerViewModel
+import org.telegram.messenger.feature.chatattach.data.repository.LegacyChatAttachRepository
+import org.telegram.messenger.feature.chatattach.domain.repository.ChatAttachRepository
+import org.telegram.messenger.feature.chatattach.domain.usecase.CalculateAttachCaptionLimitUseCase
+import org.telegram.messenger.feature.chatattach.domain.usecase.ClearAttachSelectionUseCase
+import org.telegram.messenger.feature.chatattach.domain.usecase.GetChatAttachStateUseCase
+import org.telegram.messenger.feature.chatattach.domain.usecase.ObserveChatAttachStateUseCase
+import org.telegram.messenger.feature.chatattach.domain.usecase.OpenChatAttachAlertUseCase
+import org.telegram.messenger.feature.chatattach.domain.usecase.ResolveAvailableAttachLayoutsUseCase
+import org.telegram.messenger.feature.chatattach.domain.usecase.SelectAttachLayoutUseCase
+import org.telegram.messenger.feature.chatattach.domain.usecase.ToggleAttachItemSelectionUseCase
+import org.telegram.messenger.feature.chatattach.domain.usecase.UpdateAttachSendOptionsUseCase
+import org.telegram.messenger.feature.chatattach.domain.usecase.ValidateSendOptionsUseCase
+import org.telegram.messenger.feature.chatattach.presentation.ChatAttachViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5105,6 +5118,69 @@ class AccountFeatureContainer private constructor(val account: Int) {
             toggleFavoriteUseCase = toggleStickerFavoriteUseCase,
             clearRecentUseCase = clearRecentPickerItemsUseCase,
             repository = emojiPickerRepository
+        )
+    }
+
+    fun createChatAttachRepository(): ChatAttachRepository {
+        return LegacyChatAttachRepository()
+    }
+
+    val chatAttachRepository: ChatAttachRepository by lazy {
+        createChatAttachRepository()
+    }
+
+    val resolveAvailableAttachLayoutsUseCase: ResolveAvailableAttachLayoutsUseCase
+        get() = ResolveAvailableAttachLayoutsUseCase()
+
+    val calculateAttachCaptionLimitUseCase: CalculateAttachCaptionLimitUseCase
+        get() = CalculateAttachCaptionLimitUseCase()
+
+    val toggleAttachItemSelectionUseCase: ToggleAttachItemSelectionUseCase
+        get() = ToggleAttachItemSelectionUseCase(chatAttachRepository)
+
+    val validateSendOptionsUseCase: ValidateSendOptionsUseCase
+        get() = ValidateSendOptionsUseCase()
+
+    val observeChatAttachStateUseCase: ObserveChatAttachStateUseCase
+        get() = ObserveChatAttachStateUseCase(chatAttachRepository)
+
+    val getChatAttachStateUseCase: GetChatAttachStateUseCase
+        get() = GetChatAttachStateUseCase(chatAttachRepository)
+
+    val selectAttachLayoutUseCase: SelectAttachLayoutUseCase
+        get() = SelectAttachLayoutUseCase(chatAttachRepository)
+
+    val updateAttachSendOptionsUseCase: UpdateAttachSendOptionsUseCase
+        get() = UpdateAttachSendOptionsUseCase(chatAttachRepository)
+
+    val clearAttachSelectionUseCase: ClearAttachSelectionUseCase
+        get() = ClearAttachSelectionUseCase(chatAttachRepository)
+
+    val openChatAttachAlertUseCase: OpenChatAttachAlertUseCase
+        get() = OpenChatAttachAlertUseCase(chatAttachRepository, resolveAvailableAttachLayoutsUseCase)
+
+    private var cachedChatAttachViewModel: ChatAttachViewModel? = null
+
+    val chatAttachViewModel: ChatAttachViewModel
+        get() {
+            var vm = cachedChatAttachViewModel
+            if (vm == null) {
+                vm = createChatAttachViewModel()
+                cachedChatAttachViewModel = vm
+            }
+            return vm
+        }
+
+    fun createChatAttachViewModel(): ChatAttachViewModel {
+        return ChatAttachViewModel(
+            observeStateUseCase = observeChatAttachStateUseCase,
+            openAlertUseCase = openChatAttachAlertUseCase,
+            selectLayoutUseCase = selectAttachLayoutUseCase,
+            toggleSelectionUseCase = toggleAttachItemSelectionUseCase,
+            updateSendOptionsUseCase = updateAttachSendOptionsUseCase,
+            clearSelectionUseCase = clearAttachSelectionUseCase,
+            calculateCaptionLimitUseCase = calculateAttachCaptionLimitUseCase,
+            repository = chatAttachRepository
         )
     }
 
