@@ -2922,10 +2922,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
         │   └── repository/                # Adapter implementing repository
         │       └── LegacyBotKeyboardRepository.kt
         │
-        └── presentation/                  # UI State & ViewModel
-            ├── BotKeyboardUiState.kt
             ├── BotKeyboardEvent.kt
             └── BotKeyboardViewModel.kt
+    │
+    └── windowvisibility/                 # Window Visibility Arbitration & Reference-Counting Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (WindowVisibilityScope, WindowVisibilityReason, WindowVisibilityState, WindowVisibilityController)
+        │   │   └── WindowVisibilityModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── WindowVisibilityRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── RequestHideWindowUseCase.kt
+        │       ├── ReleaseHideWindowUseCase.kt
+        │       ├── ToggleWindowHideUseCase.kt
+        │       ├── CheckIsWindowVisibleUseCase.kt
+        │       ├── GetWindowVisibilityStateUseCase.kt
+        │       ├── GetActiveHideReasonsUseCase.kt
+        │       ├── ResetWindowVisibilityUseCase.kt
+        │       ├── ObserveWindowVisibilityStateUseCase.kt
+        │       ├── ObserveWindowVisibilityChangesUseCase.kt
+        │       └── CreateVisibilityControllerUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (WindowVisibilityMapper)
+        │   │   └── WindowVisibilityMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyWindowVisibilityRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── WindowVisibilityUiState.kt
+            ├── WindowVisibilityEvent.kt
+            └── WindowVisibilityViewModel.kt
 ```
 
 
@@ -3547,10 +3574,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `BuildBotKeyboardLayoutUseCase`, `ResolveBotButtonColorUseCase`, `ParseCustomButtonTypeUseCase`, `IsForceReplyMarkupUseCase`, `IsButtonWebViewUseCase`, `GetBotKeyboardUseCase`, `SetBotKeyboardUseCase`, `ClearBotKeyboardUseCase`, `ObserveBotKeyboardUseCase`, `ClearAllKeyboardsUseCase`, `FormatButtonBadgeUseCase`
   - [x] Data layer: `BotKeyboardMapper`, `LegacyBotKeyboardRepository` (thread-safe StateFlow engine adapting `BotInlineKeyboard.java`'s 224 lines, `TLKeyboardHelper.java`'s 49 lines, button styling, row bitmask separators, and custom dialog action buttons)
   - [x] Presentation layer: `BotKeyboardUiState`, `BotKeyboardEvent`, `BotKeyboardViewModel`
+- [x] Window Visibility Arbitration & Reference-Counting Controllers (`feature.windowvisibility`)
+  - [x] Domain entities: `WindowVisibilityScope`, `WindowVisibilityReason`, `WindowVisibilityState`, `WindowVisibilityChangeResult`, `WindowVisibilityController`
+  - [x] Repository contract: `WindowVisibilityRepository`
+  - [x] Use cases: `RequestHideWindowUseCase`, `ReleaseHideWindowUseCase`, `ToggleWindowHideUseCase`, `CheckIsWindowVisibleUseCase`, `GetWindowVisibilityStateUseCase`, `GetActiveHideReasonsUseCase`, `ResetWindowVisibilityUseCase`, `ObserveWindowVisibilityStateUseCase`, `ObserveWindowVisibilityChangesUseCase`, `CreateVisibilityControllerUseCase`
+  - [x] Data layer: `WindowVisibilityMapper`, `LegacyWindowVisibilityRepository` (thread-safe StateFlow engine adapting `WindowVisibilityManager.java`'s 76 lines, reference-counting `reasonsToHide`, `OnVisibilityChangedListener`, and subsystem controllers)
+  - [x] Presentation layer: `WindowVisibilityUiState`, `WindowVisibilityEvent`, `WindowVisibilityViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 100: Isolation of Window Visibility Arbitration & Reference-Counting Controllers into feature.windowvisibility
+- **Context:** In Telegram Android, window and main activity content visibility coordination across heavy modal overlays (e.g. `BottomSheet`, `PhotoViewer`, `SecretMediaViewer`, `ArticleViewer`, `MessageSendPreview`, `StoryRecorder`, and `LaunchActivity`) was managed through `WindowVisibilityManager.java` (~76 lines). The manager tracked a `reasonsToHide` counter, notified an `OnVisibilityChangedListener` whenever `reasonsToHide > 0` toggled visibility, and supplied `Controller` instances with `setHidden(boolean)` and `destroy()` methods. In `LaunchActivity`, `ActivityVisibilityController` adapted this reference-counting logic for hiding decor views and main content layouts. Because `PhotoViewer` and other viewers directly created or manipulated static controllers and listeners without domain abstraction or reactive state observation, multi-window visibility was prone to orphaned hide locks, race conditions, and lack of testability.
+- **Decision:** Introduce pure domain models `WindowVisibilityScope`, `WindowVisibilityReason`, `WindowVisibilityState`, `WindowVisibilityChangeResult`, and `WindowVisibilityController`. Define abstract contract `WindowVisibilityRepository` covering hide registration (`requestHide`, `releaseHide`, `toggleHide`), visibility snapshots (`isVisible`, `isHidden`, `getReasonsCount`, `getActiveReasons`, `getCurrentState`), full reset (`resetAllReasons`), reactive observation (`observeState`, `observeVisibilityChanges`), and subsystem controller factories (`obtainController`). Implement pure domain use cases for hide/release requests, toggle operations, reset, and reactive streams. Provide thread-safe `LegacyWindowVisibilityRepository` with lock-based reason set arbitration and optional backward-compatible `OnVisibilityChangedListener` bridging, plus pure transformation in `WindowVisibilityMapper`. Encapsulate presentation state and MVI events in `WindowVisibilityViewModel`.
+- **Consequences:** All window and activity visibility arbitration, reference-counting hide locks, reason tracking, and visibility controller lifecycles are decoupled behind clean, testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `WindowVisibilityManager.java`, `BottomSheet.java`, and `LaunchActivity.java`.
 
 ### ADR 099: Isolation of Bot Inline Keyboards, Custom Action Buttons & Markup into feature.botkeyboard
 - **Context:** In Telegram Android, bot inline keyboards, reply markup structures, and custom action buttons were coordinated across `BotInlineKeyboard.java` (~224 lines), `TLKeyboardHelper.java` (~49 lines), `ChatActivity.java`, `ChatActivityEnterView.java`, `BotWebViewSheet.java`, and message cells. `BotInlineKeyboard` defined styling background colors (`BackgroundColor`: `NONE`, `PRIMARY`, `SUCCESS`, `DANGER`), abstract button structures (`ButtonBot`, `ButtonCustom`), multi-row keyboard builders (`Builder`, `KeyboardSourceArray`, row bitmask separators `1 << (size - 1)`), and built-in action buttons (`SUGGESTION_DECLINE`, `SUGGESTION_ACCEPT`, `SUGGESTION_EDIT`, `OPEN_MESSAGE_THREAD`, `GIFT_OFFER_DECLINE`, `GIFT_OFFER_ACCEPT`, `SHARING_OFFER_DECLINE`, `SHARING_OFFER_ACCEPT`). `TLKeyboardHelper` checked `isForceReply` and webview button indicators (`isButtonWebView`). Direct manipulation of raw MTProto classes (`TLRPC.TL_replyKeyboardMarkup`, `TLRPC.KeyboardButton`) and hardcoded button styles inside UI classes tightly coupled bot keyboard rendering to Telegram's legacy singleton state.

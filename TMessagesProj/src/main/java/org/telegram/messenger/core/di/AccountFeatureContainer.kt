@@ -1142,6 +1142,19 @@ import org.telegram.messenger.feature.botkeyboard.domain.usecase.RemoveKeyboardF
 import org.telegram.messenger.feature.botkeyboard.domain.usecase.ResolveCustomButtonTypeUseCase
 import org.telegram.messenger.feature.botkeyboard.domain.usecase.SetKeyboardForMessageUseCase
 import org.telegram.messenger.feature.botkeyboard.presentation.BotKeyboardViewModel
+import org.telegram.messenger.feature.windowvisibility.data.repository.LegacyWindowVisibilityRepository
+import org.telegram.messenger.feature.windowvisibility.domain.repository.WindowVisibilityRepository
+import org.telegram.messenger.feature.windowvisibility.domain.usecase.RequestHideWindowUseCase
+import org.telegram.messenger.feature.windowvisibility.domain.usecase.ReleaseHideWindowUseCase
+import org.telegram.messenger.feature.windowvisibility.domain.usecase.ToggleWindowHideUseCase
+import org.telegram.messenger.feature.windowvisibility.domain.usecase.CheckIsWindowVisibleUseCase
+import org.telegram.messenger.feature.windowvisibility.domain.usecase.GetWindowVisibilityStateUseCase
+import org.telegram.messenger.feature.windowvisibility.domain.usecase.GetActiveHideReasonsUseCase
+import org.telegram.messenger.feature.windowvisibility.domain.usecase.ResetWindowVisibilityUseCase
+import org.telegram.messenger.feature.windowvisibility.domain.usecase.ObserveWindowVisibilityStateUseCase
+import org.telegram.messenger.feature.windowvisibility.domain.usecase.ObserveWindowVisibilityChangesUseCase
+import org.telegram.messenger.feature.windowvisibility.domain.usecase.CreateVisibilityControllerUseCase
+import org.telegram.messenger.feature.windowvisibility.presentation.WindowVisibilityViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6757,6 +6770,69 @@ class AccountFeatureContainer private constructor(val account: Int) {
             clearAllKeyboardsUseCase = clearAllKeyboardsUseCase,
             recordButtonPressedUseCase = recordButtonPressedUseCase,
             observeStateUseCase = observeBotKeyboardStateUseCase
+        )
+    }
+
+    private var customWindowVisibilityRepository: WindowVisibilityRepository? = null
+
+    var windowVisibilityRepository: WindowVisibilityRepository
+        get() = customWindowVisibilityRepository ?: LegacyWindowVisibilityRepository()
+        set(value) {
+            customWindowVisibilityRepository = value
+        }
+
+    val requestHideWindowUseCase: RequestHideWindowUseCase
+        get() = RequestHideWindowUseCase(windowVisibilityRepository)
+
+    val releaseHideWindowUseCase: ReleaseHideWindowUseCase
+        get() = ReleaseHideWindowUseCase(windowVisibilityRepository)
+
+    val toggleWindowHideUseCase: ToggleWindowHideUseCase
+        get() = ToggleWindowHideUseCase(windowVisibilityRepository)
+
+    val checkIsWindowVisibleUseCase: CheckIsWindowVisibleUseCase
+        get() = CheckIsWindowVisibleUseCase(windowVisibilityRepository)
+
+    val getWindowVisibilityStateUseCase: GetWindowVisibilityStateUseCase
+        get() = GetWindowVisibilityStateUseCase(windowVisibilityRepository)
+
+    val getActiveHideReasonsUseCase: GetActiveHideReasonsUseCase
+        get() = GetActiveHideReasonsUseCase(windowVisibilityRepository)
+
+    val resetWindowVisibilityUseCase: ResetWindowVisibilityUseCase
+        get() = ResetWindowVisibilityUseCase(windowVisibilityRepository)
+
+    val observeWindowVisibilityStateUseCase: ObserveWindowVisibilityStateUseCase
+        get() = ObserveWindowVisibilityStateUseCase(windowVisibilityRepository)
+
+    val observeWindowVisibilityChangesUseCase: ObserveWindowVisibilityChangesUseCase
+        get() = ObserveWindowVisibilityChangesUseCase(windowVisibilityRepository)
+
+    val createVisibilityControllerUseCase: CreateVisibilityControllerUseCase
+        get() = CreateVisibilityControllerUseCase(windowVisibilityRepository)
+
+    private var cachedWindowVisibilityViewModel: WindowVisibilityViewModel? = null
+
+    val windowVisibilityViewModel: WindowVisibilityViewModel
+        get() {
+            var vm = cachedWindowVisibilityViewModel
+            if (vm == null) {
+                vm = createWindowVisibilityViewModel()
+                cachedWindowVisibilityViewModel = vm
+            }
+            return vm
+        }
+
+    fun createWindowVisibilityViewModel(): WindowVisibilityViewModel {
+        return WindowVisibilityViewModel(
+            requestHideWindowUseCase = requestHideWindowUseCase,
+            releaseHideWindowUseCase = releaseHideWindowUseCase,
+            toggleWindowHideUseCase = toggleWindowHideUseCase,
+            checkIsWindowVisibleUseCase = checkIsWindowVisibleUseCase,
+            getWindowVisibilityStateUseCase = getWindowVisibilityStateUseCase,
+            getActiveHideReasonsUseCase = getActiveHideReasonsUseCase,
+            resetWindowVisibilityUseCase = resetWindowVisibilityUseCase,
+            observeWindowVisibilityStateUseCase = observeWindowVisibilityStateUseCase
         )
     }
 
