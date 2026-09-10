@@ -834,6 +834,19 @@ import org.telegram.messenger.feature.chatattach.domain.usecase.ToggleAttachItem
 import org.telegram.messenger.feature.chatattach.domain.usecase.UpdateAttachSendOptionsUseCase
 import org.telegram.messenger.feature.chatattach.domain.usecase.ValidateSendOptionsUseCase
 import org.telegram.messenger.feature.chatattach.presentation.ChatAttachViewModel
+import org.telegram.messenger.feature.photoviewer.data.repository.LegacyPhotoViewerRepository
+import org.telegram.messenger.feature.photoviewer.domain.repository.PhotoViewerRepository
+import org.telegram.messenger.feature.photoviewer.domain.usecase.CalculateMediaPagingUseCase
+import org.telegram.messenger.feature.photoviewer.domain.usecase.CalculateZoomTransformUseCase
+import org.telegram.messenger.feature.photoviewer.domain.usecase.ClosePhotoViewerUseCase
+import org.telegram.messenger.feature.photoviewer.domain.usecase.GetPhotoViewerStateUseCase
+import org.telegram.messenger.feature.photoviewer.domain.usecase.NavigatePhotoViewerUseCase
+import org.telegram.messenger.feature.photoviewer.domain.usecase.ObservePhotoViewerStateUseCase
+import org.telegram.messenger.feature.photoviewer.domain.usecase.OpenPhotoViewerUseCase
+import org.telegram.messenger.feature.photoviewer.domain.usecase.ResolveMediaQualityUseCase
+import org.telegram.messenger.feature.photoviewer.domain.usecase.UpdatePlaybackStateUseCase
+import org.telegram.messenger.feature.photoviewer.domain.usecase.ValidateViewerActionsUseCase
+import org.telegram.messenger.feature.photoviewer.presentation.PhotoViewerViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5181,6 +5194,66 @@ class AccountFeatureContainer private constructor(val account: Int) {
             clearSelectionUseCase = clearAttachSelectionUseCase,
             calculateCaptionLimitUseCase = calculateAttachCaptionLimitUseCase,
             repository = chatAttachRepository
+        )
+    }
+
+    private var customPhotoViewerRepository: PhotoViewerRepository? = null
+
+    var photoViewerRepository: PhotoViewerRepository
+        get() = customPhotoViewerRepository ?: LegacyPhotoViewerRepository(
+            pagingUseCase = calculateMediaPagingUseCase,
+            zoomUseCase = calculateZoomTransformUseCase,
+            actionsUseCase = validateViewerActionsUseCase
+        )
+        set(value) {
+            customPhotoViewerRepository = value
+        }
+
+    val calculateMediaPagingUseCase: CalculateMediaPagingUseCase
+        get() = CalculateMediaPagingUseCase()
+
+    val calculateZoomTransformUseCase: CalculateZoomTransformUseCase
+        get() = CalculateZoomTransformUseCase()
+
+    val validateViewerActionsUseCase: ValidateViewerActionsUseCase
+        get() = ValidateViewerActionsUseCase()
+
+    val resolveMediaQualityUseCase: ResolveMediaQualityUseCase
+        get() = ResolveMediaQualityUseCase()
+
+    val observePhotoViewerStateUseCase: ObservePhotoViewerStateUseCase
+        get() = ObservePhotoViewerStateUseCase(photoViewerRepository)
+
+    val getPhotoViewerStateUseCase: GetPhotoViewerStateUseCase
+        get() = GetPhotoViewerStateUseCase(photoViewerRepository)
+
+    val openPhotoViewerUseCase: OpenPhotoViewerUseCase
+        get() = OpenPhotoViewerUseCase(photoViewerRepository)
+
+    val navigatePhotoViewerUseCase: NavigatePhotoViewerUseCase
+        get() = NavigatePhotoViewerUseCase(photoViewerRepository)
+
+    val updatePlaybackStateUseCase: UpdatePlaybackStateUseCase
+        get() = UpdatePlaybackStateUseCase(photoViewerRepository)
+
+    val closePhotoViewerUseCase: ClosePhotoViewerUseCase
+        get() = ClosePhotoViewerUseCase(photoViewerRepository)
+
+    private var cachedPhotoViewerViewModel: PhotoViewerViewModel? = null
+
+    val photoViewerViewModel: PhotoViewerViewModel
+        get() {
+            var vm = cachedPhotoViewerViewModel
+            if (vm == null) {
+                vm = createPhotoViewerViewModel()
+                cachedPhotoViewerViewModel = vm
+            }
+            return vm
+        }
+
+    fun createPhotoViewerViewModel(): PhotoViewerViewModel {
+        return PhotoViewerViewModel(
+            repository = photoViewerRepository
         )
     }
 

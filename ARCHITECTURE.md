@@ -2247,6 +2247,42 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── ChatAttachUiState.kt
             ├── ChatAttachEvent.kt
             └── ChatAttachViewModel.kt
+    │
+    └── photoviewer/                       # Fullscreen Media Viewer, Gestures, Playback & Editor Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── ViewerMediaType.kt
+        │   │   ├── ViewerSelectType.kt
+        │   │   ├── ViewerEditMode.kt
+        │   │   ├── ViewerActionType.kt
+        │   │   ├── PhotoViewerMediaItem.kt
+        │   │   ├── PhotoViewerPlaybackState.kt
+        │   │   ├── PhotoViewerTransform.kt
+        │   │   └── PhotoViewerState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── PhotoViewerRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── CalculateMediaPagingUseCase.kt
+        │       ├── CalculateZoomTransformUseCase.kt
+        │       ├── ValidateViewerActionsUseCase.kt
+        │       ├── ResolveMediaQualityUseCase.kt
+        │       ├── ObservePhotoViewerStateUseCase.kt
+        │       ├── GetPhotoViewerStateUseCase.kt
+        │       ├── OpenPhotoViewerUseCase.kt
+        │       ├── NavigatePhotoViewerUseCase.kt
+        │       ├── UpdatePlaybackStateUseCase.kt
+        │       └── ClosePhotoViewerUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure mappers & timecode formatters
+        │   │   └── PhotoViewerMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyPhotoViewerRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── PhotoViewerUiState.kt
+            ├── PhotoViewerEvent.kt
+            └── PhotoViewerViewModel.kt
 ```
 
 ### Layer Rules
@@ -2740,10 +2776,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ResolveAvailableAttachLayoutsUseCase`, `CalculateAttachCaptionLimitUseCase`, `ToggleAttachItemSelectionUseCase`, `ValidateSendOptionsUseCase`, `ObserveChatAttachStateUseCase`, `GetChatAttachStateUseCase`, `SelectAttachLayoutUseCase`, `UpdateAttachSendOptionsUseCase`, `ClearAttachSelectionUseCase`, `OpenChatAttachAlertUseCase`
   - [x] Data layer: `ChatAttachMapper`, `LegacyChatAttachRepository` (thread safe, adapting `ChatAttachAlert`, layout permissions arbitration, multi-selection ordering, caption limit calculations, and send options)
   - [x] Presentation layer: `ChatAttachUiState`, `ChatAttachEvent`, `ChatAttachViewModel`
+- [x] PhotoViewer / Fullscreen Media Viewer, Gestures, Playback & Editor (`feature.photoviewer`)
+  - [x] Domain entities: `ViewerMediaType`, `ViewerSelectType`, `ViewerEditMode`, `ViewerActionType`, `PhotoViewerMediaItem`, `PhotoViewerPlaybackState`, `PhotoViewerTransform`, `PhotoViewerState`
+  - [x] Repository contract: `PhotoViewerRepository`
+  - [x] Use cases: `CalculateMediaPagingUseCase`, `CalculateZoomTransformUseCase`, `ValidateViewerActionsUseCase`, `ResolveMediaQualityUseCase`, `ObservePhotoViewerStateUseCase`, `GetPhotoViewerStateUseCase`, `OpenPhotoViewerUseCase`, `NavigatePhotoViewerUseCase`, `UpdatePlaybackStateUseCase`, `ClosePhotoViewerUseCase`
+  - [x] Data layer: `PhotoViewerMapper`, `LegacyPhotoViewerRepository` (thread safe, adapting `PhotoViewer.java`'s 23k+ lines, pinch/zoom clamp math, 90° rotation snapping, video quality resolution, timecode formatters, and select/edit mode conversions)
+  - [x] Presentation layer: `PhotoViewerUiState`, `PhotoViewerEvent`, `PhotoViewerViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 079: Isolation of Fullscreen Photo/Video Viewer, Gestures, Playback & Editor into feature.photoviewer
+- **Context:** In Telegram Android, fullscreen photo and video viewing, animated media, stories, avatars, wallpapers, stickers, and GIF inspection were managed by `PhotoViewer.java` (~23,753 lines) in `org.telegram.ui`. The class coupled low-level Android View and window management (`FrameLayout`, `WindowManager`, `SurfaceView`, `TextureView`), hardware video decoding and internal video player instances (`VideoPlayer`, `VideoPlayerRewinder`), gesture detectors (pinch-to-zoom, double-tap zoom, translation dragging, dismiss swipes), PIP mode delegates (`IPipSourceDelegate`), photo/video editor mode switching (`CROP`, `FILTER`, `PAINT`, `STICKER_MASK`, `COVER`), action bar inflation, action routing (forward, share, delete, save to gallery, rotate, set avatar, speed, quality), and legacy integer modes (`SELECT_TYPE_*`, `EDIT_MODE_*`).
+- **Decision:** Introduce pure domain models `ViewerMediaType` (PHOTO, VIDEO, GIF, ANIMATED_STICKER, ROUND_VIDEO), `ViewerSelectType` (NO_SELECT, AVATAR, WALLPAPER, QR, STICKER, GIF, POLL_MEDIA, POLL_MEDIA_EDIT), `ViewerEditMode` (NONE, CROP, FILTER, PAINT, STICKER_MASK, COVER), `ViewerActionType` (SEND, FORWARD, SHARE, SAVE_TO_GALLERY, DELETE, EDIT, SET_AVATAR, ROTATE, PIP, SPEED, QUALITY), `PhotoViewerMediaItem`, `PhotoViewerPlaybackState`, `PhotoViewerTransform`, and `PhotoViewerState`. Define abstract contract `PhotoViewerRepository` covering state observation (`observeState`), snapshot retrieval (`getState`), media session opening (`open`), paging (`navigateTo`, `next`, `previous`), editing (`setEditMode`), UI visibility toggles (`toggleActionBar`, `toggleCaptionExpanded`), gesture transforms (`updateTransform`, `resetTransform`), playback control (`updatePlayback`), action execution (`executeAction`), and dismissal (`close`). Implement pure algorithmic use cases for boundary-safe paging (`CalculateMediaPagingUseCase`), zoom clamping with translation reset on 1.0x and 90° rotation snapping (`CalculateZoomTransformUseCase`), media/select mode action validation (`ValidateViewerActionsUseCase`), and video resolution resolution with bitrate estimation (`ResolveMediaQualityUseCase`). Provide thread-safe `LegacyPhotoViewerRepository` and timecode formatters in `PhotoViewerMapper`. Encapsulate presentation state and MVI events in `PhotoViewerViewModel`.
+- **Consequences:** The entire fullscreen media viewer domain logic, gesture bounds, zoom calculations, video playback controls, and editor mode arbitration are cleanly isolated behind testable domain interfaces with full unit test coverage while remaining 100% backward compatible with Telegram's 23k+ line `PhotoViewer.java`.
 
 ### ADR 078: Isolation of Chat Attachment Dialog & Layouts into feature.chatattach
 - **Context:** In Telegram Android, the chat attachment modal bottom sheet and its sub-layouts were managed by `ChatAttachAlert.java` (~7273 lines) and associated classes (`ChatAttachAlertPhotoLayout`, `ChatAttachAlertDocumentLayout`, `ChatAttachAlertAudioLayout`, `ChatAttachAlertLocationLayout`, `ChatAttachAlertContactsLayout`, `ChatAttachAlertPollLayout`, etc.) in `org.telegram.ui.Components`. The alert tightly coupled Android Views (`BottomSheet`, `RecyclerView`, `EditTextBoldCursor`, `AnimatedTextView`), low-level animator frameworks (`ReplaceAnimator`, `BoolAnimator`), custom camera and gallery triggers (`ImageUpdater`), direct `NotificationCenter` event dispatching, media multi-selection indexing, caption length limit calculations (standard 1024 vs premium 2048), spoilered media toggles, and send-as-file configuration.
