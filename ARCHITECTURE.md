@@ -2714,6 +2714,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── AutoDeleteMediaUiState.kt
             ├── AutoDeleteMediaEvent.kt
             └── AutoDeleteMediaViewModel.kt
+    │
+    └── authtokens/                       # Fast Re-Login & Session Logout Tokens Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (AuthTokenUserInfoModel, SavedLoginTokenModel, SavedLogoutTokenModel, AuthTokensState)
+        │   │   └── AuthTokensModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── AuthTokensRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── PruneTokensListUseCase.kt
+        │       ├── ValidateAuthTokenFormatUseCase.kt
+        │       ├── ObserveAuthTokensStateUseCase.kt
+        │       ├── GetAuthTokensStateUseCase.kt
+        │       ├── GetSavedLoginTokensUseCase.kt
+        │       ├── SaveLoginTokenUseCase.kt
+        │       ├── GetSavedLogoutTokensUseCase.kt
+        │       ├── SaveLogoutTokensUseCase.kt
+        │       ├── AddLogoutTokenUseCase.kt
+        │       ├── RemoveTokenUseCase.kt
+        │       ├── ClearAllTokensUseCase.kt
+        │       └── RefreshAuthTokensUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (TL_auth_authorization & TL_auth_loggedOut <-> Domain)
+        │   │   └── AuthTokensMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyAuthTokensRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── AuthTokensUiState.kt
+            ├── AuthTokensEvent.kt
+            └── AuthTokensViewModel.kt
 ```
 
 
@@ -3293,10 +3324,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `CheckShouldRunCleanupUseCase`, `CalculateEvictionCandidatesUseCase`, `LockFileUseCase`, `UnlockFileUseCase`, `IsFileLockedUseCase`, `RunAutoDeleteCleanupUseCase`, `ObserveAutoDeleteStateUseCase`, `GetAutoDeleteStateUseCase`
   - [x] Data layer: `AutoDeleteMediaMapper`, `LegacyAutoDeleteMediaRepository` (thread-safe StateFlow engine adapting `AutoDeleteMediaTask.java`'s 278 lines, LRU file eviction, cache limit threshold calculation, 24-hour interval guards, and in-use file locking)
   - [x] Presentation layer: `AutoDeleteMediaUiState`, `AutoDeleteMediaEvent`, `AutoDeleteMediaViewModel`
+- [x] Fast Re-Login & Session Logout Tokens (`feature.authtokens`)
+  - [x] Domain entities: `AuthTokenUserInfoModel`, `SavedLoginTokenModel`, `SavedLogoutTokenModel`, `AuthTokensState`
+  - [x] Repository contract: `AuthTokensRepository`
+  - [x] Use cases: `PruneTokensListUseCase`, `ValidateAuthTokenFormatUseCase`, `ObserveAuthTokensStateUseCase`, `GetAuthTokensStateUseCase`, `GetSavedLoginTokensUseCase`, `SaveLoginTokenUseCase`, `GetSavedLogoutTokensUseCase`, `SaveLogoutTokensUseCase`, `AddLogoutTokenUseCase`, `RemoveTokenUseCase`, `ClearAllTokensUseCase`, `RefreshAuthTokensUseCase`
+  - [x] Data layer: `AuthTokensMapper`, `LegacyAuthTokensRepository` (thread-safe StateFlow engine adapting `AuthTokensHelper.java`'s 129 lines, SharedPreferences persistence `saved_tokens` and `saved_tokens_login`, 20-token ceiling, and BackupAgent synchronization)
+  - [x] Presentation layer: `AuthTokensUiState`, `AuthTokensEvent`, `AuthTokensViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 093: Isolation of Fast Re-Login & Session Logout Tokens into feature.authtokens
+- **Context:** In Telegram Android, persistent credentials used for quick re-login (`saved_tokens_login`) and tracking invalidated session states (`saved_tokens`) were managed statically in `AuthTokensHelper.java` (~129 lines). The helper handled hex serialization and deserialization of MTProto binary structures `TLRPC.TL_auth_authorization` and `TLRPC.TL_auth_loggedOut`, enforced a 20-item ceiling, and triggered system cloud backups via `BackupAgent.requestBackup()`. Because it was directly accessed by `LoginActivity`, `SettingsActivity`, `ProfileActivity`, and `MessagesController` as a static utility without interface boundaries or thread-safe state emission, token storage could not be observed reactively or tested in isolation.
+- **Decision:** Introduce pure domain models `AuthTokenUserInfoModel`, `SavedLoginTokenModel`, `SavedLogoutTokenModel`, and `AuthTokensState`. Define abstract contract `AuthTokensRepository` covering reactive state observation (`observeState`), snapshots (`getState`), token mutation (`saveLoginToken`, `removeLoginToken`, `addLogoutToken`, `saveLogoutTokens`, `removeLogoutToken`), and full or category clearing (`clearAllTokens`, `clearLoginTokens`, `clearLogoutTokens`). Implement pure algorithmic use cases for list pruning to 20 elements (`PruneTokensListUseCase`) and hex format validation (`ValidateAuthTokenFormatUseCase`). Provide thread-safe `LegacyAuthTokensRepository` and TLRPC serialization in `AuthTokensMapper`. Encapsulate presentation state and MVI events in `AuthTokensViewModel`.
+- **Consequences:** All authentication token caching, quick login credentials, logout token tracking, and cloud backup triggers are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `AuthTokensHelper.java`.
 
 ### ADR 092: Isolation of Background Media Auto-Delete & Cache Eviction Task into feature.autodeletemedia
 - **Context:** In Telegram Android, automatic background media cleanup, LRU disk cache eviction according to user storage limits, 24-hour retention check intervals, and file access locking during ongoing playback/views were managed in `AutoDeleteMediaTask.java` (~278 lines, 12KB) and `CacheByChatsController.java`. The task periodically traverses media directories (`MEDIA_DIR_CACHE`, audio, document, video, photo, stories), evaluates retention policies per dialog type (User, Group, Channel, Stories) against `keep_media_type_*` settings, enforces `cache_limit` gigabyte ceilings via LRU eviction (sorting candidate files by last access time), and protects actively playing or loaded media via static `usingFilePaths` collections (`lockFile` / `unlockFile`). Legacy code directly invoked `AutoDeleteMediaTask.run()`, mutating static state and interacting directly with file paths without a reactive interface, which prevented testing of eviction ordering, size calculation algorithms, and lock management.

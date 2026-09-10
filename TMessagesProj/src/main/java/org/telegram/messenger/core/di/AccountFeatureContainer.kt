@@ -1039,6 +1039,21 @@ import org.telegram.messenger.feature.autodeletemedia.domain.usecase.ObserveAuto
 import org.telegram.messenger.feature.autodeletemedia.domain.usecase.RunAutoDeleteCleanupUseCase
 import org.telegram.messenger.feature.autodeletemedia.domain.usecase.UnlockFileUseCase
 import org.telegram.messenger.feature.autodeletemedia.presentation.AutoDeleteMediaViewModel
+import org.telegram.messenger.feature.authtokens.data.repository.LegacyAuthTokensRepository
+import org.telegram.messenger.feature.authtokens.domain.repository.AuthTokensRepository
+import org.telegram.messenger.feature.authtokens.domain.usecase.AddLogoutTokenUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.ClearAllTokensUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.GetAuthTokensStateUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.GetSavedLoginTokensUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.GetSavedLogoutTokensUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.ObserveAuthTokensStateUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.PruneTokensListUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.RefreshAuthTokensUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.RemoveTokenUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.SaveLoginTokenUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.SaveLogoutTokensUseCase
+import org.telegram.messenger.feature.authtokens.domain.usecase.ValidateAuthTokenFormatUseCase
+import org.telegram.messenger.feature.authtokens.presentation.AuthTokensViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6187,6 +6202,70 @@ class AccountFeatureContainer private constructor(val account: Int) {
             lockFile = lockFileUseCase,
             unlockFile = unlockFileUseCase,
             repository = autoDeleteMediaRepository
+        )
+    }
+
+    val authTokensRepository: AuthTokensRepository by lazy {
+        LegacyAuthTokensRepository(account)
+    }
+
+    val pruneTokensListUseCase: PruneTokensListUseCase
+        get() = PruneTokensListUseCase()
+
+    val validateAuthTokenFormatUseCase: ValidateAuthTokenFormatUseCase
+        get() = ValidateAuthTokenFormatUseCase()
+
+    val observeAuthTokensStateUseCase: ObserveAuthTokensStateUseCase
+        get() = ObserveAuthTokensStateUseCase(authTokensRepository)
+
+    val getAuthTokensStateUseCase: GetAuthTokensStateUseCase
+        get() = GetAuthTokensStateUseCase(authTokensRepository)
+
+    val getSavedLoginTokensUseCase: GetSavedLoginTokensUseCase
+        get() = GetSavedLoginTokensUseCase(authTokensRepository)
+
+    val saveLoginTokenUseCase: SaveLoginTokenUseCase
+        get() = SaveLoginTokenUseCase(authTokensRepository, validateAuthTokenFormatUseCase)
+
+    val getSavedLogoutTokensUseCase: GetSavedLogoutTokensUseCase
+        get() = GetSavedLogoutTokensUseCase(authTokensRepository)
+
+    val saveLogoutTokensUseCase: SaveLogoutTokensUseCase
+        get() = SaveLogoutTokensUseCase(authTokensRepository, pruneTokensListUseCase)
+
+    val addLogoutTokenUseCase: AddLogoutTokenUseCase
+        get() = AddLogoutTokenUseCase(authTokensRepository, validateAuthTokenFormatUseCase)
+
+    val removeTokenUseCase: RemoveTokenUseCase
+        get() = RemoveTokenUseCase(authTokensRepository)
+
+    val clearAllTokensUseCase: ClearAllTokensUseCase
+        get() = ClearAllTokensUseCase(authTokensRepository)
+
+    val refreshAuthTokensUseCase: RefreshAuthTokensUseCase
+        get() = RefreshAuthTokensUseCase(authTokensRepository)
+
+    private var cachedAuthTokensViewModel: AuthTokensViewModel? = null
+
+    val authTokensViewModel: AuthTokensViewModel
+        get() {
+            var vm = cachedAuthTokensViewModel
+            if (vm == null) {
+                vm = createAuthTokensViewModel()
+                cachedAuthTokensViewModel = vm
+            }
+            return vm
+        }
+
+    fun createAuthTokensViewModel(): AuthTokensViewModel {
+        return AuthTokensViewModel(
+            observeAuthTokensState = observeAuthTokensStateUseCase,
+            saveLoginToken = saveLoginTokenUseCase,
+            addLogoutToken = addLogoutTokenUseCase,
+            removeToken = removeTokenUseCase,
+            clearAllTokens = clearAllTokensUseCase,
+            refreshAuthTokens = refreshAuthTokensUseCase,
+            repository = authTokensRepository
         )
     }
 
