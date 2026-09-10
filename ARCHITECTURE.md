@@ -2502,6 +2502,43 @@ TMessagesProj/src/main/java/org/telegram/messenger/
             ├── LocalizationUiState.kt
             ├── LocalizationEvent.kt
             └── LocalizationViewModel.kt
+    │
+    └── ringtones/                        # Custom Notification Sounds, Ringtones & Cloud Uploader Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin domain entities & enums
+        │   │   ├── RingtoneErrorCode.kt
+        │   │   ├── RingtoneUploadStatus.kt
+        │   │   ├── RingtoneModel.kt
+        │   │   ├── RingtoneValidationResult.kt
+        │   │   ├── RingtoneLimitsModel.kt
+        │   │   └── RingtoneState.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── RingtoneRepository.kt
+        │   └── usecase/                   # Isolated business operations
+        │       ├── ValidateRingtoneEligibilityUseCase.kt
+        │       ├── ObserveRingtonesUseCase.kt
+        │       ├── ObserveRingtoneStateUseCase.kt
+        │       ├── GetRingtonesUseCase.kt
+        │       ├── GetRingtoneByIdUseCase.kt
+        │       ├── GetRingtoneSoundPathUseCase.kt
+        │       ├── AddRingtoneUseCase.kt
+        │       ├── RemoveRingtoneUseCase.kt
+        │       ├── SaveRingtoneFromDocumentUseCase.kt
+        │       ├── UploadRingtoneUseCase.kt
+        │       ├── CancelRingtoneUploadUseCase.kt
+        │       ├── RefreshRingtonesUseCase.kt
+        │       └── SelectRingtoneUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure duration & file size formatters with Locale.US, MIME resolver
+        │   │   └── RingtoneMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyRingtoneRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── RingtoneUiState.kt
+            ├── RingtoneEvent.kt
+            └── RingtoneViewModel.kt
 ```
 
 ### Layer Rules
@@ -3037,10 +3074,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ResolvePluralQuantityUseCase`, `FormatRelativeTimestampUseCase`, `FormatFullNameUseCase`, `FormatNumberWithSuffixUseCase`, `DetectRtlLanguageUseCase`, `ObserveLocalizationStateUseCase`, `GetLocalizationStateUseCase`, `ApplyLocaleUseCase`, `Toggle24HourFormatUseCase`, `SetNameDisplayOrderUseCase`
   - [x] Data layer: `LocalizationMapper`, `LegacyLocalizationRepository` (thread-safe StateFlow engine adapting `LocaleController.java`'s 4,500+ lines, pluralization rules for Slavic/Polish/Arabic/Germanic languages, string overrides, and RTL detection)
   - [x] Presentation layer: `LocalizationUiState`, `LocalizationEvent`, `LocalizationViewModel`
+- [x] Custom Notification Sounds, Ringtones & Cloud Uploader (`feature.ringtones`)
+  - [x] Domain entities: `RingtoneErrorCode`, `RingtoneUploadStatus`, `RingtoneModel`, `RingtoneValidationResult`, `RingtoneLimitsModel`, `RingtoneState`
+  - [x] Repository contract: `RingtoneRepository`
+  - [x] Use cases: `ValidateRingtoneEligibilityUseCase`, `ObserveRingtonesUseCase`, `ObserveRingtoneStateUseCase`, `GetRingtonesUseCase`, `GetRingtoneByIdUseCase`, `GetRingtoneSoundPathUseCase`, `AddRingtoneUseCase`, `RemoveRingtoneUseCase`, `SaveRingtoneFromDocumentUseCase`, `UploadRingtoneUseCase`, `CancelRingtoneUploadUseCase`, `RefreshRingtonesUseCase`, `SelectRingtoneUseCase`
+  - [x] Data layer: `RingtoneMapper`, `LegacyRingtoneRepository` (thread-safe StateFlow engine adapting `RingtoneDataStore.java` and `RingtoneUploader.java`, custom ringtone duration & size limits, sound path resolution, and upload cancellation)
+  - [x] Presentation layer: `RingtoneUiState`, `RingtoneEvent`, `RingtoneViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 086: Isolation of Custom Notification Sounds, Ringtones & Cloud Uploader into feature.ringtones
+- **Context:** In Telegram Android, custom notification sounds and ringtones management, cloud synchronization (`TL_account.getSavedRingtones`, `TL_account.saveRingtone`, `TL_account.uploadRingtone`), local binary document caching in preferences (`ringtones_pref_<userId>`), format and constraint validation (maximum 5 seconds duration, 300 KB max size, supported MIME types: `audio/mpeg`, `audio/ogg`, `audio/m4a`), upload tracking, and sound path resolution were split across `RingtoneDataStore.java` (~331 lines), `RingtoneUploader.java` (~99 lines), and `MediaDataController.java` (`uploadRingtone`, `saveToRingtones`, `onRingtoneUploaded`). UI activities like `NotificationsCustomSettingsActivity`, `ChatActivity`, and notification sound pickers directly interacted with these legacy classes and posted global `NotificationCenter` broadcasts (`onUserRingtonesUpdated`, `showBulletin`).
+- **Decision:** Introduce pure domain models `RingtoneErrorCode` (NONE, TOO_LONG, TOO_BIG, UNSUPPORTED_FORMAT, FILE_NOT_FOUND), `RingtoneUploadStatus`, `RingtoneModel` (id, title, durationSec, sizeBytes, mimeType, localUri, isUploading), `RingtoneValidationResult`, `RingtoneLimitsModel` (5s max duration, 300KB max size), and `RingtoneState`. Define abstract contract `RingtoneRepository` covering reactive state observation (`observeState`, `observeRingtones`), snapshot retrieval (`getState`, `getRingtones`, `getRingtoneById`, `getRingtoneSoundPath`), document saving (`saveRingtoneFromDocument`), adding and removing ringtones (`addRingtone`, `removeRingtone`), uploading with pending tone tracking (`uploadRingtone`), cancellation (`cancelUpload`), and selection (`selectRingtone`). Implement pure validation logic in `ValidateRingtoneEligibilityUseCase`, duration formatting ("0:03", "1:05") and file size formatting in `RingtoneMapper`, and thread-safe adapter `LegacyRingtoneRepository`. Encapsulate presentation state, preview playback toggle, and MVI events in `RingtoneViewModel`.
+- **Consequences:** All custom notification sounds and ringtone validation rules, upload lifecycle management, duration/size constraint checks, and sound path resolution are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `RingtoneDataStore.java` and `RingtoneUploader.java`.
 
 ### ADR 085: Isolation of Language Packs, Pluralization, Relative Timestamps & RTL Detection into feature.localization
 - **Context:** In Telegram Android, language pack downloading, plural form rules across diverse language families (English, Slavic, Polish, Arabic, etc.), string formatting (`LocaleController.getString`, `formatPluralString`), relative timestamps ("just now", "Xm ago", "Xh ago", "Xd ago"), name ordering (`FIRST_LAST` vs `LAST_FIRST`), 24-hour vs 12-hour time preferences, number abbreviations (1.2K, 3.4M), and right-to-left (RTL) language detection were governed by `LocaleController.java` (~4,517 lines, 199KB) in `org.telegram.messenger`. Direct coupling existed between Android `Context`, `Configuration`, `Resources`, raw XML language pack parsing, SQLite storage of language dictionaries (`loadRemoteLanguages`, `applyLanguageFile`), and global event broadcasts (`NotificationCenter.reloadInterface`, `suggestedLangpack`).

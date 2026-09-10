@@ -927,6 +927,22 @@ import org.telegram.messenger.feature.localization.domain.usecase.ResolvePluralQ
 import org.telegram.messenger.feature.localization.domain.usecase.SetNameDisplayOrderUseCase
 import org.telegram.messenger.feature.localization.domain.usecase.Toggle24HourFormatUseCase
 import org.telegram.messenger.feature.localization.presentation.LocalizationViewModel
+import org.telegram.messenger.feature.ringtones.data.repository.LegacyRingtoneRepository
+import org.telegram.messenger.feature.ringtones.domain.repository.RingtoneRepository
+import org.telegram.messenger.feature.ringtones.domain.usecase.AddRingtoneUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.CancelRingtoneUploadUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.GetRingtoneByIdUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.GetRingtoneSoundPathUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.GetRingtonesUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.ObserveRingtoneStateUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.ObserveRingtonesUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.RefreshRingtonesUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.RemoveRingtoneUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.SaveRingtoneFromDocumentUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.SelectRingtoneUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.UploadRingtoneUseCase
+import org.telegram.messenger.feature.ringtones.domain.usecase.ValidateRingtoneEligibilityUseCase
+import org.telegram.messenger.feature.ringtones.presentation.RingtoneViewModel
 import org.telegram.messenger.feature.chat.domain.repository.ChatRepository
 import org.telegram.messenger.feature.chat.domain.usecase.DeleteMessagesUseCase
 import org.telegram.messenger.feature.chat.domain.usecase.GetMessagesUseCase
@@ -5697,6 +5713,73 @@ class AccountFeatureContainer private constructor(val account: Int) {
             toggle24HourFormatUseCase = toggle24HourFormatUseCase,
             setNameDisplayOrderUseCase = setNameDisplayOrderUseCase,
             repository = localizationRepository
+        )
+    }
+
+    val ringtoneRepository: RingtoneRepository by lazy {
+        LegacyRingtoneRepository(account)
+    }
+
+    val validateRingtoneEligibilityUseCase: ValidateRingtoneEligibilityUseCase
+        get() = ValidateRingtoneEligibilityUseCase()
+
+    val observeRingtonesUseCase: ObserveRingtonesUseCase
+        get() = ObserveRingtonesUseCase(ringtoneRepository)
+
+    val observeRingtoneStateUseCase: ObserveRingtoneStateUseCase
+        get() = ObserveRingtoneStateUseCase(ringtoneRepository)
+
+    val getRingtonesUseCase: GetRingtonesUseCase
+        get() = GetRingtonesUseCase(ringtoneRepository)
+
+    val getRingtoneByIdUseCase: GetRingtoneByIdUseCase
+        get() = GetRingtoneByIdUseCase(ringtoneRepository)
+
+    val getRingtoneSoundPathUseCase: GetRingtoneSoundPathUseCase
+        get() = GetRingtoneSoundPathUseCase(ringtoneRepository)
+
+    val addRingtoneUseCase: AddRingtoneUseCase
+        get() = AddRingtoneUseCase(ringtoneRepository, validateRingtoneEligibilityUseCase)
+
+    val removeRingtoneUseCase: RemoveRingtoneUseCase
+        get() = RemoveRingtoneUseCase(ringtoneRepository)
+
+    val saveRingtoneFromDocumentUseCase: SaveRingtoneFromDocumentUseCase
+        get() = SaveRingtoneFromDocumentUseCase(ringtoneRepository, validateRingtoneEligibilityUseCase)
+
+    val uploadRingtoneUseCase: UploadRingtoneUseCase
+        get() = UploadRingtoneUseCase(ringtoneRepository, validateRingtoneEligibilityUseCase)
+
+    val cancelRingtoneUploadUseCase: CancelRingtoneUploadUseCase
+        get() = CancelRingtoneUploadUseCase(ringtoneRepository)
+
+    val refreshRingtonesUseCase: RefreshRingtonesUseCase
+        get() = RefreshRingtonesUseCase(ringtoneRepository)
+
+    val selectRingtoneUseCase: SelectRingtoneUseCase
+        get() = SelectRingtoneUseCase(ringtoneRepository)
+
+    private var cachedRingtoneViewModel: RingtoneViewModel? = null
+
+    val ringtoneViewModel: RingtoneViewModel
+        get() {
+            var vm = cachedRingtoneViewModel
+            if (vm == null) {
+                vm = createRingtoneViewModel()
+                cachedRingtoneViewModel = vm
+            }
+            return vm
+        }
+
+    fun createRingtoneViewModel(): RingtoneViewModel {
+        return RingtoneViewModel(
+            observeRingtoneStateUseCase = observeRingtoneStateUseCase,
+            refreshRingtonesUseCase = refreshRingtonesUseCase,
+            selectRingtoneUseCase = selectRingtoneUseCase,
+            removeRingtoneUseCase = removeRingtoneUseCase,
+            saveRingtoneFromDocumentUseCase = saveRingtoneFromDocumentUseCase,
+            uploadRingtoneUseCase = uploadRingtoneUseCase,
+            cancelRingtoneUploadUseCase = cancelRingtoneUploadUseCase
         )
     }
 
