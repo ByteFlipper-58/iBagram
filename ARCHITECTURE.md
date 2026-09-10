@@ -2895,10 +2895,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
         │   └── repository/                # Adapter implementing repository
         │       └── LegacyEphemeralMessagesRepository.kt
         │
-        └── presentation/                  # UI State & ViewModel
-            ├── EphemeralMessagesUiState.kt
-            ├── EphemeralMessagesEvent.kt
             └── EphemeralMessagesViewModel.kt
+    │
+    └── botkeyboard/                      # Bot Inline Keyboards, Custom Action Buttons & Markup Feature
+        ├── domain/
+        │   ├── model/                     # Pure Kotlin models (BotButtonColor, BotCustomButtonType, BotButtonItem, BotKeyboardRow, BotKeyboardLayout, BotKeyboardState)
+        │   │   └── BotKeyboardModel.kt
+        │   ├── repository/                # Abstract repository contracts
+        │   │   └── BotKeyboardRepository.kt
+        │   └── usecase/                   # Business logic use cases
+        │       ├── BuildBotKeyboardLayoutUseCase.kt
+        │       ├── ResolveBotButtonColorUseCase.kt
+        │       ├── ParseCustomButtonTypeUseCase.kt
+        │       ├── IsForceReplyMarkupUseCase.kt
+        │       ├── IsButtonWebViewUseCase.kt
+        │       ├── GetBotKeyboardUseCase.kt
+        │       ├── SetBotKeyboardUseCase.kt
+        │       ├── ClearBotKeyboardUseCase.kt
+        │       ├── ObserveBotKeyboardUseCase.kt
+        │       ├── ClearAllKeyboardsUseCase.kt
+        │       └── FormatButtonBadgeUseCase.kt
+        │
+        ├── data/
+        │   ├── mapper/                    # Pure type mappers (TLRPC.TL_replyKeyboardMarkup / BotInlineKeyboard <-> Domain)
+        │   │   └── BotKeyboardMapper.kt
+        │   └── repository/                # Adapter implementing repository
+        │       └── LegacyBotKeyboardRepository.kt
+        │
+        └── presentation/                  # UI State & ViewModel
+            ├── BotKeyboardUiState.kt
+            ├── BotKeyboardEvent.kt
+            └── BotKeyboardViewModel.kt
 ```
 
 
@@ -3514,10 +3541,21 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `ParseBotCommandUseCase`, `GetEphemeralCommandBotIdUseCase`, `IsEphemeralCommandUseCase`, `PackEphemeralMessageIdUseCase`, `UnpackEphemeralMessageIdUseCase`, `IsEphemeralMessageIdUseCase`, `PutWelcomeAnchorBindingUseCase`, `RemoveWelcomeAnchorBindingUseCase`, `GetWelcomeAnchorBindingsUseCase`, `ClearAllWelcomeAnchorBindingsUseCase`, `ObserveEphemeralMessagesStateUseCase`, `GetEphemeralMessagesStateUseCase`
   - [x] Data layer: `EphemeralMessagesMapper`, `LegacyEphemeralMessagesRepository` (thread-safe StateFlow engine adapting `EphemeralMessagesHelper.java`'s 489 lines, request transformation `beforeSendingFinalRequest` to `TL_ephemeral.TL_sendMessage`, ID bitmasking, and `WelcomeAnchorsState`)
   - [x] Presentation layer: `EphemeralMessagesUiState`, `EphemeralMessagesEvent`, `EphemeralMessagesViewModel`
+- [x] Bot Inline Keyboards, Custom Action Buttons & Markup (`feature.botkeyboard`)
+  - [x] Domain entities: `BotButtonColor`, `BotCustomButtonType`, `BotButtonTypeCategory`, `BotButtonItem`, `BotKeyboardRow`, `BotKeyboardLayout`, `BotKeyboardState`
+  - [x] Repository contract: `BotKeyboardRepository`
+  - [x] Use cases: `BuildBotKeyboardLayoutUseCase`, `ResolveBotButtonColorUseCase`, `ParseCustomButtonTypeUseCase`, `IsForceReplyMarkupUseCase`, `IsButtonWebViewUseCase`, `GetBotKeyboardUseCase`, `SetBotKeyboardUseCase`, `ClearBotKeyboardUseCase`, `ObserveBotKeyboardUseCase`, `ClearAllKeyboardsUseCase`, `FormatButtonBadgeUseCase`
+  - [x] Data layer: `BotKeyboardMapper`, `LegacyBotKeyboardRepository` (thread-safe StateFlow engine adapting `BotInlineKeyboard.java`'s 224 lines, `TLKeyboardHelper.java`'s 49 lines, button styling, row bitmask separators, and custom dialog action buttons)
+  - [x] Presentation layer: `BotKeyboardUiState`, `BotKeyboardEvent`, `BotKeyboardViewModel`
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 099: Isolation of Bot Inline Keyboards, Custom Action Buttons & Markup into feature.botkeyboard
+- **Context:** In Telegram Android, bot inline keyboards, reply markup structures, and custom action buttons were coordinated across `BotInlineKeyboard.java` (~224 lines), `TLKeyboardHelper.java` (~49 lines), `ChatActivity.java`, `ChatActivityEnterView.java`, `BotWebViewSheet.java`, and message cells. `BotInlineKeyboard` defined styling background colors (`BackgroundColor`: `NONE`, `PRIMARY`, `SUCCESS`, `DANGER`), abstract button structures (`ButtonBot`, `ButtonCustom`), multi-row keyboard builders (`Builder`, `KeyboardSourceArray`, row bitmask separators `1 << (size - 1)`), and built-in action buttons (`SUGGESTION_DECLINE`, `SUGGESTION_ACCEPT`, `SUGGESTION_EDIT`, `OPEN_MESSAGE_THREAD`, `GIFT_OFFER_DECLINE`, `GIFT_OFFER_ACCEPT`, `SHARING_OFFER_DECLINE`, `SHARING_OFFER_ACCEPT`). `TLKeyboardHelper` checked `isForceReply` and webview button indicators (`isButtonWebView`). Direct manipulation of raw MTProto classes (`TLRPC.TL_replyKeyboardMarkup`, `TLRPC.KeyboardButton`) and hardcoded button styles inside UI classes tightly coupled bot keyboard rendering to Telegram's legacy singleton state.
+- **Decision:** Introduce pure domain models `BotButtonColor`, `BotCustomButtonType`, `BotButtonTypeCategory`, `BotButtonItem`, `BotKeyboardRow`, `BotKeyboardLayout`, and `BotKeyboardState`. Define abstract contract `BotKeyboardRepository` covering reactive keyboard observation (`observeKeyboard`, `observeState`), snapshot queries (`getKeyboard`, `getState`), keyboard mutation (`setKeyboard`, `clearKeyboard`, `clearAllKeyboards`), and row bitmask extraction. Implement pure algorithmic use cases for 2D keyboard layout building from flat lists with row bitmasks (`BuildBotKeyboardLayoutUseCase`), button color resolution (`ResolveBotButtonColorUseCase`), custom action type parsing (`ParseCustomButtonTypeUseCase`), markup classification (`IsForceReplyMarkupUseCase`, `IsButtonWebViewUseCase`), and button badge formatting (`FormatButtonBadgeUseCase`). Provide thread-safe `LegacyBotKeyboardRepository` and bidirectional conversion in `BotKeyboardMapper`. Encapsulate presentation state and MVI events in `BotKeyboardViewModel`.
+- **Consequences:** All bot inline keyboards, custom suggestion/offer buttons, row separator bitmasks, and reply markup classifications are cleanly decoupled behind testable domain interfaces with complete unit test coverage while remaining 100% backward compatible with Telegram's `BotInlineKeyboard.java` and `TLKeyboardHelper.java`.
 
 ### ADR 098: Isolation of Ephemeral Bot Messages, Commands & Welcome Anchors into feature.ephemeralmessages
 - **Context:** In Telegram Android, ephemeral bot messages, ephemeral command detection, and welcome anchor bindings were coordinated across `EphemeralMessagesHelper.java` (~489 lines, 21.5KB), `SendMessagesHelper.java`, `MessagesController.java`, `MessagesStorage.java`, `MediaDataController.java`, and `ChatActivityEnterView.java`. The helper parsed commands (`/command@botusername`), determined whether commands were ephemeral via `TLRPC.BotCommand.ephemeral`, converted regular sending requests (`TL_messages_sendMessage`, `TL_messages_sendMedia`) to ephemeral requests (`TL_ephemeral.TL_sendMessage`) via `beforeSendingFinalRequest`, packed/unpacked ephemeral message IDs with bitmasks (`0x40000000`), converted between `TL_ephemeral.EphemeralMessage` and `TLRPC.Message`, batched incoming ephemeral updates (`EphemeralUpdates`), and tracked anchor bindings via `WelcomeAnchorsState`. Direct interaction with static instances and unsynchronized data structures tightly coupled chat input views, message dispatchers, and SQLite storage to Telegram's legacy singleton state.

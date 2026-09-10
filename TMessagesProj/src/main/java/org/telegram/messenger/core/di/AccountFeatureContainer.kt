@@ -1128,6 +1128,20 @@ import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.PutWelcom
 import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.RemoveWelcomeAnchorBindingUseCase
 import org.telegram.messenger.feature.ephemeralmessages.domain.usecase.UnpackEphemeralMessageIdUseCase
 import org.telegram.messenger.feature.ephemeralmessages.presentation.EphemeralMessagesViewModel
+import org.telegram.messenger.feature.botkeyboard.data.repository.LegacyBotKeyboardRepository
+import org.telegram.messenger.feature.botkeyboard.domain.repository.BotKeyboardRepository
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.BuildBotKeyboardLayoutUseCase
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.CheckIsButtonWebViewUseCase
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.CheckIsForceReplyUseCase
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.ClearAllKeyboardsUseCase
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.GetBotKeyboardStateUseCase
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.GetKeyboardForMessageUseCase
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.ObserveBotKeyboardStateUseCase
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.RecordButtonPressedUseCase
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.RemoveKeyboardForMessageUseCase
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.ResolveCustomButtonTypeUseCase
+import org.telegram.messenger.feature.botkeyboard.domain.usecase.SetKeyboardForMessageUseCase
+import org.telegram.messenger.feature.botkeyboard.presentation.BotKeyboardViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -6679,6 +6693,70 @@ class AccountFeatureContainer private constructor(val account: Int) {
             getWelcomeAnchorBindingsUseCase = getWelcomeAnchorBindingsUseCase,
             clearAllWelcomeAnchorBindingsUseCase = clearAllWelcomeAnchorBindingsUseCase,
             observeStateUseCase = observeEphemeralMessagesStateUseCase
+        )
+    }
+
+    private var customBotKeyboardRepository: BotKeyboardRepository? = null
+
+    var botKeyboardRepository: BotKeyboardRepository
+        get() = customBotKeyboardRepository ?: LegacyBotKeyboardRepository(account)
+        set(value) {
+            customBotKeyboardRepository = value
+        }
+
+    val buildBotKeyboardLayoutUseCase: BuildBotKeyboardLayoutUseCase
+        get() = BuildBotKeyboardLayoutUseCase()
+
+    val checkIsForceReplyUseCase: CheckIsForceReplyUseCase
+        get() = CheckIsForceReplyUseCase(botKeyboardRepository)
+
+    val checkIsButtonWebViewUseCase: CheckIsButtonWebViewUseCase
+        get() = CheckIsButtonWebViewUseCase(botKeyboardRepository)
+
+    val resolveCustomButtonTypeUseCase: ResolveCustomButtonTypeUseCase
+        get() = ResolveCustomButtonTypeUseCase()
+
+    val getKeyboardForMessageUseCase: GetKeyboardForMessageUseCase
+        get() = GetKeyboardForMessageUseCase(botKeyboardRepository)
+
+    val setKeyboardForMessageUseCase: SetKeyboardForMessageUseCase
+        get() = SetKeyboardForMessageUseCase(botKeyboardRepository)
+
+    val removeKeyboardForMessageUseCase: RemoveKeyboardForMessageUseCase
+        get() = RemoveKeyboardForMessageUseCase(botKeyboardRepository)
+
+    val clearAllKeyboardsUseCase: ClearAllKeyboardsUseCase
+        get() = ClearAllKeyboardsUseCase(botKeyboardRepository)
+
+    val recordButtonPressedUseCase: RecordButtonPressedUseCase
+        get() = RecordButtonPressedUseCase(botKeyboardRepository)
+
+    val observeBotKeyboardStateUseCase: ObserveBotKeyboardStateUseCase
+        get() = ObserveBotKeyboardStateUseCase(botKeyboardRepository)
+
+    val getBotKeyboardStateUseCase: GetBotKeyboardStateUseCase
+        get() = GetBotKeyboardStateUseCase(botKeyboardRepository)
+
+    private var cachedBotKeyboardViewModel: BotKeyboardViewModel? = null
+
+    val botKeyboardViewModel: BotKeyboardViewModel
+        get() {
+            var vm = cachedBotKeyboardViewModel
+            if (vm == null) {
+                vm = createBotKeyboardViewModel()
+                cachedBotKeyboardViewModel = vm
+            }
+            return vm
+        }
+
+    fun createBotKeyboardViewModel(): BotKeyboardViewModel {
+        return BotKeyboardViewModel(
+            getKeyboardUseCase = getKeyboardForMessageUseCase,
+            setKeyboardUseCase = setKeyboardForMessageUseCase,
+            removeKeyboardUseCase = removeKeyboardForMessageUseCase,
+            clearAllKeyboardsUseCase = clearAllKeyboardsUseCase,
+            recordButtonPressedUseCase = recordButtonPressedUseCase,
+            observeStateUseCase = observeBotKeyboardStateUseCase
         )
     }
 
