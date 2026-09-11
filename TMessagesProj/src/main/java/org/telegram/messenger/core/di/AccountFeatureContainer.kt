@@ -1,85 +1,192 @@
-﻿package org.telegram.messenger.core.di
+package org.telegram.messenger.core.di
 
+import java.util.concurrent.ConcurrentHashMap
 import org.telegram.messenger.UserConfig
-import org.telegram.messenger.feature.messaging.chat.data.repository.LegacyChatRepository
-import org.telegram.messenger.feature.social.profile.data.repository.LegacyProfileRepository
-import org.telegram.messenger.feature.social.profile.domain.repository.ProfileRepository
-import org.telegram.messenger.feature.social.profile.domain.usecase.BlockPeerUseCase
-import org.telegram.messenger.feature.social.profile.domain.usecase.GetProfileUseCase
-import org.telegram.messenger.feature.social.profile.domain.usecase.LoadFullProfileUseCase
-import org.telegram.messenger.feature.social.profile.domain.usecase.ObserveProfileUseCase
-import org.telegram.messenger.feature.social.profile.domain.usecase.UnblockPeerUseCase
-import org.telegram.messenger.feature.social.profile.presentation.ProfileViewModel
-import org.telegram.messenger.feature.system.settings.data.repository.LegacySettingsRepository
-import org.telegram.messenger.feature.system.settings.domain.repository.SettingsRepository
-import org.telegram.messenger.feature.system.settings.domain.usecase.GetSettingsUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.ObserveSettingsUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateBubbleRadiusUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateFontSizeUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateSaveToGalleryUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateStreamMediaUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateSyncContactsUseCase
-import org.telegram.messenger.feature.system.settings.presentation.SettingsViewModel
-import org.telegram.messenger.feature.media.mediadata.data.repository.LegacyMediaRepository
-import org.telegram.messenger.feature.media.mediadata.domain.repository.MediaRepository
-import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetAlbumMediaUseCase
-import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetAllMediaUseCase
-import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetMediaAlbumsUseCase
-import org.telegram.messenger.feature.media.mediadata.domain.usecase.ObserveMediaAlbumsUseCase
-import org.telegram.messenger.feature.media.mediadata.presentation.MediaViewModel
-import org.telegram.messenger.feature.media.voip.data.repository.LegacyVoIPRepository
-import org.telegram.messenger.feature.media.voip.domain.repository.VoIPRepository
-import org.telegram.messenger.feature.media.voip.domain.usecase.AcceptCallUseCase
-import org.telegram.messenger.feature.media.voip.domain.usecase.DeclineCallUseCase
-import org.telegram.messenger.feature.media.voip.domain.usecase.GetCurrentCallUseCase
-import org.telegram.messenger.feature.media.voip.domain.usecase.HangUpCallUseCase
-import org.telegram.messenger.feature.media.voip.domain.usecase.ObserveCurrentCallUseCase
-import org.telegram.messenger.feature.media.voip.domain.usecase.StartCallUseCase
-import org.telegram.messenger.feature.media.voip.domain.usecase.ToggleMuteUseCase
-import org.telegram.messenger.feature.media.voip.domain.usecase.ToggleSpeakerphoneUseCase
-import org.telegram.messenger.feature.media.voip.presentation.CallViewModel
-import org.telegram.messenger.feature.security.secretchat.data.repository.LegacySecretChatRepository
-import org.telegram.messenger.feature.security.secretchat.domain.repository.SecretChatRepository
-import org.telegram.messenger.feature.security.secretchat.domain.usecase.AcceptSecretChatUseCase
-import org.telegram.messenger.feature.security.secretchat.domain.usecase.DeclineSecretChatUseCase
-import org.telegram.messenger.feature.security.secretchat.domain.usecase.GetSecretChatUseCase
-import org.telegram.messenger.feature.security.secretchat.domain.usecase.ObserveSecretChatUseCase
-import org.telegram.messenger.feature.security.secretchat.domain.usecase.ObserveSecretChatsUseCase
-import org.telegram.messenger.feature.security.secretchat.domain.usecase.SendScreenshotNotificationUseCase
-import org.telegram.messenger.feature.security.secretchat.domain.usecase.SetSecretChatTtlUseCase
-import org.telegram.messenger.feature.security.secretchat.domain.usecase.StartSecretChatUseCase
-import org.telegram.messenger.feature.security.secretchat.presentation.SecretChatViewModel
-import org.telegram.messenger.feature.social.contacts.data.repository.LegacyContactsRepository
-import org.telegram.messenger.feature.social.contacts.domain.repository.ContactsRepository
-import org.telegram.messenger.feature.social.contacts.domain.usecase.AddContactUseCase
-import org.telegram.messenger.feature.social.contacts.domain.usecase.DeleteContactUseCase
-import org.telegram.messenger.feature.social.contacts.domain.usecase.GetContactUseCase
-import org.telegram.messenger.feature.social.contacts.domain.usecase.GetContactsUseCase
-import org.telegram.messenger.feature.social.contacts.domain.usecase.ObserveContactsUseCase
-import org.telegram.messenger.feature.social.contacts.domain.usecase.SearchContactsUseCase
-import org.telegram.messenger.feature.social.contacts.presentation.ContactsViewModel
-import org.telegram.messenger.feature.messaging.folders.data.repository.LegacyFoldersRepository
-import org.telegram.messenger.feature.messaging.folders.domain.repository.FoldersRepository
-import org.telegram.messenger.feature.messaging.folders.domain.usecase.CreateFolderUseCase
-import org.telegram.messenger.feature.messaging.folders.domain.usecase.DeleteFolderUseCase
-import org.telegram.messenger.feature.messaging.folders.domain.usecase.GetFolderUseCase
-import org.telegram.messenger.feature.messaging.folders.domain.usecase.GetFoldersUseCase
-import org.telegram.messenger.feature.messaging.folders.domain.usecase.GetSuggestedFoldersUseCase
-import org.telegram.messenger.feature.messaging.folders.domain.usecase.ObserveFoldersUseCase
-import org.telegram.messenger.feature.messaging.folders.domain.usecase.ReorderFoldersUseCase
-import org.telegram.messenger.feature.messaging.folders.domain.usecase.UpdateFolderUseCase
-import org.telegram.messenger.feature.messaging.folders.presentation.FoldersViewModel
-import org.telegram.messenger.feature.messaging.stickers.data.repository.LegacyStickersRepository
-import org.telegram.messenger.feature.messaging.stickers.domain.repository.StickersRepository
-import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetRecentStickersUseCase
-import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetStickerSetUseCase
-import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetStickerSetsUseCase
-import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetStickersForEmojiUseCase
-import org.telegram.messenger.feature.messaging.stickers.domain.usecase.ObserveStickerSetsUseCase
-import org.telegram.messenger.feature.messaging.stickers.domain.usecase.ToggleStickerSetArchivedUseCase
-import org.telegram.messenger.feature.messaging.stickers.domain.usecase.ToggleStickerSetInstalledUseCase
-import org.telegram.messenger.feature.messaging.stickers.presentation.StickersViewModel
-import org.telegram.messenger.feature.media.fileloader.data.repository.LegacyFileLoaderRepository
+import org.telegram.messenger.feature.business.billing.domain.repository.BillingRepository
+import org.telegram.messenger.feature.business.billing.domain.usecase.FormatCurrencyUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.GetBillingStateUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.GetCurrencyExpUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.GetPremiumProductUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.ManageSubscriptionUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.ObserveBillingStateUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.QueryBillingPurchasesUseCase
+import org.telegram.messenger.feature.business.billing.domain.usecase.StartBillingConnectionUseCase
+import org.telegram.messenger.feature.business.billing.presentation.BillingViewModel
+import org.telegram.messenger.feature.business.botstars.domain.repository.BotStarsRepository
+import org.telegram.messenger.feature.business.botstars.domain.usecase.GetAdminedBotsAndChannelsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.GetBotStarsStatsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.GetTonStatsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.LoadBotTransactionsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.LoadConnectedStarBotsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.LoadSuggestedStarBotsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveBotStarsStatsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveBotTransactionsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveConnectedStarBotsUseCase
+import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveTonStatsUseCase
+import org.telegram.messenger.feature.business.botstars.presentation.BotStarsViewModel
+import org.telegram.messenger.feature.business.businessbots.domain.repository.BusinessBotsRepository
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.DeleteConnectedBotUseCase
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.FindConnectedBotUseCase
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.GetConnectedBotsUseCase
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.LoadConnectedBotsUseCase
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.ObserveConnectedBotsUseCase
+import org.telegram.messenger.feature.business.businessbots.domain.usecase.UpdateConnectedBotUseCase
+import org.telegram.messenger.feature.business.businessbots.presentation.BusinessBotsViewModel
+import org.telegram.messenger.feature.business.businesslinks.domain.repository.BusinessLinksRepository
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.CanAddNewBusinessLinkUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.CreateBusinessLinkUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.DeleteBusinessLinkUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.EditBusinessLinkUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.FindBusinessLinkUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.GetBusinessLinksUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.LoadBusinessLinksUseCase
+import org.telegram.messenger.feature.business.businesslinks.domain.usecase.ObserveBusinessLinksUseCase
+import org.telegram.messenger.feature.business.businesslinks.presentation.BusinessLinksViewModel
+import org.telegram.messenger.feature.business.businessrecipients.domain.repository.BusinessRecipientsRepository
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.AddExcludedUsersUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.AddSelectedUsersUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.CheckRecipientsChangesUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.GetBusinessRecipientsUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ObserveBusinessRecipientsUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.RemoveExcludedUserUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.RemoveSelectedUserUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ResetBusinessRecipientsUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.SetBusinessRecipientsUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ToggleExcludeSelectedUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ToggleRecipientFilterUseCase
+import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ValidateBusinessRecipientsUseCase
+import org.telegram.messenger.feature.business.businessrecipients.presentation.BusinessRecipientsViewModel
+import org.telegram.messenger.feature.business.di.BusinessContainer
+import org.telegram.messenger.feature.business.giftauctions.domain.repository.GiftAuctionsRepository
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.GetActiveAuctionsUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.GetAuctionByIdUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.GetAuctionBySlugUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.LoadAuctionAcquiredGiftsUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.ObserveActiveAuctionsUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.ObserveAuctionUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.RefreshActiveAuctionsUseCase
+import org.telegram.messenger.feature.business.giftauctions.domain.usecase.SendAuctionBidUseCase
+import org.telegram.messenger.feature.business.giftauctions.presentation.GiftAuctionsViewModel
+import org.telegram.messenger.feature.business.payments.domain.repository.PaymentsRepository
+import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarSubscriptionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarTopupOptionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarTransactionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarsBalanceUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.ObserveStarSubscriptionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.ObserveStarTransactionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.ObserveStarsBalanceUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarSubscriptionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarTransactionsUseCase
+import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarsBalanceUseCase
+import org.telegram.messenger.feature.business.payments.presentation.PaymentsViewModel
+import org.telegram.messenger.feature.business.quickreplies.domain.repository.QuickRepliesRepository
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.CanAddNewQuickReplyUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.CheckQuickReplyNameBusyUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.DeleteQuickRepliesUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.FindQuickReplyUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.GetQuickRepliesUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.LoadQuickRepliesUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.ObserveQuickRepliesUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.RenameQuickReplyUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.ReorderQuickRepliesUseCase
+import org.telegram.messenger.feature.business.quickreplies.domain.usecase.SendQuickReplyUseCase
+import org.telegram.messenger.feature.business.quickreplies.presentation.QuickRepliesViewModel
+import org.telegram.messenger.feature.business.stargifts.domain.repository.StarGiftsRepository
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.GetStarGiftByIdUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.GetStarGiftsCatalogUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.LoadProfileGiftsUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.ObserveProfileGiftsUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.ObserveStarGiftsCatalogUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.ToggleHideProfileGiftUseCase
+import org.telegram.messenger.feature.business.stargifts.domain.usecase.TogglePinProfileGiftUseCase
+import org.telegram.messenger.feature.business.stargifts.presentation.StarGiftsViewModel
+import org.telegram.messenger.feature.business.timezones.domain.repository.TimezonesRepository
+import org.telegram.messenger.feature.business.timezones.domain.usecase.FindTimezoneUseCase
+import org.telegram.messenger.feature.business.timezones.domain.usecase.GetSystemTimezoneIdUseCase
+import org.telegram.messenger.feature.business.timezones.domain.usecase.GetTimezoneNameUseCase
+import org.telegram.messenger.feature.business.timezones.domain.usecase.GetTimezonesUseCase
+import org.telegram.messenger.feature.business.timezones.domain.usecase.LoadTimezonesUseCase
+import org.telegram.messenger.feature.business.timezones.domain.usecase.ObserveTimezonesUseCase
+import org.telegram.messenger.feature.business.timezones.presentation.TimezonesViewModel
+import org.telegram.messenger.feature.media.audioplayer.domain.repository.AudioPlayerRepository
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.ConfigureEqualizerUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.CyclePlaybackSpeedUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.CycleRepeatModeUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.GetPlaybackStateUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.HandleProximitySensorUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.NavigatePlaylistUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.ObservePlaybackStateUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.PlayTrackUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.SeekAudioUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.TogglePlayPauseUseCase
+import org.telegram.messenger.feature.media.audioplayer.domain.usecase.ToggleShuffleUseCase
+import org.telegram.messenger.feature.media.audioplayer.presentation.AudioPlayerViewModel
+import org.telegram.messenger.feature.media.autodeletemedia.domain.repository.AutoDeleteMediaRepository
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.CalculateEvictionCandidatesUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.CheckShouldRunCleanupUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.GetAutoDeleteStateUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.IsFileLockedUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.LockFileUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.ObserveAutoDeleteStateUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.RunAutoDeleteCleanupUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.UnlockFileUseCase
+import org.telegram.messenger.feature.media.autodeletemedia.presentation.AutoDeleteMediaViewModel
+import org.telegram.messenger.feature.media.cachebychats.domain.repository.CacheByChatsRepository
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.ClearKeepMediaExceptionsUseCase
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.GetCacheByChatsConfigUseCase
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.ObserveCacheByChatsConfigUseCase
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.RemoveKeepMediaExceptionUseCase
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.SetKeepMediaDurationUseCase
+import org.telegram.messenger.feature.media.cachebychats.domain.usecase.SetKeepMediaExceptionUseCase
+import org.telegram.messenger.feature.media.cachebychats.presentation.CacheByChatsViewModel
+import org.telegram.messenger.feature.media.camera.domain.repository.CameraRepository
+import org.telegram.messenger.feature.media.camera.domain.usecase.ChooseOptimalResolutionUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.GetCameraStateUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.InitCamerasUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.NotifyCameraRecordingUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.ObserveCameraStateUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.SelectCameraUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.SetCameraFlashModeUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.SwitchCameraUseCase
+import org.telegram.messenger.feature.media.camera.domain.usecase.ToggleMirrorFrontCameraUseCase
+import org.telegram.messenger.feature.media.camera.presentation.CameraViewModel
+import org.telegram.messenger.feature.media.chromecast.domain.repository.ChromecastRepository
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.CastMediaUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.GetChromecastStateUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.IsCastingUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.IsMediaPlayingOnCastUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.ObserveChromecastStateUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.SetCastCoverFileUseCase
+import org.telegram.messenger.feature.media.chromecast.domain.usecase.StopCastingUseCase
+import org.telegram.messenger.feature.media.chromecast.presentation.ChromecastViewModel
+import org.telegram.messenger.feature.media.contentpreview.domain.repository.ContentPreviewRepository
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.CalculatePreviewDragUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.ClearContentPreviewUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.DismissContentPreviewUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.EvaluatePreviewEligibilityUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.GetContentPreviewStateUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.ObserveContentPreviewStateUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.OpenContentPreviewUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.ResolvePreviewActionsUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.TriggerPreviewActionUseCase
+import org.telegram.messenger.feature.media.contentpreview.domain.usecase.UpdatePreviewDragUseCase
+import org.telegram.messenger.feature.media.contentpreview.presentation.ContentPreviewViewModel
+import org.telegram.messenger.feature.media.di.MediaContainer
+import org.telegram.messenger.feature.media.downloadmanager.domain.repository.DownloadManagerRepository
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.CancelDownloadUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.ClearRecentDownloadsUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.EnqueueDownloadUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.EvaluateAutoDownloadEligibilityUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.GetDownloadManagerStateUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.MarkDownloadsAsViewedUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.ObserveDownloadManagerStateUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.PauseDownloadUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.ResumeDownloadUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.RetryDownloadUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.SetDownloadNetworkTypeUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.UpdateDownloadPresetUseCase
+import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.UpdateDownloadProgressUseCase
+import org.telegram.messenger.feature.media.downloadmanager.presentation.DownloadManagerViewModel
 import org.telegram.messenger.feature.media.fileloader.domain.repository.FileLoaderRepository
 import org.telegram.messenger.feature.media.fileloader.domain.usecase.CancelAllDownloadsUseCase
 import org.telegram.messenger.feature.media.fileloader.domain.usecase.CancelFileUploadUseCase
@@ -91,7 +198,375 @@ import org.telegram.messenger.feature.media.fileloader.domain.usecase.ObserveTra
 import org.telegram.messenger.feature.media.fileloader.domain.usecase.ObserveTransfersUseCase
 import org.telegram.messenger.feature.media.fileloader.domain.usecase.UploadFileUseCase
 import org.telegram.messenger.feature.media.fileloader.presentation.FileLoaderViewModel
-import org.telegram.messenger.feature.messaging.search.data.repository.LegacySearchRepository
+import org.telegram.messenger.feature.media.fileref.domain.repository.FileRefRepository
+import org.telegram.messenger.feature.media.fileref.domain.usecase.CancelFileRefRequestUseCase
+import org.telegram.messenger.feature.media.fileref.domain.usecase.ClearFileRefCacheUseCase
+import org.telegram.messenger.feature.media.fileref.domain.usecase.GetFileRefStatsUseCase
+import org.telegram.messenger.feature.media.fileref.domain.usecase.NotifyReferenceRenewedUseCase
+import org.telegram.messenger.feature.media.fileref.domain.usecase.ObserveFileRefStatsUseCase
+import org.telegram.messenger.feature.media.fileref.domain.usecase.RequestReferenceRenewalUseCase
+import org.telegram.messenger.feature.media.fileref.presentation.FileRefViewModel
+import org.telegram.messenger.feature.media.gallerysave.domain.repository.GallerySaveRepository
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.GetGallerySaveConfigUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.GetGallerySaveExceptionsUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.GetGallerySaveSettingsUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.ObserveGallerySaveConfigUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.RemoveAllGallerySaveExceptionsUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.RemoveGallerySaveExceptionUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.SetGallerySaveExceptionUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.SetGallerySaveVideoLimitUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.ToggleGallerySavePeerTypeUseCase
+import org.telegram.messenger.feature.media.gallerysave.domain.usecase.UpdateGallerySaveSettingsUseCase
+import org.telegram.messenger.feature.media.gallerysave.presentation.GallerySaveViewModel
+import org.telegram.messenger.feature.media.imageloader.domain.repository.ImageLoaderRepository
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.BuildImageCacheKeyUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.CalculateImageDownscaleUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.CancelImageRequestUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.ClearImageCacheUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.EnqueueImageRequestUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.EvaluateImageCacheEligibilityUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.FormatImageFilterUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.GetImageLoaderStateUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.ObserveImageLoaderStateUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.ParseImageFilterUseCase
+import org.telegram.messenger.feature.media.imageloader.domain.usecase.TrimImageMemoryUseCase
+import org.telegram.messenger.feature.media.imageloader.presentation.ImageLoaderViewModel
+import org.telegram.messenger.feature.media.mediadata.domain.repository.MediaRepository
+import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetAlbumMediaUseCase
+import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetAllMediaUseCase
+import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetMediaAlbumsUseCase
+import org.telegram.messenger.feature.media.mediadata.domain.usecase.ObserveMediaAlbumsUseCase
+import org.telegram.messenger.feature.media.mediadata.presentation.MediaViewModel
+import org.telegram.messenger.feature.media.photoviewer.domain.repository.PhotoViewerRepository
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.CalculateMediaPagingUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.CalculateZoomTransformUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ClosePhotoViewerUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.GetPhotoViewerStateUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.NavigatePhotoViewerUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ObservePhotoViewerStateUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.OpenPhotoViewerUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ResolveMediaQualityUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.UpdatePlaybackStateUseCase
+import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ValidateViewerActionsUseCase
+import org.telegram.messenger.feature.media.photoviewer.presentation.PhotoViewerViewModel
+import org.telegram.messenger.feature.media.pip.domain.repository.PipRepository
+import org.telegram.messenger.feature.media.pip.domain.usecase.DispatchPipStateUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.EvaluatePipEligibilityUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.GetPipSessionUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.ObservePipSessionUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.RegisterPipSourceUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.TriggerPipActionUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.UnregisterPipSourceUseCase
+import org.telegram.messenger.feature.media.pip.domain.usecase.UpdatePipSourceStateUseCase
+import org.telegram.messenger.feature.media.pip.presentation.PipViewModel
+import org.telegram.messenger.feature.media.sharedmedia.domain.repository.SharedMediaRepository
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.CalculateMediaSelectionUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ClearMediaSelectionUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.FilterSharedMediaUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.GetSharedMediaStateUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.GroupMediaByMonthUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ObserveSharedMediaStateUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ResolveAvailableTabsUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.SelectSharedMediaTabUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.SetSharedMediaFilterUseCase
+import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ToggleMediaSelectionUseCase
+import org.telegram.messenger.feature.media.sharedmedia.presentation.SharedMediaViewModel
+import org.telegram.messenger.feature.media.stories.domain.repository.StoriesRepository
+import org.telegram.messenger.feature.media.stories.domain.usecase.ActivateStealthModeUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.DeleteStoryUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.GetPeerStoriesUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.GetStoryLimitUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.MarkStoryAsReadUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveHiddenStoriesUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveSelfStoriesUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveStealthModeUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveStoriesUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.RefreshStoriesUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ToggleStoryHiddenUseCase
+import org.telegram.messenger.feature.media.stories.domain.usecase.ToggleStoryPinUseCase
+import org.telegram.messenger.feature.media.stories.presentation.StoriesViewModel
+import org.telegram.messenger.feature.media.storycustomparams.domain.repository.StoryCustomParamsRepository
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.CheckStoryCustomParamsEmptyUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.ClearAllStoryCustomParamsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.ComputeStoryCustomParamsFlagsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.CopyStoryCustomParamsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.GetStoryCustomParamsStateUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.GetStoryCustomParamsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.ObserveStoryCustomParamsStateUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.RemoveStoryCustomParamsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.SaveStoryCustomParamsUseCase
+import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.UpdateStoryTranslationUseCase
+import org.telegram.messenger.feature.media.storycustomparams.presentation.StoryCustomParamsViewModel
+import org.telegram.messenger.feature.media.voip.domain.repository.VoIPRepository
+import org.telegram.messenger.feature.media.voip.domain.usecase.AcceptCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.DeclineCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.GetCurrentCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.HangUpCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.ObserveCurrentCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.StartCallUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.ToggleMuteUseCase
+import org.telegram.messenger.feature.media.voip.domain.usecase.ToggleSpeakerphoneUseCase
+import org.telegram.messenger.feature.media.voip.presentation.CallViewModel
+import org.telegram.messenger.feature.messaging.aitones.domain.repository.AiTonesRepository
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.AddAiToneUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.EditAiToneUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.GetAiTonesStateUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.LoadAiTonesUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.ObserveAiTonesUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.RemoveAiToneUseCase
+import org.telegram.messenger.feature.messaging.aitones.domain.usecase.UnsaveAiToneUseCase
+import org.telegram.messenger.feature.messaging.aitones.presentation.AiTonesViewModel
+import org.telegram.messenger.feature.messaging.autodelete.domain.repository.AutoDeleteRepository
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.GetChatAutoDeleteUseCase
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.GetGlobalAutoDeleteUseCase
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.ObserveGlobalAutoDeleteUseCase
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetChatAutoDeleteUseCase
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetChatsAutoDeleteBatchUseCase
+import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetGlobalAutoDeleteUseCase
+import org.telegram.messenger.feature.messaging.autodelete.presentation.AutoDeleteViewModel
+import org.telegram.messenger.feature.messaging.botforum.domain.repository.BotForumRepository
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckHasBotForumDraftsUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckIsBotForumUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckIsStreamingTopicUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckNewMessageDraftReplacementUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.DeriveTopicNameFromMessageUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.GetBotForumStateUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.GetStreamingSendButtonStateUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.ObserveBotForumStateUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.RemoveMarkedRemovedDraftsUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.ResolveStreamingButtonStateUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.SaveIsStreamingTopicUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.StopStreamingDraftUseCase
+import org.telegram.messenger.feature.messaging.botforum.domain.usecase.UpdateBotForumDraftUseCase
+import org.telegram.messenger.feature.messaging.botforum.presentation.BotForumViewModel
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.repository.BotKeyboardRepository
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.BuildBotKeyboardLayoutUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.CheckIsButtonWebViewUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.CheckIsForceReplyUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.ClearAllKeyboardsUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.GetBotKeyboardStateUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.GetKeyboardForMessageUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.ObserveBotKeyboardStateUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.RecordButtonPressedUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.RemoveKeyboardForMessageUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.ResolveCustomButtonTypeUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.SetKeyboardForMessageUseCase
+import org.telegram.messenger.feature.messaging.botkeyboard.presentation.BotKeyboardViewModel
+import org.telegram.messenger.feature.messaging.bottomviews.domain.repository.BottomViewsVisibilityRepository
+import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.GetBottomViewVisibilityUseCase
+import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.GetBottomViewsStateUseCase
+import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.GetPriorityBottomContainerUseCase
+import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.ObserveBottomViewsVisibilityUseCase
+import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.SetBottomViewVisibleUseCase
+import org.telegram.messenger.feature.messaging.bottomviews.presentation.BottomViewsViewModel
+import org.telegram.messenger.feature.messaging.chat.domain.repository.ChatRepository
+import org.telegram.messenger.feature.messaging.chat.domain.usecase.DeleteMessagesUseCase
+import org.telegram.messenger.feature.messaging.chat.domain.usecase.GetMessagesUseCase
+import org.telegram.messenger.feature.messaging.chat.domain.usecase.LoadHistoryUseCase
+import org.telegram.messenger.feature.messaging.chat.domain.usecase.ObserveMessagesUseCase
+import org.telegram.messenger.feature.messaging.chat.domain.usecase.SendMessageUseCase
+import org.telegram.messenger.feature.messaging.chat.presentation.ChatViewModel
+import org.telegram.messenger.feature.messaging.chatattach.domain.repository.ChatAttachRepository
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.CalculateAttachCaptionLimitUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ClearAttachSelectionUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.GetChatAttachStateUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ObserveChatAttachStateUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.OpenChatAttachAlertUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ResolveAvailableAttachLayoutsUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.SelectAttachLayoutUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ToggleAttachItemSelectionUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.UpdateAttachSendOptionsUseCase
+import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ValidateSendOptionsUseCase
+import org.telegram.messenger.feature.messaging.chatattach.presentation.ChatAttachViewModel
+import org.telegram.messenger.feature.messaging.chatinput.domain.repository.ChatInputRepository
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.CalculateSendButtonStateUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ClearChatInputReplyUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.FormatTextSelectionUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.GetChatInputStateUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ObserveChatInputStateUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ResolvePanelVisibilityUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChatInputPanelModeUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChatInputReplyUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChatInputTextUseCase
+import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ValidateVoiceRecordActionUseCase
+import org.telegram.messenger.feature.messaging.chatinput.presentation.ChatInputViewModel
+import org.telegram.messenger.feature.messaging.chatmeta.domain.repository.ChatMessagesMetadataRepository
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.CancelPendingMetadataRequestsUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.CheckMessagesMetadataUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.GetChatMetadataStatsUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.LoadMessagesExtendedMediaUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.LoadMessagesReactionsUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.ObserveChatMetadataStatsUseCase
+import org.telegram.messenger.feature.messaging.chatmeta.presentation.ChatMetadataViewModel
+import org.telegram.messenger.feature.messaging.chattheme.domain.repository.ChatThemeRepository
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.GetAvailableChatThemesUseCase
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.GetDialogThemeStateUseCase
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.ObserveDialogThemeUseCase
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.ResetDialogThemeUseCase
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.SaveChatWallpaperUseCase
+import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.SetDialogThemeUseCase
+import org.telegram.messenger.feature.messaging.chattheme.presentation.ChatThemeViewModel
+import org.telegram.messenger.feature.messaging.di.MessagingContainer
+import org.telegram.messenger.feature.messaging.dialogs.domain.repository.DialogsRepository
+import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.DeleteDialogUseCase
+import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.GetDialogsUseCase
+import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.LoadMoreDialogsUseCase
+import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.MarkDialogAsReadUseCase
+import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.PinDialogUseCase
+import org.telegram.messenger.feature.messaging.dialogs.presentation.DialogsViewModel
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.repository.DraftMeasureRepository
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.CalculateDraftMeasureOverrideUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.GetDraftMeasureConfigUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.ObserveDraftMeasureConfigUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.OnDraftMessageIdChangedUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.ResetDraftMeasureTargetUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.SetDraftMeasureTargetUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.SetPreviousMessageHeightUseCase
+import org.telegram.messenger.feature.messaging.draftmeasure.presentation.DraftMeasureViewModel
+import org.telegram.messenger.feature.messaging.drafts.domain.repository.DraftsRepository
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.CleanupExpiredDraftsUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.DeleteDraftUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.DeleteForEditUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.GetDraftForEditUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.GetDraftsStateUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.LoadDraftsUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.ObserveDraftsStateUseCase
+import org.telegram.messenger.feature.messaging.drafts.domain.usecase.SaveDraftUseCase
+import org.telegram.messenger.feature.messaging.drafts.presentation.DraftsViewModel
+import org.telegram.messenger.feature.messaging.emojieffects.domain.repository.EmojiEffectsRepository
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.CalculateEmojiBoundsUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.CalculateEmojiOverlayPositionUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.ClearEmojiEffectsUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.DecodeEmojiInteractionsJsonUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.DismissEmojiEffectUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.EncodeEmojiInteractionsJsonUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.EvaluateAnimationQuotaUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.EvaluateEmojiSupportUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.GetEmojiEffectsStateUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.NormalizeEmojiUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.ObserveEmojiEffectsStateUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.RecordEmojiTapUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.StartEmojiEffectUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.UpdateEmojiEffectProgressUseCase
+import org.telegram.messenger.feature.messaging.emojieffects.presentation.EmojiEffectsViewModel
+import org.telegram.messenger.feature.messaging.emojipicker.domain.repository.EmojiPickerRepository
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ClearRecentPickerItemsUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.FilterEmojiItemsUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.FilterGifsUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.FilterStickersUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.GetEmojiPickerStateUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ObserveEmojiPickerStateUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ResolveAvailablePickerTabsUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.SelectPickerTabUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ToggleStickerFavoriteUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.UpdatePickerSearchQueryUseCase
+import org.telegram.messenger.feature.messaging.emojipicker.presentation.EmojiPickerViewModel
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.repository.EphemeralMessagesRepository
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.ClearAllWelcomeAnchorBindingsUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.GetEphemeralCommandBotIdUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.GetEphemeralMessagesStateUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.GetWelcomeAnchorBindingsUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.IsEphemeralCommandUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.IsEphemeralMessageIdUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.ObserveEphemeralMessagesStateUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.PackEphemeralMessageIdUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.ParseBotCommandUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.PutWelcomeAnchorBindingUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.RemoveWelcomeAnchorBindingUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.UnpackEphemeralMessageIdUseCase
+import org.telegram.messenger.feature.messaging.ephemeralmessages.presentation.EphemeralMessagesViewModel
+import org.telegram.messenger.feature.messaging.factcheck.domain.repository.FactCheckRepository
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.ApplyFactCheckUseCase
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.DeleteFactCheckUseCase
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.GetFactCheckLimitUseCase
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.GetFactCheckUseCase
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.LoadFactCheckUseCase
+import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.ObserveFactCheckLoadedUseCase
+import org.telegram.messenger.feature.messaging.factcheck.presentation.FactCheckViewModel
+import org.telegram.messenger.feature.messaging.folders.domain.repository.FoldersRepository
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.CreateFolderUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.DeleteFolderUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.GetFolderUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.GetFoldersUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.GetSuggestedFoldersUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.ObserveFoldersUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.ReorderFoldersUseCase
+import org.telegram.messenger.feature.messaging.folders.domain.usecase.UpdateFolderUseCase
+import org.telegram.messenger.feature.messaging.folders.presentation.FoldersViewModel
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.repository.GroupCallMessagesRepository
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.ClearGroupCallMessagesUseCase
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.GetGroupCallMessagesUseCase
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.ObserveGroupCallMessagesUseCase
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.PopGroupCallMessageUseCase
+import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.SendGroupCallMessageUseCase
+import org.telegram.messenger.feature.messaging.groupcallmsg.presentation.GroupCallMessagesViewModel
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.repository.HashtagSearchRepository
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.AddHashtagToHistoryUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ClearHashtagHistoryUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ClearHashtagSearchResultsUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.GetHashtagHistoryUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.JumpToHashtagMessageUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ObserveHashtagHistoryUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ObserveHashtagSearchResultUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.RemoveHashtagFromHistoryUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.SearchHashtagUseCase
+import org.telegram.messenger.feature.messaging.hashtagsearch.presentation.HashtagSearchViewModel
+import org.telegram.messenger.feature.messaging.mentions.domain.repository.MentionsRepository
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ClearMentionsUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.DismissMentionsUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.FilterMentionsUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.FormatMentionReplacementUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.GetMentionsStateUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ObserveMentionsStateUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ParseMentionQueryUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.SetMentionCandidatesUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.UpdateMentionQueryUseCase
+import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ValidateUsernameUseCase
+import org.telegram.messenger.feature.messaging.mentions.presentation.MentionsViewModel
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.repository.MessageCustomParamsRepository
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.CheckMessageCustomParamsEmptyUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.ClearAllMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.CopyMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.GetMessageCustomParamsStateUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.GetMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.MergeMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.ObserveMessageCustomParamsStateUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.RemoveMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.SetMessageCustomParamsUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateMessageSummaryUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateMessageTranslationUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateVoiceTranscriptionUseCase
+import org.telegram.messenger.feature.messaging.messagecustomparams.presentation.MessageCustomParamsViewModel
+import org.telegram.messenger.feature.messaging.reactions.domain.repository.ReactionsRepository
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.ClearReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetAvailableReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetDoubleTapReactionUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetReactionsSettingsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetRecentReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.LoadAvailableReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.ObserveAvailableReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.ObserveRecentReactionsUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SendReactionUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SendVoteUseCase
+import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SetDoubleTapReactionUseCase
+import org.telegram.messenger.feature.messaging.reactions.presentation.ReactionsViewModel
+import org.telegram.messenger.feature.messaging.richcaption.domain.repository.RichCaptionRepository
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.CalculateCaptionMeasureWidthUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.CheckCaptionPressHitUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.ClearRichCaptionUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.GetRichCaptionUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.ObserveRichCaptionUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionCreditUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionLockedUseCase
+import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionTextUseCase
+import org.telegram.messenger.feature.messaging.richcaption.presentation.RichCaptionViewModel
+import org.telegram.messenger.feature.messaging.savedmessages.domain.repository.SavedMessagesRepository
+import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.DeleteSavedDialogUseCase
+import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.GetSavedDialogsUseCase
+import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.GetSavedTagsUseCase
+import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.SearchSavedDialogsUseCase
+import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.TogglePinSavedDialogUseCase
+import org.telegram.messenger.feature.messaging.savedmessages.presentation.SavedMessagesViewModel
 import org.telegram.messenger.feature.messaging.search.domain.repository.SearchRepository
 import org.telegram.messenger.feature.messaging.search.domain.usecase.ClearRecentHashtagsUseCase
 import org.telegram.messenger.feature.messaging.search.domain.usecase.ClearRecentSearchesUseCase
@@ -102,7 +577,399 @@ import org.telegram.messenger.feature.messaging.search.domain.usecase.RemoveRece
 import org.telegram.messenger.feature.messaging.search.domain.usecase.SearchGlobalUseCase
 import org.telegram.messenger.feature.messaging.search.domain.usecase.SearchLocalUseCase
 import org.telegram.messenger.feature.messaging.search.presentation.SearchViewModel
-import org.telegram.messenger.feature.system.notifications.data.repository.LegacyNotificationsRepository
+import org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.CancelSendMessageUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.ForwardMessagesUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.ObservePendingSendsUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.RetrySendMessageUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendMediaAlbumUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendMediaMessageUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendTextMessageUseCase
+import org.telegram.messenger.feature.messaging.sendmessages.presentation.SendMessagesViewModel
+import org.telegram.messenger.feature.messaging.stickers.domain.repository.StickersRepository
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetRecentStickersUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetStickerSetUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetStickerSetsUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetStickersForEmojiUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.ObserveStickerSetsUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.ToggleStickerSetArchivedUseCase
+import org.telegram.messenger.feature.messaging.stickers.domain.usecase.ToggleStickerSetInstalledUseCase
+import org.telegram.messenger.feature.messaging.stickers.presentation.StickersViewModel
+import org.telegram.messenger.feature.messaging.topics.domain.repository.TopicsRepository
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.DeleteTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.GetForumUnreadCountUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.GetTopicUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.GetTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.LoadTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.MarkTopicReactionsAsReadUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ObserveForumUnreadCountUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ObserveTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ReloadTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ReorderPinnedTopicsUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ToggleCloseTopicUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.TogglePinTopicUseCase
+import org.telegram.messenger.feature.messaging.topics.domain.usecase.ToggleShowTopicUseCase
+import org.telegram.messenger.feature.messaging.topics.presentation.TopicsViewModel
+import org.telegram.messenger.feature.messaging.translate.domain.repository.TranslationRepository
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.AddDoNotTranslateLanguageUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.ApplyAppLanguageUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.GetAvailableLanguagesUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.GetDialogTranslationStateUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.GetTranslateSettingsUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.ObserveDialogTranslationStateUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.ObserveTranslateSettingsUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.RemoveDoNotTranslateLanguageUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetChatTranslateEnabledUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetContextTranslateEnabledUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetDialogTargetLanguageUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetDoNotTranslateLanguagesUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.ToggleDialogTranslatingUseCase
+import org.telegram.messenger.feature.messaging.translate.domain.usecase.TranslateTextUseCase
+import org.telegram.messenger.feature.messaging.translate.presentation.TranslateViewModel
+import org.telegram.messenger.feature.network.di.NetworkContainer
+import org.telegram.messenger.feature.network.networkstats.domain.repository.NetworkStatsRepository
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.CalculateMessagesTrafficUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.FormatCallsDurationUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.FormatTrafficBytesUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.GetAllNetworkStatsUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.GetNetworkStatsUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.IncrementCallsTimeUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.IncrementTrafficBytesUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.IncrementTrafficItemsUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.ObserveAllNetworkStatsUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.ObserveNetworkStatsUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.RefreshNetworkStatsUseCase
+import org.telegram.messenger.feature.network.networkstats.domain.usecase.ResetNetworkStatsUseCase
+import org.telegram.messenger.feature.network.networkstats.presentation.NetworkStatsViewModel
+import org.telegram.messenger.feature.network.proxy.domain.repository.ProxyRepository
+import org.telegram.messenger.feature.network.proxy.domain.usecase.AddProxyUseCase
+import org.telegram.messenger.feature.network.proxy.domain.usecase.CheckProxyPingUseCase
+import org.telegram.messenger.feature.network.proxy.domain.usecase.DeleteProxyUseCase
+import org.telegram.messenger.feature.network.proxy.domain.usecase.DisableProxyUseCase
+import org.telegram.messenger.feature.network.proxy.domain.usecase.EnableProxyUseCase
+import org.telegram.messenger.feature.network.proxy.domain.usecase.GetProxySettingsUseCase
+import org.telegram.messenger.feature.network.proxy.domain.usecase.ObserveProxySettingsUseCase
+import org.telegram.messenger.feature.network.proxy.domain.usecase.ToggleProxyRotationUseCase
+import org.telegram.messenger.feature.network.proxy.presentation.ProxyViewModel
+import org.telegram.messenger.feature.network.push.domain.repository.PushRepository
+import org.telegram.messenger.feature.network.push.domain.usecase.GetPushStatusUseCase
+import org.telegram.messenger.feature.network.push.domain.usecase.IsPushAvailableUseCase
+import org.telegram.messenger.feature.network.push.domain.usecase.ObservePushStatusUseCase
+import org.telegram.messenger.feature.network.push.domain.usecase.RegisterPushTokenUseCase
+import org.telegram.messenger.feature.network.push.domain.usecase.RequestPushTokenUseCase
+import org.telegram.messenger.feature.network.push.domain.usecase.ResetPushTokenUseCase
+import org.telegram.messenger.feature.network.push.presentation.PushViewModel
+import org.telegram.messenger.feature.network.pushlistener.domain.repository.PushListenerRepository
+import org.telegram.messenger.feature.network.pushlistener.domain.usecase.DeterminePushActionTypeUseCase
+import org.telegram.messenger.feature.network.pushlistener.domain.usecase.GetPushListenerStateUseCase
+import org.telegram.messenger.feature.network.pushlistener.domain.usecase.ObserveIncomingPushesUseCase
+import org.telegram.messenger.feature.network.pushlistener.domain.usecase.ObservePushListenerStateUseCase
+import org.telegram.messenger.feature.network.pushlistener.domain.usecase.ParsePushJsonPayloadUseCase
+import org.telegram.messenger.feature.network.pushlistener.domain.usecase.ProcessIncomingPushUseCase
+import org.telegram.messenger.feature.network.pushlistener.domain.usecase.RegisterPushListenerTokenUseCase
+import org.telegram.messenger.feature.network.pushlistener.domain.usecase.TogglePushListeningUseCase
+import org.telegram.messenger.feature.network.pushlistener.presentation.PushListenerViewModel
+import org.telegram.messenger.feature.security.authtokens.domain.repository.AuthTokensRepository
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.AddLogoutTokenUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.ClearAllTokensUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.GetAuthTokensStateUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.GetSavedLoginTokensUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.GetSavedLogoutTokensUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.ObserveAuthTokensStateUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.PruneTokensListUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.RefreshAuthTokensUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.RemoveTokenUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.SaveLoginTokenUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.SaveLogoutTokensUseCase
+import org.telegram.messenger.feature.security.authtokens.domain.usecase.ValidateAuthTokenFormatUseCase
+import org.telegram.messenger.feature.security.authtokens.presentation.AuthTokensViewModel
+import org.telegram.messenger.feature.security.biometrics.domain.repository.BiometricsRepository
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.CheckBiometricKeyReadyUseCase
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.DeleteInvalidBiometricKeyUseCase
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.GetBiometricKeyStateUseCase
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.HasDeviceBiometricsChangedUseCase
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.IsBiometricKeyReadyUseCase
+import org.telegram.messenger.feature.security.biometrics.domain.usecase.ObserveBiometricKeyStateUseCase
+import org.telegram.messenger.feature.security.biometrics.presentation.BiometricsViewModel
+import org.telegram.messenger.feature.security.botguard.domain.repository.BotGuardRepository
+import org.telegram.messenger.feature.security.botguard.domain.usecase.ClearAllGuardBotSessionsUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.CloseGuardBotSessionUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.DetermineGuardBotLaunchFlowUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.FormatGuardBotBulletinUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.GetAllActiveGuardBotSessionsUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.GetGuardBotSessionUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.IsGuardBotConfirmationNeededUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.MapJoinChatBotResultUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.ObserveGuardBotDecisionsUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.ObserveGuardBotStateUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.RegisterGuardBotSessionUseCase
+import org.telegram.messenger.feature.security.botguard.domain.usecase.SetGuardBotConfirmationShownUseCase
+import org.telegram.messenger.feature.security.botguard.presentation.BotGuardViewModel
+import org.telegram.messenger.feature.security.captcha.domain.repository.CaptchaRepository
+import org.telegram.messenger.feature.security.captcha.domain.usecase.CancelCaptchaUseCase
+import org.telegram.messenger.feature.security.captcha.domain.usecase.GetActiveCaptchaRequestsUseCase
+import org.telegram.messenger.feature.security.captcha.domain.usecase.ObserveActiveCaptchaRequestsUseCase
+import org.telegram.messenger.feature.security.captcha.domain.usecase.SubmitCaptchaResultUseCase
+import org.telegram.messenger.feature.security.captcha.domain.usecase.VerifyCaptchaUseCase
+import org.telegram.messenger.feature.security.captcha.presentation.CaptchaViewModel
+import org.telegram.messenger.feature.security.di.SecurityContainer
+import org.telegram.messenger.feature.security.passkeys.domain.repository.PasskeysRepository
+import org.telegram.messenger.feature.security.passkeys.domain.usecase.CheckCanAddPasskeyUseCase
+import org.telegram.messenger.feature.security.passkeys.domain.usecase.DeletePasskeyUseCase
+import org.telegram.messenger.feature.security.passkeys.domain.usecase.GetPasskeysUseCase
+import org.telegram.messenger.feature.security.passkeys.domain.usecase.IsPasskeysSupportedUseCase
+import org.telegram.messenger.feature.security.passkeys.domain.usecase.ObservePasskeysUseCase
+import org.telegram.messenger.feature.security.passkeys.presentation.PasskeysViewModel
+import org.telegram.messenger.feature.security.privacy.domain.repository.PrivacyRepository
+import org.telegram.messenger.feature.security.privacy.domain.usecase.BlockPrivacyPeerUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.CheckPasscodeUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.ClearPasscodeUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.GetBlockedPeersUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.GetPasscodeSettingsUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.GetPrivacyRulesUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.LoadPrivacyRulesUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.LoadTwoStepVerificationUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.ObserveBlockedPeersUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.ObservePrivacyRulesUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.ObserveTwoStepVerificationUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.SetPasscodeUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.SetPrivacyRuleUseCase
+import org.telegram.messenger.feature.security.privacy.domain.usecase.UnblockPrivacyPeerUseCase
+import org.telegram.messenger.feature.security.privacy.presentation.PrivacyViewModel
+import org.telegram.messenger.feature.security.secretchat.domain.repository.SecretChatRepository
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.AcceptSecretChatUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.DeclineSecretChatUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.GetSecretChatUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.ObserveSecretChatUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.ObserveSecretChatsUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.SendScreenshotNotificationUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.SetSecretChatTtlUseCase
+import org.telegram.messenger.feature.security.secretchat.domain.usecase.StartSecretChatUseCase
+import org.telegram.messenger.feature.security.secretchat.presentation.SecretChatViewModel
+import org.telegram.messenger.feature.security.sessions.domain.repository.SessionsRepository
+import org.telegram.messenger.feature.security.sessions.domain.usecase.AcceptQrLoginUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.GetSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.GetWebSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.LoadSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.LoadWebSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.ObserveSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.ObserveWebSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.SetSessionsTtlUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateAllOtherSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateAllWebSessionsUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateSessionUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateWebSessionUseCase
+import org.telegram.messenger.feature.security.sessions.domain.usecase.UpdateSessionSettingsUseCase
+import org.telegram.messenger.feature.security.sessions.presentation.SessionsViewModel
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.repository.UnconfirmedAuthRepository
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ClearUnconfirmedAuthsUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ConfirmAllAuthsUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ConfirmAuthUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.DenyAllAuthsUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.DenyAuthUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.GetUnconfirmedAuthsUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ObserveUnconfirmedAuthsUseCase
+import org.telegram.messenger.feature.security.unconfirmedauth.presentation.UnconfirmedAuthViewModel
+import org.telegram.messenger.feature.social.birthdays.domain.repository.BirthdaysRepository
+import org.telegram.messenger.feature.social.birthdays.domain.usecase.CheckBirthdaysUseCase
+import org.telegram.messenger.feature.social.birthdays.domain.usecase.GetBirthdaysStateUseCase
+import org.telegram.messenger.feature.social.birthdays.domain.usecase.HasBirthdaysTodayUseCase
+import org.telegram.messenger.feature.social.birthdays.domain.usecase.HideTodayBirthdaysUseCase
+import org.telegram.messenger.feature.social.birthdays.domain.usecase.IsBirthdayTodayUseCase
+import org.telegram.messenger.feature.social.birthdays.domain.usecase.ObserveBirthdaysUseCase
+import org.telegram.messenger.feature.social.birthdays.presentation.BirthdaysViewModel
+import org.telegram.messenger.feature.social.boosts.domain.repository.BoostsRepository
+import org.telegram.messenger.feature.social.boosts.domain.usecase.ApplyBoostUseCase
+import org.telegram.messenger.feature.social.boosts.domain.usecase.CheckCanApplyBoostUseCase
+import org.telegram.messenger.feature.social.boosts.domain.usecase.GetBoostsStatusUseCase
+import org.telegram.messenger.feature.social.boosts.domain.usecase.GetMyBoostsUseCase
+import org.telegram.messenger.feature.social.boosts.presentation.BoostsViewModel
+import org.telegram.messenger.feature.social.contacts.domain.repository.ContactsRepository
+import org.telegram.messenger.feature.social.contacts.domain.usecase.AddContactUseCase
+import org.telegram.messenger.feature.social.contacts.domain.usecase.DeleteContactUseCase
+import org.telegram.messenger.feature.social.contacts.domain.usecase.GetContactUseCase
+import org.telegram.messenger.feature.social.contacts.domain.usecase.GetContactsUseCase
+import org.telegram.messenger.feature.social.contacts.domain.usecase.ObserveContactsUseCase
+import org.telegram.messenger.feature.social.contacts.domain.usecase.SearchContactsUseCase
+import org.telegram.messenger.feature.social.contacts.presentation.ContactsViewModel
+import org.telegram.messenger.feature.social.di.SocialContainer
+import org.telegram.messenger.feature.social.joinrequests.domain.repository.JoinRequestsRepository
+import org.telegram.messenger.feature.social.joinrequests.domain.usecase.ApproveAllJoinRequestsUseCase
+import org.telegram.messenger.feature.social.joinrequests.domain.usecase.ApproveJoinRequestUseCase
+import org.telegram.messenger.feature.social.joinrequests.domain.usecase.DismissAllJoinRequestsUseCase
+import org.telegram.messenger.feature.social.joinrequests.domain.usecase.DismissJoinRequestUseCase
+import org.telegram.messenger.feature.social.joinrequests.domain.usecase.GetCachedJoinRequestsUseCase
+import org.telegram.messenger.feature.social.joinrequests.domain.usecase.GetPendingRequestsCountUseCase
+import org.telegram.messenger.feature.social.joinrequests.domain.usecase.LoadJoinRequestsUseCase
+import org.telegram.messenger.feature.social.joinrequests.domain.usecase.ObservePendingRequestsUseCase
+import org.telegram.messenger.feature.social.joinrequests.presentation.JoinRequestsViewModel
+import org.telegram.messenger.feature.social.location.domain.repository.LocationRepository
+import org.telegram.messenger.feature.social.location.domain.usecase.GetActiveSharingsUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.GetLastKnownLocationUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.GetSharingInfoUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.IsSharingLocationUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.LoadPeerLiveLocationsUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.MarkLiveLocationsAsReadUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.ObserveActiveSharingsUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.ObserveLastKnownLocationUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.ObservePeerLocationsUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.SendLiveLocationUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.SendStaticLocationUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.SetProximityAlertUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.StopAllLocationSharingsUseCase
+import org.telegram.messenger.feature.social.location.domain.usecase.StopLocationSharingUseCase
+import org.telegram.messenger.feature.social.location.presentation.LocationViewModel
+import org.telegram.messenger.feature.social.profile.domain.repository.ProfileRepository
+import org.telegram.messenger.feature.social.profile.domain.usecase.BlockPeerUseCase
+import org.telegram.messenger.feature.social.profile.domain.usecase.GetProfileUseCase
+import org.telegram.messenger.feature.social.profile.domain.usecase.LoadFullProfileUseCase
+import org.telegram.messenger.feature.social.profile.domain.usecase.ObserveProfileUseCase
+import org.telegram.messenger.feature.social.profile.domain.usecase.UnblockPeerUseCase
+import org.telegram.messenger.feature.social.profile.presentation.ProfileViewModel
+import org.telegram.messenger.feature.system.adjustpan.domain.repository.AdjustPanRepository
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.CalculatePanTransitionPlanUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.ComputePanProgressUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.GetAdjustPanStateUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.ObserveAdjustPanStateUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.ResetAdjustPanUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.SetAdjustPanEnabledUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.StartAdjustPanTransitionUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.StopAdjustPanTransitionUseCase
+import org.telegram.messenger.feature.system.adjustpan.domain.usecase.UpdateAdjustPanTransitionUseCase
+import org.telegram.messenger.feature.system.adjustpan.presentation.AdjustPanViewModel
+import org.telegram.messenger.feature.system.appconfig.domain.repository.AppConfigRepository
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetAiComposeConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetAppConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetAppLimitsUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetMessageLimitsUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetPollsConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetRichMessageLimitsUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetStarsPricingConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetTonPricingConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.ObserveAppConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.ReloadAppConfigUseCase
+import org.telegram.messenger.feature.system.appconfig.domain.usecase.UpdateAppConfigValueUseCase
+import org.telegram.messenger.feature.system.appconfig.presentation.AppConfigViewModel
+import org.telegram.messenger.feature.system.browser.domain.repository.BrowserRepository
+import org.telegram.messenger.feature.system.browser.domain.usecase.CheckUrlSafetyUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.ClassifyUrlTargetUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.ExtractUsernameFromUrlUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.GetBrowserStateUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.ManageBrowserHistoryUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.ObserveBrowserStateUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.OpenBrowserUrlUseCase
+import org.telegram.messenger.feature.system.browser.domain.usecase.UpdateBrowserSettingsUseCase
+import org.telegram.messenger.feature.system.browser.presentation.BrowserViewModel
+import org.telegram.messenger.feature.system.countdowntimer.domain.repository.CountdownTimerRepository
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ClearAllCountdownTimersUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.DecomposeCountdownTimeUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.FormatCountdownTimeUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.GetCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.IsCountdownTimerRunningUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ObserveCountdownStateUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ObserveCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.PauseCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ResumeCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.StartCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.StopCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.TickCountdownTimerUseCase
+import org.telegram.messenger.feature.system.countdowntimer.presentation.CountdownTimerViewModel
+import org.telegram.messenger.feature.system.datastorage.domain.repository.DataStorageRepository
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ClearCacheUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ClearDatabaseUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetAutoDownloadPresetUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetKeepMediaSettingsUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetNetworkUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetStorageUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveAutoDownloadPresetUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveKeepMediaSettingsUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveNetworkUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveStorageUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.RefreshStorageUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.ResetNetworkUsageUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.UpdateAutoDownloadPresetUseCase
+import org.telegram.messenger.feature.system.datastorage.domain.usecase.UpdateKeepMediaUseCase
+import org.telegram.messenger.feature.system.datastorage.presentation.DataStorageViewModel
+import org.telegram.messenger.feature.system.di.SystemContainer
+import org.telegram.messenger.feature.system.floatingdebug.domain.repository.FloatingDebugRepository
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.ClearFloatingDebugItemsUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.GetFloatingDebugItemsUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.GetFloatingDebugStateUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.IsFloatingDebugActiveUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.ObserveFloatingDebugStateUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.RegisterFloatingDebugItemsUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.SetFloatingDebugActiveUseCase
+import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.ToggleFloatingDebugActiveUseCase
+import org.telegram.messenger.feature.system.floatingdebug.presentation.FloatingDebugViewModel
+import org.telegram.messenger.feature.system.hints.domain.repository.HintsRepository
+import org.telegram.messenger.feature.system.hints.domain.usecase.DoNotShowAgainHintUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.GetHintUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.GetHintsStateUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.IncrementHintUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.ObserveHintsUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.ResetAllHintsUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.ResetHintUseCase
+import org.telegram.messenger.feature.system.hints.domain.usecase.ShouldShowHintUseCase
+import org.telegram.messenger.feature.system.hints.presentation.HintsViewModel
+import org.telegram.messenger.feature.system.keyboardhide.domain.repository.KeyboardHideRepository
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.CalculateKeyboardHideProgressUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.EndKeyboardHideMovingUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.EvaluateKeyboardDismissDecisionUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.FinishKeyboardHideDismissUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.GetKeyboardHideStateUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.ObserveKeyboardHideStateUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.ResetKeyboardHideUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.SetKeyboardHideEnabledUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.StartKeyboardHideMovingUseCase
+import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.UpdateKeyboardHideMovingUseCase
+import org.telegram.messenger.feature.system.keyboardhide.presentation.KeyboardHideViewModel
+import org.telegram.messenger.feature.system.keyboardinsets.domain.repository.KeyboardInsetsRepository
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.GetKeyboardInsetsUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.ObserveKeyboardInsetsUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.RequestInAppKeyboardHeightUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.RequestInAppKeyboardHeightWithNavbarUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.ResetInAppKeyboardHeightUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.UpdateSystemInsetsUseCase
+import org.telegram.messenger.feature.system.keyboardinsets.presentation.KeyboardInsetsViewModel
+import org.telegram.messenger.feature.system.launchericon.domain.repository.LauncherIconRepository
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.FixLauncherIconIfNeededUseCase
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.GetActiveLauncherIconUseCase
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.GetLauncherIconsUseCase
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.IsLauncherIconEnabledUseCase
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.ObserveLauncherIconsUseCase
+import org.telegram.messenger.feature.system.launchericon.domain.usecase.SetLauncherIconUseCase
+import org.telegram.messenger.feature.system.launchericon.presentation.LauncherIconViewModel
+import org.telegram.messenger.feature.system.litemode.domain.repository.LiteModeRepository
+import org.telegram.messenger.feature.system.litemode.domain.usecase.CalculateEffectiveFlagsUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.CheckLiteModeFlagUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.GetLiteModeStateUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.ObserveLiteModeStateUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.ResolvePresetUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.SetLiteModePresetUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.ToggleLiteModeFlagUseCase
+import org.telegram.messenger.feature.system.litemode.domain.usecase.UpdatePowerSaverThresholdUseCase
+import org.telegram.messenger.feature.system.litemode.presentation.LiteModeViewModel
+import org.telegram.messenger.feature.system.localization.domain.repository.LocalizationRepository
+import org.telegram.messenger.feature.system.localization.domain.usecase.ApplyLocaleUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.DetectRtlLanguageUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.FormatFullNameUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.FormatNumberWithSuffixUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.FormatRelativeTimestampUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.GetLocalizationStateUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.ObserveLocalizationStateUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.ResolvePluralQuantityUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.SetNameDisplayOrderUseCase
+import org.telegram.messenger.feature.system.localization.domain.usecase.Toggle24HourFormatUseCase
+import org.telegram.messenger.feature.system.localization.presentation.LocalizationViewModel
+import org.telegram.messenger.feature.system.maintabs.domain.repository.MainTabsRepository
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.GetMainTabsConfigUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.ObserveMainTabsConfigUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.SelectMainTabUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetContactsPermissionWarningUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetMainTabsVisibleUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetShowCallsTabUseCase
+import org.telegram.messenger.feature.system.maintabs.domain.usecase.UpdateChatsUnreadCountUseCase
+import org.telegram.messenger.feature.system.maintabs.presentation.MainTabsViewModel
 import org.telegram.messenger.feature.system.notifications.domain.repository.NotificationsRepository
 import org.telegram.messenger.feature.system.notifications.domain.usecase.GetBadgeSettingsUseCase
 import org.telegram.messenger.feature.system.notifications.domain.usecase.GetBadgeUseCase
@@ -122,609 +989,6 @@ import org.telegram.messenger.feature.system.notifications.domain.usecase.Toggle
 import org.telegram.messenger.feature.system.notifications.domain.usecase.TogglePinnedMessagesNotificationsUseCase
 import org.telegram.messenger.feature.system.notifications.domain.usecase.UpdateBadgeSettingsUseCase
 import org.telegram.messenger.feature.system.notifications.presentation.NotificationsViewModel
-import org.telegram.messenger.feature.security.privacy.data.repository.LegacyPrivacyRepository
-import org.telegram.messenger.feature.security.privacy.domain.repository.PrivacyRepository
-import org.telegram.messenger.feature.security.privacy.domain.usecase.BlockPrivacyPeerUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.CheckPasscodeUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.ClearPasscodeUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.GetBlockedPeersUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.GetPasscodeSettingsUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.GetPrivacyRulesUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.LoadPrivacyRulesUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.LoadTwoStepVerificationUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.ObserveBlockedPeersUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.ObservePrivacyRulesUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.ObserveTwoStepVerificationUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.SetPasscodeUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.SetPrivacyRuleUseCase
-import org.telegram.messenger.feature.security.privacy.domain.usecase.UnblockPrivacyPeerUseCase
-import org.telegram.messenger.feature.security.privacy.presentation.PrivacyViewModel
-import org.telegram.messenger.feature.system.themes.data.repository.LegacyThemeRepository
-import org.telegram.messenger.feature.system.themes.domain.repository.ThemeRepository
-import org.telegram.messenger.feature.system.themes.domain.usecase.ApplyThemeUseCase
-import org.telegram.messenger.feature.system.themes.domain.usecase.GetAppearanceSettingsUseCase
-import org.telegram.messenger.feature.system.themes.domain.usecase.GetAvailableThemesUseCase
-import org.telegram.messenger.feature.system.themes.domain.usecase.ObserveAppearanceSettingsUseCase
-import org.telegram.messenger.feature.system.themes.domain.usecase.ObserveAvailableThemesUseCase
-import org.telegram.messenger.feature.system.themes.domain.usecase.ObserveNightModeUseCase
-import org.telegram.messenger.feature.system.themes.domain.usecase.ResetAppearanceSettingsUseCase
-import org.telegram.messenger.feature.system.themes.domain.usecase.SetBubbleRadiusUseCase
-import org.telegram.messenger.feature.system.themes.domain.usecase.SetNightModeSettingsUseCase
-import org.telegram.messenger.feature.system.themes.domain.usecase.SetNightModeTypeUseCase
-import org.telegram.messenger.feature.system.themes.domain.usecase.SetThemeAccentUseCase
-import org.telegram.messenger.feature.system.themes.presentation.ThemeViewModel
-import org.telegram.messenger.feature.media.stories.data.repository.LegacyStoriesRepository
-import org.telegram.messenger.feature.media.stories.domain.repository.StoriesRepository
-import org.telegram.messenger.feature.media.stories.domain.usecase.ActivateStealthModeUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.DeleteStoryUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.GetPeerStoriesUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.GetStoryLimitUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.MarkStoryAsReadUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveHiddenStoriesUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveSelfStoriesUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveStealthModeUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.ObserveStoriesUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.RefreshStoriesUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.ToggleStoryHiddenUseCase
-import org.telegram.messenger.feature.media.stories.domain.usecase.ToggleStoryPinUseCase
-import org.telegram.messenger.feature.media.stories.presentation.StoriesViewModel
-import org.telegram.messenger.feature.business.payments.data.repository.LegacyPaymentsRepository
-import org.telegram.messenger.feature.business.payments.domain.repository.PaymentsRepository
-import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarSubscriptionsUseCase
-import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarTopupOptionsUseCase
-import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarTransactionsUseCase
-import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarsBalanceUseCase
-import org.telegram.messenger.feature.business.payments.domain.usecase.ObserveStarSubscriptionsUseCase
-import org.telegram.messenger.feature.business.payments.domain.usecase.ObserveStarTransactionsUseCase
-import org.telegram.messenger.feature.business.payments.domain.usecase.ObserveStarsBalanceUseCase
-import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarSubscriptionsUseCase
-import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarTransactionsUseCase
-import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarsBalanceUseCase
-import org.telegram.messenger.feature.business.payments.presentation.PaymentsViewModel
-import org.telegram.messenger.feature.system.datastorage.data.repository.LegacyDataStorageRepository
-import org.telegram.messenger.feature.system.datastorage.domain.repository.DataStorageRepository
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.ClearCacheUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.ClearDatabaseUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetAutoDownloadPresetUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetKeepMediaSettingsUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetNetworkUsageUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetStorageUsageUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveAutoDownloadPresetUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveKeepMediaSettingsUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveNetworkUsageUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.ObserveStorageUsageUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.RefreshStorageUsageUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.ResetNetworkUsageUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.UpdateAutoDownloadPresetUseCase
-import org.telegram.messenger.feature.system.datastorage.domain.usecase.UpdateKeepMediaUseCase
-import org.telegram.messenger.feature.system.datastorage.presentation.DataStorageViewModel
-import org.telegram.messenger.feature.messaging.topics.data.repository.LegacyTopicsRepository
-import org.telegram.messenger.feature.messaging.topics.domain.repository.TopicsRepository
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.DeleteTopicsUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.GetForumUnreadCountUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.GetTopicUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.GetTopicsUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.LoadTopicsUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.MarkTopicReactionsAsReadUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.ObserveForumUnreadCountUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.ObserveTopicsUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.ReloadTopicsUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.ReorderPinnedTopicsUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.ToggleCloseTopicUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.TogglePinTopicUseCase
-import org.telegram.messenger.feature.messaging.topics.domain.usecase.ToggleShowTopicUseCase
-import org.telegram.messenger.feature.messaging.topics.presentation.TopicsViewModel
-import org.telegram.messenger.feature.social.location.data.repository.LegacyLocationRepository
-import org.telegram.messenger.feature.social.location.domain.repository.LocationRepository
-import org.telegram.messenger.feature.social.location.domain.usecase.GetActiveSharingsUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.GetLastKnownLocationUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.GetSharingInfoUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.IsSharingLocationUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.LoadPeerLiveLocationsUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.MarkLiveLocationsAsReadUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.ObserveActiveSharingsUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.ObserveLastKnownLocationUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.ObservePeerLocationsUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.SendLiveLocationUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.SendStaticLocationUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.SetProximityAlertUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.StopAllLocationSharingsUseCase
-import org.telegram.messenger.feature.social.location.domain.usecase.StopLocationSharingUseCase
-import org.telegram.messenger.feature.social.location.presentation.LocationViewModel
-import org.telegram.messenger.feature.security.sessions.data.repository.LegacySessionsRepository
-import org.telegram.messenger.feature.security.sessions.domain.repository.SessionsRepository
-import org.telegram.messenger.feature.security.sessions.domain.usecase.AcceptQrLoginUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.GetSessionsUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.GetWebSessionsUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.LoadSessionsUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.LoadWebSessionsUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.ObserveSessionsUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.ObserveWebSessionsUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.SetSessionsTtlUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateAllOtherSessionsUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateAllWebSessionsUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateSessionUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateWebSessionUseCase
-import org.telegram.messenger.feature.security.sessions.domain.usecase.UpdateSessionSettingsUseCase
-import org.telegram.messenger.feature.security.sessions.presentation.SessionsViewModel
-import org.telegram.messenger.feature.messaging.translate.data.repository.LegacyTranslationRepository
-import org.telegram.messenger.feature.messaging.translate.domain.repository.TranslationRepository
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.AddDoNotTranslateLanguageUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.ApplyAppLanguageUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.GetAvailableLanguagesUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.GetDialogTranslationStateUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.GetTranslateSettingsUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.ObserveDialogTranslationStateUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.ObserveTranslateSettingsUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.RemoveDoNotTranslateLanguageUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetChatTranslateEnabledUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetContextTranslateEnabledUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetDialogTargetLanguageUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.SetDoNotTranslateLanguagesUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.ToggleDialogTranslatingUseCase
-import org.telegram.messenger.feature.messaging.translate.domain.usecase.TranslateTextUseCase
-import org.telegram.messenger.feature.messaging.translate.presentation.TranslateViewModel
-import org.telegram.messenger.feature.messaging.reactions.data.repository.LegacyReactionsRepository
-import org.telegram.messenger.feature.messaging.reactions.domain.repository.ReactionsRepository
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.ClearReactionsUseCase
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetAvailableReactionsUseCase
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetDoubleTapReactionUseCase
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetReactionsSettingsUseCase
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetRecentReactionsUseCase
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.LoadAvailableReactionsUseCase
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.ObserveAvailableReactionsUseCase
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.ObserveRecentReactionsUseCase
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SendReactionUseCase
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SendVoteUseCase
-import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SetDoubleTapReactionUseCase
-import org.telegram.messenger.feature.messaging.reactions.presentation.ReactionsViewModel
-import org.telegram.messenger.feature.social.boosts.data.repository.LegacyBoostsRepository
-import org.telegram.messenger.feature.social.boosts.domain.repository.BoostsRepository
-import org.telegram.messenger.feature.social.boosts.domain.usecase.ApplyBoostUseCase
-import org.telegram.messenger.feature.social.boosts.domain.usecase.CheckCanApplyBoostUseCase
-import org.telegram.messenger.feature.social.boosts.domain.usecase.GetBoostsStatusUseCase
-import org.telegram.messenger.feature.social.boosts.domain.usecase.GetMyBoostsUseCase
-import org.telegram.messenger.feature.social.boosts.presentation.BoostsViewModel
-import org.telegram.messenger.feature.business.quickreplies.data.repository.LegacyQuickRepliesRepository
-import org.telegram.messenger.feature.business.quickreplies.domain.repository.QuickRepliesRepository
-import org.telegram.messenger.feature.business.quickreplies.domain.usecase.CanAddNewQuickReplyUseCase
-import org.telegram.messenger.feature.business.quickreplies.domain.usecase.CheckQuickReplyNameBusyUseCase
-import org.telegram.messenger.feature.business.quickreplies.domain.usecase.DeleteQuickRepliesUseCase
-import org.telegram.messenger.feature.business.quickreplies.domain.usecase.FindQuickReplyUseCase
-import org.telegram.messenger.feature.business.quickreplies.domain.usecase.GetQuickRepliesUseCase
-import org.telegram.messenger.feature.business.quickreplies.domain.usecase.LoadQuickRepliesUseCase
-import org.telegram.messenger.feature.business.quickreplies.domain.usecase.ObserveQuickRepliesUseCase
-import org.telegram.messenger.feature.business.quickreplies.domain.usecase.RenameQuickReplyUseCase
-import org.telegram.messenger.feature.business.quickreplies.domain.usecase.ReorderQuickRepliesUseCase
-import org.telegram.messenger.feature.business.quickreplies.domain.usecase.SendQuickReplyUseCase
-import org.telegram.messenger.feature.business.quickreplies.presentation.QuickRepliesViewModel
-import org.telegram.messenger.feature.social.joinrequests.data.repository.LegacyJoinRequestsRepository
-import org.telegram.messenger.feature.social.joinrequests.domain.repository.JoinRequestsRepository
-import org.telegram.messenger.feature.social.joinrequests.domain.usecase.ApproveAllJoinRequestsUseCase
-import org.telegram.messenger.feature.social.joinrequests.domain.usecase.ApproveJoinRequestUseCase
-import org.telegram.messenger.feature.social.joinrequests.domain.usecase.DismissAllJoinRequestsUseCase
-import org.telegram.messenger.feature.social.joinrequests.domain.usecase.DismissJoinRequestUseCase
-import org.telegram.messenger.feature.social.joinrequests.domain.usecase.GetCachedJoinRequestsUseCase
-import org.telegram.messenger.feature.social.joinrequests.domain.usecase.GetPendingRequestsCountUseCase
-import org.telegram.messenger.feature.social.joinrequests.domain.usecase.LoadJoinRequestsUseCase
-import org.telegram.messenger.feature.social.joinrequests.domain.usecase.ObservePendingRequestsUseCase
-import org.telegram.messenger.feature.social.joinrequests.presentation.JoinRequestsViewModel
-import org.telegram.messenger.feature.messaging.factcheck.data.repository.LegacyFactCheckRepository
-import org.telegram.messenger.feature.messaging.factcheck.domain.repository.FactCheckRepository
-import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.ApplyFactCheckUseCase
-import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.DeleteFactCheckUseCase
-import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.GetFactCheckLimitUseCase
-import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.GetFactCheckUseCase
-import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.LoadFactCheckUseCase
-import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.ObserveFactCheckLoadedUseCase
-import org.telegram.messenger.feature.messaging.factcheck.presentation.FactCheckViewModel
-import org.telegram.messenger.feature.social.birthdays.data.repository.LegacyBirthdaysRepository
-import org.telegram.messenger.feature.social.birthdays.domain.repository.BirthdaysRepository
-import org.telegram.messenger.feature.social.birthdays.domain.usecase.CheckBirthdaysUseCase
-import org.telegram.messenger.feature.social.birthdays.domain.usecase.GetBirthdaysStateUseCase
-import org.telegram.messenger.feature.social.birthdays.domain.usecase.HasBirthdaysTodayUseCase
-import org.telegram.messenger.feature.social.birthdays.domain.usecase.HideTodayBirthdaysUseCase
-import org.telegram.messenger.feature.social.birthdays.domain.usecase.IsBirthdayTodayUseCase
-import org.telegram.messenger.feature.social.birthdays.domain.usecase.ObserveBirthdaysUseCase
-import org.telegram.messenger.feature.social.birthdays.presentation.BirthdaysViewModel
-import org.telegram.messenger.feature.messaging.chattheme.data.repository.LegacyChatThemeRepository
-import org.telegram.messenger.feature.messaging.chattheme.domain.repository.ChatThemeRepository
-import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.GetAvailableChatThemesUseCase
-import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.GetDialogThemeStateUseCase
-import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.ObserveDialogThemeUseCase
-import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.ResetDialogThemeUseCase
-import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.SaveChatWallpaperUseCase
-import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.SetDialogThemeUseCase
-import org.telegram.messenger.feature.messaging.chattheme.presentation.ChatThemeViewModel
-import org.telegram.messenger.feature.security.passkeys.data.repository.LegacyPasskeysRepository
-import org.telegram.messenger.feature.security.passkeys.domain.repository.PasskeysRepository
-import org.telegram.messenger.feature.security.passkeys.domain.usecase.CheckCanAddPasskeyUseCase
-import org.telegram.messenger.feature.security.passkeys.domain.usecase.DeletePasskeyUseCase
-import org.telegram.messenger.feature.security.passkeys.domain.usecase.GetPasskeysUseCase
-import org.telegram.messenger.feature.security.passkeys.domain.usecase.IsPasskeysSupportedUseCase
-import org.telegram.messenger.feature.security.passkeys.domain.usecase.ObservePasskeysUseCase
-import org.telegram.messenger.feature.security.passkeys.presentation.PasskeysViewModel
-import org.telegram.messenger.feature.network.proxy.data.repository.LegacyProxyRepository
-import org.telegram.messenger.feature.network.proxy.domain.repository.ProxyRepository
-import org.telegram.messenger.feature.network.proxy.domain.usecase.AddProxyUseCase
-import org.telegram.messenger.feature.network.proxy.domain.usecase.CheckProxyPingUseCase
-import org.telegram.messenger.feature.network.proxy.domain.usecase.DeleteProxyUseCase
-import org.telegram.messenger.feature.network.proxy.domain.usecase.DisableProxyUseCase
-import org.telegram.messenger.feature.network.proxy.domain.usecase.EnableProxyUseCase
-import org.telegram.messenger.feature.network.proxy.domain.usecase.GetProxySettingsUseCase
-import org.telegram.messenger.feature.network.proxy.domain.usecase.ObserveProxySettingsUseCase
-import org.telegram.messenger.feature.network.proxy.domain.usecase.ToggleProxyRotationUseCase
-import org.telegram.messenger.feature.network.proxy.presentation.ProxyViewModel
-import org.telegram.messenger.feature.messaging.autodelete.data.repository.LegacyAutoDeleteRepository
-import org.telegram.messenger.feature.messaging.autodelete.domain.repository.AutoDeleteRepository
-import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.GetChatAutoDeleteUseCase
-import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.GetGlobalAutoDeleteUseCase
-import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.ObserveGlobalAutoDeleteUseCase
-import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetChatAutoDeleteUseCase
-import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetChatsAutoDeleteBatchUseCase
-import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetGlobalAutoDeleteUseCase
-import org.telegram.messenger.feature.messaging.autodelete.presentation.AutoDeleteViewModel
-import org.telegram.messenger.feature.security.unconfirmedauth.data.repository.LegacyUnconfirmedAuthRepository
-import org.telegram.messenger.feature.security.unconfirmedauth.domain.repository.UnconfirmedAuthRepository
-import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ClearUnconfirmedAuthsUseCase
-import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ConfirmAllAuthsUseCase
-import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ConfirmAuthUseCase
-import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.DenyAllAuthsUseCase
-import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.DenyAuthUseCase
-import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.GetUnconfirmedAuthsUseCase
-import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ObserveUnconfirmedAuthsUseCase
-import org.telegram.messenger.feature.security.unconfirmedauth.presentation.UnconfirmedAuthViewModel
-import org.telegram.messenger.feature.business.stargifts.data.repository.LegacyStarGiftsRepository
-import org.telegram.messenger.feature.business.stargifts.domain.repository.StarGiftsRepository
-import org.telegram.messenger.feature.business.stargifts.domain.usecase.GetStarGiftByIdUseCase
-import org.telegram.messenger.feature.business.stargifts.domain.usecase.GetStarGiftsCatalogUseCase
-import org.telegram.messenger.feature.business.stargifts.domain.usecase.LoadProfileGiftsUseCase
-import org.telegram.messenger.feature.business.stargifts.domain.usecase.ObserveProfileGiftsUseCase
-import org.telegram.messenger.feature.business.stargifts.domain.usecase.ObserveStarGiftsCatalogUseCase
-import org.telegram.messenger.feature.business.stargifts.domain.usecase.ToggleHideProfileGiftUseCase
-import org.telegram.messenger.feature.business.stargifts.domain.usecase.TogglePinProfileGiftUseCase
-import org.telegram.messenger.feature.business.stargifts.presentation.StarGiftsViewModel
-import org.telegram.messenger.feature.messaging.aitones.data.repository.LegacyAiTonesRepository
-import org.telegram.messenger.feature.messaging.aitones.domain.repository.AiTonesRepository
-import org.telegram.messenger.feature.messaging.aitones.domain.usecase.AddAiToneUseCase
-import org.telegram.messenger.feature.messaging.aitones.domain.usecase.EditAiToneUseCase
-import org.telegram.messenger.feature.messaging.aitones.domain.usecase.GetAiTonesStateUseCase
-import org.telegram.messenger.feature.messaging.aitones.domain.usecase.LoadAiTonesUseCase
-import org.telegram.messenger.feature.messaging.aitones.domain.usecase.ObserveAiTonesUseCase
-import org.telegram.messenger.feature.messaging.aitones.domain.usecase.RemoveAiToneUseCase
-import org.telegram.messenger.feature.messaging.aitones.domain.usecase.UnsaveAiToneUseCase
-import org.telegram.messenger.feature.messaging.aitones.presentation.AiTonesViewModel
-import org.telegram.messenger.feature.security.captcha.data.repository.LegacyCaptchaRepository
-import org.telegram.messenger.feature.security.captcha.domain.repository.CaptchaRepository
-import org.telegram.messenger.feature.security.captcha.domain.usecase.CancelCaptchaUseCase
-import org.telegram.messenger.feature.security.captcha.domain.usecase.GetActiveCaptchaRequestsUseCase
-import org.telegram.messenger.feature.security.captcha.domain.usecase.ObserveActiveCaptchaRequestsUseCase
-import org.telegram.messenger.feature.security.captcha.domain.usecase.SubmitCaptchaResultUseCase
-import org.telegram.messenger.feature.security.captcha.domain.usecase.VerifyCaptchaUseCase
-import org.telegram.messenger.feature.security.captcha.presentation.CaptchaViewModel
-import org.telegram.messenger.feature.messaging.hashtagsearch.data.repository.LegacyHashtagSearchRepository
-import org.telegram.messenger.feature.messaging.hashtagsearch.domain.repository.HashtagSearchRepository
-import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.AddHashtagToHistoryUseCase
-import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ClearHashtagHistoryUseCase
-import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ClearHashtagSearchResultsUseCase
-import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.GetHashtagHistoryUseCase
-import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.JumpToHashtagMessageUseCase
-import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ObserveHashtagHistoryUseCase
-import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.ObserveHashtagSearchResultUseCase
-import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.RemoveHashtagFromHistoryUseCase
-import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.SearchHashtagUseCase
-import org.telegram.messenger.feature.messaging.hashtagsearch.presentation.HashtagSearchViewModel
-import org.telegram.messenger.feature.security.biometrics.data.repository.LegacyBiometricsRepository
-import org.telegram.messenger.feature.security.biometrics.domain.repository.BiometricsRepository
-import org.telegram.messenger.feature.security.biometrics.domain.usecase.CheckBiometricKeyReadyUseCase
-import org.telegram.messenger.feature.security.biometrics.domain.usecase.DeleteInvalidBiometricKeyUseCase
-import org.telegram.messenger.feature.security.biometrics.domain.usecase.GetBiometricKeyStateUseCase
-import org.telegram.messenger.feature.security.biometrics.domain.usecase.HasDeviceBiometricsChangedUseCase
-import org.telegram.messenger.feature.security.biometrics.domain.usecase.IsBiometricKeyReadyUseCase
-import org.telegram.messenger.feature.security.biometrics.domain.usecase.ObserveBiometricKeyStateUseCase
-import org.telegram.messenger.feature.security.biometrics.presentation.BiometricsViewModel
-import org.telegram.messenger.feature.business.giftauctions.data.repository.LegacyGiftAuctionsRepository
-import org.telegram.messenger.feature.business.giftauctions.domain.repository.GiftAuctionsRepository
-import org.telegram.messenger.feature.business.giftauctions.domain.usecase.GetActiveAuctionsUseCase
-import org.telegram.messenger.feature.business.giftauctions.domain.usecase.GetAuctionByIdUseCase
-import org.telegram.messenger.feature.business.giftauctions.domain.usecase.GetAuctionBySlugUseCase
-import org.telegram.messenger.feature.business.giftauctions.domain.usecase.LoadAuctionAcquiredGiftsUseCase
-import org.telegram.messenger.feature.business.giftauctions.domain.usecase.ObserveActiveAuctionsUseCase
-import org.telegram.messenger.feature.business.giftauctions.domain.usecase.ObserveAuctionUseCase
-import org.telegram.messenger.feature.business.giftauctions.domain.usecase.RefreshActiveAuctionsUseCase
-import org.telegram.messenger.feature.business.giftauctions.domain.usecase.SendAuctionBidUseCase
-import org.telegram.messenger.feature.business.giftauctions.presentation.GiftAuctionsViewModel
-import org.telegram.messenger.feature.business.businesslinks.data.repository.LegacyBusinessLinksRepository
-import org.telegram.messenger.feature.business.businesslinks.domain.repository.BusinessLinksRepository
-import org.telegram.messenger.feature.business.businesslinks.domain.usecase.CanAddNewBusinessLinkUseCase
-import org.telegram.messenger.feature.business.businesslinks.domain.usecase.CreateBusinessLinkUseCase
-import org.telegram.messenger.feature.business.businesslinks.domain.usecase.DeleteBusinessLinkUseCase
-import org.telegram.messenger.feature.business.businesslinks.domain.usecase.EditBusinessLinkUseCase
-import org.telegram.messenger.feature.business.businesslinks.domain.usecase.FindBusinessLinkUseCase
-import org.telegram.messenger.feature.business.businesslinks.domain.usecase.GetBusinessLinksUseCase
-import org.telegram.messenger.feature.business.businesslinks.domain.usecase.LoadBusinessLinksUseCase
-import org.telegram.messenger.feature.business.businesslinks.domain.usecase.ObserveBusinessLinksUseCase
-import org.telegram.messenger.feature.business.businesslinks.presentation.BusinessLinksViewModel
-import org.telegram.messenger.feature.business.businessbots.data.repository.LegacyBusinessBotsRepository
-import org.telegram.messenger.feature.business.businessbots.domain.repository.BusinessBotsRepository
-import org.telegram.messenger.feature.business.businessbots.domain.usecase.DeleteConnectedBotUseCase
-import org.telegram.messenger.feature.business.businessbots.domain.usecase.FindConnectedBotUseCase
-import org.telegram.messenger.feature.business.businessbots.domain.usecase.GetConnectedBotsUseCase
-import org.telegram.messenger.feature.business.businessbots.domain.usecase.LoadConnectedBotsUseCase
-import org.telegram.messenger.feature.business.businessbots.domain.usecase.ObserveConnectedBotsUseCase
-import org.telegram.messenger.feature.business.businessbots.domain.usecase.UpdateConnectedBotUseCase
-import org.telegram.messenger.feature.business.businessbots.presentation.BusinessBotsViewModel
-import org.telegram.messenger.feature.business.timezones.data.repository.LegacyTimezonesRepository
-import org.telegram.messenger.feature.business.timezones.domain.repository.TimezonesRepository
-import org.telegram.messenger.feature.business.timezones.domain.usecase.FindTimezoneUseCase
-import org.telegram.messenger.feature.business.timezones.domain.usecase.GetSystemTimezoneIdUseCase
-import org.telegram.messenger.feature.business.timezones.domain.usecase.GetTimezoneNameUseCase
-import org.telegram.messenger.feature.business.timezones.domain.usecase.GetTimezonesUseCase
-import org.telegram.messenger.feature.business.timezones.domain.usecase.LoadTimezonesUseCase
-import org.telegram.messenger.feature.business.timezones.domain.usecase.ObserveTimezonesUseCase
-import org.telegram.messenger.feature.business.timezones.presentation.TimezonesViewModel
-import org.telegram.messenger.feature.business.botstars.data.repository.LegacyBotStarsRepository
-import org.telegram.messenger.feature.business.botstars.domain.repository.BotStarsRepository
-import org.telegram.messenger.feature.business.botstars.domain.usecase.GetAdminedBotsAndChannelsUseCase
-import org.telegram.messenger.feature.business.botstars.domain.usecase.GetBotStarsStatsUseCase
-import org.telegram.messenger.feature.business.botstars.domain.usecase.GetTonStatsUseCase
-import org.telegram.messenger.feature.business.botstars.domain.usecase.LoadBotTransactionsUseCase
-import org.telegram.messenger.feature.business.botstars.domain.usecase.LoadConnectedStarBotsUseCase
-import org.telegram.messenger.feature.business.botstars.domain.usecase.LoadSuggestedStarBotsUseCase
-import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveBotStarsStatsUseCase
-import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveBotTransactionsUseCase
-import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveConnectedStarBotsUseCase
-import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveTonStatsUseCase
-import org.telegram.messenger.feature.business.botstars.presentation.BotStarsViewModel
-import org.telegram.messenger.feature.business.billing.data.repository.LegacyBillingRepository
-import org.telegram.messenger.feature.business.billing.domain.repository.BillingRepository
-import org.telegram.messenger.feature.business.billing.domain.usecase.FormatCurrencyUseCase
-import org.telegram.messenger.feature.business.billing.domain.usecase.GetBillingStateUseCase
-import org.telegram.messenger.feature.business.billing.domain.usecase.GetCurrencyExpUseCase
-import org.telegram.messenger.feature.business.billing.domain.usecase.GetPremiumProductUseCase
-import org.telegram.messenger.feature.business.billing.domain.usecase.ManageSubscriptionUseCase
-import org.telegram.messenger.feature.business.billing.domain.usecase.ObserveBillingStateUseCase
-import org.telegram.messenger.feature.business.billing.domain.usecase.QueryBillingPurchasesUseCase
-import org.telegram.messenger.feature.business.billing.domain.usecase.StartBillingConnectionUseCase
-import org.telegram.messenger.feature.business.billing.presentation.BillingViewModel
-import org.telegram.messenger.feature.system.launchericon.data.repository.LegacyLauncherIconRepository
-import org.telegram.messenger.feature.system.launchericon.domain.repository.LauncherIconRepository
-import org.telegram.messenger.feature.system.launchericon.domain.usecase.FixLauncherIconIfNeededUseCase
-import org.telegram.messenger.feature.system.launchericon.domain.usecase.GetActiveLauncherIconUseCase
-import org.telegram.messenger.feature.system.launchericon.domain.usecase.GetLauncherIconsUseCase
-import org.telegram.messenger.feature.system.launchericon.domain.usecase.IsLauncherIconEnabledUseCase
-import org.telegram.messenger.feature.system.launchericon.domain.usecase.ObserveLauncherIconsUseCase
-import org.telegram.messenger.feature.system.launchericon.domain.usecase.SetLauncherIconUseCase
-import org.telegram.messenger.feature.system.launchericon.presentation.LauncherIconViewModel
-import org.telegram.messenger.feature.network.push.data.repository.LegacyPushRepository
-import org.telegram.messenger.feature.network.push.domain.repository.PushRepository
-import org.telegram.messenger.feature.network.push.domain.usecase.GetPushStatusUseCase
-import org.telegram.messenger.feature.network.push.domain.usecase.IsPushAvailableUseCase
-import org.telegram.messenger.feature.network.push.domain.usecase.ObservePushStatusUseCase
-import org.telegram.messenger.feature.network.push.domain.usecase.RegisterPushTokenUseCase
-import org.telegram.messenger.feature.network.push.domain.usecase.RequestPushTokenUseCase
-import org.telegram.messenger.feature.network.push.domain.usecase.ResetPushTokenUseCase
-import org.telegram.messenger.feature.network.push.presentation.PushViewModel
-import org.telegram.messenger.feature.media.chromecast.data.repository.LegacyChromecastRepository
-import org.telegram.messenger.feature.media.chromecast.domain.repository.ChromecastRepository
-import org.telegram.messenger.feature.media.chromecast.domain.usecase.CastMediaUseCase
-import org.telegram.messenger.feature.media.chromecast.domain.usecase.GetChromecastStateUseCase
-import org.telegram.messenger.feature.media.chromecast.domain.usecase.IsCastingUseCase
-import org.telegram.messenger.feature.media.chromecast.domain.usecase.IsMediaPlayingOnCastUseCase
-import org.telegram.messenger.feature.media.chromecast.domain.usecase.ObserveChromecastStateUseCase
-import org.telegram.messenger.feature.media.chromecast.domain.usecase.SetCastCoverFileUseCase
-import org.telegram.messenger.feature.media.chromecast.domain.usecase.StopCastingUseCase
-import org.telegram.messenger.feature.media.chromecast.presentation.ChromecastViewModel
-import org.telegram.messenger.feature.system.hints.data.repository.LegacyHintsRepository
-import org.telegram.messenger.feature.system.hints.domain.repository.HintsRepository
-import org.telegram.messenger.feature.system.hints.domain.usecase.DoNotShowAgainHintUseCase
-import org.telegram.messenger.feature.system.hints.domain.usecase.GetHintUseCase
-import org.telegram.messenger.feature.system.hints.domain.usecase.GetHintsStateUseCase
-import org.telegram.messenger.feature.system.hints.domain.usecase.IncrementHintUseCase
-import org.telegram.messenger.feature.system.hints.domain.usecase.ObserveHintsUseCase
-import org.telegram.messenger.feature.system.hints.domain.usecase.ResetAllHintsUseCase
-import org.telegram.messenger.feature.system.hints.domain.usecase.ResetHintUseCase
-import org.telegram.messenger.feature.system.hints.domain.usecase.ShouldShowHintUseCase
-import org.telegram.messenger.feature.system.hints.presentation.HintsViewModel
-import org.telegram.messenger.feature.messaging.groupcallmsg.data.repository.LegacyGroupCallMessagesRepository
-import org.telegram.messenger.feature.messaging.groupcallmsg.domain.repository.GroupCallMessagesRepository
-import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.ClearGroupCallMessagesUseCase
-import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.GetGroupCallMessagesUseCase
-import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.ObserveGroupCallMessagesUseCase
-import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.PopGroupCallMessageUseCase
-import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.SendGroupCallMessageUseCase
-import org.telegram.messenger.feature.messaging.groupcallmsg.presentation.GroupCallMessagesViewModel
-import org.telegram.messenger.feature.media.gallerysave.data.repository.LegacyGallerySaveRepository
-import org.telegram.messenger.feature.media.gallerysave.domain.repository.GallerySaveRepository
-import org.telegram.messenger.feature.media.gallerysave.domain.usecase.GetGallerySaveConfigUseCase
-import org.telegram.messenger.feature.media.gallerysave.domain.usecase.GetGallerySaveExceptionsUseCase
-import org.telegram.messenger.feature.media.gallerysave.domain.usecase.GetGallerySaveSettingsUseCase
-import org.telegram.messenger.feature.media.gallerysave.domain.usecase.ObserveGallerySaveConfigUseCase
-import org.telegram.messenger.feature.media.gallerysave.domain.usecase.RemoveAllGallerySaveExceptionsUseCase
-import org.telegram.messenger.feature.media.gallerysave.domain.usecase.RemoveGallerySaveExceptionUseCase
-import org.telegram.messenger.feature.media.gallerysave.domain.usecase.SetGallerySaveExceptionUseCase
-import org.telegram.messenger.feature.media.gallerysave.domain.usecase.SetGallerySaveVideoLimitUseCase
-import org.telegram.messenger.feature.media.gallerysave.domain.usecase.ToggleGallerySavePeerTypeUseCase
-import org.telegram.messenger.feature.media.gallerysave.domain.usecase.UpdateGallerySaveSettingsUseCase
-import org.telegram.messenger.feature.media.gallerysave.presentation.GallerySaveViewModel
-import org.telegram.messenger.feature.system.refreshrate.data.repository.LegacyRefreshRateRepository
-import org.telegram.messenger.feature.system.refreshrate.domain.repository.RefreshRateRepository
-import org.telegram.messenger.feature.system.refreshrate.domain.usecase.GetDisplayRefreshModesUseCase
-import org.telegram.messenger.feature.system.refreshrate.domain.usecase.GetRefreshRateStateUseCase
-import org.telegram.messenger.feature.system.refreshrate.domain.usecase.ObserveRefreshRateStateUseCase
-import org.telegram.messenger.feature.system.refreshrate.domain.usecase.RecordFrameMetricUseCase
-import org.telegram.messenger.feature.system.refreshrate.domain.usecase.ResetRefreshRateStatsUseCase
-import org.telegram.messenger.feature.system.refreshrate.domain.usecase.SetPreferredRefreshRateModeUseCase
-import org.telegram.messenger.feature.system.refreshrate.domain.usecase.StartRefreshRateTrackingUseCase
-import org.telegram.messenger.feature.system.refreshrate.domain.usecase.StopRefreshRateTrackingUseCase
-import org.telegram.messenger.feature.system.refreshrate.domain.usecase.ToggleAdaptiveRefreshRateUseCase
-import org.telegram.messenger.feature.system.refreshrate.presentation.RefreshRateViewModel
-import org.telegram.messenger.feature.messaging.chatmeta.data.repository.LegacyChatMessagesMetadataRepository
-import org.telegram.messenger.feature.messaging.chatmeta.domain.repository.ChatMessagesMetadataRepository
-import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.CancelPendingMetadataRequestsUseCase
-import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.CheckMessagesMetadataUseCase
-import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.GetChatMetadataStatsUseCase
-import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.LoadMessagesExtendedMediaUseCase
-import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.LoadMessagesReactionsUseCase
-import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.ObserveChatMetadataStatsUseCase
-import org.telegram.messenger.feature.messaging.chatmeta.presentation.ChatMetadataViewModel
-import org.telegram.messenger.feature.media.pip.data.repository.LegacyPipRepository
-import org.telegram.messenger.feature.media.pip.domain.repository.PipRepository
-import org.telegram.messenger.feature.media.pip.domain.usecase.DispatchPipStateUseCase
-import org.telegram.messenger.feature.media.pip.domain.usecase.EvaluatePipEligibilityUseCase
-import org.telegram.messenger.feature.media.pip.domain.usecase.GetPipSessionUseCase
-import org.telegram.messenger.feature.media.pip.domain.usecase.ObservePipSessionUseCase
-import org.telegram.messenger.feature.media.pip.domain.usecase.RegisterPipSourceUseCase
-import org.telegram.messenger.feature.media.pip.domain.usecase.TriggerPipActionUseCase
-import org.telegram.messenger.feature.media.pip.domain.usecase.UnregisterPipSourceUseCase
-import org.telegram.messenger.feature.media.pip.domain.usecase.UpdatePipSourceStateUseCase
-import org.telegram.messenger.feature.media.pip.presentation.PipViewModel
-import org.telegram.messenger.feature.messaging.drafts.data.repository.LegacyDraftsRepository
-import org.telegram.messenger.feature.messaging.drafts.domain.repository.DraftsRepository
-import org.telegram.messenger.feature.messaging.drafts.domain.usecase.CleanupExpiredDraftsUseCase
-import org.telegram.messenger.feature.messaging.drafts.domain.usecase.DeleteDraftUseCase
-import org.telegram.messenger.feature.messaging.drafts.domain.usecase.DeleteForEditUseCase
-import org.telegram.messenger.feature.messaging.drafts.domain.usecase.GetDraftForEditUseCase
-import org.telegram.messenger.feature.messaging.drafts.domain.usecase.GetDraftsStateUseCase
-import org.telegram.messenger.feature.messaging.drafts.domain.usecase.LoadDraftsUseCase
-import org.telegram.messenger.feature.messaging.drafts.domain.usecase.ObserveDraftsStateUseCase
-import org.telegram.messenger.feature.messaging.drafts.domain.usecase.SaveDraftUseCase
-import org.telegram.messenger.feature.messaging.drafts.presentation.DraftsViewModel
-import org.telegram.messenger.feature.media.fileref.data.repository.LegacyFileRefRepository
-import org.telegram.messenger.feature.media.fileref.domain.repository.FileRefRepository
-import org.telegram.messenger.feature.media.fileref.domain.usecase.CancelFileRefRequestUseCase
-import org.telegram.messenger.feature.media.fileref.domain.usecase.ClearFileRefCacheUseCase
-import org.telegram.messenger.feature.media.fileref.domain.usecase.GetFileRefStatsUseCase
-import org.telegram.messenger.feature.media.fileref.domain.usecase.NotifyReferenceRenewedUseCase
-import org.telegram.messenger.feature.media.fileref.domain.usecase.ObserveFileRefStatsUseCase
-import org.telegram.messenger.feature.media.fileref.domain.usecase.RequestReferenceRenewalUseCase
-import org.telegram.messenger.feature.media.fileref.presentation.FileRefViewModel
-import org.telegram.messenger.feature.media.camera.data.repository.LegacyCameraRepository
-import org.telegram.messenger.feature.media.camera.domain.repository.CameraRepository
-import org.telegram.messenger.feature.media.camera.domain.usecase.ChooseOptimalResolutionUseCase
-import org.telegram.messenger.feature.media.camera.domain.usecase.GetCameraStateUseCase
-import org.telegram.messenger.feature.media.camera.domain.usecase.InitCamerasUseCase
-import org.telegram.messenger.feature.media.camera.domain.usecase.NotifyCameraRecordingUseCase
-import org.telegram.messenger.feature.media.camera.domain.usecase.ObserveCameraStateUseCase
-import org.telegram.messenger.feature.media.camera.domain.usecase.SelectCameraUseCase
-import org.telegram.messenger.feature.media.camera.domain.usecase.SetCameraFlashModeUseCase
-import org.telegram.messenger.feature.media.camera.domain.usecase.SwitchCameraUseCase
-import org.telegram.messenger.feature.media.camera.domain.usecase.ToggleMirrorFrontCameraUseCase
-import org.telegram.messenger.feature.media.camera.presentation.CameraViewModel
-import org.telegram.messenger.feature.media.cachebychats.data.repository.LegacyCacheByChatsRepository
-import org.telegram.messenger.feature.media.cachebychats.domain.repository.CacheByChatsRepository
-import org.telegram.messenger.feature.media.cachebychats.domain.usecase.ClearKeepMediaExceptionsUseCase
-import org.telegram.messenger.feature.media.cachebychats.domain.usecase.GetCacheByChatsConfigUseCase
-import org.telegram.messenger.feature.media.cachebychats.domain.usecase.ObserveCacheByChatsConfigUseCase
-import org.telegram.messenger.feature.media.cachebychats.domain.usecase.RemoveKeepMediaExceptionUseCase
-import org.telegram.messenger.feature.media.cachebychats.domain.usecase.SetKeepMediaDurationUseCase
-import org.telegram.messenger.feature.media.cachebychats.domain.usecase.SetKeepMediaExceptionUseCase
-import org.telegram.messenger.feature.media.cachebychats.presentation.CacheByChatsViewModel
-import org.telegram.messenger.feature.messaging.draftmeasure.data.repository.LegacyDraftMeasureRepository
-import org.telegram.messenger.feature.messaging.draftmeasure.domain.repository.DraftMeasureRepository
-import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.CalculateDraftMeasureOverrideUseCase
-import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.GetDraftMeasureConfigUseCase
-import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.ObserveDraftMeasureConfigUseCase
-import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.OnDraftMessageIdChangedUseCase
-import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.ResetDraftMeasureTargetUseCase
-import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.SetDraftMeasureTargetUseCase
-import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.SetPreviousMessageHeightUseCase
-import org.telegram.messenger.feature.messaging.draftmeasure.presentation.DraftMeasureViewModel
-import org.telegram.ui.Components.chat.ChatActivityDraftMessageMeasureController
-import org.telegram.messenger.feature.messaging.bottomviews.data.repository.LegacyBottomViewsVisibilityRepository
-import org.telegram.messenger.feature.messaging.bottomviews.domain.repository.BottomViewsVisibilityRepository
-import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.GetBottomViewVisibilityUseCase
-import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.GetBottomViewsStateUseCase
-import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.GetPriorityBottomContainerUseCase
-import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.ObserveBottomViewsVisibilityUseCase
-import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.SetBottomViewVisibleUseCase
-import org.telegram.messenger.feature.messaging.bottomviews.presentation.BottomViewsViewModel
-import org.telegram.ui.Components.chat.ChatActivityBottomViewsVisibilityController
-import org.telegram.messenger.feature.system.floatingdebug.data.repository.LegacyFloatingDebugRepository
-import org.telegram.messenger.feature.system.floatingdebug.domain.repository.FloatingDebugRepository
-import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.ClearFloatingDebugItemsUseCase
-import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.GetFloatingDebugItemsUseCase
-import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.GetFloatingDebugStateUseCase
-import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.IsFloatingDebugActiveUseCase
-import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.ObserveFloatingDebugStateUseCase
-import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.RegisterFloatingDebugItemsUseCase
-import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.SetFloatingDebugActiveUseCase
-import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.ToggleFloatingDebugActiveUseCase
-import org.telegram.messenger.feature.system.floatingdebug.presentation.FloatingDebugViewModel
-import org.telegram.ui.LaunchActivity
-import org.telegram.messenger.feature.system.keyboardinsets.data.repository.LegacyKeyboardInsetsRepository
-import org.telegram.messenger.feature.system.keyboardinsets.domain.repository.KeyboardInsetsRepository
-import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.GetKeyboardInsetsUseCase
-import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.ObserveKeyboardInsetsUseCase
-import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.RequestInAppKeyboardHeightUseCase
-import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.RequestInAppKeyboardHeightWithNavbarUseCase
-import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.ResetInAppKeyboardHeightUseCase
-import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.UpdateSystemInsetsUseCase
-import org.telegram.messenger.feature.system.keyboardinsets.presentation.KeyboardInsetsViewModel
-import org.telegram.ui.Components.inset.WindowInsetsInAppController
-import org.telegram.messenger.feature.system.maintabs.data.repository.LegacyMainTabsRepository
-import org.telegram.messenger.feature.system.maintabs.domain.repository.MainTabsRepository
-import org.telegram.messenger.feature.system.maintabs.domain.usecase.GetMainTabsConfigUseCase
-import org.telegram.messenger.feature.system.maintabs.domain.usecase.ObserveMainTabsConfigUseCase
-import org.telegram.messenger.feature.system.maintabs.domain.usecase.SelectMainTabUseCase
-import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetContactsPermissionWarningUseCase
-import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetMainTabsVisibleUseCase
-import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetShowCallsTabUseCase
-import org.telegram.messenger.feature.system.maintabs.domain.usecase.UpdateChatsUnreadCountUseCase
-import org.telegram.messenger.feature.system.maintabs.presentation.MainTabsViewModel
-import org.telegram.ui.MainTabsActivityController
-import org.telegram.messenger.feature.messaging.richcaption.data.repository.LegacyRichCaptionRepository
-import org.telegram.messenger.feature.messaging.richcaption.domain.repository.RichCaptionRepository
-import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.CalculateCaptionMeasureWidthUseCase
-import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.CheckCaptionPressHitUseCase
-import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.ClearRichCaptionUseCase
-import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.GetRichCaptionUseCase
-import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.ObserveRichCaptionUseCase
-import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionCreditUseCase
-import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionLockedUseCase
-import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionTextUseCase
-import org.telegram.messenger.feature.messaging.richcaption.presentation.RichCaptionViewModel
-import org.telegram.messenger.feature.system.adjustpan.data.repository.LegacyAdjustPanRepository
-import org.telegram.messenger.feature.system.adjustpan.domain.repository.AdjustPanRepository
-import org.telegram.messenger.feature.system.adjustpan.domain.usecase.CalculatePanTransitionPlanUseCase
-import org.telegram.messenger.feature.system.adjustpan.domain.usecase.ComputePanProgressUseCase
-import org.telegram.messenger.feature.system.adjustpan.domain.usecase.GetAdjustPanStateUseCase
-import org.telegram.messenger.feature.system.adjustpan.domain.usecase.ObserveAdjustPanStateUseCase
-import org.telegram.messenger.feature.system.adjustpan.domain.usecase.ResetAdjustPanUseCase
-import org.telegram.messenger.feature.system.adjustpan.domain.usecase.SetAdjustPanEnabledUseCase
-import org.telegram.messenger.feature.system.adjustpan.domain.usecase.StartAdjustPanTransitionUseCase
-import org.telegram.messenger.feature.system.adjustpan.domain.usecase.StopAdjustPanTransitionUseCase
-import org.telegram.messenger.feature.system.adjustpan.domain.usecase.UpdateAdjustPanTransitionUseCase
-import org.telegram.messenger.feature.system.adjustpan.presentation.AdjustPanViewModel
-import org.telegram.messenger.feature.system.keyboardhide.data.repository.LegacyKeyboardHideRepository
-import org.telegram.messenger.feature.system.keyboardhide.domain.repository.KeyboardHideRepository
-import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.CalculateKeyboardHideProgressUseCase
-import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.EndKeyboardHideMovingUseCase
-import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.EvaluateKeyboardDismissDecisionUseCase
-import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.FinishKeyboardHideDismissUseCase
-import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.GetKeyboardHideStateUseCase
-import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.ObserveKeyboardHideStateUseCase
-import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.ResetKeyboardHideUseCase
-import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.SetKeyboardHideEnabledUseCase
-import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.StartKeyboardHideMovingUseCase
-import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.UpdateKeyboardHideMovingUseCase
-import org.telegram.messenger.feature.system.keyboardhide.presentation.KeyboardHideViewModel
-import org.telegram.messenger.feature.business.businessrecipients.data.repository.LegacyBusinessRecipientsRepository
-import org.telegram.messenger.feature.business.businessrecipients.domain.repository.BusinessRecipientsRepository
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.AddExcludedUsersUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.AddSelectedUsersUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.CheckRecipientsChangesUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.GetBusinessRecipientsUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ObserveBusinessRecipientsUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.RemoveExcludedUserUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.RemoveSelectedUserUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ResetBusinessRecipientsUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.SetBusinessRecipientsUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ToggleExcludeSelectedUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ToggleRecipientFilterUseCase
-import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ValidateBusinessRecipientsUseCase
-import org.telegram.messenger.feature.business.businessrecipients.presentation.BusinessRecipientsViewModel
-import org.telegram.messenger.feature.system.pinchtozoom.data.repository.LegacyPinchToZoomRepository
 import org.telegram.messenger.feature.system.pinchtozoom.domain.repository.PinchToZoomRepository
 import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.CalculatePinchImageBoundsUseCase
 import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.CalculatePinchScaleUseCase
@@ -738,7 +1002,6 @@ import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.ResetPin
 import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.StartPinchZoomUseCase
 import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.UpdatePinchZoomUseCase
 import org.telegram.messenger.feature.system.pinchtozoom.presentation.PinchToZoomViewModel
-import org.telegram.messenger.feature.system.recyclerscroll.data.repository.LegacyRecyclerScrollRepository
 import org.telegram.messenger.feature.system.recyclerscroll.domain.repository.RecyclerScrollRepository
 import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.CalculateScrollAnimationPlanUseCase
 import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.CalculateScrollLengthUseCase
@@ -752,182 +1015,17 @@ import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.Reset
 import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.StartRecyclerScrollUseCase
 import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.UpdateRecyclerScrollProgressUseCase
 import org.telegram.messenger.feature.system.recyclerscroll.presentation.RecyclerScrollViewModel
-import org.telegram.messenger.feature.messaging.emojieffects.data.repository.LegacyEmojiEffectsRepository
-import org.telegram.messenger.feature.messaging.emojieffects.domain.repository.EmojiEffectsRepository
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.CalculateEmojiBoundsUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.CalculateEmojiOverlayPositionUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.ClearEmojiEffectsUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.DecodeEmojiInteractionsJsonUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.DismissEmojiEffectUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.EncodeEmojiInteractionsJsonUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.EvaluateAnimationQuotaUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.EvaluateEmojiSupportUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.GetEmojiEffectsStateUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.NormalizeEmojiUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.ObserveEmojiEffectsStateUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.RecordEmojiTapUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.StartEmojiEffectUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.UpdateEmojiEffectProgressUseCase
-import org.telegram.messenger.feature.messaging.emojieffects.presentation.EmojiEffectsViewModel
-import org.telegram.messenger.feature.messaging.mentions.data.repository.LegacyMentionsRepository
-import org.telegram.messenger.feature.messaging.mentions.domain.repository.MentionsRepository
-import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ClearMentionsUseCase
-import org.telegram.messenger.feature.messaging.mentions.domain.usecase.DismissMentionsUseCase
-import org.telegram.messenger.feature.messaging.mentions.domain.usecase.FilterMentionsUseCase
-import org.telegram.messenger.feature.messaging.mentions.domain.usecase.FormatMentionReplacementUseCase
-import org.telegram.messenger.feature.messaging.mentions.domain.usecase.GetMentionsStateUseCase
-import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ObserveMentionsStateUseCase
-import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ParseMentionQueryUseCase
-import org.telegram.messenger.feature.messaging.mentions.domain.usecase.SetMentionCandidatesUseCase
-import org.telegram.messenger.feature.messaging.mentions.domain.usecase.UpdateMentionQueryUseCase
-import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ValidateUsernameUseCase
-import org.telegram.messenger.feature.messaging.mentions.presentation.MentionsViewModel
-import org.telegram.messenger.feature.media.sharedmedia.data.repository.LegacySharedMediaRepository
-import org.telegram.messenger.feature.media.sharedmedia.domain.repository.SharedMediaRepository
-import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.CalculateMediaSelectionUseCase
-import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ClearMediaSelectionUseCase
-import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.FilterSharedMediaUseCase
-import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.GetSharedMediaStateUseCase
-import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.GroupMediaByMonthUseCase
-import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ObserveSharedMediaStateUseCase
-import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ResolveAvailableTabsUseCase
-import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.SelectSharedMediaTabUseCase
-import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.SetSharedMediaFilterUseCase
-import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ToggleMediaSelectionUseCase
-import org.telegram.messenger.feature.media.sharedmedia.presentation.SharedMediaViewModel
-import org.telegram.messenger.feature.media.contentpreview.data.repository.LegacyContentPreviewRepository
-import org.telegram.messenger.feature.media.contentpreview.domain.repository.ContentPreviewRepository
-import org.telegram.messenger.feature.media.contentpreview.domain.usecase.CalculatePreviewDragUseCase
-import org.telegram.messenger.feature.media.contentpreview.domain.usecase.ClearContentPreviewUseCase
-import org.telegram.messenger.feature.media.contentpreview.domain.usecase.DismissContentPreviewUseCase
-import org.telegram.messenger.feature.media.contentpreview.domain.usecase.EvaluatePreviewEligibilityUseCase
-import org.telegram.messenger.feature.media.contentpreview.domain.usecase.GetContentPreviewStateUseCase
-import org.telegram.messenger.feature.media.contentpreview.domain.usecase.ObserveContentPreviewStateUseCase
-import org.telegram.messenger.feature.media.contentpreview.domain.usecase.OpenContentPreviewUseCase
-import org.telegram.messenger.feature.media.contentpreview.domain.usecase.ResolvePreviewActionsUseCase
-import org.telegram.messenger.feature.media.contentpreview.domain.usecase.TriggerPreviewActionUseCase
-import org.telegram.messenger.feature.media.contentpreview.domain.usecase.UpdatePreviewDragUseCase
-import org.telegram.messenger.feature.media.contentpreview.presentation.ContentPreviewViewModel
-import org.telegram.messenger.feature.messaging.emojipicker.data.repository.LegacyEmojiPickerRepository
-import org.telegram.messenger.feature.messaging.emojipicker.domain.repository.EmojiPickerRepository
-import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ClearRecentPickerItemsUseCase
-import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.FilterEmojiItemsUseCase
-import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.FilterGifsUseCase
-import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.FilterStickersUseCase
-import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.GetEmojiPickerStateUseCase
-import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ObserveEmojiPickerStateUseCase
-import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ResolveAvailablePickerTabsUseCase
-import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.SelectPickerTabUseCase
-import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ToggleStickerFavoriteUseCase
-import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.UpdatePickerSearchQueryUseCase
-import org.telegram.messenger.feature.messaging.emojipicker.presentation.EmojiPickerViewModel
-import org.telegram.messenger.feature.messaging.chatattach.data.repository.LegacyChatAttachRepository
-import org.telegram.messenger.feature.messaging.chatattach.domain.repository.ChatAttachRepository
-import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.CalculateAttachCaptionLimitUseCase
-import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ClearAttachSelectionUseCase
-import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.GetChatAttachStateUseCase
-import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ObserveChatAttachStateUseCase
-import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.OpenChatAttachAlertUseCase
-import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ResolveAvailableAttachLayoutsUseCase
-import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.SelectAttachLayoutUseCase
-import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ToggleAttachItemSelectionUseCase
-import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.UpdateAttachSendOptionsUseCase
-import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ValidateSendOptionsUseCase
-import org.telegram.messenger.feature.messaging.chatattach.presentation.ChatAttachViewModel
-import org.telegram.messenger.feature.media.photoviewer.data.repository.LegacyPhotoViewerRepository
-import org.telegram.messenger.feature.media.photoviewer.domain.repository.PhotoViewerRepository
-import org.telegram.messenger.feature.media.photoviewer.domain.usecase.CalculateMediaPagingUseCase
-import org.telegram.messenger.feature.media.photoviewer.domain.usecase.CalculateZoomTransformUseCase
-import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ClosePhotoViewerUseCase
-import org.telegram.messenger.feature.media.photoviewer.domain.usecase.GetPhotoViewerStateUseCase
-import org.telegram.messenger.feature.media.photoviewer.domain.usecase.NavigatePhotoViewerUseCase
-import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ObservePhotoViewerStateUseCase
-import org.telegram.messenger.feature.media.photoviewer.domain.usecase.OpenPhotoViewerUseCase
-import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ResolveMediaQualityUseCase
-import org.telegram.messenger.feature.media.photoviewer.domain.usecase.UpdatePlaybackStateUseCase
-import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ValidateViewerActionsUseCase
-import org.telegram.messenger.feature.media.photoviewer.presentation.PhotoViewerViewModel
-import org.telegram.messenger.feature.messaging.chatinput.data.repository.LegacyChatInputRepository
-import org.telegram.messenger.feature.messaging.chatinput.domain.repository.ChatInputRepository
-import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.CalculateSendButtonStateUseCase
-import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ClearChatInputReplyUseCase
-import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.FormatTextSelectionUseCase
-import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.GetChatInputStateUseCase
-import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ObserveChatInputStateUseCase
-import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ResolvePanelVisibilityUseCase
-import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChatInputPanelModeUseCase
-import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChatInputReplyUseCase
-import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChatInputTextUseCase
-import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ValidateVoiceRecordActionUseCase
-import org.telegram.messenger.feature.messaging.chatinput.presentation.ChatInputViewModel
-import org.telegram.messenger.feature.media.audioplayer.data.repository.LegacyAudioPlayerRepository
-import org.telegram.messenger.feature.media.audioplayer.domain.repository.AudioPlayerRepository
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.ConfigureEqualizerUseCase
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.CyclePlaybackSpeedUseCase
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.CycleRepeatModeUseCase
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.GetPlaybackStateUseCase
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.HandleProximitySensorUseCase
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.NavigatePlaylistUseCase
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.ObservePlaybackStateUseCase
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.PlayTrackUseCase
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.SeekAudioUseCase
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.TogglePlayPauseUseCase
-import org.telegram.messenger.feature.media.audioplayer.domain.usecase.ToggleShuffleUseCase
-import org.telegram.messenger.feature.media.audioplayer.presentation.AudioPlayerViewModel
-import org.telegram.messenger.feature.messaging.sendmessages.data.repository.LegacySendMessagesRepository
-import org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository
-import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.CancelSendMessageUseCase
-import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.ForwardMessagesUseCase
-import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.ObservePendingSendsUseCase
-import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.RetrySendMessageUseCase
-import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendMediaAlbumUseCase
-import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendMediaMessageUseCase
-import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendTextMessageUseCase
-import org.telegram.messenger.feature.messaging.sendmessages.presentation.SendMessagesViewModel
-import org.telegram.messenger.feature.media.imageloader.data.repository.LegacyImageLoaderRepository
-import org.telegram.messenger.feature.media.imageloader.domain.repository.ImageLoaderRepository
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.BuildImageCacheKeyUseCase
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.CalculateImageDownscaleUseCase
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.CancelImageRequestUseCase
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.ClearImageCacheUseCase
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.EnqueueImageRequestUseCase
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.EvaluateImageCacheEligibilityUseCase
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.FormatImageFilterUseCase
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.GetImageLoaderStateUseCase
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.ObserveImageLoaderStateUseCase
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.ParseImageFilterUseCase
-import org.telegram.messenger.feature.media.imageloader.domain.usecase.TrimImageMemoryUseCase
-import org.telegram.messenger.feature.media.imageloader.presentation.ImageLoaderViewModel
-import org.telegram.messenger.feature.media.downloadmanager.data.repository.LegacyDownloadManagerRepository
-import org.telegram.messenger.feature.media.downloadmanager.domain.repository.DownloadManagerRepository
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.CancelDownloadUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.ClearRecentDownloadsUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.EnqueueDownloadUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.EvaluateAutoDownloadEligibilityUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.GetDownloadManagerStateUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.MarkDownloadsAsViewedUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.ObserveDownloadManagerStateUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.PauseDownloadUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.ResumeDownloadUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.RetryDownloadUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.SetDownloadNetworkTypeUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.UpdateDownloadPresetUseCase
-import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.UpdateDownloadProgressUseCase
-import org.telegram.messenger.feature.media.downloadmanager.presentation.DownloadManagerViewModel
-import org.telegram.messenger.feature.system.localization.data.repository.LegacyLocalizationRepository
-import org.telegram.messenger.feature.system.localization.domain.repository.LocalizationRepository
-import org.telegram.messenger.feature.system.localization.domain.usecase.ApplyLocaleUseCase
-import org.telegram.messenger.feature.system.localization.domain.usecase.DetectRtlLanguageUseCase
-import org.telegram.messenger.feature.system.localization.domain.usecase.FormatFullNameUseCase
-import org.telegram.messenger.feature.system.localization.domain.usecase.FormatNumberWithSuffixUseCase
-import org.telegram.messenger.feature.system.localization.domain.usecase.FormatRelativeTimestampUseCase
-import org.telegram.messenger.feature.system.localization.domain.usecase.GetLocalizationStateUseCase
-import org.telegram.messenger.feature.system.localization.domain.usecase.ObserveLocalizationStateUseCase
-import org.telegram.messenger.feature.system.localization.domain.usecase.ResolvePluralQuantityUseCase
-import org.telegram.messenger.feature.system.localization.domain.usecase.SetNameDisplayOrderUseCase
-import org.telegram.messenger.feature.system.localization.domain.usecase.Toggle24HourFormatUseCase
-import org.telegram.messenger.feature.system.localization.presentation.LocalizationViewModel
-import org.telegram.messenger.feature.system.ringtones.data.repository.LegacyRingtoneRepository
+import org.telegram.messenger.feature.system.refreshrate.domain.repository.RefreshRateRepository
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.GetDisplayRefreshModesUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.GetRefreshRateStateUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.ObserveRefreshRateStateUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.RecordFrameMetricUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.ResetRefreshRateStatsUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.SetPreferredRefreshRateModeUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.StartRefreshRateTrackingUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.StopRefreshRateTrackingUseCase
+import org.telegram.messenger.feature.system.refreshrate.domain.usecase.ToggleAdaptiveRefreshRateUseCase
+import org.telegram.messenger.feature.system.refreshrate.presentation.RefreshRateViewModel
 import org.telegram.messenger.feature.system.ringtones.domain.repository.RingtoneRepository
 import org.telegram.messenger.feature.system.ringtones.domain.usecase.AddRingtoneUseCase
 import org.telegram.messenger.feature.system.ringtones.domain.usecase.CancelRingtoneUploadUseCase
@@ -943,6437 +1041,3841 @@ import org.telegram.messenger.feature.system.ringtones.domain.usecase.SelectRing
 import org.telegram.messenger.feature.system.ringtones.domain.usecase.UploadRingtoneUseCase
 import org.telegram.messenger.feature.system.ringtones.domain.usecase.ValidateRingtoneEligibilityUseCase
 import org.telegram.messenger.feature.system.ringtones.presentation.RingtoneViewModel
-import org.telegram.messenger.feature.network.networkstats.data.repository.LegacyNetworkStatsRepository
-import org.telegram.messenger.feature.network.networkstats.domain.repository.NetworkStatsRepository
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.CalculateMessagesTrafficUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.FormatCallsDurationUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.FormatTrafficBytesUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.GetAllNetworkStatsUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.GetNetworkStatsUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.IncrementCallsTimeUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.IncrementTrafficBytesUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.IncrementTrafficItemsUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.ObserveAllNetworkStatsUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.ObserveNetworkStatsUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.RefreshNetworkStatsUseCase
-import org.telegram.messenger.feature.network.networkstats.domain.usecase.ResetNetworkStatsUseCase
-import org.telegram.messenger.feature.network.networkstats.presentation.NetworkStatsViewModel
-import org.telegram.messenger.feature.network.pushlistener.data.repository.LegacyPushListenerRepository
-import org.telegram.messenger.feature.network.pushlistener.domain.repository.PushListenerRepository
-import org.telegram.messenger.feature.network.pushlistener.domain.usecase.DeterminePushActionTypeUseCase
-import org.telegram.messenger.feature.network.pushlistener.domain.usecase.GetPushListenerStateUseCase
-import org.telegram.messenger.feature.network.pushlistener.domain.usecase.ObserveIncomingPushesUseCase
-import org.telegram.messenger.feature.network.pushlistener.domain.usecase.ObservePushListenerStateUseCase
-import org.telegram.messenger.feature.network.pushlistener.domain.usecase.ParsePushJsonPayloadUseCase
-import org.telegram.messenger.feature.network.pushlistener.domain.usecase.ProcessIncomingPushUseCase
-import org.telegram.messenger.feature.network.pushlistener.domain.usecase.RegisterPushListenerTokenUseCase
-import org.telegram.messenger.feature.network.pushlistener.domain.usecase.TogglePushListeningUseCase
-import org.telegram.messenger.feature.network.pushlistener.presentation.PushListenerViewModel
-import org.telegram.messenger.feature.messaging.chat.domain.repository.ChatRepository
-import org.telegram.messenger.feature.messaging.chat.domain.usecase.DeleteMessagesUseCase
-import org.telegram.messenger.feature.messaging.chat.domain.usecase.GetMessagesUseCase
-import org.telegram.messenger.feature.messaging.chat.domain.usecase.LoadHistoryUseCase
-import org.telegram.messenger.feature.messaging.chat.domain.usecase.ObserveMessagesUseCase
-import org.telegram.messenger.feature.messaging.chat.domain.usecase.SendMessageUseCase
-import org.telegram.messenger.feature.messaging.chat.presentation.ChatViewModel
-import org.telegram.messenger.feature.messaging.dialogs.data.repository.LegacyDialogsRepository
-import org.telegram.messenger.feature.messaging.dialogs.domain.repository.DialogsRepository
-import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.DeleteDialogUseCase
-import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.GetDialogsUseCase
-import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.LoadMoreDialogsUseCase
-import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.MarkDialogAsReadUseCase
-import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.PinDialogUseCase
-import org.telegram.messenger.feature.messaging.dialogs.presentation.DialogsViewModel
-import org.telegram.messenger.feature.messaging.savedmessages.data.repository.LegacySavedMessagesRepository
-import org.telegram.messenger.feature.messaging.savedmessages.domain.repository.SavedMessagesRepository
-import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.DeleteSavedDialogUseCase
-import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.GetSavedDialogsUseCase
-import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.GetSavedTagsUseCase
-import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.SearchSavedDialogsUseCase
-import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.TogglePinSavedDialogUseCase
-import org.telegram.messenger.feature.messaging.savedmessages.presentation.SavedMessagesViewModel
-import org.telegram.messenger.feature.system.browser.data.repository.LegacyBrowserRepository
-import org.telegram.messenger.feature.system.browser.domain.repository.BrowserRepository
-import org.telegram.messenger.feature.system.browser.domain.usecase.CheckUrlSafetyUseCase
-import org.telegram.messenger.feature.system.browser.domain.usecase.ClassifyUrlTargetUseCase
-import org.telegram.messenger.feature.system.browser.domain.usecase.ExtractUsernameFromUrlUseCase
-import org.telegram.messenger.feature.system.browser.domain.usecase.GetBrowserStateUseCase
-import org.telegram.messenger.feature.system.browser.domain.usecase.ManageBrowserHistoryUseCase
-import org.telegram.messenger.feature.system.browser.domain.usecase.ObserveBrowserStateUseCase
-import org.telegram.messenger.feature.system.browser.domain.usecase.OpenBrowserUrlUseCase
-import org.telegram.messenger.feature.system.browser.domain.usecase.UpdateBrowserSettingsUseCase
-import org.telegram.messenger.feature.system.browser.presentation.BrowserViewModel
-import org.telegram.messenger.feature.system.litemode.data.repository.LegacyLiteModeRepository
-import org.telegram.messenger.feature.system.litemode.domain.repository.LiteModeRepository
-import org.telegram.messenger.feature.system.litemode.domain.usecase.CalculateEffectiveFlagsUseCase
-import org.telegram.messenger.feature.system.litemode.domain.usecase.CheckLiteModeFlagUseCase
-import org.telegram.messenger.feature.system.litemode.domain.usecase.GetLiteModeStateUseCase
-import org.telegram.messenger.feature.system.litemode.domain.usecase.ObserveLiteModeStateUseCase
-import org.telegram.messenger.feature.system.litemode.domain.usecase.ResolvePresetUseCase
-import org.telegram.messenger.feature.system.litemode.domain.usecase.SetLiteModePresetUseCase
-import org.telegram.messenger.feature.system.litemode.domain.usecase.ToggleLiteModeFlagUseCase
-import org.telegram.messenger.feature.system.litemode.domain.usecase.UpdatePowerSaverThresholdUseCase
-import org.telegram.messenger.feature.system.litemode.presentation.LiteModeViewModel
-import org.telegram.messenger.feature.system.appconfig.data.repository.LegacyAppConfigRepository
-import org.telegram.messenger.feature.system.appconfig.domain.repository.AppConfigRepository
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetAiComposeConfigUseCase
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetAppConfigUseCase
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetAppLimitsUseCase
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetMessageLimitsUseCase
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetPollsConfigUseCase
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetRichMessageLimitsUseCase
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetStarsPricingConfigUseCase
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.GetTonPricingConfigUseCase
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.ObserveAppConfigUseCase
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.ReloadAppConfigUseCase
-import org.telegram.messenger.feature.system.appconfig.domain.usecase.UpdateAppConfigValueUseCase
-import org.telegram.messenger.feature.system.appconfig.presentation.AppConfigViewModel
-import org.telegram.messenger.feature.media.autodeletemedia.data.repository.LegacyAutoDeleteMediaRepository
-import org.telegram.messenger.feature.media.autodeletemedia.domain.repository.AutoDeleteMediaRepository
-import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.CalculateEvictionCandidatesUseCase
-import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.CheckShouldRunCleanupUseCase
-import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.GetAutoDeleteStateUseCase
-import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.IsFileLockedUseCase
-import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.LockFileUseCase
-import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.ObserveAutoDeleteStateUseCase
-import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.RunAutoDeleteCleanupUseCase
-import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.UnlockFileUseCase
-import org.telegram.messenger.feature.media.autodeletemedia.presentation.AutoDeleteMediaViewModel
-import org.telegram.messenger.feature.security.authtokens.data.repository.LegacyAuthTokensRepository
-import org.telegram.messenger.feature.security.authtokens.domain.repository.AuthTokensRepository
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.AddLogoutTokenUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.ClearAllTokensUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.GetAuthTokensStateUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.GetSavedLoginTokensUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.GetSavedLogoutTokensUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.ObserveAuthTokensStateUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.PruneTokensListUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.RefreshAuthTokensUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.RemoveTokenUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.SaveLoginTokenUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.SaveLogoutTokensUseCase
-import org.telegram.messenger.feature.security.authtokens.domain.usecase.ValidateAuthTokenFormatUseCase
-import org.telegram.messenger.feature.security.authtokens.presentation.AuthTokensViewModel
-import org.telegram.messenger.feature.messaging.messagecustomparams.data.repository.LegacyMessageCustomParamsRepository
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.repository.MessageCustomParamsRepository
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.CheckMessageCustomParamsEmptyUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.ClearAllMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.CopyMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.GetMessageCustomParamsStateUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.GetMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.MergeMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.ObserveMessageCustomParamsStateUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.RemoveMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.SetMessageCustomParamsUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateMessageSummaryUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateMessageTranslationUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateVoiceTranscriptionUseCase
-import org.telegram.messenger.feature.messaging.messagecustomparams.presentation.MessageCustomParamsViewModel
-import org.telegram.messenger.feature.messaging.botforum.data.repository.LegacyBotForumRepository
-import org.telegram.messenger.feature.messaging.botforum.domain.repository.BotForumRepository
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckHasBotForumDraftsUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckIsBotForumUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckIsStreamingTopicUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckNewMessageDraftReplacementUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.DeriveTopicNameFromMessageUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.GetBotForumStateUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.GetStreamingSendButtonStateUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.ObserveBotForumStateUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.RemoveMarkedRemovedDraftsUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.ResolveStreamingButtonStateUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.SaveIsStreamingTopicUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.StopStreamingDraftUseCase
-import org.telegram.messenger.feature.messaging.botforum.domain.usecase.UpdateBotForumDraftUseCase
-import org.telegram.messenger.feature.messaging.botforum.presentation.BotForumViewModel
-import org.telegram.messenger.feature.media.storycustomparams.data.repository.LegacyStoryCustomParamsRepository
-import org.telegram.messenger.feature.media.storycustomparams.domain.repository.StoryCustomParamsRepository
-import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.CheckStoryCustomParamsEmptyUseCase
-import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.ClearAllStoryCustomParamsUseCase
-import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.ComputeStoryCustomParamsFlagsUseCase
-import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.CopyStoryCustomParamsUseCase
-import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.GetStoryCustomParamsStateUseCase
-import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.GetStoryCustomParamsUseCase
-import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.ObserveStoryCustomParamsStateUseCase
-import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.RemoveStoryCustomParamsUseCase
-import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.SaveStoryCustomParamsUseCase
-import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.UpdateStoryTranslationUseCase
-import org.telegram.messenger.feature.media.storycustomparams.presentation.StoryCustomParamsViewModel
-import org.telegram.messenger.feature.security.botguard.data.repository.LegacyBotGuardRepository
-import org.telegram.messenger.feature.security.botguard.domain.repository.BotGuardRepository
-import org.telegram.messenger.feature.security.botguard.domain.usecase.ClearAllGuardBotSessionsUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.CloseGuardBotSessionUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.DetermineGuardBotLaunchFlowUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.FormatGuardBotBulletinUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.GetAllActiveGuardBotSessionsUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.GetGuardBotSessionUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.IsGuardBotConfirmationNeededUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.MapJoinChatBotResultUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.ObserveGuardBotDecisionsUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.ObserveGuardBotStateUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.RegisterGuardBotSessionUseCase
-import org.telegram.messenger.feature.security.botguard.domain.usecase.SetGuardBotConfirmationShownUseCase
-import org.telegram.messenger.feature.security.botguard.presentation.BotGuardViewModel
-import org.telegram.messenger.feature.messaging.ephemeralmessages.data.repository.LegacyEphemeralMessagesRepository
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.repository.EphemeralMessagesRepository
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.ClearAllWelcomeAnchorBindingsUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.GetEphemeralCommandBotIdUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.GetEphemeralMessagesStateUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.GetWelcomeAnchorBindingsUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.IsEphemeralCommandUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.IsEphemeralMessageIdUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.ObserveEphemeralMessagesStateUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.PackEphemeralMessageIdUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.ParseBotCommandUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.PutWelcomeAnchorBindingUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.RemoveWelcomeAnchorBindingUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.UnpackEphemeralMessageIdUseCase
-import org.telegram.messenger.feature.messaging.ephemeralmessages.presentation.EphemeralMessagesViewModel
-import org.telegram.messenger.feature.messaging.botkeyboard.data.repository.LegacyBotKeyboardRepository
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.repository.BotKeyboardRepository
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.BuildBotKeyboardLayoutUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.CheckIsButtonWebViewUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.CheckIsForceReplyUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.ClearAllKeyboardsUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.GetBotKeyboardStateUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.GetKeyboardForMessageUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.ObserveBotKeyboardStateUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.RecordButtonPressedUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.RemoveKeyboardForMessageUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.ResolveCustomButtonTypeUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.SetKeyboardForMessageUseCase
-import org.telegram.messenger.feature.messaging.botkeyboard.presentation.BotKeyboardViewModel
-import org.telegram.messenger.feature.system.windowvisibility.data.repository.LegacyWindowVisibilityRepository
+import org.telegram.messenger.feature.system.settings.domain.repository.SettingsRepository
+import org.telegram.messenger.feature.system.settings.domain.usecase.GetSettingsUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.ObserveSettingsUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateBubbleRadiusUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateFontSizeUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateSaveToGalleryUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateStreamMediaUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateSyncContactsUseCase
+import org.telegram.messenger.feature.system.settings.presentation.SettingsViewModel
+import org.telegram.messenger.feature.system.themes.domain.repository.ThemeRepository
+import org.telegram.messenger.feature.system.themes.domain.usecase.ApplyThemeUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.GetAppearanceSettingsUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.GetAvailableThemesUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.ObserveAppearanceSettingsUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.ObserveAvailableThemesUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.ObserveNightModeUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.ResetAppearanceSettingsUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.SetBubbleRadiusUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.SetNightModeSettingsUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.SetNightModeTypeUseCase
+import org.telegram.messenger.feature.system.themes.domain.usecase.SetThemeAccentUseCase
+import org.telegram.messenger.feature.system.themes.presentation.ThemeViewModel
 import org.telegram.messenger.feature.system.windowvisibility.domain.repository.WindowVisibilityRepository
-import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.RequestHideWindowUseCase
-import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ReleaseHideWindowUseCase
-import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ToggleWindowHideUseCase
 import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.CheckIsWindowVisibleUseCase
-import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.GetWindowVisibilityStateUseCase
-import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.GetActiveHideReasonsUseCase
-import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ResetWindowVisibilityUseCase
-import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ObserveWindowVisibilityStateUseCase
-import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ObserveWindowVisibilityChangesUseCase
 import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.CreateVisibilityControllerUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.GetActiveHideReasonsUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.GetWindowVisibilityStateUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ObserveWindowVisibilityChangesUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ObserveWindowVisibilityStateUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ReleaseHideWindowUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.RequestHideWindowUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ResetWindowVisibilityUseCase
+import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.ToggleWindowHideUseCase
 import org.telegram.messenger.feature.system.windowvisibility.presentation.WindowVisibilityViewModel
-import org.telegram.messenger.feature.system.countdowntimer.data.repository.LegacyCountdownTimerRepository
-import org.telegram.messenger.feature.system.countdowntimer.domain.repository.CountdownTimerRepository
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.StartCountdownTimerUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.StopCountdownTimerUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.PauseCountdownTimerUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ResumeCountdownTimerUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.GetCountdownTimerUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.IsCountdownTimerRunningUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.TickCountdownTimerUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ClearAllCountdownTimersUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ObserveCountdownTimerUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.ObserveCountdownStateUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.DecomposeCountdownTimeUseCase
-import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.FormatCountdownTimeUseCase
-import org.telegram.messenger.feature.system.countdowntimer.presentation.CountdownTimerViewModel
-import java.util.concurrent.ConcurrentHashMap
+import org.telegram.ui.Components.chat.ChatActivityBottomViewsVisibilityController
+import org.telegram.ui.Components.chat.ChatActivityDraftMessageMeasureController
+import org.telegram.ui.Components.inset.WindowInsetsInAppController
+import org.telegram.ui.LaunchActivity
+import org.telegram.ui.MainTabsActivityController
 
-
-/**
- * Scoped service container that manages feature dependencies per [account].
- * Ensures clean lifecycle isolation between multi-account instances without heavyweight reflection.
- */
 class AccountFeatureContainer private constructor(val account: Int) {
 
-    private var customSavedMessagesRepository: SavedMessagesRepository? = null
-
-    /**
-     * Repository providing Saved Messages operations.
-     * Can be replaced or mocked via custom setter for testing.
-     */
-    var savedMessagesRepository: SavedMessagesRepository
-        get() = customSavedMessagesRepository ?: LegacySavedMessagesRepository(account)
-        set(value) {
-            customSavedMessagesRepository = value
-        }
-
-    val getSavedDialogsUseCase: GetSavedDialogsUseCase
-        get() = GetSavedDialogsUseCase(savedMessagesRepository)
-
-    val togglePinSavedDialogUseCase: TogglePinSavedDialogUseCase
-        get() = TogglePinSavedDialogUseCase(savedMessagesRepository)
-
-    val deleteSavedDialogUseCase: DeleteSavedDialogUseCase
-        get() = DeleteSavedDialogUseCase(savedMessagesRepository)
-
-    val getSavedTagsUseCase: GetSavedTagsUseCase
-        get() = GetSavedTagsUseCase(savedMessagesRepository)
-
-    val searchSavedDialogsUseCase: SearchSavedDialogsUseCase
-        get() = SearchSavedDialogsUseCase(savedMessagesRepository)
-
-    private var cachedSavedMessagesViewModel: SavedMessagesViewModel? = null
-
-    fun getSavedMessagesViewModel(): SavedMessagesViewModel {
-        return cachedSavedMessagesViewModel ?: createSavedMessagesViewModel().also {
-            cachedSavedMessagesViewModel = it
-        }
-    }
-
-    fun createSavedMessagesViewModel(): SavedMessagesViewModel {
-        return SavedMessagesViewModel(
-            account = account,
-            getSavedDialogsUseCase = getSavedDialogsUseCase,
-            togglePinSavedDialogUseCase = togglePinSavedDialogUseCase,
-            deleteSavedDialogUseCase = deleteSavedDialogUseCase,
-            getSavedTagsUseCase = getSavedTagsUseCase,
-            searchSavedDialogsUseCase = searchSavedDialogsUseCase
-        )
-    }
-
-    private var customDialogsRepository: DialogsRepository? = null
-
-    var dialogsRepository: DialogsRepository
-        get() = customDialogsRepository ?: LegacyDialogsRepository(account)
-        set(value) {
-            customDialogsRepository = value
-        }
-
-    val getDialogsUseCase: GetDialogsUseCase
-        get() = GetDialogsUseCase(dialogsRepository)
-
-    val loadMoreDialogsUseCase: LoadMoreDialogsUseCase
-        get() = LoadMoreDialogsUseCase(dialogsRepository)
-
-    val pinDialogUseCase: PinDialogUseCase
-        get() = PinDialogUseCase(dialogsRepository)
-
-    val deleteDialogUseCase: DeleteDialogUseCase
-        get() = DeleteDialogUseCase(dialogsRepository)
-
-    val markDialogAsReadUseCase: MarkDialogAsReadUseCase
-        get() = MarkDialogAsReadUseCase(dialogsRepository)
-
-    private var cachedDialogsViewModel: DialogsViewModel? = null
-
-    fun getDialogsViewModel(): DialogsViewModel {
-        return cachedDialogsViewModel ?: createDialogsViewModel().also {
-            cachedDialogsViewModel = it
-        }
-    }
-
-    fun createDialogsViewModel(): DialogsViewModel {
-        return DialogsViewModel(
-            account = account,
-            getDialogsUseCase = getDialogsUseCase,
-            loadMoreDialogsUseCase = loadMoreDialogsUseCase,
-            pinDialogUseCase = pinDialogUseCase,
-            deleteDialogUseCase = deleteDialogUseCase,
-            markDialogAsReadUseCase = markDialogAsReadUseCase
-        )
-    }
-
-    private var customChatRepository: ChatRepository? = null
-
-    var chatRepository: ChatRepository
-        get() = customChatRepository ?: LegacyChatRepository(account)
-        set(value) {
-            customChatRepository = value
-        }
-
-    val observeMessagesUseCase: ObserveMessagesUseCase
-        get() = ObserveMessagesUseCase(chatRepository)
-
-    val getMessagesUseCase: GetMessagesUseCase
-        get() = GetMessagesUseCase(chatRepository)
-
-    val loadHistoryUseCase: LoadHistoryUseCase
-        get() = LoadHistoryUseCase(chatRepository)
-
-    val sendMessageUseCase: SendMessageUseCase
-        get() = SendMessageUseCase(chatRepository)
-
-    val deleteMessagesUseCase: DeleteMessagesUseCase
-        get() = DeleteMessagesUseCase(chatRepository)
-
-    private val cachedChatViewModels = ConcurrentHashMap<Long, ChatViewModel>()
-
-    fun getChatViewModel(dialogId: Long): ChatViewModel {
-        return cachedChatViewModels.computeIfAbsent(dialogId) { createChatViewModel(it) }
-    }
-
-    fun createChatViewModel(dialogId: Long): ChatViewModel {
-        return ChatViewModel(
-            account = account,
-            dialogId = dialogId,
-            observeMessagesUseCase = observeMessagesUseCase,
-            loadHistoryUseCase = loadHistoryUseCase,
-            sendMessageUseCase = sendMessageUseCase,
-            deleteMessagesUseCase = deleteMessagesUseCase
-        )
-    }
-
-    private var customProfileRepository: ProfileRepository? = null
-
-    var profileRepository: ProfileRepository
-        get() = customProfileRepository ?: LegacyProfileRepository(account)
-        set(value) {
-            customProfileRepository = value
-        }
-
-    val observeProfileUseCase: ObserveProfileUseCase
-        get() = ObserveProfileUseCase(profileRepository)
-
-    val getProfileUseCase: GetProfileUseCase
-        get() = GetProfileUseCase(profileRepository)
-
-    val loadFullProfileUseCase: LoadFullProfileUseCase
-        get() = LoadFullProfileUseCase(profileRepository)
-
-    val blockPeerUseCase: BlockPeerUseCase
-        get() = BlockPeerUseCase(profileRepository)
-
-    val unblockPeerUseCase: UnblockPeerUseCase
-        get() = UnblockPeerUseCase(profileRepository)
-
-    private val cachedProfileViewModels = ConcurrentHashMap<Long, ProfileViewModel>()
-
-    fun getProfileViewModel(peerId: Long): ProfileViewModel {
-        return cachedProfileViewModels.computeIfAbsent(peerId) { createProfileViewModel(it) }
-    }
-
-    fun createProfileViewModel(peerId: Long): ProfileViewModel {
-        return ProfileViewModel(
-            account = account,
-            peerId = peerId,
-            observeProfileUseCase = observeProfileUseCase,
-            loadFullProfileUseCase = loadFullProfileUseCase,
-            blockPeerUseCase = blockPeerUseCase,
-            unblockPeerUseCase = unblockPeerUseCase
-        )
-    }
-
-    private var customSettingsRepository: SettingsRepository? = null
-
-    var settingsRepository: SettingsRepository
-        get() = customSettingsRepository ?: LegacySettingsRepository(account)
-        set(value) {
-            customSettingsRepository = value
-        }
-
-    val observeSettingsUseCase: ObserveSettingsUseCase
-        get() = ObserveSettingsUseCase(settingsRepository)
-
-    val getSettingsUseCase: GetSettingsUseCase
-        get() = GetSettingsUseCase(settingsRepository)
-
-    val updateFontSizeUseCase: UpdateFontSizeUseCase
-        get() = UpdateFontSizeUseCase(settingsRepository)
-
-    val updateBubbleRadiusUseCase: UpdateBubbleRadiusUseCase
-        get() = UpdateBubbleRadiusUseCase(settingsRepository)
-
-    val updateSaveToGalleryUseCase: UpdateSaveToGalleryUseCase
-        get() = UpdateSaveToGalleryUseCase(settingsRepository)
-
-    val updateStreamMediaUseCase: UpdateStreamMediaUseCase
-        get() = UpdateStreamMediaUseCase(settingsRepository)
-
-    val updateSyncContactsUseCase: UpdateSyncContactsUseCase
-        get() = UpdateSyncContactsUseCase(settingsRepository)
-
-    private var cachedSettingsViewModel: SettingsViewModel? = null
-
-    val settingsViewModel: SettingsViewModel
-        get() {
-            var vm = cachedSettingsViewModel
-            if (vm == null) {
-                vm = createSettingsViewModel()
-                cachedSettingsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createSettingsViewModel(): SettingsViewModel {
-        return SettingsViewModel(
-            observeSettingsUseCase = observeSettingsUseCase,
-            getSettingsUseCase = getSettingsUseCase,
-            updateFontSizeUseCase = updateFontSizeUseCase,
-            updateBubbleRadiusUseCase = updateBubbleRadiusUseCase,
-            updateSaveToGalleryUseCase = updateSaveToGalleryUseCase,
-            updateStreamMediaUseCase = updateStreamMediaUseCase,
-            updateSyncContactsUseCase = updateSyncContactsUseCase
-        )
-    }
-
-    private var customMediaRepository: MediaRepository? = null
-
-    var mediaRepository: MediaRepository
-        get() = customMediaRepository ?: LegacyMediaRepository()
-        set(value) {
-            customMediaRepository = value
-        }
-
-    val observeMediaAlbumsUseCase: ObserveMediaAlbumsUseCase
-        get() = ObserveMediaAlbumsUseCase(mediaRepository)
-
-    val getMediaAlbumsUseCase: GetMediaAlbumsUseCase
-        get() = GetMediaAlbumsUseCase(mediaRepository)
-
-    val getAlbumMediaUseCase: GetAlbumMediaUseCase
-        get() = GetAlbumMediaUseCase(mediaRepository)
-
-    val getAllMediaUseCase: GetAllMediaUseCase
-        get() = GetAllMediaUseCase(mediaRepository)
-
-    private var cachedMediaViewModel: MediaViewModel? = null
-
-    val mediaViewModel: MediaViewModel
-        get() {
-            var vm = cachedMediaViewModel
-            if (vm == null) {
-                vm = createMediaViewModel()
-                cachedMediaViewModel = vm
-            }
-            return vm
-        }
-
-    fun createMediaViewModel(): MediaViewModel {
-        return MediaViewModel(
-            observeMediaAlbumsUseCase = observeMediaAlbumsUseCase,
-            getMediaAlbumsUseCase = getMediaAlbumsUseCase,
-            getAlbumMediaUseCase = getAlbumMediaUseCase,
-            getAllMediaUseCase = getAllMediaUseCase
-        )
-    }
-
-    private var customVoIPRepository: VoIPRepository? = null
-
-    var voipRepository: VoIPRepository
-        get() = customVoIPRepository ?: LegacyVoIPRepository(account)
-        set(value) {
-            customVoIPRepository = value
-        }
-
-    val observeCurrentCallUseCase: ObserveCurrentCallUseCase
-        get() = ObserveCurrentCallUseCase(voipRepository)
-
-    val getCurrentCallUseCase: GetCurrentCallUseCase
-        get() = GetCurrentCallUseCase(voipRepository)
-
-    val startCallUseCase: StartCallUseCase
-        get() = StartCallUseCase(voipRepository)
-
-    val acceptCallUseCase: AcceptCallUseCase
-        get() = AcceptCallUseCase(voipRepository)
-
-    val declineCallUseCase: DeclineCallUseCase
-        get() = DeclineCallUseCase(voipRepository)
-
-    val hangUpCallUseCase: HangUpCallUseCase
-        get() = HangUpCallUseCase(voipRepository)
-
-    val toggleMuteUseCase: ToggleMuteUseCase
-        get() = ToggleMuteUseCase(voipRepository)
-
-    val toggleSpeakerphoneUseCase: ToggleSpeakerphoneUseCase
-        get() = ToggleSpeakerphoneUseCase(voipRepository)
-
-    private var cachedCallViewModel: CallViewModel? = null
-
-    val callViewModel: CallViewModel
-        get() {
-            var vm = cachedCallViewModel
-            if (vm == null) {
-                vm = createCallViewModel()
-                cachedCallViewModel = vm
-            }
-            return vm
-        }
-
-    fun createCallViewModel(): CallViewModel {
-        return CallViewModel(
-            observeCurrentCallUseCase = observeCurrentCallUseCase,
-            getCurrentCallUseCase = getCurrentCallUseCase,
-            startCallUseCase = startCallUseCase,
-            acceptCallUseCase = acceptCallUseCase,
-            declineCallUseCase = declineCallUseCase,
-            hangUpCallUseCase = hangUpCallUseCase,
-            toggleMuteUseCase = toggleMuteUseCase,
-            toggleSpeakerphoneUseCase = toggleSpeakerphoneUseCase
-        )
-    }
-
-    private var customSecretChatRepository: SecretChatRepository? = null
-
-    var secretChatRepository: SecretChatRepository
-        get() = customSecretChatRepository ?: LegacySecretChatRepository(account)
-        set(value) {
-            customSecretChatRepository = value
-        }
-
-    val observeSecretChatUseCase: ObserveSecretChatUseCase
-        get() = ObserveSecretChatUseCase(secretChatRepository)
-
-    val observeSecretChatsUseCase: ObserveSecretChatsUseCase
-        get() = ObserveSecretChatsUseCase(secretChatRepository)
-
-    val getSecretChatUseCase: GetSecretChatUseCase
-        get() = GetSecretChatUseCase(secretChatRepository)
-
-    val startSecretChatUseCase: StartSecretChatUseCase
-        get() = StartSecretChatUseCase(secretChatRepository)
-
-    val acceptSecretChatUseCase: AcceptSecretChatUseCase
-        get() = AcceptSecretChatUseCase(secretChatRepository)
-
-    val declineSecretChatUseCase: DeclineSecretChatUseCase
-        get() = DeclineSecretChatUseCase(secretChatRepository)
-
-    val setSecretChatTtlUseCase: SetSecretChatTtlUseCase
-        get() = SetSecretChatTtlUseCase(secretChatRepository)
-
-    val sendScreenshotNotificationUseCase: SendScreenshotNotificationUseCase
-        get() = SendScreenshotNotificationUseCase(secretChatRepository)
-
-    private val cachedSecretChatViewModels = ConcurrentHashMap<Int, SecretChatViewModel>()
-
-    fun getSecretChatViewModel(chatId: Int): SecretChatViewModel {
-        return cachedSecretChatViewModels.computeIfAbsent(chatId) { createSecretChatViewModel(it) }
-    }
-
-    fun createSecretChatViewModel(chatId: Int): SecretChatViewModel {
-        return SecretChatViewModel(
-            chatId = chatId,
-            observeSecretChatUseCase = observeSecretChatUseCase,
-            getSecretChatUseCase = getSecretChatUseCase,
-            acceptSecretChatUseCase = acceptSecretChatUseCase,
-            declineSecretChatUseCase = declineSecretChatUseCase,
-            setSecretChatTtlUseCase = setSecretChatTtlUseCase,
-            sendScreenshotNotificationUseCase = sendScreenshotNotificationUseCase
-        )
-    }
-
-    private var customContactsRepository: ContactsRepository? = null
-
-    var contactsRepository: ContactsRepository
-        get() = customContactsRepository ?: LegacyContactsRepository(account)
-        set(value) {
-            customContactsRepository = value
-        }
-
-    val observeContactsUseCase: ObserveContactsUseCase
-        get() = ObserveContactsUseCase(contactsRepository)
-
-    val getContactsUseCase: GetContactsUseCase
-        get() = GetContactsUseCase(contactsRepository)
-
-    val getContactUseCase: GetContactUseCase
-        get() = GetContactUseCase(contactsRepository)
-
-    val addContactUseCase: AddContactUseCase
-        get() = AddContactUseCase(contactsRepository)
-
-    val deleteContactUseCase: DeleteContactUseCase
-        get() = DeleteContactUseCase(contactsRepository)
-
-    val searchContactsUseCase: SearchContactsUseCase
-        get() = SearchContactsUseCase(contactsRepository)
-
-    private var cachedContactsViewModel: ContactsViewModel? = null
-
-    val contactsViewModel: ContactsViewModel
-        get() {
-            var vm = cachedContactsViewModel
-            if (vm == null) {
-                vm = createContactsViewModel()
-                cachedContactsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createContactsViewModel(): ContactsViewModel {
-        return ContactsViewModel(
-            observeContactsUseCase = observeContactsUseCase,
-            getContactsUseCase = getContactsUseCase,
-            getContactUseCase = getContactUseCase,
-            addContactUseCase = addContactUseCase,
-            deleteContactUseCase = deleteContactUseCase,
-            searchContactsUseCase = searchContactsUseCase
-        )
-    }
-
-    private var customFoldersRepository: FoldersRepository? = null
-
-    var foldersRepository: FoldersRepository
-        get() = customFoldersRepository ?: LegacyFoldersRepository(account)
-        set(value) {
-            customFoldersRepository = value
-        }
-
-    val observeFoldersUseCase: ObserveFoldersUseCase
-        get() = ObserveFoldersUseCase(foldersRepository)
-
-    val getFoldersUseCase: GetFoldersUseCase
-        get() = GetFoldersUseCase(foldersRepository)
-
-    val getFolderUseCase: GetFolderUseCase
-        get() = GetFolderUseCase(foldersRepository)
-
-    val createFolderUseCase: CreateFolderUseCase
-        get() = CreateFolderUseCase(foldersRepository)
-
-    val updateFolderUseCase: UpdateFolderUseCase
-        get() = UpdateFolderUseCase(foldersRepository)
-
-    val deleteFolderUseCase: DeleteFolderUseCase
-        get() = DeleteFolderUseCase(foldersRepository)
-
-    val reorderFoldersUseCase: ReorderFoldersUseCase
-        get() = ReorderFoldersUseCase(foldersRepository)
-
-    val getSuggestedFoldersUseCase: GetSuggestedFoldersUseCase
-        get() = GetSuggestedFoldersUseCase(foldersRepository)
-
-    private var cachedFoldersViewModel: FoldersViewModel? = null
-
-    val foldersViewModel: FoldersViewModel
-        get() {
-            var vm = cachedFoldersViewModel
-            if (vm == null) {
-                vm = createFoldersViewModel()
-                cachedFoldersViewModel = vm
-            }
-            return vm
-        }
-
-    fun createFoldersViewModel(): FoldersViewModel {
-        return FoldersViewModel(
-            observeFoldersUseCase = observeFoldersUseCase,
-            getFoldersUseCase = getFoldersUseCase,
-            getFolderUseCase = getFolderUseCase,
-            createFolderUseCase = createFolderUseCase,
-            updateFolderUseCase = updateFolderUseCase,
-            deleteFolderUseCase = deleteFolderUseCase,
-            reorderFoldersUseCase = reorderFoldersUseCase,
-            getSuggestedFoldersUseCase = getSuggestedFoldersUseCase
-        )
-    }
-
-    private var customStickersRepository: StickersRepository? = null
-
-    var stickersRepository: StickersRepository
-        get() = customStickersRepository ?: LegacyStickersRepository(account)
-        set(value) {
-            customStickersRepository = value
-        }
-
-    val observeStickerSetsUseCase: ObserveStickerSetsUseCase
-        get() = ObserveStickerSetsUseCase(stickersRepository)
-
-    val getStickerSetsUseCase: GetStickerSetsUseCase
-        get() = GetStickerSetsUseCase(stickersRepository)
-
-    val getStickerSetUseCase: GetStickerSetUseCase
-        get() = GetStickerSetUseCase(stickersRepository)
-
-    val getRecentStickersUseCase: GetRecentStickersUseCase
-        get() = GetRecentStickersUseCase(stickersRepository)
-
-    val getStickersForEmojiUseCase: GetStickersForEmojiUseCase
-        get() = GetStickersForEmojiUseCase(stickersRepository)
-
-    val toggleStickerSetInstalledUseCase: ToggleStickerSetInstalledUseCase
-        get() = ToggleStickerSetInstalledUseCase(stickersRepository)
-
-    val toggleStickerSetArchivedUseCase: ToggleStickerSetArchivedUseCase
-        get() = ToggleStickerSetArchivedUseCase(stickersRepository)
-
-    private val cachedStickersViewModels = ConcurrentHashMap<Int, StickersViewModel>()
-
-    val stickersViewModel: StickersViewModel
-        get() = getStickersViewModel(0)
-
-    fun getStickersViewModel(type: Int = 0): StickersViewModel {
-        return cachedStickersViewModels.computeIfAbsent(type) { createStickersViewModel(it) }
-    }
-
-    fun createStickersViewModel(type: Int = 0): StickersViewModel {
-        return StickersViewModel(
-            observeStickerSetsUseCase = observeStickerSetsUseCase,
-            getStickerSetsUseCase = getStickerSetsUseCase,
-            getStickerSetUseCase = getStickerSetUseCase,
-            getRecentStickersUseCase = getRecentStickersUseCase,
-            getStickersForEmojiUseCase = getStickersForEmojiUseCase,
-            toggleStickerSetInstalledUseCase = toggleStickerSetInstalledUseCase,
-            toggleStickerSetArchivedUseCase = toggleStickerSetArchivedUseCase,
-            stickerType = type
-        )
-    }
-
-    private var customFileLoaderRepository: FileLoaderRepository? = null
-
-    var fileLoaderRepository: FileLoaderRepository
-        get() = customFileLoaderRepository ?: LegacyFileLoaderRepository(account)
-        set(value) {
-            customFileLoaderRepository = value
-        }
-
-    val observeTransfersUseCase: ObserveTransfersUseCase
-        get() = ObserveTransfersUseCase(fileLoaderRepository)
-
-    val observeTransferUseCase: ObserveTransferUseCase
-        get() = ObserveTransferUseCase(fileLoaderRepository)
-
-    val getActiveDownloadsUseCase: GetActiveDownloadsUseCase
-        get() = GetActiveDownloadsUseCase(fileLoaderRepository)
-
-    val getRecentDownloadsUseCase: GetRecentDownloadsUseCase
-        get() = GetRecentDownloadsUseCase(fileLoaderRepository)
-
-    val loadFileUseCase: LoadFileUseCase
-        get() = LoadFileUseCase(fileLoaderRepository)
-
-    val cancelLoadFileUseCase: CancelLoadFileUseCase
-        get() = CancelLoadFileUseCase(fileLoaderRepository)
-
-    val cancelAllDownloadsUseCase: CancelAllDownloadsUseCase
-        get() = CancelAllDownloadsUseCase(fileLoaderRepository)
-
-    val uploadFileUseCase: UploadFileUseCase
-        get() = UploadFileUseCase(fileLoaderRepository)
-
-    val cancelFileUploadUseCase: CancelFileUploadUseCase
-        get() = CancelFileUploadUseCase(fileLoaderRepository)
-
-    private var cachedFileLoaderViewModel: FileLoaderViewModel? = null
-
-    val fileLoaderViewModel: FileLoaderViewModel
-        get() {
-            var vm = cachedFileLoaderViewModel
-            if (vm == null) {
-                vm = createFileLoaderViewModel()
-                cachedFileLoaderViewModel = vm
-            }
-            return vm
-        }
-
-    fun createFileLoaderViewModel(): FileLoaderViewModel {
-        return FileLoaderViewModel(
-            observeTransfersUseCase = observeTransfersUseCase,
-            getActiveDownloadsUseCase = getActiveDownloadsUseCase,
-            getRecentDownloadsUseCase = getRecentDownloadsUseCase,
-            loadFileUseCase = loadFileUseCase,
-            cancelLoadFileUseCase = cancelLoadFileUseCase,
-            cancelAllDownloadsUseCase = cancelAllDownloadsUseCase,
-            uploadFileUseCase = uploadFileUseCase,
-            cancelFileUploadUseCase = cancelFileUploadUseCase
-        )
-    }
-
-    // --- Search ---
-    private var customSearchRepository: SearchRepository? = null
-
-    var searchRepository: SearchRepository
-        get() = customSearchRepository ?: LegacySearchRepository(account)
-        set(value) {
-            customSearchRepository = value
-        }
-
-    val searchGlobalUseCase: SearchGlobalUseCase
-        get() = SearchGlobalUseCase(searchRepository)
-
-    val searchLocalUseCase: SearchLocalUseCase
-        get() = SearchLocalUseCase(searchRepository)
-
-    val getRecentSearchesUseCase: GetRecentSearchesUseCase
-        get() = GetRecentSearchesUseCase(searchRepository)
-
-    val clearRecentSearchesUseCase: ClearRecentSearchesUseCase
-        get() = ClearRecentSearchesUseCase(searchRepository)
-
-    val removeRecentSearchUseCase: RemoveRecentSearchUseCase
-        get() = RemoveRecentSearchUseCase(searchRepository)
-
-    val getRecentHashtagsUseCase: GetRecentHashtagsUseCase
-        get() = GetRecentHashtagsUseCase(searchRepository)
-
-    val putRecentHashtagUseCase: PutRecentHashtagUseCase
-        get() = PutRecentHashtagUseCase(searchRepository)
-
-    val clearRecentHashtagsUseCase: ClearRecentHashtagsUseCase
-        get() = ClearRecentHashtagsUseCase(searchRepository)
-
-    private var cachedSearchViewModel: SearchViewModel? = null
-
-    val searchViewModel: SearchViewModel
-        get() {
-            var vm = cachedSearchViewModel
-            if (vm == null) {
-                vm = createSearchViewModel()
-                cachedSearchViewModel = vm
-            }
-            return vm
-        }
-
-    fun createSearchViewModel(): SearchViewModel {
-        return SearchViewModel(
-            searchGlobalUseCase = searchGlobalUseCase,
-            searchLocalUseCase = searchLocalUseCase,
-            getRecentSearchesUseCase = getRecentSearchesUseCase,
-            clearRecentSearchesUseCase = clearRecentSearchesUseCase,
-            removeRecentSearchUseCase = removeRecentSearchUseCase,
-            getRecentHashtagsUseCase = getRecentHashtagsUseCase,
-            putRecentHashtagUseCase = putRecentHashtagUseCase,
-            clearRecentHashtagsUseCase = clearRecentHashtagsUseCase
-        )
-    }
-
-    private var customNotificationsRepository: NotificationsRepository? = null
-
-    var notificationsRepository: NotificationsRepository
-        get() = customNotificationsRepository ?: LegacyNotificationsRepository(account)
-        set(value) {
-            customNotificationsRepository = value
-        }
-
-    val observeNotificationSettingsUseCase: ObserveNotificationSettingsUseCase
-        get() = ObserveNotificationSettingsUseCase(notificationsRepository)
-
-    val getNotificationSettingsUseCase: GetNotificationSettingsUseCase
-        get() = GetNotificationSettingsUseCase(notificationsRepository)
-
-    val observeBadgeUseCase: ObserveBadgeUseCase
-        get() = ObserveBadgeUseCase(notificationsRepository)
-
-    val getBadgeUseCase: GetBadgeUseCase
-        get() = GetBadgeUseCase(notificationsRepository)
-
-    val observeBadgeSettingsUseCase: ObserveBadgeSettingsUseCase
-        get() = ObserveBadgeSettingsUseCase(notificationsRepository)
-
-    val getBadgeSettingsUseCase: GetBadgeSettingsUseCase
-        get() = GetBadgeSettingsUseCase(notificationsRepository)
-
-    val togglePeerNotificationsUseCase: TogglePeerNotificationsUseCase
-        get() = TogglePeerNotificationsUseCase(notificationsRepository)
-
-    val toggleInChatSoundUseCase: ToggleInChatSoundUseCase
-        get() = ToggleInChatSoundUseCase(notificationsRepository)
-
-    val toggleInAppSoundsUseCase: ToggleInAppSoundsUseCase
-        get() = ToggleInAppSoundsUseCase(notificationsRepository)
-
-    val toggleInAppVibrateUseCase: ToggleInAppVibrateUseCase
-        get() = ToggleInAppVibrateUseCase(notificationsRepository)
-
-    val toggleInAppPreviewUseCase: ToggleInAppPreviewUseCase
-        get() = ToggleInAppPreviewUseCase(notificationsRepository)
-
-    val toggleContactJoinedNotificationsUseCase: ToggleContactJoinedNotificationsUseCase
-        get() = ToggleContactJoinedNotificationsUseCase(notificationsRepository)
-
-    val togglePinnedMessagesNotificationsUseCase: TogglePinnedMessagesNotificationsUseCase
-        get() = TogglePinnedMessagesNotificationsUseCase(notificationsRepository)
-
-    val updateBadgeSettingsUseCase: UpdateBadgeSettingsUseCase
-        get() = UpdateBadgeSettingsUseCase(notificationsRepository)
-
-    val muteDialogUseCase: MuteDialogUseCase
-        get() = MuteDialogUseCase(notificationsRepository)
-
-    val isDialogMutedUseCase: IsDialogMutedUseCase
-        get() = IsDialogMutedUseCase(notificationsRepository)
-
-    val refreshBadgeUseCase: RefreshBadgeUseCase
-        get() = RefreshBadgeUseCase(notificationsRepository)
-
-    private var cachedNotificationsViewModel: NotificationsViewModel? = null
-
-    val notificationsViewModel: NotificationsViewModel
-        get() {
-            var vm = cachedNotificationsViewModel
-            if (vm == null) {
-                vm = createNotificationsViewModel()
-                cachedNotificationsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createNotificationsViewModel(): NotificationsViewModel {
-        return NotificationsViewModel(
-            observeNotificationSettingsUseCase = observeNotificationSettingsUseCase,
-            getNotificationSettingsUseCase = getNotificationSettingsUseCase,
-            observeBadgeUseCase = observeBadgeUseCase,
-            getBadgeUseCase = getBadgeUseCase,
-            observeBadgeSettingsUseCase = observeBadgeSettingsUseCase,
-            getBadgeSettingsUseCase = getBadgeSettingsUseCase,
-            togglePeerNotificationsUseCase = togglePeerNotificationsUseCase,
-            toggleInChatSoundUseCase = toggleInChatSoundUseCase,
-            toggleInAppSoundsUseCase = toggleInAppSoundsUseCase,
-            toggleInAppVibrateUseCase = toggleInAppVibrateUseCase,
-            toggleInAppPreviewUseCase = toggleInAppPreviewUseCase,
-            toggleContactJoinedNotificationsUseCase = toggleContactJoinedNotificationsUseCase,
-            togglePinnedMessagesNotificationsUseCase = togglePinnedMessagesNotificationsUseCase,
-            updateBadgeSettingsUseCase = updateBadgeSettingsUseCase,
-            muteDialogUseCase = muteDialogUseCase,
-            refreshBadgeUseCase = refreshBadgeUseCase
-        )
-    }
-
-    val privacyRepository: PrivacyRepository by lazy {
-        LegacyPrivacyRepository(account)
-    }
-
-    val observePrivacyRulesUseCase: ObservePrivacyRulesUseCase
-        get() = ObservePrivacyRulesUseCase(privacyRepository)
-
-    val getPrivacyRulesUseCase: GetPrivacyRulesUseCase
-        get() = GetPrivacyRulesUseCase(privacyRepository)
-
-    val setPrivacyRuleUseCase: SetPrivacyRuleUseCase
-        get() = SetPrivacyRuleUseCase(privacyRepository)
-
-    val loadPrivacyRulesUseCase: LoadPrivacyRulesUseCase
-        get() = LoadPrivacyRulesUseCase(privacyRepository)
-
-    val observeBlockedPeersUseCase: ObserveBlockedPeersUseCase
-        get() = ObserveBlockedPeersUseCase(privacyRepository)
-
-    val getBlockedPeersUseCase: GetBlockedPeersUseCase
-        get() = GetBlockedPeersUseCase(privacyRepository)
-
-    val blockPrivacyPeerUseCase: BlockPrivacyPeerUseCase
-        get() = BlockPrivacyPeerUseCase(privacyRepository)
-
-    val unblockPrivacyPeerUseCase: UnblockPrivacyPeerUseCase
-        get() = UnblockPrivacyPeerUseCase(privacyRepository)
-
-    val getPasscodeSettingsUseCase: GetPasscodeSettingsUseCase
-        get() = GetPasscodeSettingsUseCase(privacyRepository)
-
-    val setPasscodeUseCase: SetPasscodeUseCase
-        get() = SetPasscodeUseCase(privacyRepository)
-
-    val checkPasscodeUseCase: CheckPasscodeUseCase
-        get() = CheckPasscodeUseCase(privacyRepository)
-
-    val clearPasscodeUseCase: ClearPasscodeUseCase
-        get() = ClearPasscodeUseCase(privacyRepository)
-
-    val observeTwoStepVerificationUseCase: ObserveTwoStepVerificationUseCase
-        get() = ObserveTwoStepVerificationUseCase(privacyRepository)
-
-    val loadTwoStepVerificationUseCase: LoadTwoStepVerificationUseCase
-        get() = LoadTwoStepVerificationUseCase(privacyRepository)
-
-    private var cachedPrivacyViewModel: PrivacyViewModel? = null
-
-    val privacyViewModel: PrivacyViewModel
-        get() {
-            var vm = cachedPrivacyViewModel
-            if (vm == null) {
-                vm = createPrivacyViewModel()
-                cachedPrivacyViewModel = vm
-            }
-            return vm
-        }
-
-    fun createPrivacyViewModel(): PrivacyViewModel {
-        return PrivacyViewModel(
-            privacyRepository = privacyRepository,
-            observePrivacyRulesUseCase = observePrivacyRulesUseCase,
-            getPrivacyRulesUseCase = getPrivacyRulesUseCase,
-            setPrivacyRuleUseCase = setPrivacyRuleUseCase,
-            loadPrivacyRulesUseCase = loadPrivacyRulesUseCase,
-            observeBlockedPeersUseCase = observeBlockedPeersUseCase,
-            getBlockedPeersUseCase = getBlockedPeersUseCase,
-            blockPrivacyPeerUseCase = blockPrivacyPeerUseCase,
-            unblockPrivacyPeerUseCase = unblockPrivacyPeerUseCase,
-            getPasscodeSettingsUseCase = getPasscodeSettingsUseCase,
-            setPasscodeUseCase = setPasscodeUseCase,
-            checkPasscodeUseCase = checkPasscodeUseCase,
-            clearPasscodeUseCase = clearPasscodeUseCase,
-            observeTwoStepVerificationUseCase = observeTwoStepVerificationUseCase,
-            loadTwoStepVerificationUseCase = loadTwoStepVerificationUseCase
-        )
-    }
-
-    val themeRepository: ThemeRepository by lazy {
-        LegacyThemeRepository(account)
-    }
-
-    val observeAppearanceSettingsUseCase: ObserveAppearanceSettingsUseCase
-        get() = ObserveAppearanceSettingsUseCase(themeRepository)
-
-    val getAppearanceSettingsUseCase: GetAppearanceSettingsUseCase
-        get() = GetAppearanceSettingsUseCase(themeRepository)
-
-    val observeAvailableThemesUseCase: ObserveAvailableThemesUseCase
-        get() = ObserveAvailableThemesUseCase(themeRepository)
-
-    val getAvailableThemesUseCase: GetAvailableThemesUseCase
-        get() = GetAvailableThemesUseCase(themeRepository)
-
-    val applyThemeUseCase: ApplyThemeUseCase
-        get() = ApplyThemeUseCase(themeRepository)
-
-    val observeNightModeUseCase: ObserveNightModeUseCase
-        get() = ObserveNightModeUseCase(themeRepository)
-
-    val setNightModeTypeUseCase: SetNightModeTypeUseCase
-        get() = SetNightModeTypeUseCase(themeRepository)
-
-    val setNightModeSettingsUseCase: SetNightModeSettingsUseCase
-        get() = SetNightModeSettingsUseCase(themeRepository)
-
-    val setThemeAccentUseCase: SetThemeAccentUseCase
-        get() = SetThemeAccentUseCase(themeRepository)
-
-    val setBubbleRadiusUseCase: SetBubbleRadiusUseCase
-        get() = SetBubbleRadiusUseCase(themeRepository)
-
-    val resetAppearanceSettingsUseCase: ResetAppearanceSettingsUseCase
-        get() = ResetAppearanceSettingsUseCase(themeRepository)
-
-    private var cachedThemeViewModel: ThemeViewModel? = null
-
-    val themeViewModel: ThemeViewModel
-        get() {
-            var vm = cachedThemeViewModel
-            if (vm == null) {
-                vm = createThemeViewModel()
-                cachedThemeViewModel = vm
-            }
-            return vm
-        }
-
-    fun createThemeViewModel(): ThemeViewModel {
-        return ThemeViewModel(
-            themeRepository = themeRepository,
-            observeAppearanceSettingsUseCase = observeAppearanceSettingsUseCase,
-            getAppearanceSettingsUseCase = getAppearanceSettingsUseCase,
-            observeAvailableThemesUseCase = observeAvailableThemesUseCase,
-            getAvailableThemesUseCase = getAvailableThemesUseCase,
-            applyThemeUseCase = applyThemeUseCase,
-            observeNightModeUseCase = observeNightModeUseCase,
-            setNightModeTypeUseCase = setNightModeTypeUseCase,
-            setNightModeSettingsUseCase = setNightModeSettingsUseCase,
-            setThemeAccentUseCase = setThemeAccentUseCase,
-            setBubbleRadiusUseCase = setBubbleRadiusUseCase,
-            resetAppearanceSettingsUseCase = resetAppearanceSettingsUseCase
-        )
-    }
-
-    private var customStoriesRepository: StoriesRepository? = null
-
-    var storiesRepository: StoriesRepository
-        get() = customStoriesRepository ?: LegacyStoriesRepository(account)
-        set(value) {
-            customStoriesRepository = value
-        }
-
-    val observeStoriesUseCase: ObserveStoriesUseCase
-        get() = ObserveStoriesUseCase(storiesRepository)
-
-    val observeHiddenStoriesUseCase: ObserveHiddenStoriesUseCase
-        get() = ObserveHiddenStoriesUseCase(storiesRepository)
-
-    val observeStealthModeUseCase: ObserveStealthModeUseCase
-        get() = ObserveStealthModeUseCase(storiesRepository)
-
-    val observeSelfStoriesUseCase: ObserveSelfStoriesUseCase
-        get() = ObserveSelfStoriesUseCase(storiesRepository)
-
-    val getPeerStoriesUseCase: GetPeerStoriesUseCase
-        get() = GetPeerStoriesUseCase(storiesRepository)
-
-    val markStoryAsReadUseCase: MarkStoryAsReadUseCase
-        get() = MarkStoryAsReadUseCase(storiesRepository)
-
-    val deleteStoryUseCase: DeleteStoryUseCase
-        get() = DeleteStoryUseCase(storiesRepository)
-
-    val toggleStoryPinUseCase: ToggleStoryPinUseCase
-        get() = ToggleStoryPinUseCase(storiesRepository)
-
-    val toggleStoryHiddenUseCase: ToggleStoryHiddenUseCase
-        get() = ToggleStoryHiddenUseCase(storiesRepository)
-
-    val activateStealthModeUseCase: ActivateStealthModeUseCase
-        get() = ActivateStealthModeUseCase(storiesRepository)
-
-    val getStoryLimitUseCase: GetStoryLimitUseCase
-        get() = GetStoryLimitUseCase(storiesRepository)
-
-    val refreshStoriesUseCase: RefreshStoriesUseCase
-        get() = RefreshStoriesUseCase(storiesRepository)
-
-    private var cachedStoriesViewModel: StoriesViewModel? = null
-
-    val storiesViewModel: StoriesViewModel
-        get() {
-            var vm = cachedStoriesViewModel
-            if (vm == null) {
-                vm = createStoriesViewModel()
-                cachedStoriesViewModel = vm
-            }
-            return vm
-        }
-
-    fun createStoriesViewModel(): StoriesViewModel {
-        return StoriesViewModel(
-            observeStoriesUseCase = observeStoriesUseCase,
-            observeHiddenStoriesUseCase = observeHiddenStoriesUseCase,
-            observeStealthModeUseCase = observeStealthModeUseCase,
-            observeSelfStoriesUseCase = observeSelfStoriesUseCase,
-            markStoryAsReadUseCase = markStoryAsReadUseCase,
-            deleteStoryUseCase = deleteStoryUseCase,
-            toggleStoryPinUseCase = toggleStoryPinUseCase,
-            toggleStoryHiddenUseCase = toggleStoryHiddenUseCase,
-            activateStealthModeUseCase = activateStealthModeUseCase,
-            getStoryLimitUseCase = getStoryLimitUseCase,
-            refreshStoriesUseCase = refreshStoriesUseCase
-        )
-    }
-
-    private var customPaymentsRepository: PaymentsRepository? = null
+    val business: BusinessContainer by lazy { BusinessContainer(account) }
+    val media: MediaContainer by lazy { MediaContainer(account) }
+    val messaging: MessagingContainer by lazy { MessagingContainer(account) }
+    val network: NetworkContainer by lazy { NetworkContainer(account) }
+    val security: SecurityContainer by lazy { SecurityContainer(account) }
+    val social: SocialContainer by lazy { SocialContainer(account) }
+    val system: SystemContainer by lazy { SystemContainer(account) }
+
+    // ==================== BUSINESS DOMAIN ====================
 
     var paymentsRepository: PaymentsRepository
-        get() = customPaymentsRepository ?: LegacyPaymentsRepository(account)
-        set(value) {
-            customPaymentsRepository = value
-        }
+        get() = business.paymentsRepository
+        set(value) { business.paymentsRepository = value }
 
     val observeStarsBalanceUseCase: ObserveStarsBalanceUseCase
-        get() = ObserveStarsBalanceUseCase(paymentsRepository)
+        get() = business.observeStarsBalanceUseCase
 
     val observeStarTransactionsUseCase: ObserveStarTransactionsUseCase
-        get() = ObserveStarTransactionsUseCase(paymentsRepository)
+        get() = business.observeStarTransactionsUseCase
 
     val observeStarSubscriptionsUseCase: ObserveStarSubscriptionsUseCase
-        get() = ObserveStarSubscriptionsUseCase(paymentsRepository)
+        get() = business.observeStarSubscriptionsUseCase
 
     val getStarsBalanceUseCase: GetStarsBalanceUseCase
-        get() = GetStarsBalanceUseCase(paymentsRepository)
+        get() = business.getStarsBalanceUseCase
 
     val getStarTransactionsUseCase: GetStarTransactionsUseCase
-        get() = GetStarTransactionsUseCase(paymentsRepository)
+        get() = business.getStarTransactionsUseCase
 
     val getStarSubscriptionsUseCase: GetStarSubscriptionsUseCase
-        get() = GetStarSubscriptionsUseCase(paymentsRepository)
+        get() = business.getStarSubscriptionsUseCase
 
     val getStarTopupOptionsUseCase: GetStarTopupOptionsUseCase
-        get() = GetStarTopupOptionsUseCase(paymentsRepository)
+        get() = business.getStarTopupOptionsUseCase
 
     val refreshStarsBalanceUseCase: RefreshStarsBalanceUseCase
-        get() = RefreshStarsBalanceUseCase(paymentsRepository)
+        get() = business.refreshStarsBalanceUseCase
 
     val refreshStarTransactionsUseCase: RefreshStarTransactionsUseCase
-        get() = RefreshStarTransactionsUseCase(paymentsRepository)
+        get() = business.refreshStarTransactionsUseCase
 
     val refreshStarSubscriptionsUseCase: RefreshStarSubscriptionsUseCase
-        get() = RefreshStarSubscriptionsUseCase(paymentsRepository)
-
-    private var cachedPaymentsViewModel: PaymentsViewModel? = null
+        get() = business.refreshStarSubscriptionsUseCase
 
     val paymentsViewModel: PaymentsViewModel
-        get() {
-            var vm = cachedPaymentsViewModel
-            if (vm == null) {
-                vm = createPaymentsViewModel()
-                cachedPaymentsViewModel = vm
-            }
-            return vm
-        }
+        get() = business.paymentsViewModel
 
-    fun createPaymentsViewModel(): PaymentsViewModel {
-        return PaymentsViewModel(
-            observeStarsBalanceUseCase = observeStarsBalanceUseCase,
-            observeStarTransactionsUseCase = observeStarTransactionsUseCase,
-            observeStarSubscriptionsUseCase = observeStarSubscriptionsUseCase,
-            getStarTopupOptionsUseCase = getStarTopupOptionsUseCase,
-            refreshStarsBalanceUseCase = refreshStarsBalanceUseCase,
-            refreshStarTransactionsUseCase = refreshStarTransactionsUseCase,
-            refreshStarSubscriptionsUseCase = refreshStarSubscriptionsUseCase
-        )
-    }
-
-    private var customDataStorageRepository: DataStorageRepository? = null
-
-    var dataStorageRepository: DataStorageRepository
-        get() = customDataStorageRepository ?: LegacyDataStorageRepository(account)
-        set(value) {
-            customDataStorageRepository = value
-        }
-
-    val observeNetworkUsageUseCase: ObserveNetworkUsageUseCase
-        get() = ObserveNetworkUsageUseCase(dataStorageRepository)
-
-    val observeStorageUsageUseCase: ObserveStorageUsageUseCase
-        get() = ObserveStorageUsageUseCase(dataStorageRepository)
-
-    val observeAutoDownloadPresetUseCase: ObserveAutoDownloadPresetUseCase
-        get() = ObserveAutoDownloadPresetUseCase(dataStorageRepository)
-
-    val observeKeepMediaSettingsUseCase: ObserveKeepMediaSettingsUseCase
-        get() = ObserveKeepMediaSettingsUseCase(dataStorageRepository)
-
-    val getNetworkUsageUseCase: GetNetworkUsageUseCase
-        get() = GetNetworkUsageUseCase(dataStorageRepository)
-
-    val resetNetworkUsageUseCase: ResetNetworkUsageUseCase
-        get() = ResetNetworkUsageUseCase(dataStorageRepository)
-
-    val getStorageUsageUseCase: GetStorageUsageUseCase
-        get() = GetStorageUsageUseCase(dataStorageRepository)
-
-    val clearCacheUseCase: ClearCacheUseCase
-        get() = ClearCacheUseCase(dataStorageRepository)
-
-    val clearDatabaseUseCase: ClearDatabaseUseCase
-        get() = ClearDatabaseUseCase(dataStorageRepository)
-
-    val getAutoDownloadPresetUseCase: GetAutoDownloadPresetUseCase
-        get() = GetAutoDownloadPresetUseCase(dataStorageRepository)
-
-    val updateAutoDownloadPresetUseCase: UpdateAutoDownloadPresetUseCase
-        get() = UpdateAutoDownloadPresetUseCase(dataStorageRepository)
-
-    val getKeepMediaSettingsUseCase: GetKeepMediaSettingsUseCase
-        get() = GetKeepMediaSettingsUseCase(dataStorageRepository)
-
-    val updateKeepMediaUseCase: UpdateKeepMediaUseCase
-        get() = UpdateKeepMediaUseCase(dataStorageRepository)
-
-    val refreshStorageUsageUseCase: RefreshStorageUsageUseCase
-        get() = RefreshStorageUsageUseCase(dataStorageRepository)
-
-    private var cachedDataStorageViewModel: DataStorageViewModel? = null
-
-    val dataStorageViewModel: DataStorageViewModel
-        get() {
-            var vm = cachedDataStorageViewModel
-            if (vm == null) {
-                vm = createDataStorageViewModel()
-                cachedDataStorageViewModel = vm
-            }
-            return vm
-        }
-
-    fun createDataStorageViewModel(): DataStorageViewModel {
-        return DataStorageViewModel(
-            observeNetworkUsageUseCase = observeNetworkUsageUseCase,
-            observeStorageUsageUseCase = observeStorageUsageUseCase,
-            observeAutoDownloadPresetUseCase = observeAutoDownloadPresetUseCase,
-            observeKeepMediaSettingsUseCase = observeKeepMediaSettingsUseCase,
-            getNetworkUsageUseCase = getNetworkUsageUseCase,
-            resetNetworkUsageUseCase = resetNetworkUsageUseCase,
-            getStorageUsageUseCase = getStorageUsageUseCase,
-            clearCacheUseCase = clearCacheUseCase,
-            clearDatabaseUseCase = clearDatabaseUseCase,
-            getAutoDownloadPresetUseCase = getAutoDownloadPresetUseCase,
-            updateAutoDownloadPresetUseCase = updateAutoDownloadPresetUseCase,
-            getKeepMediaSettingsUseCase = getKeepMediaSettingsUseCase,
-            updateKeepMediaUseCase = updateKeepMediaUseCase,
-            refreshStorageUsageUseCase = refreshStorageUsageUseCase
-        )
-    }
-
-    private var customTopicsRepository: TopicsRepository? = null
-
-    var topicsRepository: TopicsRepository
-        get() = customTopicsRepository ?: LegacyTopicsRepository(account)
-        set(value) {
-            customTopicsRepository = value
-        }
-
-    val observeTopicsUseCase: ObserveTopicsUseCase
-        get() = ObserveTopicsUseCase(topicsRepository)
-
-    val observeForumUnreadCountUseCase: ObserveForumUnreadCountUseCase
-        get() = ObserveForumUnreadCountUseCase(topicsRepository)
-
-    val getTopicsUseCase: GetTopicsUseCase
-        get() = GetTopicsUseCase(topicsRepository)
-
-    val getTopicUseCase: GetTopicUseCase
-        get() = GetTopicUseCase(topicsRepository)
-
-    val loadTopicsUseCase: LoadTopicsUseCase
-        get() = LoadTopicsUseCase(topicsRepository)
-
-    val reloadTopicsUseCase: ReloadTopicsUseCase
-        get() = ReloadTopicsUseCase(topicsRepository)
-
-    val toggleCloseTopicUseCase: ToggleCloseTopicUseCase
-        get() = ToggleCloseTopicUseCase(topicsRepository)
-
-    val togglePinTopicUseCase: TogglePinTopicUseCase
-        get() = TogglePinTopicUseCase(topicsRepository)
-
-    val toggleShowTopicUseCase: ToggleShowTopicUseCase
-        get() = ToggleShowTopicUseCase(topicsRepository)
-
-    val deleteTopicsUseCase: DeleteTopicsUseCase
-        get() = DeleteTopicsUseCase(topicsRepository)
-
-    val reorderPinnedTopicsUseCase: ReorderPinnedTopicsUseCase
-        get() = ReorderPinnedTopicsUseCase(topicsRepository)
-
-    val markTopicReactionsAsReadUseCase: MarkTopicReactionsAsReadUseCase
-        get() = MarkTopicReactionsAsReadUseCase(topicsRepository)
-
-    val getForumUnreadCountUseCase: GetForumUnreadCountUseCase
-        get() = GetForumUnreadCountUseCase(topicsRepository)
-
-    private var cachedTopicsViewModel: TopicsViewModel? = null
-
-    val topicsViewModel: TopicsViewModel
-        get() {
-            var vm = cachedTopicsViewModel
-            if (vm == null) {
-                vm = createTopicsViewModel()
-                cachedTopicsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createTopicsViewModel(): TopicsViewModel {
-        return TopicsViewModel(
-            observeTopicsUseCase = observeTopicsUseCase,
-            observeForumUnreadCountUseCase = observeForumUnreadCountUseCase,
-            getTopicsUseCase = getTopicsUseCase,
-            getTopicUseCase = getTopicUseCase,
-            loadTopicsUseCase = loadTopicsUseCase,
-            reloadTopicsUseCase = reloadTopicsUseCase,
-            toggleCloseTopicUseCase = toggleCloseTopicUseCase,
-            togglePinTopicUseCase = togglePinTopicUseCase,
-            toggleShowTopicUseCase = toggleShowTopicUseCase,
-            deleteTopicsUseCase = deleteTopicsUseCase,
-            reorderPinnedTopicsUseCase = reorderPinnedTopicsUseCase,
-            markTopicReactionsAsReadUseCase = markTopicReactionsAsReadUseCase,
-            getForumUnreadCountUseCase = getForumUnreadCountUseCase
-        )
-    }
-
-    private var customLocationRepository: LocationRepository? = null
-
-    var locationRepository: LocationRepository
-        get() = customLocationRepository ?: LegacyLocationRepository(account)
-        set(value) {
-            customLocationRepository = value
-        }
-
-    val observeActiveSharingsUseCase: ObserveActiveSharingsUseCase
-        get() = ObserveActiveSharingsUseCase(locationRepository)
-
-    val observePeerLocationsUseCase: ObservePeerLocationsUseCase
-        get() = ObservePeerLocationsUseCase(locationRepository)
-
-    val observeLastKnownLocationUseCase: ObserveLastKnownLocationUseCase
-        get() = ObserveLastKnownLocationUseCase(locationRepository)
-
-    val getActiveSharingsUseCase: GetActiveSharingsUseCase
-        get() = GetActiveSharingsUseCase(locationRepository)
-
-    val isSharingLocationUseCase: IsSharingLocationUseCase
-        get() = IsSharingLocationUseCase(locationRepository)
-
-    val getSharingInfoUseCase: GetSharingInfoUseCase
-        get() = GetSharingInfoUseCase(locationRepository)
-
-    val getLastKnownLocationUseCase: GetLastKnownLocationUseCase
-        get() = GetLastKnownLocationUseCase(locationRepository)
-
-    val loadPeerLiveLocationsUseCase: LoadPeerLiveLocationsUseCase
-        get() = LoadPeerLiveLocationsUseCase(locationRepository)
-
-    val stopLocationSharingUseCase: StopLocationSharingUseCase
-        get() = StopLocationSharingUseCase(locationRepository)
-
-    val stopAllLocationSharingsUseCase: StopAllLocationSharingsUseCase
-        get() = StopAllLocationSharingsUseCase(locationRepository)
-
-    val setProximityAlertUseCase: SetProximityAlertUseCase
-        get() = SetProximityAlertUseCase(locationRepository)
-
-    val sendStaticLocationUseCase: SendStaticLocationUseCase
-        get() = SendStaticLocationUseCase(locationRepository)
-
-    val sendLiveLocationUseCase: SendLiveLocationUseCase
-        get() = SendLiveLocationUseCase(locationRepository)
-
-    val markLiveLocationsAsReadUseCase: MarkLiveLocationsAsReadUseCase
-        get() = MarkLiveLocationsAsReadUseCase(locationRepository)
-
-    private var cachedLocationViewModel: LocationViewModel? = null
-
-    val locationViewModel: LocationViewModel
-        get() {
-            var vm = cachedLocationViewModel
-            if (vm == null) {
-                vm = createLocationViewModel()
-                cachedLocationViewModel = vm
-            }
-            return vm
-        }
-
-    fun createLocationViewModel(): LocationViewModel {
-        return LocationViewModel(
-            observeActiveSharingsUseCase = observeActiveSharingsUseCase,
-            observePeerLocationsUseCase = observePeerLocationsUseCase,
-            observeLastKnownLocationUseCase = observeLastKnownLocationUseCase,
-            getActiveSharingsUseCase = getActiveSharingsUseCase,
-            isSharingLocationUseCase = isSharingLocationUseCase,
-            getSharingInfoUseCase = getSharingInfoUseCase,
-            getLastKnownLocationUseCase = getLastKnownLocationUseCase,
-            loadPeerLiveLocationsUseCase = loadPeerLiveLocationsUseCase,
-            stopLocationSharingUseCase = stopLocationSharingUseCase,
-            stopAllLocationSharingsUseCase = stopAllLocationSharingsUseCase,
-            setProximityAlertUseCase = setProximityAlertUseCase,
-            sendStaticLocationUseCase = sendStaticLocationUseCase,
-            sendLiveLocationUseCase = sendLiveLocationUseCase,
-            markLiveLocationsAsReadUseCase = markLiveLocationsAsReadUseCase
-        )
-    }
-
-    private var customSessionsRepository: SessionsRepository? = null
-
-    var sessionsRepository: SessionsRepository
-        get() = customSessionsRepository ?: LegacySessionsRepository(account)
-        set(value) {
-            customSessionsRepository = value
-        }
-
-    val observeSessionsUseCase: ObserveSessionsUseCase
-        get() = ObserveSessionsUseCase(sessionsRepository)
-
-    val observeWebSessionsUseCase: ObserveWebSessionsUseCase
-        get() = ObserveWebSessionsUseCase(sessionsRepository)
-
-    val getSessionsUseCase: GetSessionsUseCase
-        get() = GetSessionsUseCase(sessionsRepository)
-
-    val loadSessionsUseCase: LoadSessionsUseCase
-        get() = LoadSessionsUseCase(sessionsRepository)
-
-    val getWebSessionsUseCase: GetWebSessionsUseCase
-        get() = GetWebSessionsUseCase(sessionsRepository)
-
-    val loadWebSessionsUseCase: LoadWebSessionsUseCase
-        get() = LoadWebSessionsUseCase(sessionsRepository)
-
-    val terminateSessionUseCase: TerminateSessionUseCase
-        get() = TerminateSessionUseCase(sessionsRepository)
-
-    val terminateAllOtherSessionsUseCase: TerminateAllOtherSessionsUseCase
-        get() = TerminateAllOtherSessionsUseCase(sessionsRepository)
-
-    val terminateWebSessionUseCase: TerminateWebSessionUseCase
-        get() = TerminateWebSessionUseCase(sessionsRepository)
-
-    val terminateAllWebSessionsUseCase: TerminateAllWebSessionsUseCase
-        get() = TerminateAllWebSessionsUseCase(sessionsRepository)
-
-    val updateSessionSettingsUseCase: UpdateSessionSettingsUseCase
-        get() = UpdateSessionSettingsUseCase(sessionsRepository)
-
-    val setSessionsTtlUseCase: SetSessionsTtlUseCase
-        get() = SetSessionsTtlUseCase(sessionsRepository)
-
-    val acceptQrLoginUseCase: AcceptQrLoginUseCase
-        get() = AcceptQrLoginUseCase(sessionsRepository)
-
-    private var cachedSessionsViewModel: SessionsViewModel? = null
-
-    val sessionsViewModel: SessionsViewModel
-        get() {
-            var vm = cachedSessionsViewModel
-            if (vm == null) {
-                vm = createSessionsViewModel()
-                cachedSessionsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createSessionsViewModel(): SessionsViewModel {
-        return SessionsViewModel(
-            observeSessionsUseCase = observeSessionsUseCase,
-            observeWebSessionsUseCase = observeWebSessionsUseCase,
-            loadSessionsUseCase = loadSessionsUseCase,
-            loadWebSessionsUseCase = loadWebSessionsUseCase,
-            terminateSessionUseCase = terminateSessionUseCase,
-            terminateAllOtherSessionsUseCase = terminateAllOtherSessionsUseCase,
-            terminateWebSessionUseCase = terminateWebSessionUseCase,
-            terminateAllWebSessionsUseCase = terminateAllWebSessionsUseCase,
-            updateSessionSettingsUseCase = updateSessionSettingsUseCase,
-            setSessionsTtlUseCase = setSessionsTtlUseCase,
-            acceptQrLoginUseCase = acceptQrLoginUseCase
-        )
-    }
-
-    private var customTranslationRepository: TranslationRepository? = null
-
-    var translationRepository: TranslationRepository
-        get() = customTranslationRepository ?: LegacyTranslationRepository(account)
-        set(value) {
-            customTranslationRepository = value
-        }
-
-    val observeTranslateSettingsUseCase: ObserveTranslateSettingsUseCase
-        get() = ObserveTranslateSettingsUseCase(translationRepository)
-
-    val getTranslateSettingsUseCase: GetTranslateSettingsUseCase
-        get() = GetTranslateSettingsUseCase(translationRepository)
-
-    val setChatTranslateEnabledUseCase: SetChatTranslateEnabledUseCase
-        get() = SetChatTranslateEnabledUseCase(translationRepository)
-
-    val setContextTranslateEnabledUseCase: SetContextTranslateEnabledUseCase
-        get() = SetContextTranslateEnabledUseCase(translationRepository)
-
-    val setDoNotTranslateLanguagesUseCase: SetDoNotTranslateLanguagesUseCase
-        get() = SetDoNotTranslateLanguagesUseCase(translationRepository)
-
-    val addDoNotTranslateLanguageUseCase: AddDoNotTranslateLanguageUseCase
-        get() = AddDoNotTranslateLanguageUseCase(translationRepository)
-
-    val removeDoNotTranslateLanguageUseCase: RemoveDoNotTranslateLanguageUseCase
-        get() = RemoveDoNotTranslateLanguageUseCase(translationRepository)
-
-    val observeDialogTranslationStateUseCase: ObserveDialogTranslationStateUseCase
-        get() = ObserveDialogTranslationStateUseCase(translationRepository)
-
-    val getDialogTranslationStateUseCase: GetDialogTranslationStateUseCase
-        get() = GetDialogTranslationStateUseCase(translationRepository)
-
-    val toggleDialogTranslatingUseCase: ToggleDialogTranslatingUseCase
-        get() = ToggleDialogTranslatingUseCase(translationRepository)
-
-    val setDialogTargetLanguageUseCase: SetDialogTargetLanguageUseCase
-        get() = SetDialogTargetLanguageUseCase(translationRepository)
-
-    val translateTextUseCase: TranslateTextUseCase
-        get() = TranslateTextUseCase(translationRepository)
-
-    val getAvailableLanguagesUseCase: GetAvailableLanguagesUseCase
-        get() = GetAvailableLanguagesUseCase(translationRepository)
-
-    val applyAppLanguageUseCase: ApplyAppLanguageUseCase
-        get() = ApplyAppLanguageUseCase(translationRepository)
-
-    private var cachedTranslateViewModel: TranslateViewModel? = null
-
-    val translateViewModel: TranslateViewModel
-        get() {
-            var vm = cachedTranslateViewModel
-            if (vm == null) {
-                vm = createTranslateViewModel()
-                cachedTranslateViewModel = vm
-            }
-            return vm
-        }
-
-    fun createTranslateViewModel(): TranslateViewModel {
-        return TranslateViewModel(
-            observeTranslateSettingsUseCase = observeTranslateSettingsUseCase,
-            getTranslateSettingsUseCase = getTranslateSettingsUseCase,
-            setChatTranslateEnabledUseCase = setChatTranslateEnabledUseCase,
-            setContextTranslateEnabledUseCase = setContextTranslateEnabledUseCase,
-            setDoNotTranslateLanguagesUseCase = setDoNotTranslateLanguagesUseCase,
-            addDoNotTranslateLanguageUseCase = addDoNotTranslateLanguageUseCase,
-            removeDoNotTranslateLanguageUseCase = removeDoNotTranslateLanguageUseCase,
-            observeDialogTranslationStateUseCase = observeDialogTranslationStateUseCase,
-            getDialogTranslationStateUseCase = getDialogTranslationStateUseCase,
-            toggleDialogTranslatingUseCase = toggleDialogTranslatingUseCase,
-            setDialogTargetLanguageUseCase = setDialogTargetLanguageUseCase,
-            translateTextUseCase = translateTextUseCase,
-            getAvailableLanguagesUseCase = getAvailableLanguagesUseCase,
-            applyAppLanguageUseCase = applyAppLanguageUseCase
-        )
-    }
-
-    private var customReactionsRepository: ReactionsRepository? = null
-
-    var reactionsRepository: ReactionsRepository
-        get() = customReactionsRepository ?: LegacyReactionsRepository(account)
-        set(value) {
-            customReactionsRepository = value
-        }
-
-    val observeAvailableReactionsUseCase: ObserveAvailableReactionsUseCase
-        get() = ObserveAvailableReactionsUseCase(reactionsRepository)
-
-    val getAvailableReactionsUseCase: GetAvailableReactionsUseCase
-        get() = GetAvailableReactionsUseCase(reactionsRepository)
-
-    val loadAvailableReactionsUseCase: LoadAvailableReactionsUseCase
-        get() = LoadAvailableReactionsUseCase(reactionsRepository)
-
-    val observeRecentReactionsUseCase: ObserveRecentReactionsUseCase
-        get() = ObserveRecentReactionsUseCase(reactionsRepository)
-
-    val getRecentReactionsUseCase: GetRecentReactionsUseCase
-        get() = GetRecentReactionsUseCase(reactionsRepository)
-
-    val getReactionsSettingsUseCase: GetReactionsSettingsUseCase
-        get() = GetReactionsSettingsUseCase(reactionsRepository)
-
-    val getDoubleTapReactionUseCase: GetDoubleTapReactionUseCase
-        get() = GetDoubleTapReactionUseCase(reactionsRepository)
-
-    val setDoubleTapReactionUseCase: SetDoubleTapReactionUseCase
-        get() = SetDoubleTapReactionUseCase(reactionsRepository)
-
-    val sendReactionUseCase: SendReactionUseCase
-        get() = SendReactionUseCase(reactionsRepository)
-
-    val clearReactionsUseCase: ClearReactionsUseCase
-        get() = ClearReactionsUseCase(reactionsRepository)
-
-    val sendVoteUseCase: SendVoteUseCase
-        get() = SendVoteUseCase(reactionsRepository)
-
-    private var cachedReactionsViewModel: ReactionsViewModel? = null
-
-    val reactionsViewModel: ReactionsViewModel
-        get() {
-            var vm = cachedReactionsViewModel
-            if (vm == null) {
-                vm = createReactionsViewModel()
-                cachedReactionsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createReactionsViewModel(): ReactionsViewModel {
-        return ReactionsViewModel(
-            observeAvailableReactionsUseCase = observeAvailableReactionsUseCase,
-            getAvailableReactionsUseCase = getAvailableReactionsUseCase,
-            loadAvailableReactionsUseCase = loadAvailableReactionsUseCase,
-            observeRecentReactionsUseCase = observeRecentReactionsUseCase,
-            getRecentReactionsUseCase = getRecentReactionsUseCase,
-            getReactionsSettingsUseCase = getReactionsSettingsUseCase,
-            getDoubleTapReactionUseCase = getDoubleTapReactionUseCase,
-            setDoubleTapReactionUseCase = setDoubleTapReactionUseCase,
-            sendReactionUseCase = sendReactionUseCase,
-            clearReactionsUseCase = clearReactionsUseCase,
-            sendVoteUseCase = sendVoteUseCase
-        )
-    }
-
-    private var customBoostsRepository: BoostsRepository? = null
-
-    var boostsRepository: BoostsRepository
-        get() = customBoostsRepository ?: LegacyBoostsRepository(account)
-        set(value) {
-            customBoostsRepository = value
-        }
-
-    val getBoostsStatusUseCase: GetBoostsStatusUseCase
-        get() = GetBoostsStatusUseCase(boostsRepository)
-
-    val getMyBoostsUseCase: GetMyBoostsUseCase
-        get() = GetMyBoostsUseCase(boostsRepository)
-
-    val checkCanApplyBoostUseCase: CheckCanApplyBoostUseCase
-        get() = CheckCanApplyBoostUseCase(boostsRepository)
-
-    val applyBoostUseCase: ApplyBoostUseCase
-        get() = ApplyBoostUseCase(boostsRepository)
-
-    private var cachedBoostsViewModel: BoostsViewModel? = null
-
-    val boostsViewModel: BoostsViewModel
-        get() {
-            var vm = cachedBoostsViewModel
-            if (vm == null) {
-                vm = createBoostsViewModel()
-                cachedBoostsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createBoostsViewModel(): BoostsViewModel {
-        return BoostsViewModel(
-            getBoostsStatusUseCase = getBoostsStatusUseCase,
-            getMyBoostsUseCase = getMyBoostsUseCase,
-            checkCanApplyBoostUseCase = checkCanApplyBoostUseCase,
-            applyBoostUseCase = applyBoostUseCase
-        )
-    }
-
-    private var customQuickRepliesRepository: QuickRepliesRepository? = null
+    fun createPaymentsViewModel(): PaymentsViewModel = business.createPaymentsViewModel()
 
     var quickRepliesRepository: QuickRepliesRepository
-        get() = customQuickRepliesRepository ?: LegacyQuickRepliesRepository(account)
-        set(value) {
-            customQuickRepliesRepository = value
-        }
+        get() = business.quickRepliesRepository
+        set(value) { business.quickRepliesRepository = value }
 
     val observeQuickRepliesUseCase: ObserveQuickRepliesUseCase
-        get() = ObserveQuickRepliesUseCase(quickRepliesRepository)
+        get() = business.observeQuickRepliesUseCase
 
     val getQuickRepliesUseCase: GetQuickRepliesUseCase
-        get() = GetQuickRepliesUseCase(quickRepliesRepository)
+        get() = business.getQuickRepliesUseCase
 
     val loadQuickRepliesUseCase: LoadQuickRepliesUseCase
-        get() = LoadQuickRepliesUseCase(quickRepliesRepository)
+        get() = business.loadQuickRepliesUseCase
 
     val findQuickReplyUseCase: FindQuickReplyUseCase
-        get() = FindQuickReplyUseCase(quickRepliesRepository)
+        get() = business.findQuickReplyUseCase
 
     val checkQuickReplyNameBusyUseCase: CheckQuickReplyNameBusyUseCase
-        get() = CheckQuickReplyNameBusyUseCase(quickRepliesRepository)
+        get() = business.checkQuickReplyNameBusyUseCase
 
     val canAddNewQuickReplyUseCase: CanAddNewQuickReplyUseCase
-        get() = CanAddNewQuickReplyUseCase(quickRepliesRepository)
+        get() = business.canAddNewQuickReplyUseCase
 
     val renameQuickReplyUseCase: RenameQuickReplyUseCase
-        get() = RenameQuickReplyUseCase(quickRepliesRepository)
+        get() = business.renameQuickReplyUseCase
 
     val reorderQuickRepliesUseCase: ReorderQuickRepliesUseCase
-        get() = ReorderQuickRepliesUseCase(quickRepliesRepository)
+        get() = business.reorderQuickRepliesUseCase
 
     val deleteQuickRepliesUseCase: DeleteQuickRepliesUseCase
-        get() = DeleteQuickRepliesUseCase(quickRepliesRepository)
+        get() = business.deleteQuickRepliesUseCase
 
     val sendQuickReplyUseCase: SendQuickReplyUseCase
-        get() = SendQuickReplyUseCase(quickRepliesRepository)
-
-    private var cachedQuickRepliesViewModel: QuickRepliesViewModel? = null
+        get() = business.sendQuickReplyUseCase
 
     val quickRepliesViewModel: QuickRepliesViewModel
-        get() {
-            var vm = cachedQuickRepliesViewModel
-            if (vm == null) {
-                vm = createQuickRepliesViewModel()
-                cachedQuickRepliesViewModel = vm
-            }
-            return vm
-        }
+        get() = business.quickRepliesViewModel
 
-    fun createQuickRepliesViewModel(): QuickRepliesViewModel {
-        return QuickRepliesViewModel(
-            observeQuickRepliesUseCase = observeQuickRepliesUseCase,
-            loadQuickRepliesUseCase = loadQuickRepliesUseCase,
-            canAddNewQuickReplyUseCase = canAddNewQuickReplyUseCase,
-            renameQuickReplyUseCase = renameQuickReplyUseCase,
-            reorderQuickRepliesUseCase = reorderQuickRepliesUseCase,
-            deleteQuickRepliesUseCase = deleteQuickRepliesUseCase,
-            sendQuickReplyUseCase = sendQuickReplyUseCase
-        )
-    }
-
-    private var customJoinRequestsRepository: JoinRequestsRepository? = null
-
-    var joinRequestsRepository: JoinRequestsRepository
-        get() = customJoinRequestsRepository ?: LegacyJoinRequestsRepository(account)
-        set(value) {
-            customJoinRequestsRepository = value
-        }
-
-    val observePendingRequestsUseCase: ObservePendingRequestsUseCase
-        get() = ObservePendingRequestsUseCase(joinRequestsRepository)
-
-    val getPendingRequestsCountUseCase: GetPendingRequestsCountUseCase
-        get() = GetPendingRequestsCountUseCase(joinRequestsRepository)
-
-    val getCachedJoinRequestsUseCase: GetCachedJoinRequestsUseCase
-        get() = GetCachedJoinRequestsUseCase(joinRequestsRepository)
-
-    val loadJoinRequestsUseCase: LoadJoinRequestsUseCase
-        get() = LoadJoinRequestsUseCase(joinRequestsRepository)
-
-    val approveJoinRequestUseCase: ApproveJoinRequestUseCase
-        get() = ApproveJoinRequestUseCase(joinRequestsRepository)
-
-    val dismissJoinRequestUseCase: DismissJoinRequestUseCase
-        get() = DismissJoinRequestUseCase(joinRequestsRepository)
-
-    val approveAllJoinRequestsUseCase: ApproveAllJoinRequestsUseCase
-        get() = ApproveAllJoinRequestsUseCase(joinRequestsRepository)
-
-    val dismissAllJoinRequestsUseCase: DismissAllJoinRequestsUseCase
-        get() = DismissAllJoinRequestsUseCase(joinRequestsRepository)
-
-    private var cachedJoinRequestsViewModel: JoinRequestsViewModel? = null
-
-    val joinRequestsViewModel: JoinRequestsViewModel
-        get() {
-            var vm = cachedJoinRequestsViewModel
-            if (vm == null) {
-                vm = createJoinRequestsViewModel()
-                cachedJoinRequestsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createJoinRequestsViewModel(): JoinRequestsViewModel {
-        return JoinRequestsViewModel(
-            observePendingRequestsUseCase = observePendingRequestsUseCase,
-            getCachedJoinRequestsUseCase = getCachedJoinRequestsUseCase,
-            loadJoinRequestsUseCase = loadJoinRequestsUseCase,
-            approveJoinRequestUseCase = approveJoinRequestUseCase,
-            dismissJoinRequestUseCase = dismissJoinRequestUseCase,
-            approveAllJoinRequestsUseCase = approveAllJoinRequestsUseCase,
-            dismissAllJoinRequestsUseCase = dismissAllJoinRequestsUseCase
-        )
-    }
-
-    private var customFactCheckRepository: FactCheckRepository? = null
-
-    var factCheckRepository: FactCheckRepository
-        get() = customFactCheckRepository ?: LegacyFactCheckRepository(account)
-        set(value) {
-            customFactCheckRepository = value
-        }
-
-    val observeFactCheckLoadedUseCase: ObserveFactCheckLoadedUseCase
-        get() = ObserveFactCheckLoadedUseCase(factCheckRepository)
-
-    val getFactCheckUseCase: GetFactCheckUseCase
-        get() = GetFactCheckUseCase(factCheckRepository)
-
-    val loadFactCheckUseCase: LoadFactCheckUseCase
-        get() = LoadFactCheckUseCase(factCheckRepository)
-
-    val applyFactCheckUseCase: ApplyFactCheckUseCase
-        get() = ApplyFactCheckUseCase(factCheckRepository)
-
-    val deleteFactCheckUseCase: DeleteFactCheckUseCase
-        get() = DeleteFactCheckUseCase(factCheckRepository)
-
-    val getFactCheckLimitUseCase: GetFactCheckLimitUseCase
-        get() = GetFactCheckLimitUseCase(factCheckRepository)
-
-    private var cachedFactCheckViewModel: FactCheckViewModel? = null
-
-    val factCheckViewModel: FactCheckViewModel
-        get() {
-            var vm = cachedFactCheckViewModel
-            if (vm == null) {
-                vm = createFactCheckViewModel()
-                cachedFactCheckViewModel = vm
-            }
-            return vm
-        }
-
-    fun createFactCheckViewModel(): FactCheckViewModel {
-        return FactCheckViewModel(
-            observeFactCheckLoadedUseCase = observeFactCheckLoadedUseCase,
-            getFactCheckUseCase = getFactCheckUseCase,
-            loadFactCheckUseCase = loadFactCheckUseCase,
-            applyFactCheckUseCase = applyFactCheckUseCase,
-            deleteFactCheckUseCase = deleteFactCheckUseCase,
-            getFactCheckLimitUseCase = getFactCheckLimitUseCase
-        )
-    }
-
-    private var customBirthdaysRepository: BirthdaysRepository? = null
-
-    var birthdaysRepository: BirthdaysRepository
-        get() = customBirthdaysRepository ?: LegacyBirthdaysRepository(account)
-        set(value) {
-            customBirthdaysRepository = value
-        }
-
-    val observeBirthdaysUseCase: ObserveBirthdaysUseCase
-        get() = ObserveBirthdaysUseCase(birthdaysRepository)
-
-    val getBirthdaysStateUseCase: GetBirthdaysStateUseCase
-        get() = GetBirthdaysStateUseCase(birthdaysRepository)
-
-    val checkBirthdaysUseCase: CheckBirthdaysUseCase
-        get() = CheckBirthdaysUseCase(birthdaysRepository)
-
-    val hideTodayBirthdaysUseCase: HideTodayBirthdaysUseCase
-        get() = HideTodayBirthdaysUseCase(birthdaysRepository)
-
-    val isBirthdayTodayUseCase: IsBirthdayTodayUseCase
-        get() = IsBirthdayTodayUseCase(birthdaysRepository)
-
-    val hasBirthdaysTodayUseCase: HasBirthdaysTodayUseCase
-        get() = HasBirthdaysTodayUseCase(birthdaysRepository)
-
-    private var cachedBirthdaysViewModel: BirthdaysViewModel? = null
-
-    val birthdaysViewModel: BirthdaysViewModel
-        get() {
-            var vm = cachedBirthdaysViewModel
-            if (vm == null) {
-                vm = createBirthdaysViewModel()
-                cachedBirthdaysViewModel = vm
-            }
-            return vm
-        }
-
-    fun createBirthdaysViewModel(): BirthdaysViewModel {
-        return BirthdaysViewModel(
-            observeBirthdaysUseCase = observeBirthdaysUseCase,
-            getBirthdaysStateUseCase = getBirthdaysStateUseCase,
-            checkBirthdaysUseCase = checkBirthdaysUseCase,
-            hideTodayBirthdaysUseCase = hideTodayBirthdaysUseCase,
-            isBirthdayTodayUseCase = isBirthdayTodayUseCase,
-            hasBirthdaysTodayUseCase = hasBirthdaysTodayUseCase
-        )
-    }
-
-    private var customChatThemeRepository: ChatThemeRepository? = null
-
-    var chatThemeRepository: ChatThemeRepository
-        get() = customChatThemeRepository ?: LegacyChatThemeRepository(account)
-        set(value) {
-            customChatThemeRepository = value
-        }
-
-    val observeDialogThemeUseCase: ObserveDialogThemeUseCase
-        get() = ObserveDialogThemeUseCase(chatThemeRepository)
-
-    val getDialogThemeStateUseCase: GetDialogThemeStateUseCase
-        get() = GetDialogThemeStateUseCase(chatThemeRepository)
-
-    val getAvailableChatThemesUseCase: GetAvailableChatThemesUseCase
-        get() = GetAvailableChatThemesUseCase(chatThemeRepository)
-
-    val setDialogThemeUseCase: SetDialogThemeUseCase
-        get() = SetDialogThemeUseCase(chatThemeRepository)
-
-    val resetDialogThemeUseCase: ResetDialogThemeUseCase
-        get() = ResetDialogThemeUseCase(chatThemeRepository)
-
-    val saveChatWallpaperUseCase: SaveChatWallpaperUseCase
-        get() = SaveChatWallpaperUseCase(chatThemeRepository)
-
-    private var cachedChatThemeViewModel: ChatThemeViewModel? = null
-
-    val chatThemeViewModel: ChatThemeViewModel
-        get() {
-            var vm = cachedChatThemeViewModel
-            if (vm == null) {
-                vm = createChatThemeViewModel()
-                cachedChatThemeViewModel = vm
-            }
-            return vm
-        }
-
-    fun createChatThemeViewModel(): ChatThemeViewModel {
-        return ChatThemeViewModel(
-            observeDialogThemeUseCase = observeDialogThemeUseCase,
-            getDialogThemeStateUseCase = getDialogThemeStateUseCase,
-            getAvailableThemesUseCase = getAvailableChatThemesUseCase,
-            setDialogThemeUseCase = setDialogThemeUseCase,
-            resetDialogThemeUseCase = resetDialogThemeUseCase,
-            saveChatWallpaperUseCase = saveChatWallpaperUseCase
-        )
-    }
-
-    private var customPasskeysRepository: PasskeysRepository? = null
-
-    var passkeysRepository: PasskeysRepository
-        get() = customPasskeysRepository ?: LegacyPasskeysRepository(account)
-        set(value) {
-            customPasskeysRepository = value
-        }
-
-    val observePasskeysUseCase: ObservePasskeysUseCase
-        get() = ObservePasskeysUseCase(passkeysRepository)
-
-    val getPasskeysUseCase: GetPasskeysUseCase
-        get() = GetPasskeysUseCase(passkeysRepository)
-
-    val deletePasskeyUseCase: DeletePasskeyUseCase
-        get() = DeletePasskeyUseCase(passkeysRepository)
-
-    val checkCanAddPasskeyUseCase: CheckCanAddPasskeyUseCase
-        get() = CheckCanAddPasskeyUseCase(passkeysRepository)
-
-    val isPasskeysSupportedUseCase: IsPasskeysSupportedUseCase
-        get() = IsPasskeysSupportedUseCase(passkeysRepository)
-
-    private var cachedPasskeysViewModel: PasskeysViewModel? = null
-
-    val passkeysViewModel: PasskeysViewModel
-        get() {
-            var vm = cachedPasskeysViewModel
-            if (vm == null) {
-                vm = createPasskeysViewModel()
-                cachedPasskeysViewModel = vm
-            }
-            return vm
-        }
-
-    fun createPasskeysViewModel(): PasskeysViewModel {
-        return PasskeysViewModel(
-            observePasskeysUseCase = observePasskeysUseCase,
-            getPasskeysUseCase = getPasskeysUseCase,
-            deletePasskeyUseCase = deletePasskeyUseCase,
-            checkCanAddPasskeyUseCase = checkCanAddPasskeyUseCase,
-            isPasskeysSupportedUseCase = isPasskeysSupportedUseCase
-        )
-    }
-
-    private var customProxyRepository: ProxyRepository? = null
-
-    var proxyRepository: ProxyRepository
-        get() = customProxyRepository ?: LegacyProxyRepository(account)
-        set(value) {
-            customProxyRepository = value
-        }
-
-    val observeProxySettingsUseCase: ObserveProxySettingsUseCase
-        get() = ObserveProxySettingsUseCase(proxyRepository)
-
-    val getProxySettingsUseCase: GetProxySettingsUseCase
-        get() = GetProxySettingsUseCase(proxyRepository)
-
-    val addProxyUseCase: AddProxyUseCase
-        get() = AddProxyUseCase(proxyRepository)
-
-    val deleteProxyUseCase: DeleteProxyUseCase
-        get() = DeleteProxyUseCase(proxyRepository)
-
-    val enableProxyUseCase: EnableProxyUseCase
-        get() = EnableProxyUseCase(proxyRepository)
-
-    val disableProxyUseCase: DisableProxyUseCase
-        get() = DisableProxyUseCase(proxyRepository)
-
-    val toggleProxyRotationUseCase: ToggleProxyRotationUseCase
-        get() = ToggleProxyRotationUseCase(proxyRepository)
-
-    val checkProxyPingUseCase: CheckProxyPingUseCase
-        get() = CheckProxyPingUseCase(proxyRepository)
-
-    private var cachedProxyViewModel: ProxyViewModel? = null
-
-    val proxyViewModel: ProxyViewModel
-        get() {
-            var vm = cachedProxyViewModel
-            if (vm == null) {
-                vm = createProxyViewModel()
-                cachedProxyViewModel = vm
-            }
-            return vm
-        }
-
-    fun createProxyViewModel(): ProxyViewModel {
-        return ProxyViewModel(
-            observeProxySettingsUseCase = observeProxySettingsUseCase,
-            getProxySettingsUseCase = getProxySettingsUseCase,
-            addProxyUseCase = addProxyUseCase,
-            deleteProxyUseCase = deleteProxyUseCase,
-            enableProxyUseCase = enableProxyUseCase,
-            disableProxyUseCase = disableProxyUseCase,
-            toggleProxyRotationUseCase = toggleProxyRotationUseCase,
-            checkProxyPingUseCase = checkProxyPingUseCase
-        )
-    }
-
-    private var customAutoDeleteRepository: AutoDeleteRepository? = null
-
-    var autoDeleteRepository: AutoDeleteRepository
-        get() = customAutoDeleteRepository ?: LegacyAutoDeleteRepository(account)
-        set(value) {
-            customAutoDeleteRepository = value
-        }
-
-    val observeGlobalAutoDeleteUseCase: ObserveGlobalAutoDeleteUseCase
-        get() = ObserveGlobalAutoDeleteUseCase(autoDeleteRepository)
-
-    val getGlobalAutoDeleteUseCase: GetGlobalAutoDeleteUseCase
-        get() = GetGlobalAutoDeleteUseCase(autoDeleteRepository)
-
-    val setGlobalAutoDeleteUseCase: SetGlobalAutoDeleteUseCase
-        get() = SetGlobalAutoDeleteUseCase(autoDeleteRepository)
-
-    val getChatAutoDeleteUseCase: GetChatAutoDeleteUseCase
-        get() = GetChatAutoDeleteUseCase(autoDeleteRepository)
-
-    val setChatAutoDeleteUseCase: SetChatAutoDeleteUseCase
-        get() = SetChatAutoDeleteUseCase(autoDeleteRepository)
-
-    val setChatsAutoDeleteBatchUseCase: SetChatsAutoDeleteBatchUseCase
-        get() = SetChatsAutoDeleteBatchUseCase(autoDeleteRepository)
-
-    private var cachedAutoDeleteViewModel: AutoDeleteViewModel? = null
-
-    val autoDeleteViewModel: AutoDeleteViewModel
-        get() {
-            var vm = cachedAutoDeleteViewModel
-            if (vm == null) {
-                vm = createAutoDeleteViewModel()
-                cachedAutoDeleteViewModel = vm
-            }
-            return vm
-        }
-
-    fun createAutoDeleteViewModel(): AutoDeleteViewModel {
-        return AutoDeleteViewModel(
-            observeGlobalAutoDeleteUseCase = observeGlobalAutoDeleteUseCase,
-            getGlobalAutoDeleteUseCase = getGlobalAutoDeleteUseCase,
-            setGlobalAutoDeleteUseCase = setGlobalAutoDeleteUseCase,
-            getChatAutoDeleteUseCase = getChatAutoDeleteUseCase,
-            setChatAutoDeleteUseCase = setChatAutoDeleteUseCase,
-            setChatsAutoDeleteBatchUseCase = setChatsAutoDeleteBatchUseCase
-        )
-    }
-
-    private var customUnconfirmedAuthRepository: UnconfirmedAuthRepository? = null
-
-    var unconfirmedAuthRepository: UnconfirmedAuthRepository
-        get() = customUnconfirmedAuthRepository ?: LegacyUnconfirmedAuthRepository(account)
-        set(value) {
-            customUnconfirmedAuthRepository = value
-        }
-
-    val observeUnconfirmedAuthsUseCase: ObserveUnconfirmedAuthsUseCase
-        get() = ObserveUnconfirmedAuthsUseCase(unconfirmedAuthRepository)
-
-    val getUnconfirmedAuthsUseCase: GetUnconfirmedAuthsUseCase
-        get() = GetUnconfirmedAuthsUseCase(unconfirmedAuthRepository)
-
-    val confirmAuthUseCase: ConfirmAuthUseCase
-        get() = ConfirmAuthUseCase(unconfirmedAuthRepository)
-
-    val denyAuthUseCase: DenyAuthUseCase
-        get() = DenyAuthUseCase(unconfirmedAuthRepository)
-
-    val confirmAllAuthsUseCase: ConfirmAllAuthsUseCase
-        get() = ConfirmAllAuthsUseCase(unconfirmedAuthRepository)
-
-    val denyAllAuthsUseCase: DenyAllAuthsUseCase
-        get() = DenyAllAuthsUseCase(unconfirmedAuthRepository)
-
-    val clearUnconfirmedAuthsUseCase: ClearUnconfirmedAuthsUseCase
-        get() = ClearUnconfirmedAuthsUseCase(unconfirmedAuthRepository)
-
-    private var cachedUnconfirmedAuthViewModel: UnconfirmedAuthViewModel? = null
-
-    val unconfirmedAuthViewModel: UnconfirmedAuthViewModel
-        get() {
-            var vm = cachedUnconfirmedAuthViewModel
-            if (vm == null) {
-                vm = createUnconfirmedAuthViewModel()
-                cachedUnconfirmedAuthViewModel = vm
-            }
-            return vm
-        }
-
-    fun createUnconfirmedAuthViewModel(): UnconfirmedAuthViewModel {
-        return UnconfirmedAuthViewModel(
-            observeUnconfirmedAuthsUseCase = observeUnconfirmedAuthsUseCase,
-            getUnconfirmedAuthsUseCase = getUnconfirmedAuthsUseCase,
-            confirmAuthUseCase = confirmAuthUseCase,
-            denyAuthUseCase = denyAuthUseCase,
-            confirmAllAuthsUseCase = confirmAllAuthsUseCase,
-            denyAllAuthsUseCase = denyAllAuthsUseCase,
-            clearUnconfirmedAuthsUseCase = clearUnconfirmedAuthsUseCase
-        )
-    }
-
-    private var customStarGiftsRepository: StarGiftsRepository? = null
+    fun createQuickRepliesViewModel(): QuickRepliesViewModel = business.createQuickRepliesViewModel()
 
     var starGiftsRepository: StarGiftsRepository
-        get() = customStarGiftsRepository ?: LegacyStarGiftsRepository(account)
-        set(value) {
-            customStarGiftsRepository = value
-        }
+        get() = business.starGiftsRepository
+        set(value) { business.starGiftsRepository = value }
 
     val observeStarGiftsCatalogUseCase: ObserveStarGiftsCatalogUseCase
-        get() = ObserveStarGiftsCatalogUseCase(starGiftsRepository)
+        get() = business.observeStarGiftsCatalogUseCase
 
     val getStarGiftsCatalogUseCase: GetStarGiftsCatalogUseCase
-        get() = GetStarGiftsCatalogUseCase(starGiftsRepository)
+        get() = business.getStarGiftsCatalogUseCase
 
     val getStarGiftByIdUseCase: GetStarGiftByIdUseCase
-        get() = GetStarGiftByIdUseCase(starGiftsRepository)
+        get() = business.getStarGiftByIdUseCase
 
     val observeProfileGiftsUseCase: ObserveProfileGiftsUseCase
-        get() = ObserveProfileGiftsUseCase(starGiftsRepository)
+        get() = business.observeProfileGiftsUseCase
 
     val loadProfileGiftsUseCase: LoadProfileGiftsUseCase
-        get() = LoadProfileGiftsUseCase(starGiftsRepository)
+        get() = business.loadProfileGiftsUseCase
 
     val togglePinProfileGiftUseCase: TogglePinProfileGiftUseCase
-        get() = TogglePinProfileGiftUseCase(starGiftsRepository)
+        get() = business.togglePinProfileGiftUseCase
 
     val toggleHideProfileGiftUseCase: ToggleHideProfileGiftUseCase
-        get() = ToggleHideProfileGiftUseCase(starGiftsRepository)
-
-    private var cachedStarGiftsViewModel: StarGiftsViewModel? = null
+        get() = business.toggleHideProfileGiftUseCase
 
     val starGiftsViewModel: StarGiftsViewModel
-        get() {
-            var vm = cachedStarGiftsViewModel
-            if (vm == null) {
-                vm = createStarGiftsViewModel()
-                cachedStarGiftsViewModel = vm
-            }
-            return vm
-        }
+        get() = business.starGiftsViewModel
 
-    fun createStarGiftsViewModel(): StarGiftsViewModel {
-        return StarGiftsViewModel(
-            observeStarGiftsCatalogUseCase = observeStarGiftsCatalogUseCase,
-            getStarGiftsCatalogUseCase = getStarGiftsCatalogUseCase,
-            getStarGiftByIdUseCase = getStarGiftByIdUseCase,
-            observeProfileGiftsUseCase = observeProfileGiftsUseCase,
-            loadProfileGiftsUseCase = loadProfileGiftsUseCase,
-            togglePinProfileGiftUseCase = togglePinProfileGiftUseCase,
-            toggleHideProfileGiftUseCase = toggleHideProfileGiftUseCase
-        )
-    }
-
-    private var customAiTonesRepository: AiTonesRepository? = null
-
-    var aiTonesRepository: AiTonesRepository
-        get() = customAiTonesRepository ?: LegacyAiTonesRepository(account)
-        set(value) {
-            customAiTonesRepository = value
-        }
-
-    val observeAiTonesUseCase: ObserveAiTonesUseCase
-        get() = ObserveAiTonesUseCase(aiTonesRepository)
-
-    val getAiTonesStateUseCase: GetAiTonesStateUseCase
-        get() = GetAiTonesStateUseCase(aiTonesRepository)
-
-    val loadAiTonesUseCase: LoadAiTonesUseCase
-        get() = LoadAiTonesUseCase(aiTonesRepository)
-
-    val addAiToneUseCase: AddAiToneUseCase
-        get() = AddAiToneUseCase(aiTonesRepository)
-
-    val removeAiToneUseCase: RemoveAiToneUseCase
-        get() = RemoveAiToneUseCase(aiTonesRepository)
-
-    val unsaveAiToneUseCase: UnsaveAiToneUseCase
-        get() = UnsaveAiToneUseCase(aiTonesRepository)
-
-    val editAiToneUseCase: EditAiToneUseCase
-        get() = EditAiToneUseCase(aiTonesRepository)
-
-    private var cachedAiTonesViewModel: AiTonesViewModel? = null
-
-    val aiTonesViewModel: AiTonesViewModel
-        get() {
-            var vm = cachedAiTonesViewModel
-            if (vm == null) {
-                vm = createAiTonesViewModel()
-                cachedAiTonesViewModel = vm
-            }
-            return vm
-        }
-
-    fun createAiTonesViewModel(): AiTonesViewModel {
-        return AiTonesViewModel(
-            observeAiTonesUseCase = observeAiTonesUseCase,
-            getAiTonesStateUseCase = getAiTonesStateUseCase,
-            loadAiTonesUseCase = loadAiTonesUseCase,
-            addAiToneUseCase = addAiToneUseCase,
-            removeAiToneUseCase = removeAiToneUseCase,
-            unsaveAiToneUseCase = unsaveAiToneUseCase,
-            editAiToneUseCase = editAiToneUseCase
-        )
-    }
-
-    private var customCaptchaRepository: CaptchaRepository? = null
-
-    var captchaRepository: CaptchaRepository
-        get() = customCaptchaRepository ?: LegacyCaptchaRepository(account)
-        set(value) {
-            customCaptchaRepository = value
-        }
-
-    val observeActiveCaptchaRequestsUseCase: ObserveActiveCaptchaRequestsUseCase
-        get() = ObserveActiveCaptchaRequestsUseCase(captchaRepository)
-
-    val getActiveCaptchaRequestsUseCase: GetActiveCaptchaRequestsUseCase
-        get() = GetActiveCaptchaRequestsUseCase(captchaRepository)
-
-    val verifyCaptchaUseCase: VerifyCaptchaUseCase
-        get() = VerifyCaptchaUseCase(captchaRepository)
-
-    val submitCaptchaResultUseCase: SubmitCaptchaResultUseCase
-        get() = SubmitCaptchaResultUseCase(captchaRepository)
-
-    val cancelCaptchaUseCase: CancelCaptchaUseCase
-        get() = CancelCaptchaUseCase(captchaRepository)
-
-    private var cachedCaptchaViewModel: CaptchaViewModel? = null
-
-    val captchaViewModel: CaptchaViewModel
-        get() {
-            var vm = cachedCaptchaViewModel
-            if (vm == null) {
-                vm = createCaptchaViewModel()
-                cachedCaptchaViewModel = vm
-            }
-            return vm
-        }
-
-    fun createCaptchaViewModel(): CaptchaViewModel {
-        return CaptchaViewModel(
-            observeActiveCaptchaRequestsUseCase = observeActiveCaptchaRequestsUseCase,
-            getActiveCaptchaRequestsUseCase = getActiveCaptchaRequestsUseCase,
-            verifyCaptchaUseCase = verifyCaptchaUseCase,
-            submitCaptchaResultUseCase = submitCaptchaResultUseCase,
-            cancelCaptchaUseCase = cancelCaptchaUseCase
-        )
-    }
-
-    private var customHashtagSearchRepository: HashtagSearchRepository? = null
-
-    var hashtagSearchRepository: HashtagSearchRepository
-        get() = customHashtagSearchRepository ?: LegacyHashtagSearchRepository(account)
-        set(value) {
-            customHashtagSearchRepository = value
-        }
-
-    val observeHashtagHistoryUseCase: ObserveHashtagHistoryUseCase
-        get() = ObserveHashtagHistoryUseCase(hashtagSearchRepository)
-
-    val getHashtagHistoryUseCase: GetHashtagHistoryUseCase
-        get() = GetHashtagHistoryUseCase(hashtagSearchRepository)
-
-    val addHashtagToHistoryUseCase: AddHashtagToHistoryUseCase
-        get() = AddHashtagToHistoryUseCase(hashtagSearchRepository)
-
-    val removeHashtagFromHistoryUseCase: RemoveHashtagFromHistoryUseCase
-        get() = RemoveHashtagFromHistoryUseCase(hashtagSearchRepository)
-
-    val clearHashtagHistoryUseCase: ClearHashtagHistoryUseCase
-        get() = ClearHashtagHistoryUseCase(hashtagSearchRepository)
-
-    val observeHashtagSearchResultUseCase: ObserveHashtagSearchResultUseCase
-        get() = ObserveHashtagSearchResultUseCase(hashtagSearchRepository)
-
-    val searchHashtagUseCase: SearchHashtagUseCase
-        get() = SearchHashtagUseCase(hashtagSearchRepository)
-
-    val jumpToHashtagMessageUseCase: JumpToHashtagMessageUseCase
-        get() = JumpToHashtagMessageUseCase(hashtagSearchRepository)
-
-    val clearHashtagSearchResultsUseCase: ClearHashtagSearchResultsUseCase
-        get() = ClearHashtagSearchResultsUseCase(hashtagSearchRepository)
-
-    private var cachedHashtagSearchViewModel: HashtagSearchViewModel? = null
-
-    val hashtagSearchViewModel: HashtagSearchViewModel
-        get() {
-            var vm = cachedHashtagSearchViewModel
-            if (vm == null) {
-                vm = createHashtagSearchViewModel()
-                cachedHashtagSearchViewModel = vm
-            }
-            return vm
-        }
-
-    fun createHashtagSearchViewModel(): HashtagSearchViewModel {
-        return HashtagSearchViewModel(
-            observeHashtagHistoryUseCase = observeHashtagHistoryUseCase,
-            getHashtagHistoryUseCase = getHashtagHistoryUseCase,
-            addHashtagToHistoryUseCase = addHashtagToHistoryUseCase,
-            removeHashtagFromHistoryUseCase = removeHashtagFromHistoryUseCase,
-            clearHashtagHistoryUseCase = clearHashtagHistoryUseCase,
-            observeHashtagSearchResultUseCase = observeHashtagSearchResultUseCase,
-            searchHashtagUseCase = searchHashtagUseCase,
-            jumpToHashtagMessageUseCase = jumpToHashtagMessageUseCase,
-            clearHashtagSearchResultsUseCase = clearHashtagSearchResultsUseCase
-        )
-    }
-
-    private var customBiometricsRepository: BiometricsRepository? = null
-
-    var biometricsRepository: BiometricsRepository
-        get() = customBiometricsRepository ?: LegacyBiometricsRepository()
-        set(value) {
-            customBiometricsRepository = value
-        }
-
-    val observeBiometricKeyStateUseCase: ObserveBiometricKeyStateUseCase
-        get() = ObserveBiometricKeyStateUseCase(biometricsRepository)
-
-    val getBiometricKeyStateUseCase: GetBiometricKeyStateUseCase
-        get() = GetBiometricKeyStateUseCase(biometricsRepository)
-
-    val checkBiometricKeyReadyUseCase: CheckBiometricKeyReadyUseCase
-        get() = CheckBiometricKeyReadyUseCase(biometricsRepository)
-
-    val deleteInvalidBiometricKeyUseCase: DeleteInvalidBiometricKeyUseCase
-        get() = DeleteInvalidBiometricKeyUseCase(biometricsRepository)
-
-    val isBiometricKeyReadyUseCase: IsBiometricKeyReadyUseCase
-        get() = IsBiometricKeyReadyUseCase(biometricsRepository)
-
-    val hasDeviceBiometricsChangedUseCase: HasDeviceBiometricsChangedUseCase
-        get() = HasDeviceBiometricsChangedUseCase(biometricsRepository)
-
-    private var cachedBiometricsViewModel: BiometricsViewModel? = null
-
-    val biometricsViewModel: BiometricsViewModel
-        get() {
-            var vm = cachedBiometricsViewModel
-            if (vm == null) {
-                vm = createBiometricsViewModel()
-                cachedBiometricsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createBiometricsViewModel(): BiometricsViewModel {
-        return BiometricsViewModel(
-            observeBiometricKeyStateUseCase = observeBiometricKeyStateUseCase,
-            getBiometricKeyStateUseCase = getBiometricKeyStateUseCase,
-            checkBiometricKeyReadyUseCase = checkBiometricKeyReadyUseCase,
-            deleteInvalidBiometricKeyUseCase = deleteInvalidBiometricKeyUseCase,
-            isBiometricKeyReadyUseCase = isBiometricKeyReadyUseCase,
-            hasDeviceBiometricsChangedUseCase = hasDeviceBiometricsChangedUseCase
-        )
-    }
-
-    private var customGiftAuctionsRepository: GiftAuctionsRepository? = null
+    fun createStarGiftsViewModel(): StarGiftsViewModel = business.createStarGiftsViewModel()
 
     var giftAuctionsRepository: GiftAuctionsRepository
-        get() = customGiftAuctionsRepository ?: LegacyGiftAuctionsRepository(account)
-        set(value) {
-            customGiftAuctionsRepository = value
-        }
+        get() = business.giftAuctionsRepository
+        set(value) { business.giftAuctionsRepository = value }
 
     val observeActiveAuctionsUseCase: ObserveActiveAuctionsUseCase
-        get() = ObserveActiveAuctionsUseCase(giftAuctionsRepository)
+        get() = business.observeActiveAuctionsUseCase
 
     val observeAuctionUseCase: ObserveAuctionUseCase
-        get() = ObserveAuctionUseCase(giftAuctionsRepository)
+        get() = business.observeAuctionUseCase
 
     val getActiveAuctionsUseCase: GetActiveAuctionsUseCase
-        get() = GetActiveAuctionsUseCase(giftAuctionsRepository)
+        get() = business.getActiveAuctionsUseCase
 
     val getAuctionByIdUseCase: GetAuctionByIdUseCase
-        get() = GetAuctionByIdUseCase(giftAuctionsRepository)
+        get() = business.getAuctionByIdUseCase
 
     val getAuctionBySlugUseCase: GetAuctionBySlugUseCase
-        get() = GetAuctionBySlugUseCase(giftAuctionsRepository)
+        get() = business.getAuctionBySlugUseCase
 
     val sendAuctionBidUseCase: SendAuctionBidUseCase
-        get() = SendAuctionBidUseCase(giftAuctionsRepository)
+        get() = business.sendAuctionBidUseCase
 
     val loadAuctionAcquiredGiftsUseCase: LoadAuctionAcquiredGiftsUseCase
-        get() = LoadAuctionAcquiredGiftsUseCase(giftAuctionsRepository)
+        get() = business.loadAuctionAcquiredGiftsUseCase
 
     val refreshActiveAuctionsUseCase: RefreshActiveAuctionsUseCase
-        get() = RefreshActiveAuctionsUseCase(giftAuctionsRepository)
-
-    private var cachedGiftAuctionsViewModel: GiftAuctionsViewModel? = null
+        get() = business.refreshActiveAuctionsUseCase
 
     val giftAuctionsViewModel: GiftAuctionsViewModel
-        get() {
-            var vm = cachedGiftAuctionsViewModel
-            if (vm == null) {
-                vm = createGiftAuctionsViewModel()
-                cachedGiftAuctionsViewModel = vm
-            }
-            return vm
-        }
+        get() = business.giftAuctionsViewModel
 
-    fun createGiftAuctionsViewModel(): GiftAuctionsViewModel {
-        return GiftAuctionsViewModel(
-            observeActiveAuctionsUseCase = observeActiveAuctionsUseCase,
-            observeAuctionUseCase = observeAuctionUseCase,
-            getActiveAuctionsUseCase = getActiveAuctionsUseCase,
-            getAuctionByIdUseCase = getAuctionByIdUseCase,
-            getAuctionBySlugUseCase = getAuctionBySlugUseCase,
-            sendAuctionBidUseCase = sendAuctionBidUseCase,
-            loadAuctionAcquiredGiftsUseCase = loadAuctionAcquiredGiftsUseCase,
-            refreshActiveAuctionsUseCase = refreshActiveAuctionsUseCase
-        )
-    }
-
-    private var customBusinessLinksRepository: BusinessLinksRepository? = null
+    fun createGiftAuctionsViewModel(): GiftAuctionsViewModel = business.createGiftAuctionsViewModel()
 
     var businessLinksRepository: BusinessLinksRepository
-        get() = customBusinessLinksRepository ?: LegacyBusinessLinksRepository(account)
-        set(value) {
-            customBusinessLinksRepository = value
-        }
+        get() = business.businessLinksRepository
+        set(value) { business.businessLinksRepository = value }
 
     val observeBusinessLinksUseCase: ObserveBusinessLinksUseCase
-        get() = ObserveBusinessLinksUseCase(businessLinksRepository)
+        get() = business.observeBusinessLinksUseCase
 
     val getBusinessLinksUseCase: GetBusinessLinksUseCase
-        get() = GetBusinessLinksUseCase(businessLinksRepository)
+        get() = business.getBusinessLinksUseCase
 
     val loadBusinessLinksUseCase: LoadBusinessLinksUseCase
-        get() = LoadBusinessLinksUseCase(businessLinksRepository)
+        get() = business.loadBusinessLinksUseCase
 
     val createBusinessLinkUseCase: CreateBusinessLinkUseCase
-        get() = CreateBusinessLinkUseCase(businessLinksRepository)
+        get() = business.createBusinessLinkUseCase
 
     val editBusinessLinkUseCase: EditBusinessLinkUseCase
-        get() = EditBusinessLinkUseCase(businessLinksRepository)
+        get() = business.editBusinessLinkUseCase
 
     val deleteBusinessLinkUseCase: DeleteBusinessLinkUseCase
-        get() = DeleteBusinessLinkUseCase(businessLinksRepository)
+        get() = business.deleteBusinessLinkUseCase
 
     val findBusinessLinkUseCase: FindBusinessLinkUseCase
-        get() = FindBusinessLinkUseCase(businessLinksRepository)
+        get() = business.findBusinessLinkUseCase
 
     val canAddNewBusinessLinkUseCase: CanAddNewBusinessLinkUseCase
-        get() = CanAddNewBusinessLinkUseCase(businessLinksRepository)
-
-    private var cachedBusinessLinksViewModel: BusinessLinksViewModel? = null
+        get() = business.canAddNewBusinessLinkUseCase
 
     val businessLinksViewModel: BusinessLinksViewModel
-        get() {
-            var vm = cachedBusinessLinksViewModel
-            if (vm == null) {
-                vm = createBusinessLinksViewModel()
-                cachedBusinessLinksViewModel = vm
-            }
-            return vm
-        }
+        get() = business.businessLinksViewModel
 
-    fun createBusinessLinksViewModel(): BusinessLinksViewModel {
-        return BusinessLinksViewModel(
-            observeBusinessLinksUseCase = observeBusinessLinksUseCase,
-            loadBusinessLinksUseCase = loadBusinessLinksUseCase,
-            createBusinessLinkUseCase = createBusinessLinkUseCase,
-            editBusinessLinkUseCase = editBusinessLinkUseCase,
-            deleteBusinessLinkUseCase = deleteBusinessLinkUseCase,
-            canAddNewBusinessLinkUseCase = canAddNewBusinessLinkUseCase
-        )
-    }
-
-    private var customBusinessBotsRepository: BusinessBotsRepository? = null
+    fun createBusinessLinksViewModel(): BusinessLinksViewModel = business.createBusinessLinksViewModel()
 
     var businessBotsRepository: BusinessBotsRepository
-        get() = customBusinessBotsRepository ?: LegacyBusinessBotsRepository(account)
-        set(value) {
-            customBusinessBotsRepository = value
-        }
+        get() = business.businessBotsRepository
+        set(value) { business.businessBotsRepository = value }
 
     val observeConnectedBotsUseCase: ObserveConnectedBotsUseCase
-        get() = ObserveConnectedBotsUseCase(businessBotsRepository)
+        get() = business.observeConnectedBotsUseCase
 
     val getConnectedBotsUseCase: GetConnectedBotsUseCase
-        get() = GetConnectedBotsUseCase(businessBotsRepository)
+        get() = business.getConnectedBotsUseCase
 
     val loadConnectedBotsUseCase: LoadConnectedBotsUseCase
-        get() = LoadConnectedBotsUseCase(businessBotsRepository)
+        get() = business.loadConnectedBotsUseCase
 
     val updateConnectedBotUseCase: UpdateConnectedBotUseCase
-        get() = UpdateConnectedBotUseCase(businessBotsRepository)
+        get() = business.updateConnectedBotUseCase
 
     val deleteConnectedBotUseCase: DeleteConnectedBotUseCase
-        get() = DeleteConnectedBotUseCase(businessBotsRepository)
+        get() = business.deleteConnectedBotUseCase
 
     val findConnectedBotUseCase: FindConnectedBotUseCase
-        get() = FindConnectedBotUseCase(businessBotsRepository)
-
-    private var cachedBusinessBotsViewModel: BusinessBotsViewModel? = null
+        get() = business.findConnectedBotUseCase
 
     val businessBotsViewModel: BusinessBotsViewModel
-        get() {
-            var vm = cachedBusinessBotsViewModel
-            if (vm == null) {
-                vm = createBusinessBotsViewModel()
-                cachedBusinessBotsViewModel = vm
-            }
-            return vm
-        }
+        get() = business.businessBotsViewModel
 
-    fun createBusinessBotsViewModel(): BusinessBotsViewModel {
-        return BusinessBotsViewModel(
-            observeConnectedBotsUseCase = observeConnectedBotsUseCase,
-            loadConnectedBotsUseCase = loadConnectedBotsUseCase,
-            updateConnectedBotUseCase = updateConnectedBotUseCase,
-            deleteConnectedBotUseCase = deleteConnectedBotUseCase
-        )
-    }
-
-    // --- Timezones ---
-    private var customTimezonesRepository: TimezonesRepository? = null
+    fun createBusinessBotsViewModel(): BusinessBotsViewModel = business.createBusinessBotsViewModel()
 
     var timezonesRepository: TimezonesRepository
-        get() = customTimezonesRepository ?: LegacyTimezonesRepository(account)
-        set(value) {
-            customTimezonesRepository = value
-        }
+        get() = business.timezonesRepository
+        set(value) { business.timezonesRepository = value }
 
     val observeTimezonesUseCase: ObserveTimezonesUseCase
-        get() = ObserveTimezonesUseCase(timezonesRepository)
+        get() = business.observeTimezonesUseCase
 
     val getTimezonesUseCase: GetTimezonesUseCase
-        get() = GetTimezonesUseCase(timezonesRepository)
+        get() = business.getTimezonesUseCase
 
     val loadTimezonesUseCase: LoadTimezonesUseCase
-        get() = LoadTimezonesUseCase(timezonesRepository)
+        get() = business.loadTimezonesUseCase
 
     val findTimezoneUseCase: FindTimezoneUseCase
-        get() = FindTimezoneUseCase(timezonesRepository)
+        get() = business.findTimezoneUseCase
 
     val getSystemTimezoneIdUseCase: GetSystemTimezoneIdUseCase
-        get() = GetSystemTimezoneIdUseCase(timezonesRepository)
+        get() = business.getSystemTimezoneIdUseCase
 
     val getTimezoneNameUseCase: GetTimezoneNameUseCase
-        get() = GetTimezoneNameUseCase(timezonesRepository)
-
-    private var cachedTimezonesViewModel: TimezonesViewModel? = null
+        get() = business.getTimezoneNameUseCase
 
     val timezonesViewModel: TimezonesViewModel
-        get() {
-            var vm = cachedTimezonesViewModel
-            if (vm == null) {
-                vm = createTimezonesViewModel()
-                cachedTimezonesViewModel = vm
-            }
-            return vm
-        }
+        get() = business.timezonesViewModel
 
-    fun createTimezonesViewModel(): TimezonesViewModel {
-        return TimezonesViewModel(
-            observeTimezonesUseCase = observeTimezonesUseCase,
-            getTimezonesUseCase = getTimezonesUseCase,
-            loadTimezonesUseCase = loadTimezonesUseCase,
-            findTimezoneUseCase = findTimezoneUseCase,
-            getSystemTimezoneIdUseCase = getSystemTimezoneIdUseCase,
-            getTimezoneNameUseCase = getTimezoneNameUseCase
-        )
-    }
-
-    // --- Bot Stars ---
-    private var customBotStarsRepository: BotStarsRepository? = null
+    fun createTimezonesViewModel(): TimezonesViewModel = business.createTimezonesViewModel()
 
     var botStarsRepository: BotStarsRepository
-        get() = customBotStarsRepository ?: LegacyBotStarsRepository(account)
-        set(value) {
-            customBotStarsRepository = value
-        }
+        get() = business.botStarsRepository
+        set(value) { business.botStarsRepository = value }
 
     val observeBotStarsStatsUseCase: ObserveBotStarsStatsUseCase
-        get() = ObserveBotStarsStatsUseCase(botStarsRepository)
+        get() = business.observeBotStarsStatsUseCase
 
     val getBotStarsStatsUseCase: GetBotStarsStatsUseCase
-        get() = GetBotStarsStatsUseCase(botStarsRepository)
+        get() = business.getBotStarsStatsUseCase
 
     val observeTonStatsUseCase: ObserveTonStatsUseCase
-        get() = ObserveTonStatsUseCase(botStarsRepository)
+        get() = business.observeTonStatsUseCase
 
     val getTonStatsUseCase: GetTonStatsUseCase
-        get() = GetTonStatsUseCase(botStarsRepository)
+        get() = business.getTonStatsUseCase
 
     val observeBotTransactionsUseCase: ObserveBotTransactionsUseCase
-        get() = ObserveBotTransactionsUseCase(botStarsRepository)
+        get() = business.observeBotTransactionsUseCase
 
     val loadBotTransactionsUseCase: LoadBotTransactionsUseCase
-        get() = LoadBotTransactionsUseCase(botStarsRepository)
+        get() = business.loadBotTransactionsUseCase
 
     val observeConnectedStarBotsUseCase: ObserveConnectedStarBotsUseCase
-        get() = ObserveConnectedStarBotsUseCase(botStarsRepository)
+        get() = business.observeConnectedStarBotsUseCase
 
     val loadConnectedStarBotsUseCase: LoadConnectedStarBotsUseCase
-        get() = LoadConnectedStarBotsUseCase(botStarsRepository)
+        get() = business.loadConnectedStarBotsUseCase
 
     val loadSuggestedStarBotsUseCase: LoadSuggestedStarBotsUseCase
-        get() = LoadSuggestedStarBotsUseCase(botStarsRepository)
+        get() = business.loadSuggestedStarBotsUseCase
 
     val getAdminedBotsAndChannelsUseCase: GetAdminedBotsAndChannelsUseCase
-        get() = GetAdminedBotsAndChannelsUseCase(botStarsRepository)
-
-    private var cachedBotStarsViewModel: BotStarsViewModel? = null
+        get() = business.getAdminedBotsAndChannelsUseCase
 
     val botStarsViewModel: BotStarsViewModel
-        get() {
-            var vm = cachedBotStarsViewModel
-            if (vm == null) {
-                vm = createBotStarsViewModel()
-                cachedBotStarsViewModel = vm
-            }
-            return vm
-        }
+        get() = business.botStarsViewModel
 
-    fun createBotStarsViewModel(): BotStarsViewModel {
-        return BotStarsViewModel(
-            observeBotStarsStatsUseCase = observeBotStarsStatsUseCase,
-            getBotStarsStatsUseCase = getBotStarsStatsUseCase,
-            observeTonStatsUseCase = observeTonStatsUseCase,
-            getTonStatsUseCase = getTonStatsUseCase,
-            observeBotTransactionsUseCase = observeBotTransactionsUseCase,
-            loadBotTransactionsUseCase = loadBotTransactionsUseCase,
-            observeConnectedStarBotsUseCase = observeConnectedStarBotsUseCase,
-            loadConnectedStarBotsUseCase = loadConnectedStarBotsUseCase,
-            loadSuggestedStarBotsUseCase = loadSuggestedStarBotsUseCase,
-            getAdminedBotsAndChannelsUseCase = getAdminedBotsAndChannelsUseCase
-        )
-    }
-
-    private var customBillingRepository: BillingRepository? = null
+    fun createBotStarsViewModel(): BotStarsViewModel = business.createBotStarsViewModel()
 
     var billingRepository: BillingRepository
-        get() = customBillingRepository ?: LegacyBillingRepository()
-        set(value) {
-            customBillingRepository = value
-        }
+        get() = business.billingRepository
+        set(value) { business.billingRepository = value }
 
     val observeBillingStateUseCase: ObserveBillingStateUseCase
-        get() = ObserveBillingStateUseCase(billingRepository)
+        get() = business.observeBillingStateUseCase
 
     val getBillingStateUseCase: GetBillingStateUseCase
-        get() = GetBillingStateUseCase(billingRepository)
+        get() = business.getBillingStateUseCase
 
     val startBillingConnectionUseCase: StartBillingConnectionUseCase
-        get() = StartBillingConnectionUseCase(billingRepository)
+        get() = business.startBillingConnectionUseCase
 
     val getPremiumProductUseCase: GetPremiumProductUseCase
-        get() = GetPremiumProductUseCase(billingRepository)
+        get() = business.getPremiumProductUseCase
 
     val formatCurrencyUseCase: FormatCurrencyUseCase
-        get() = FormatCurrencyUseCase(billingRepository)
+        get() = business.formatCurrencyUseCase
 
     val getCurrencyExpUseCase: GetCurrencyExpUseCase
-        get() = GetCurrencyExpUseCase(billingRepository)
+        get() = business.getCurrencyExpUseCase
 
     val queryBillingPurchasesUseCase: QueryBillingPurchasesUseCase
-        get() = QueryBillingPurchasesUseCase(billingRepository)
+        get() = business.queryBillingPurchasesUseCase
 
     val manageSubscriptionUseCase: ManageSubscriptionUseCase
-        get() = ManageSubscriptionUseCase(billingRepository)
-
-    private var cachedBillingViewModel: BillingViewModel? = null
+        get() = business.manageSubscriptionUseCase
 
     val billingViewModel: BillingViewModel
-        get() {
-            var vm = cachedBillingViewModel
-            if (vm == null) {
-                vm = createBillingViewModel()
-                cachedBillingViewModel = vm
-            }
-            return vm
-        }
+        get() = business.billingViewModel
 
-    fun createBillingViewModel(): BillingViewModel {
-        return BillingViewModel(
-            observeBillingStateUseCase = observeBillingStateUseCase,
-            getBillingStateUseCase = getBillingStateUseCase,
-            startBillingConnectionUseCase = startBillingConnectionUseCase,
-            queryBillingPurchasesUseCase = queryBillingPurchasesUseCase,
-            manageSubscriptionUseCase = manageSubscriptionUseCase
-        )
-    }
+    fun createBillingViewModel(): BillingViewModel = business.createBillingViewModel()
 
-    private var customLauncherIconRepository: LauncherIconRepository? = null
+    fun createBusinessRecipientsRepository(): BusinessRecipientsRepository = business.createBusinessRecipientsRepository()
 
-    var launcherIconRepository: LauncherIconRepository
-        get() = customLauncherIconRepository ?: LegacyLauncherIconRepository()
-        set(value) {
-            customLauncherIconRepository = value
-        }
-
-    val observeLauncherIconsUseCase: ObserveLauncherIconsUseCase
-        get() = ObserveLauncherIconsUseCase(launcherIconRepository)
-
-    val getLauncherIconsUseCase: GetLauncherIconsUseCase
-        get() = GetLauncherIconsUseCase(launcherIconRepository)
-
-    val getActiveLauncherIconUseCase: GetActiveLauncherIconUseCase
-        get() = GetActiveLauncherIconUseCase(launcherIconRepository)
-
-    val isLauncherIconEnabledUseCase: IsLauncherIconEnabledUseCase
-        get() = IsLauncherIconEnabledUseCase(launcherIconRepository)
-
-    val setLauncherIconUseCase: SetLauncherIconUseCase
-        get() = SetLauncherIconUseCase(launcherIconRepository)
-
-    val fixLauncherIconIfNeededUseCase: FixLauncherIconIfNeededUseCase
-        get() = FixLauncherIconIfNeededUseCase(launcherIconRepository)
-
-    private var cachedLauncherIconViewModel: LauncherIconViewModel? = null
-
-    val launcherIconViewModel: LauncherIconViewModel
-        get() {
-            var vm = cachedLauncherIconViewModel
-            if (vm == null) {
-                vm = createLauncherIconViewModel()
-                cachedLauncherIconViewModel = vm
-            }
-            return vm
-        }
-
-    fun createLauncherIconViewModel(): LauncherIconViewModel {
-        return LauncherIconViewModel(
-            observeLauncherIconsUseCase = observeLauncherIconsUseCase,
-            getLauncherIconsUseCase = getLauncherIconsUseCase,
-            getActiveLauncherIconUseCase = getActiveLauncherIconUseCase,
-            setLauncherIconUseCase = setLauncherIconUseCase,
-            fixLauncherIconIfNeededUseCase = fixLauncherIconIfNeededUseCase
-        )
-    }
-
-    private var customPushRepository: PushRepository? = null
-
-    var pushRepository: PushRepository
-        get() = customPushRepository ?: LegacyPushRepository(account)
-        set(value) {
-            customPushRepository = value
-        }
-
-    val observePushStatusUseCase: ObservePushStatusUseCase
-        get() = ObservePushStatusUseCase(pushRepository)
-
-    val getPushStatusUseCase: GetPushStatusUseCase
-        get() = GetPushStatusUseCase(pushRepository)
-
-    val isPushAvailableUseCase: IsPushAvailableUseCase
-        get() = IsPushAvailableUseCase(pushRepository)
-
-    val requestPushTokenUseCase: RequestPushTokenUseCase
-        get() = RequestPushTokenUseCase(pushRepository)
-
-    val registerPushTokenUseCase: RegisterPushTokenUseCase
-        get() = RegisterPushTokenUseCase(pushRepository)
-
-    val resetPushTokenUseCase: ResetPushTokenUseCase
-        get() = ResetPushTokenUseCase(pushRepository)
-
-    private var cachedPushViewModel: PushViewModel? = null
-
-    val pushViewModel: PushViewModel
-        get() {
-            var vm = cachedPushViewModel
-            if (vm == null) {
-                vm = createPushViewModel()
-                cachedPushViewModel = vm
-            }
-            return vm
-        }
-
-    fun createPushViewModel(): PushViewModel {
-        return PushViewModel(
-            observePushStatusUseCase = observePushStatusUseCase,
-            getPushStatusUseCase = getPushStatusUseCase,
-            isPushAvailableUseCase = isPushAvailableUseCase,
-            requestPushTokenUseCase = requestPushTokenUseCase,
-            registerPushTokenUseCase = registerPushTokenUseCase,
-            resetPushTokenUseCase = resetPushTokenUseCase
-        )
-    }
-
-    private var customChromecastRepository: ChromecastRepository? = null
-
-    var chromecastRepository: ChromecastRepository
-        get() = customChromecastRepository ?: LegacyChromecastRepository()
-        set(value) {
-            customChromecastRepository = value
-        }
-
-    val observeChromecastStateUseCase: ObserveChromecastStateUseCase
-        get() = ObserveChromecastStateUseCase(chromecastRepository)
-
-    val getChromecastStateUseCase: GetChromecastStateUseCase
-        get() = GetChromecastStateUseCase(chromecastRepository)
-
-    val isCastingUseCase: IsCastingUseCase
-        get() = IsCastingUseCase(chromecastRepository)
-
-    val isMediaPlayingOnCastUseCase: IsMediaPlayingOnCastUseCase
-        get() = IsMediaPlayingOnCastUseCase(chromecastRepository)
-
-    val castMediaUseCase: CastMediaUseCase
-        get() = CastMediaUseCase(chromecastRepository)
-
-    val stopCastingUseCase: StopCastingUseCase
-        get() = StopCastingUseCase(chromecastRepository)
-
-    val setCastCoverFileUseCase: SetCastCoverFileUseCase
-        get() = SetCastCoverFileUseCase(chromecastRepository)
-
-    private var cachedChromecastViewModel: ChromecastViewModel? = null
-
-    val chromecastViewModel: ChromecastViewModel
-        get() {
-            var vm = cachedChromecastViewModel
-            if (vm == null) {
-                vm = createChromecastViewModel()
-                cachedChromecastViewModel = vm
-            }
-            return vm
-        }
-
-    fun createChromecastViewModel(): ChromecastViewModel {
-        return ChromecastViewModel(
-            observeChromecastStateUseCase = observeChromecastStateUseCase,
-            getChromecastStateUseCase = getChromecastStateUseCase,
-            isCastingUseCase = isCastingUseCase,
-            isMediaPlayingOnCastUseCase = isMediaPlayingOnCastUseCase,
-            castMediaUseCase = castMediaUseCase,
-            stopCastingUseCase = stopCastingUseCase,
-            setCastCoverFileUseCase = setCastCoverFileUseCase
-        )
-    }
-
-    private var customHintsRepository: HintsRepository? = null
-
-    var hintsRepository: HintsRepository
-        get() = customHintsRepository ?: LegacyHintsRepository()
-        set(value) {
-            customHintsRepository = value
-        }
-
-    val observeHintsUseCase: ObserveHintsUseCase
-        get() = ObserveHintsUseCase(hintsRepository)
-
-    val getHintsStateUseCase: GetHintsStateUseCase
-        get() = GetHintsStateUseCase(hintsRepository)
-
-    val getHintUseCase: GetHintUseCase
-        get() = GetHintUseCase(hintsRepository)
-
-    val shouldShowHintUseCase: ShouldShowHintUseCase
-        get() = ShouldShowHintUseCase(hintsRepository)
-
-    val incrementHintUseCase: IncrementHintUseCase
-        get() = IncrementHintUseCase(hintsRepository)
-
-    val doNotShowAgainHintUseCase: DoNotShowAgainHintUseCase
-        get() = DoNotShowAgainHintUseCase(hintsRepository)
-
-    val resetHintUseCase: ResetHintUseCase
-        get() = ResetHintUseCase(hintsRepository)
-
-    val resetAllHintsUseCase: ResetAllHintsUseCase
-        get() = ResetAllHintsUseCase(hintsRepository)
-
-    private var cachedHintsViewModel: HintsViewModel? = null
-
-    val hintsViewModel: HintsViewModel
-        get() {
-            var vm = cachedHintsViewModel
-            if (vm == null) {
-                vm = createHintsViewModel()
-                cachedHintsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createHintsViewModel(): HintsViewModel {
-        return HintsViewModel(
-            observeHintsUseCase = observeHintsUseCase,
-            getHintsStateUseCase = getHintsStateUseCase,
-            shouldShowHintUseCase = shouldShowHintUseCase,
-            incrementHintUseCase = incrementHintUseCase,
-            doNotShowAgainHintUseCase = doNotShowAgainHintUseCase,
-            resetHintUseCase = resetHintUseCase,
-            resetAllHintsUseCase = resetAllHintsUseCase
-        )
-    }
-
-    private var customGroupCallMessagesRepository: GroupCallMessagesRepository? = null
-
-    var groupCallMessagesRepository: GroupCallMessagesRepository
-        get() = customGroupCallMessagesRepository ?: LegacyGroupCallMessagesRepository(account)
-        set(value) {
-            customGroupCallMessagesRepository = value
-        }
-
-    val observeGroupCallMessagesUseCase: ObserveGroupCallMessagesUseCase
-        get() = ObserveGroupCallMessagesUseCase(groupCallMessagesRepository)
-
-    val getGroupCallMessagesUseCase: GetGroupCallMessagesUseCase
-        get() = GetGroupCallMessagesUseCase(groupCallMessagesRepository)
-
-    val sendGroupCallMessageUseCase: SendGroupCallMessageUseCase
-        get() = SendGroupCallMessageUseCase(groupCallMessagesRepository)
-
-    val popGroupCallMessageUseCase: PopGroupCallMessageUseCase
-        get() = PopGroupCallMessageUseCase(groupCallMessagesRepository)
-
-    val clearGroupCallMessagesUseCase: ClearGroupCallMessagesUseCase
-        get() = ClearGroupCallMessagesUseCase(groupCallMessagesRepository)
-
-    private val cachedGroupCallMessagesViewModels = ConcurrentHashMap<Long, GroupCallMessagesViewModel>()
-
-    fun getGroupCallMessagesViewModel(callId: Long = 0L): GroupCallMessagesViewModel {
-        return cachedGroupCallMessagesViewModels.computeIfAbsent(callId) { createGroupCallMessagesViewModel(it) }
-    }
-
-    fun createGroupCallMessagesViewModel(callId: Long = 0L): GroupCallMessagesViewModel {
-        return GroupCallMessagesViewModel(
-            observeGroupCallMessagesUseCase = observeGroupCallMessagesUseCase,
-            getGroupCallMessagesUseCase = getGroupCallMessagesUseCase,
-            sendGroupCallMessageUseCase = sendGroupCallMessageUseCase,
-            popGroupCallMessageUseCase = popGroupCallMessageUseCase,
-            clearGroupCallMessagesUseCase = clearGroupCallMessagesUseCase,
-            initialCallId = callId
-        )
-    }
-
-    private var customGallerySaveRepository: GallerySaveRepository? = null
-
-    var gallerySaveRepository: GallerySaveRepository
-        get() = customGallerySaveRepository ?: LegacyGallerySaveRepository(account)
-        set(value) {
-            customGallerySaveRepository = value
-        }
-
-    val observeGallerySaveConfigUseCase: ObserveGallerySaveConfigUseCase
-        get() = ObserveGallerySaveConfigUseCase(gallerySaveRepository)
-
-    val getGallerySaveConfigUseCase: GetGallerySaveConfigUseCase
-        get() = GetGallerySaveConfigUseCase(gallerySaveRepository)
-
-    val getGallerySaveSettingsUseCase: GetGallerySaveSettingsUseCase
-        get() = GetGallerySaveSettingsUseCase(gallerySaveRepository)
-
-    val updateGallerySaveSettingsUseCase: UpdateGallerySaveSettingsUseCase
-        get() = UpdateGallerySaveSettingsUseCase(gallerySaveRepository)
-
-    val toggleGallerySavePeerTypeUseCase: ToggleGallerySavePeerTypeUseCase
-        get() = ToggleGallerySavePeerTypeUseCase(gallerySaveRepository)
-
-    val setGallerySaveVideoLimitUseCase: SetGallerySaveVideoLimitUseCase
-        get() = SetGallerySaveVideoLimitUseCase(gallerySaveRepository)
-
-    val getGallerySaveExceptionsUseCase: GetGallerySaveExceptionsUseCase
-        get() = GetGallerySaveExceptionsUseCase(gallerySaveRepository)
-
-    val setGallerySaveExceptionUseCase: SetGallerySaveExceptionUseCase
-        get() = SetGallerySaveExceptionUseCase(gallerySaveRepository)
-
-    val removeGallerySaveExceptionUseCase: RemoveGallerySaveExceptionUseCase
-        get() = RemoveGallerySaveExceptionUseCase(gallerySaveRepository)
-
-    val removeAllGallerySaveExceptionsUseCase: RemoveAllGallerySaveExceptionsUseCase
-        get() = RemoveAllGallerySaveExceptionsUseCase(gallerySaveRepository)
-
-    private var cachedGallerySaveViewModel: GallerySaveViewModel? = null
-
-    val gallerySaveViewModel: GallerySaveViewModel
-        get() {
-            var vm = cachedGallerySaveViewModel
-            if (vm == null) {
-                vm = createGallerySaveViewModel()
-                cachedGallerySaveViewModel = vm
-            }
-            return vm
-        }
-
-    fun createGallerySaveViewModel(): GallerySaveViewModel {
-        return GallerySaveViewModel(
-            observeGallerySaveConfigUseCase = observeGallerySaveConfigUseCase,
-            getGallerySaveConfigUseCase = getGallerySaveConfigUseCase,
-            getGallerySaveSettingsUseCase = getGallerySaveSettingsUseCase,
-            updateGallerySaveSettingsUseCase = updateGallerySaveSettingsUseCase,
-            toggleGallerySavePeerTypeUseCase = toggleGallerySavePeerTypeUseCase,
-            setGallerySaveVideoLimitUseCase = setGallerySaveVideoLimitUseCase,
-            setGallerySaveExceptionUseCase = setGallerySaveExceptionUseCase,
-            removeGallerySaveExceptionUseCase = removeGallerySaveExceptionUseCase,
-            removeAllGallerySaveExceptionsUseCase = removeAllGallerySaveExceptionsUseCase
-        )
-    }
-
-    private var customRefreshRateRepository: RefreshRateRepository? = null
-
-    var refreshRateRepository: RefreshRateRepository
-        get() = customRefreshRateRepository ?: LegacyRefreshRateRepository()
-        set(value) {
-            customRefreshRateRepository = value
-        }
-
-    val observeRefreshRateStateUseCase: ObserveRefreshRateStateUseCase
-        get() = ObserveRefreshRateStateUseCase(refreshRateRepository)
-
-    val getRefreshRateStateUseCase: GetRefreshRateStateUseCase
-        get() = GetRefreshRateStateUseCase(refreshRateRepository)
-
-    val startRefreshRateTrackingUseCase: StartRefreshRateTrackingUseCase
-        get() = StartRefreshRateTrackingUseCase(refreshRateRepository)
-
-    val stopRefreshRateTrackingUseCase: StopRefreshRateTrackingUseCase
-        get() = StopRefreshRateTrackingUseCase(refreshRateRepository)
-
-    val toggleAdaptiveRefreshRateUseCase: ToggleAdaptiveRefreshRateUseCase
-        get() = ToggleAdaptiveRefreshRateUseCase(refreshRateRepository)
-
-    val setPreferredRefreshRateModeUseCase: SetPreferredRefreshRateModeUseCase
-        get() = SetPreferredRefreshRateModeUseCase(refreshRateRepository)
-
-    val recordFrameMetricUseCase: RecordFrameMetricUseCase
-        get() = RecordFrameMetricUseCase(refreshRateRepository)
-
-    val resetRefreshRateStatsUseCase: ResetRefreshRateStatsUseCase
-        get() = ResetRefreshRateStatsUseCase(refreshRateRepository)
-
-    val getDisplayRefreshModesUseCase: GetDisplayRefreshModesUseCase
-        get() = GetDisplayRefreshModesUseCase(refreshRateRepository)
-
-    private var cachedRefreshRateViewModel: RefreshRateViewModel? = null
-
-    val refreshRateViewModel: RefreshRateViewModel
-        get() {
-            var vm = cachedRefreshRateViewModel
-            if (vm == null) {
-                vm = createRefreshRateViewModel()
-                cachedRefreshRateViewModel = vm
-            }
-            return vm
-        }
-
-    fun createRefreshRateViewModel(): RefreshRateViewModel {
-        return RefreshRateViewModel(
-            observeRefreshRateStateUseCase = observeRefreshRateStateUseCase,
-            getRefreshRateStateUseCase = getRefreshRateStateUseCase,
-            startRefreshRateTrackingUseCase = startRefreshRateTrackingUseCase,
-            stopRefreshRateTrackingUseCase = stopRefreshRateTrackingUseCase,
-            toggleAdaptiveRefreshRateUseCase = toggleAdaptiveRefreshRateUseCase,
-            setPreferredRefreshRateModeUseCase = setPreferredRefreshRateModeUseCase,
-            recordFrameMetricUseCase = recordFrameMetricUseCase,
-            resetRefreshRateStatsUseCase = resetRefreshRateStatsUseCase
-        )
-    }
-
-    private var customChatMessagesMetadataRepository: ChatMessagesMetadataRepository? = null
-
-    var chatMessagesMetadataRepository: ChatMessagesMetadataRepository
-        get() = customChatMessagesMetadataRepository ?: LegacyChatMessagesMetadataRepository(account)
-        set(value) {
-            customChatMessagesMetadataRepository = value
-        }
-
-    val observeChatMetadataStatsUseCase: ObserveChatMetadataStatsUseCase
-        get() = ObserveChatMetadataStatsUseCase(chatMessagesMetadataRepository)
-
-    val getChatMetadataStatsUseCase: GetChatMetadataStatsUseCase
-        get() = GetChatMetadataStatsUseCase(chatMessagesMetadataRepository)
-
-    val checkMessagesMetadataUseCase: CheckMessagesMetadataUseCase
-        get() = CheckMessagesMetadataUseCase(chatMessagesMetadataRepository)
-
-    val loadMessagesReactionsUseCase: LoadMessagesReactionsUseCase
-        get() = LoadMessagesReactionsUseCase(chatMessagesMetadataRepository)
-
-    val loadMessagesExtendedMediaUseCase: LoadMessagesExtendedMediaUseCase
-        get() = LoadMessagesExtendedMediaUseCase(chatMessagesMetadataRepository)
-
-    val cancelPendingMetadataRequestsUseCase: CancelPendingMetadataRequestsUseCase
-        get() = CancelPendingMetadataRequestsUseCase(chatMessagesMetadataRepository)
-
-    private var cachedChatMetadataViewModel: ChatMetadataViewModel? = null
-
-    val chatMetadataViewModel: ChatMetadataViewModel
-        get() {
-            var vm = cachedChatMetadataViewModel
-            if (vm == null) {
-                vm = createChatMetadataViewModel()
-                cachedChatMetadataViewModel = vm
-            }
-            return vm
-        }
-
-    fun createChatMetadataViewModel(): ChatMetadataViewModel {
-        return ChatMetadataViewModel(
-            observeChatMetadataStatsUseCase = observeChatMetadataStatsUseCase,
-            getChatMetadataStatsUseCase = getChatMetadataStatsUseCase,
-            checkMessagesMetadataUseCase = checkMessagesMetadataUseCase,
-            loadMessagesReactionsUseCase = loadMessagesReactionsUseCase,
-            loadMessagesExtendedMediaUseCase = loadMessagesExtendedMediaUseCase,
-            cancelPendingMetadataRequestsUseCase = cancelPendingMetadataRequestsUseCase
-        )
-    }
-
-    private var customPipRepository: PipRepository? = null
-
-    var pipRepository: PipRepository
-        get() = customPipRepository ?: LegacyPipRepository()
-        set(value) {
-            customPipRepository = value
-        }
-
-    val observePipSessionUseCase: ObservePipSessionUseCase
-        get() = ObservePipSessionUseCase(pipRepository)
-
-    val getPipSessionUseCase: GetPipSessionUseCase
-        get() = GetPipSessionUseCase(pipRepository)
-
-    val registerPipSourceUseCase: RegisterPipSourceUseCase
-        get() = RegisterPipSourceUseCase(pipRepository)
-
-    val unregisterPipSourceUseCase: UnregisterPipSourceUseCase
-        get() = UnregisterPipSourceUseCase(pipRepository)
-
-    val updatePipSourceStateUseCase: UpdatePipSourceStateUseCase
-        get() = UpdatePipSourceStateUseCase(pipRepository)
-
-    val dispatchPipStateUseCase: DispatchPipStateUseCase
-        get() = DispatchPipStateUseCase(pipRepository)
-
-    val triggerPipActionUseCase: TriggerPipActionUseCase
-        get() = TriggerPipActionUseCase(pipRepository)
-
-    val evaluatePipEligibilityUseCase: EvaluatePipEligibilityUseCase
-        get() = EvaluatePipEligibilityUseCase(pipRepository)
-
-    private var cachedPipViewModel: PipViewModel? = null
-
-    val pipViewModel: PipViewModel
-        get() {
-            var vm = cachedPipViewModel
-            if (vm == null) {
-                vm = createPipViewModel()
-                cachedPipViewModel = vm
-            }
-            return vm
-        }
-
-    fun createPipViewModel(): PipViewModel {
-        return PipViewModel(
-            observePipSessionUseCase = observePipSessionUseCase,
-            getPipSessionUseCase = getPipSessionUseCase,
-            registerPipSourceUseCase = registerPipSourceUseCase,
-            unregisterPipSourceUseCase = unregisterPipSourceUseCase,
-            updatePipSourceStateUseCase = updatePipSourceStateUseCase,
-            dispatchPipStateUseCase = dispatchPipStateUseCase,
-            triggerPipActionUseCase = triggerPipActionUseCase,
-            evaluatePipEligibilityUseCase = evaluatePipEligibilityUseCase
-        )
-    }
-
-    private var customDraftsRepository: DraftsRepository? = null
-
-    var draftsRepository: DraftsRepository
-        get() = customDraftsRepository ?: LegacyDraftsRepository(account)
-        set(value) {
-            customDraftsRepository = value
-        }
-
-    val observeDraftsStateUseCase: ObserveDraftsStateUseCase
-        get() = ObserveDraftsStateUseCase(draftsRepository)
-
-    val getDraftsStateUseCase: GetDraftsStateUseCase
-        get() = GetDraftsStateUseCase(draftsRepository)
-
-    val loadDraftsUseCase: LoadDraftsUseCase
-        get() = LoadDraftsUseCase(draftsRepository)
-
-    val saveDraftUseCase: SaveDraftUseCase
-        get() = SaveDraftUseCase(draftsRepository)
-
-    val deleteDraftUseCase: DeleteDraftUseCase
-        get() = DeleteDraftUseCase(draftsRepository)
-
-    val deleteForEditUseCase: DeleteForEditUseCase
-        get() = DeleteForEditUseCase(draftsRepository)
-
-    val getDraftForEditUseCase: GetDraftForEditUseCase
-        get() = GetDraftForEditUseCase(draftsRepository)
-
-    val cleanupExpiredDraftsUseCase: CleanupExpiredDraftsUseCase
-        get() = CleanupExpiredDraftsUseCase(draftsRepository)
-
-    private var cachedDraftsViewModel: DraftsViewModel? = null
-
-    val draftsViewModel: DraftsViewModel
-        get() {
-            var vm = cachedDraftsViewModel
-            if (vm == null) {
-                vm = createDraftsViewModel()
-                cachedDraftsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createDraftsViewModel(): DraftsViewModel {
-        return DraftsViewModel(
-            observeDraftsStateUseCase = observeDraftsStateUseCase,
-            getDraftsStateUseCase = getDraftsStateUseCase,
-            loadDraftsUseCase = loadDraftsUseCase,
-            saveDraftUseCase = saveDraftUseCase,
-            deleteDraftUseCase = deleteDraftUseCase,
-            deleteForEditUseCase = deleteForEditUseCase,
-            getDraftForEditUseCase = getDraftForEditUseCase,
-            cleanupExpiredDraftsUseCase = cleanupExpiredDraftsUseCase
-        )
-    }
-
-    // ==========================================
-    // Feature: FileRef (MTProto File Reference Renewal)
-    // ==========================================
-
-    private var customFileRefRepository: FileRefRepository? = null
-
-    var fileRefRepository: FileRefRepository
-        get() = customFileRefRepository ?: LegacyFileRefRepository(account)
-        set(value) { customFileRefRepository = value }
-
-    val observeFileRefStatsUseCase: ObserveFileRefStatsUseCase
-        get() = ObserveFileRefStatsUseCase(fileRefRepository)
-
-    val getFileRefStatsUseCase: GetFileRefStatsUseCase
-        get() = GetFileRefStatsUseCase(fileRefRepository)
-
-    val requestReferenceRenewalUseCase: RequestReferenceRenewalUseCase
-        get() = RequestReferenceRenewalUseCase(fileRefRepository)
-
-    val notifyReferenceRenewedUseCase: NotifyReferenceRenewedUseCase
-        get() = NotifyReferenceRenewedUseCase(fileRefRepository)
-
-    val cancelFileRefRequestUseCase: CancelFileRefRequestUseCase
-        get() = CancelFileRefRequestUseCase(fileRefRepository)
-
-    val clearFileRefCacheUseCase: ClearFileRefCacheUseCase
-        get() = ClearFileRefCacheUseCase(fileRefRepository)
-
-    private var cachedFileRefViewModel: FileRefViewModel? = null
-
-    val fileRefViewModel: FileRefViewModel
-        get() {
-            var vm = cachedFileRefViewModel
-            if (vm == null) {
-                vm = createFileRefViewModel()
-                cachedFileRefViewModel = vm
-            }
-            return vm
-        }
-
-    fun createFileRefViewModel(): FileRefViewModel {
-        return FileRefViewModel(
-            observeFileRefStatsUseCase = observeFileRefStatsUseCase,
-            getFileRefStatsUseCase = getFileRefStatsUseCase,
-            requestReferenceRenewalUseCase = requestReferenceRenewalUseCase,
-            notifyReferenceRenewedUseCase = notifyReferenceRenewedUseCase,
-            cancelFileRefRequestUseCase = cancelFileRefRequestUseCase,
-            clearFileRefCacheUseCase = clearFileRefCacheUseCase
-        )
-    }
-
-    // ==========================================
-    // Feature: Camera (Hardware Camera & Video Recording)
-    // ==========================================
-
-    private var customCameraRepository: CameraRepository? = null
-
-    var cameraRepository: CameraRepository
-        get() = customCameraRepository ?: LegacyCameraRepository()
-        set(value) { customCameraRepository = value }
-
-    val observeCameraStateUseCase: ObserveCameraStateUseCase
-        get() = ObserveCameraStateUseCase(cameraRepository)
-
-    val getCameraStateUseCase: GetCameraStateUseCase
-        get() = GetCameraStateUseCase(cameraRepository)
-
-    val initCamerasUseCase: InitCamerasUseCase
-        get() = InitCamerasUseCase(cameraRepository)
-
-    val selectCameraUseCase: SelectCameraUseCase
-        get() = SelectCameraUseCase(cameraRepository)
-
-    val switchCameraUseCase: SwitchCameraUseCase
-        get() = SwitchCameraUseCase(cameraRepository)
-
-    val setCameraFlashModeUseCase: SetCameraFlashModeUseCase
-        get() = SetCameraFlashModeUseCase(cameraRepository)
-
-    val toggleMirrorFrontCameraUseCase: ToggleMirrorFrontCameraUseCase
-        get() = ToggleMirrorFrontCameraUseCase(cameraRepository)
-
-    val chooseOptimalResolutionUseCase: ChooseOptimalResolutionUseCase
-        get() = ChooseOptimalResolutionUseCase(cameraRepository)
-
-    val notifyCameraRecordingUseCase: NotifyCameraRecordingUseCase
-        get() = NotifyCameraRecordingUseCase(cameraRepository)
-
-    private var cachedCameraViewModel: CameraViewModel? = null
-
-    val cameraViewModel: CameraViewModel
-        get() {
-            var vm = cachedCameraViewModel
-            if (vm == null) {
-                vm = createCameraViewModel()
-                cachedCameraViewModel = vm
-            }
-            return vm
-        }
-
-    fun createCameraViewModel(): CameraViewModel {
-        return CameraViewModel(
-            observeCameraStateUseCase = observeCameraStateUseCase,
-            getCameraStateUseCase = getCameraStateUseCase,
-            initCamerasUseCase = initCamerasUseCase,
-            selectCameraUseCase = selectCameraUseCase,
-            switchCameraUseCase = switchCameraUseCase,
-            setCameraFlashModeUseCase = setCameraFlashModeUseCase,
-            toggleMirrorFrontCameraUseCase = toggleMirrorFrontCameraUseCase,
-            chooseOptimalResolutionUseCase = chooseOptimalResolutionUseCase,
-            notifyCameraRecordingUseCase = notifyCameraRecordingUseCase
-        )
-    }
-
-    // ==========================================
-    // Feature: CacheByChats (Keep-Media Cache Retention & Exceptions)
-    // ==========================================
-
-    private var customCacheByChatsRepository: CacheByChatsRepository? = null
-
-    var cacheByChatsRepository: CacheByChatsRepository
-        get() = customCacheByChatsRepository ?: LegacyCacheByChatsRepository(account)
-        set(value) { customCacheByChatsRepository = value }
-
-    val observeCacheByChatsConfigUseCase: ObserveCacheByChatsConfigUseCase
-        get() = ObserveCacheByChatsConfigUseCase(cacheByChatsRepository)
-
-    val getCacheByChatsConfigUseCase: GetCacheByChatsConfigUseCase
-        get() = GetCacheByChatsConfigUseCase(cacheByChatsRepository)
-
-    val setKeepMediaDurationUseCase: SetKeepMediaDurationUseCase
-        get() = SetKeepMediaDurationUseCase(cacheByChatsRepository)
-
-    val setKeepMediaExceptionUseCase: SetKeepMediaExceptionUseCase
-        get() = SetKeepMediaExceptionUseCase(cacheByChatsRepository)
-
-    val removeKeepMediaExceptionUseCase: RemoveKeepMediaExceptionUseCase
-        get() = RemoveKeepMediaExceptionUseCase(cacheByChatsRepository)
-
-    val clearKeepMediaExceptionsUseCase: ClearKeepMediaExceptionsUseCase
-        get() = ClearKeepMediaExceptionsUseCase(cacheByChatsRepository)
-
-    private var cachedCacheByChatsViewModel: CacheByChatsViewModel? = null
-
-    val cacheByChatsViewModel: CacheByChatsViewModel
-        get() {
-            var vm = cachedCacheByChatsViewModel
-            if (vm == null) {
-                vm = createCacheByChatsViewModel()
-                cachedCacheByChatsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createCacheByChatsViewModel(): CacheByChatsViewModel {
-        return CacheByChatsViewModel(
-            observeCacheByChatsConfigUseCase = observeCacheByChatsConfigUseCase,
-            getCacheByChatsConfigUseCase = getCacheByChatsConfigUseCase,
-            setKeepMediaDurationUseCase = setKeepMediaDurationUseCase,
-            setKeepMediaExceptionUseCase = setKeepMediaExceptionUseCase,
-            removeKeepMediaExceptionUseCase = removeKeepMediaExceptionUseCase,
-            clearKeepMediaExceptionsUseCase = clearKeepMediaExceptionsUseCase
-        )
-    }
-
-    fun createDraftMeasureRepository(legacyController: ChatActivityDraftMessageMeasureController? = null): DraftMeasureRepository {
-        return LegacyDraftMeasureRepository(legacyController)
-    }
-
-    val draftMeasureRepository: DraftMeasureRepository by lazy {
-        LegacyDraftMeasureRepository()
-    }
-
-    val calculateDraftMeasureOverrideUseCase: CalculateDraftMeasureOverrideUseCase
-        get() = CalculateDraftMeasureOverrideUseCase(draftMeasureRepository)
-
-    val setDraftMeasureTargetUseCase: SetDraftMeasureTargetUseCase
-        get() = SetDraftMeasureTargetUseCase(draftMeasureRepository)
-
-    val onDraftMessageIdChangedUseCase: OnDraftMessageIdChangedUseCase
-        get() = OnDraftMessageIdChangedUseCase(draftMeasureRepository)
-
-    val setPreviousMessageHeightUseCase: SetPreviousMessageHeightUseCase
-        get() = SetPreviousMessageHeightUseCase(draftMeasureRepository)
-
-    val resetDraftMeasureTargetUseCase: ResetDraftMeasureTargetUseCase
-        get() = ResetDraftMeasureTargetUseCase(draftMeasureRepository)
-
-    val observeDraftMeasureConfigUseCase: ObserveDraftMeasureConfigUseCase
-        get() = ObserveDraftMeasureConfigUseCase(draftMeasureRepository)
-
-    val getDraftMeasureConfigUseCase: GetDraftMeasureConfigUseCase
-        get() = GetDraftMeasureConfigUseCase(draftMeasureRepository)
-
-    private var cachedDraftMeasureViewModel: DraftMeasureViewModel? = null
-
-    val draftMeasureViewModel: DraftMeasureViewModel
-        get() {
-            var vm = cachedDraftMeasureViewModel
-            if (vm == null) {
-                vm = createDraftMeasureViewModel()
-                cachedDraftMeasureViewModel = vm
-            }
-            return vm
-        }
-
-    fun createDraftMeasureViewModel(legacyController: ChatActivityDraftMessageMeasureController? = null): DraftMeasureViewModel {
-        val repo = if (legacyController != null) createDraftMeasureRepository(legacyController) else draftMeasureRepository
-        return DraftMeasureViewModel(
-            calculateOverrideUseCase = CalculateDraftMeasureOverrideUseCase(repo),
-            setTargetUseCase = SetDraftMeasureTargetUseCase(repo),
-            onMessageIdChangedUseCase = OnDraftMessageIdChangedUseCase(repo),
-            setPreviousHeightUseCase = SetPreviousMessageHeightUseCase(repo),
-            resetTargetUseCase = ResetDraftMeasureTargetUseCase(repo),
-            observeConfigUseCase = ObserveDraftMeasureConfigUseCase(repo),
-            getConfigUseCase = GetDraftMeasureConfigUseCase(repo)
-        )
-    }
-
-    fun createBottomViewsRepository(legacyController: ChatActivityBottomViewsVisibilityController? = null): BottomViewsVisibilityRepository {
-        return LegacyBottomViewsVisibilityRepository(legacyController)
-    }
-
-    val bottomViewsRepository: BottomViewsVisibilityRepository by lazy {
-        LegacyBottomViewsVisibilityRepository()
-    }
-
-    val getBottomViewVisibilityUseCase: GetBottomViewVisibilityUseCase
-        get() = GetBottomViewVisibilityUseCase(bottomViewsRepository)
-
-    val setBottomViewVisibleUseCase: SetBottomViewVisibleUseCase
-        get() = SetBottomViewVisibleUseCase(bottomViewsRepository)
-
-    val getPriorityBottomContainerUseCase: GetPriorityBottomContainerUseCase
-        get() = GetPriorityBottomContainerUseCase(bottomViewsRepository)
-
-    val getBottomViewsStateUseCase: GetBottomViewsStateUseCase
-        get() = GetBottomViewsStateUseCase(bottomViewsRepository)
-
-    val observeBottomViewsVisibilityUseCase: ObserveBottomViewsVisibilityUseCase
-        get() = ObserveBottomViewsVisibilityUseCase(bottomViewsRepository)
-
-    private var cachedBottomViewsViewModel: BottomViewsViewModel? = null
-
-    val bottomViewsViewModel: BottomViewsViewModel
-        get() {
-            var vm = cachedBottomViewsViewModel
-            if (vm == null) {
-                vm = createBottomViewsViewModel()
-                cachedBottomViewsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createBottomViewsViewModel(legacyController: ChatActivityBottomViewsVisibilityController? = null): BottomViewsViewModel {
-        val repo = if (legacyController != null) createBottomViewsRepository(legacyController) else bottomViewsRepository
-        return BottomViewsViewModel(
-            observeBottomViewsVisibilityUseCase = ObserveBottomViewsVisibilityUseCase(repo),
-            getBottomViewsStateUseCase = GetBottomViewsStateUseCase(repo),
-            setBottomViewVisibleUseCase = SetBottomViewVisibleUseCase(repo)
-        )
-    }
-
-    fun createFloatingDebugRepository(activityProvider: (() -> LaunchActivity?)? = null): FloatingDebugRepository {
-        return LegacyFloatingDebugRepository(activityProvider)
-    }
-
-    val floatingDebugRepository: FloatingDebugRepository by lazy {
-        LegacyFloatingDebugRepository()
-    }
-
-    val isFloatingDebugActiveUseCase: IsFloatingDebugActiveUseCase
-        get() = IsFloatingDebugActiveUseCase(floatingDebugRepository)
-
-    val setFloatingDebugActiveUseCase: SetFloatingDebugActiveUseCase
-        get() = SetFloatingDebugActiveUseCase(floatingDebugRepository)
-
-    val toggleFloatingDebugActiveUseCase: ToggleFloatingDebugActiveUseCase
-        get() = ToggleFloatingDebugActiveUseCase(floatingDebugRepository)
-
-    val getFloatingDebugItemsUseCase: GetFloatingDebugItemsUseCase
-        get() = GetFloatingDebugItemsUseCase(floatingDebugRepository)
-
-    val registerFloatingDebugItemsUseCase: RegisterFloatingDebugItemsUseCase
-        get() = RegisterFloatingDebugItemsUseCase(floatingDebugRepository)
-
-    val clearFloatingDebugItemsUseCase: ClearFloatingDebugItemsUseCase
-        get() = ClearFloatingDebugItemsUseCase(floatingDebugRepository)
-
-    val observeFloatingDebugStateUseCase: ObserveFloatingDebugStateUseCase
-        get() = ObserveFloatingDebugStateUseCase(floatingDebugRepository)
-
-    val getFloatingDebugStateUseCase: GetFloatingDebugStateUseCase
-        get() = GetFloatingDebugStateUseCase(floatingDebugRepository)
-
-    private var cachedFloatingDebugViewModel: FloatingDebugViewModel? = null
-
-    val floatingDebugViewModel: FloatingDebugViewModel
-        get() {
-            var vm = cachedFloatingDebugViewModel
-            if (vm == null) {
-                vm = createFloatingDebugViewModel()
-                cachedFloatingDebugViewModel = vm
-            }
-            return vm
-        }
-
-    fun createFloatingDebugViewModel(activityProvider: (() -> LaunchActivity?)? = null): FloatingDebugViewModel {
-        val repo = if (activityProvider != null) createFloatingDebugRepository(activityProvider) else floatingDebugRepository
-        return FloatingDebugViewModel(
-            observeFloatingDebugStateUseCase = ObserveFloatingDebugStateUseCase(repo),
-            getFloatingDebugStateUseCase = GetFloatingDebugStateUseCase(repo),
-            setFloatingDebugActiveUseCase = SetFloatingDebugActiveUseCase(repo),
-            toggleFloatingDebugActiveUseCase = ToggleFloatingDebugActiveUseCase(repo),
-            registerFloatingDebugItemsUseCase = RegisterFloatingDebugItemsUseCase(repo),
-            clearFloatingDebugItemsUseCase = ClearFloatingDebugItemsUseCase(repo)
-        )
-    }
-
-    fun createKeyboardInsetsRepository(inAppController: WindowInsetsInAppController? = null): KeyboardInsetsRepository {
-        return LegacyKeyboardInsetsRepository(inAppController)
-    }
-
-    val keyboardInsetsRepository: KeyboardInsetsRepository by lazy {
-        LegacyKeyboardInsetsRepository()
-    }
-
-    val requestInAppKeyboardHeightUseCase: RequestInAppKeyboardHeightUseCase
-        get() = RequestInAppKeyboardHeightUseCase(keyboardInsetsRepository)
-
-    val resetInAppKeyboardHeightUseCase: ResetInAppKeyboardHeightUseCase
-        get() = ResetInAppKeyboardHeightUseCase(keyboardInsetsRepository)
-
-    val requestInAppKeyboardHeightWithNavbarUseCase: RequestInAppKeyboardHeightWithNavbarUseCase
-        get() = RequestInAppKeyboardHeightWithNavbarUseCase(keyboardInsetsRepository)
-
-    val updateSystemInsetsUseCase: UpdateSystemInsetsUseCase
-        get() = UpdateSystemInsetsUseCase(keyboardInsetsRepository)
-
-    val getKeyboardInsetsUseCase: GetKeyboardInsetsUseCase
-        get() = GetKeyboardInsetsUseCase(keyboardInsetsRepository)
-
-    val observeKeyboardInsetsUseCase: ObserveKeyboardInsetsUseCase
-        get() = ObserveKeyboardInsetsUseCase(keyboardInsetsRepository)
-
-    private var cachedKeyboardInsetsViewModel: KeyboardInsetsViewModel? = null
-
-    val keyboardInsetsViewModel: KeyboardInsetsViewModel
-        get() {
-            var vm = cachedKeyboardInsetsViewModel
-            if (vm == null) {
-                vm = createKeyboardInsetsViewModel()
-                cachedKeyboardInsetsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createKeyboardInsetsViewModel(inAppController: WindowInsetsInAppController? = null): KeyboardInsetsViewModel {
-        val repo = if (inAppController != null) createKeyboardInsetsRepository(inAppController) else keyboardInsetsRepository
-        return KeyboardInsetsViewModel(
-            observeKeyboardInsetsUseCase = ObserveKeyboardInsetsUseCase(repo),
-            getKeyboardInsetsUseCase = GetKeyboardInsetsUseCase(repo),
-            requestInAppKeyboardHeightUseCase = RequestInAppKeyboardHeightUseCase(repo),
-            resetInAppKeyboardHeightUseCase = ResetInAppKeyboardHeightUseCase(repo),
-            requestInAppKeyboardHeightWithNavbarUseCase = RequestInAppKeyboardHeightWithNavbarUseCase(repo),
-            updateSystemInsetsUseCase = UpdateSystemInsetsUseCase(repo)
-        )
-    }
-
-    fun createMainTabsRepository(controller: MainTabsActivityController? = null): MainTabsRepository {
-        return LegacyMainTabsRepository(account, controller)
-    }
-
-    val mainTabsRepository: MainTabsRepository by lazy {
-        LegacyMainTabsRepository(account)
-    }
-
-    val observeMainTabsConfigUseCase: ObserveMainTabsConfigUseCase
-        get() = ObserveMainTabsConfigUseCase(mainTabsRepository)
-
-    val getMainTabsConfigUseCase: GetMainTabsConfigUseCase
-        get() = GetMainTabsConfigUseCase(mainTabsRepository)
-
-    val setMainTabsVisibleUseCase: SetMainTabsVisibleUseCase
-        get() = SetMainTabsVisibleUseCase(mainTabsRepository)
-
-    val selectMainTabUseCase: SelectMainTabUseCase
-        get() = SelectMainTabUseCase(mainTabsRepository)
-
-    val setShowCallsTabUseCase: SetShowCallsTabUseCase
-        get() = SetShowCallsTabUseCase(mainTabsRepository)
-
-    val updateChatsUnreadCountUseCase: UpdateChatsUnreadCountUseCase
-        get() = UpdateChatsUnreadCountUseCase(mainTabsRepository)
-
-    val setContactsPermissionWarningUseCase: SetContactsPermissionWarningUseCase
-        get() = SetContactsPermissionWarningUseCase(mainTabsRepository)
-
-    private var cachedMainTabsViewModel: MainTabsViewModel? = null
-
-    val mainTabsViewModel: MainTabsViewModel
-        get() {
-            var vm = cachedMainTabsViewModel
-            if (vm == null) {
-                vm = createMainTabsViewModel()
-                cachedMainTabsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createMainTabsViewModel(controller: MainTabsActivityController? = null): MainTabsViewModel {
-        val repo = if (controller != null) createMainTabsRepository(controller) else mainTabsRepository
-        return MainTabsViewModel(
-            observeConfigUseCase = ObserveMainTabsConfigUseCase(repo),
-            getConfigUseCase = GetMainTabsConfigUseCase(repo),
-            setTabsVisibleUseCase = SetMainTabsVisibleUseCase(repo),
-            selectMainTabUseCase = SelectMainTabUseCase(repo),
-            setShowCallsTabUseCase = SetShowCallsTabUseCase(repo),
-            updateChatsUnreadCountUseCase = UpdateChatsUnreadCountUseCase(repo),
-            setContactsPermissionWarningUseCase = SetContactsPermissionWarningUseCase(repo)
-        )
-    }
-
-    fun createRichCaptionRepository(): RichCaptionRepository {
-        return LegacyRichCaptionRepository()
-    }
-
-    val richCaptionRepository: RichCaptionRepository by lazy {
-        LegacyRichCaptionRepository()
-    }
-
-    val observeRichCaptionUseCase: ObserveRichCaptionUseCase
-        get() = ObserveRichCaptionUseCase(richCaptionRepository)
-
-    val getRichCaptionUseCase: GetRichCaptionUseCase
-        get() = GetRichCaptionUseCase(richCaptionRepository)
-
-    val setRichCaptionTextUseCase: SetRichCaptionTextUseCase
-        get() = SetRichCaptionTextUseCase(richCaptionRepository)
-
-    val setRichCaptionCreditUseCase: SetRichCaptionCreditUseCase
-        get() = SetRichCaptionCreditUseCase(richCaptionRepository)
-
-    val setRichCaptionLockedUseCase: SetRichCaptionLockedUseCase
-        get() = SetRichCaptionLockedUseCase(richCaptionRepository)
-
-    val calculateCaptionMeasureWidthUseCase: CalculateCaptionMeasureWidthUseCase
-        get() = CalculateCaptionMeasureWidthUseCase(richCaptionRepository)
-
-    val checkCaptionPressHitUseCase: CheckCaptionPressHitUseCase
-        get() = CheckCaptionPressHitUseCase(richCaptionRepository)
-
-    val clearRichCaptionUseCase: ClearRichCaptionUseCase
-        get() = ClearRichCaptionUseCase(richCaptionRepository)
-
-    private var cachedRichCaptionViewModel: RichCaptionViewModel? = null
-
-    val richCaptionViewModel: RichCaptionViewModel
-        get() {
-            var vm = cachedRichCaptionViewModel
-            if (vm == null) {
-                vm = createRichCaptionViewModel()
-                cachedRichCaptionViewModel = vm
-            }
-            return vm
-        }
-
-    fun createRichCaptionViewModel(): RichCaptionViewModel {
-        return RichCaptionViewModel(
-            observeRichCaptionUseCase = observeRichCaptionUseCase,
-            getRichCaptionUseCase = getRichCaptionUseCase,
-            setRichCaptionTextUseCase = setRichCaptionTextUseCase,
-            setRichCaptionCreditUseCase = setRichCaptionCreditUseCase,
-            setRichCaptionLockedUseCase = setRichCaptionLockedUseCase,
-            clearRichCaptionUseCase = clearRichCaptionUseCase
-        )
-    }
-
-    fun createAdjustPanRepository(): AdjustPanRepository {
-        return LegacyAdjustPanRepository()
-    }
-
-    val adjustPanRepository: AdjustPanRepository by lazy {
-        LegacyAdjustPanRepository()
-    }
-
-    val calculatePanTransitionPlanUseCase: CalculatePanTransitionPlanUseCase
-        get() = CalculatePanTransitionPlanUseCase(adjustPanRepository)
-
-    val computePanProgressUseCase: ComputePanProgressUseCase
-        get() = ComputePanProgressUseCase(adjustPanRepository)
-
-    val observeAdjustPanStateUseCase: ObserveAdjustPanStateUseCase
-        get() = ObserveAdjustPanStateUseCase(adjustPanRepository)
-
-    val getAdjustPanStateUseCase: GetAdjustPanStateUseCase
-        get() = GetAdjustPanStateUseCase(adjustPanRepository)
-
-    val setAdjustPanEnabledUseCase: SetAdjustPanEnabledUseCase
-        get() = SetAdjustPanEnabledUseCase(adjustPanRepository)
-
-    val startAdjustPanTransitionUseCase: StartAdjustPanTransitionUseCase
-        get() = StartAdjustPanTransitionUseCase(adjustPanRepository)
-
-    val updateAdjustPanTransitionUseCase: UpdateAdjustPanTransitionUseCase
-        get() = UpdateAdjustPanTransitionUseCase(adjustPanRepository)
-
-    val stopAdjustPanTransitionUseCase: StopAdjustPanTransitionUseCase
-        get() = StopAdjustPanTransitionUseCase(adjustPanRepository)
-
-    val resetAdjustPanUseCase: ResetAdjustPanUseCase
-        get() = ResetAdjustPanUseCase(adjustPanRepository)
-
-    private var cachedAdjustPanViewModel: AdjustPanViewModel? = null
-
-    val adjustPanViewModel: AdjustPanViewModel
-        get() {
-            var vm = cachedAdjustPanViewModel
-            if (vm == null) {
-                vm = createAdjustPanViewModel()
-                cachedAdjustPanViewModel = vm
-            }
-            return vm
-        }
-
-    fun createAdjustPanViewModel(): AdjustPanViewModel {
-        return AdjustPanViewModel(
-            calculatePlanUseCase = calculatePanTransitionPlanUseCase,
-            observeStateUseCase = observeAdjustPanStateUseCase,
-            getAdjustPanStateUseCase = getAdjustPanStateUseCase,
-            setEnabledUseCase = setAdjustPanEnabledUseCase,
-            startTransitionUseCase = startAdjustPanTransitionUseCase,
-            updateTransitionUseCase = updateAdjustPanTransitionUseCase,
-            stopTransitionUseCase = stopAdjustPanTransitionUseCase,
-            resetUseCase = resetAdjustPanUseCase
-        )
-    }
-
-    fun createKeyboardHideRepository(): KeyboardHideRepository {
-        return LegacyKeyboardHideRepository()
-    }
-
-    val keyboardHideRepository: KeyboardHideRepository by lazy {
-        LegacyKeyboardHideRepository()
-    }
-
-    val calculateKeyboardHideProgressUseCase: CalculateKeyboardHideProgressUseCase
-        get() = CalculateKeyboardHideProgressUseCase(keyboardHideRepository)
-
-    val evaluateKeyboardDismissDecisionUseCase: EvaluateKeyboardDismissDecisionUseCase
-        get() = EvaluateKeyboardDismissDecisionUseCase(keyboardHideRepository)
-
-    val observeKeyboardHideStateUseCase: ObserveKeyboardHideStateUseCase
-        get() = ObserveKeyboardHideStateUseCase(keyboardHideRepository)
-
-    val getKeyboardHideStateUseCase: GetKeyboardHideStateUseCase
-        get() = GetKeyboardHideStateUseCase(keyboardHideRepository)
-
-    val setKeyboardHideEnabledUseCase: SetKeyboardHideEnabledUseCase
-        get() = SetKeyboardHideEnabledUseCase(keyboardHideRepository)
-
-    val startKeyboardHideMovingUseCase: StartKeyboardHideMovingUseCase
-        get() = StartKeyboardHideMovingUseCase(keyboardHideRepository)
-
-    val updateKeyboardHideMovingUseCase: UpdateKeyboardHideMovingUseCase
-        get() = UpdateKeyboardHideMovingUseCase(keyboardHideRepository)
-
-    val endKeyboardHideMovingUseCase: EndKeyboardHideMovingUseCase
-        get() = EndKeyboardHideMovingUseCase(keyboardHideRepository)
-
-    val finishKeyboardHideDismissUseCase: FinishKeyboardHideDismissUseCase
-        get() = FinishKeyboardHideDismissUseCase(keyboardHideRepository)
-
-    val resetKeyboardHideUseCase: ResetKeyboardHideUseCase
-        get() = ResetKeyboardHideUseCase(keyboardHideRepository)
-
-    private var cachedKeyboardHideViewModel: KeyboardHideViewModel? = null
-
-    val keyboardHideViewModel: KeyboardHideViewModel
-        get() {
-            var vm = cachedKeyboardHideViewModel
-            if (vm == null) {
-                vm = createKeyboardHideViewModel()
-                cachedKeyboardHideViewModel = vm
-            }
-            return vm
-        }
-
-    fun createKeyboardHideViewModel(): KeyboardHideViewModel {
-        return KeyboardHideViewModel(
-            calculateProgressUseCase = calculateKeyboardHideProgressUseCase,
-            evaluateDismissDecisionUseCase = evaluateKeyboardDismissDecisionUseCase,
-            observeStateUseCase = observeKeyboardHideStateUseCase,
-            getStateUseCase = getKeyboardHideStateUseCase,
-            setEnabledUseCase = setKeyboardHideEnabledUseCase,
-            startMovingUseCase = startKeyboardHideMovingUseCase,
-            updateMovingUseCase = updateKeyboardHideMovingUseCase,
-            endMovingUseCase = endKeyboardHideMovingUseCase,
-            finishDismissUseCase = finishKeyboardHideDismissUseCase,
-            resetUseCase = resetKeyboardHideUseCase
-        )
-    }
-
-    fun createBusinessRecipientsRepository(): BusinessRecipientsRepository {
-        return LegacyBusinessRecipientsRepository()
-    }
-
-    val businessRecipientsRepository: BusinessRecipientsRepository by lazy {
-        LegacyBusinessRecipientsRepository()
-    }
+    val businessRecipientsRepository: BusinessRecipientsRepository
+        get() = business.businessRecipientsRepository
 
     val observeBusinessRecipientsUseCase: ObserveBusinessRecipientsUseCase
-        get() = ObserveBusinessRecipientsUseCase(businessRecipientsRepository)
+        get() = business.observeBusinessRecipientsUseCase
 
     val getBusinessRecipientsUseCase: GetBusinessRecipientsUseCase
-        get() = GetBusinessRecipientsUseCase(businessRecipientsRepository)
+        get() = business.getBusinessRecipientsUseCase
 
     val setBusinessRecipientsUseCase: SetBusinessRecipientsUseCase
-        get() = SetBusinessRecipientsUseCase(businessRecipientsRepository)
+        get() = business.setBusinessRecipientsUseCase
 
     val toggleExcludeSelectedUseCase: ToggleExcludeSelectedUseCase
-        get() = ToggleExcludeSelectedUseCase(businessRecipientsRepository)
+        get() = business.toggleExcludeSelectedUseCase
 
     val toggleRecipientFilterUseCase: ToggleRecipientFilterUseCase
-        get() = ToggleRecipientFilterUseCase(businessRecipientsRepository)
+        get() = business.toggleRecipientFilterUseCase
 
     val addSelectedUsersUseCase: AddSelectedUsersUseCase
-        get() = AddSelectedUsersUseCase(businessRecipientsRepository)
+        get() = business.addSelectedUsersUseCase
 
     val removeSelectedUserUseCase: RemoveSelectedUserUseCase
-        get() = RemoveSelectedUserUseCase(businessRecipientsRepository)
+        get() = business.removeSelectedUserUseCase
 
     val addExcludedUsersUseCase: AddExcludedUsersUseCase
-        get() = AddExcludedUsersUseCase(businessRecipientsRepository)
+        get() = business.addExcludedUsersUseCase
 
     val removeExcludedUserUseCase: RemoveExcludedUserUseCase
-        get() = RemoveExcludedUserUseCase(businessRecipientsRepository)
+        get() = business.removeExcludedUserUseCase
 
     val checkRecipientsChangesUseCase: CheckRecipientsChangesUseCase
-        get() = CheckRecipientsChangesUseCase(businessRecipientsRepository)
+        get() = business.checkRecipientsChangesUseCase
 
     val validateBusinessRecipientsUseCase: ValidateBusinessRecipientsUseCase
-        get() = ValidateBusinessRecipientsUseCase(businessRecipientsRepository)
+        get() = business.validateBusinessRecipientsUseCase
 
     val resetBusinessRecipientsUseCase: ResetBusinessRecipientsUseCase
-        get() = ResetBusinessRecipientsUseCase(businessRecipientsRepository)
-
-    private var cachedBusinessRecipientsViewModel: BusinessRecipientsViewModel? = null
+        get() = business.resetBusinessRecipientsUseCase
 
     val businessRecipientsViewModel: BusinessRecipientsViewModel
-        get() {
-            var vm = cachedBusinessRecipientsViewModel
-            if (vm == null) {
-                vm = createBusinessRecipientsViewModel()
-                cachedBusinessRecipientsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createBusinessRecipientsViewModel(): BusinessRecipientsViewModel {
-        return BusinessRecipientsViewModel(
-            observeRecipientsUseCase = observeBusinessRecipientsUseCase,
-            getRecipientsUseCase = getBusinessRecipientsUseCase,
-            setRecipientsUseCase = setBusinessRecipientsUseCase,
-            toggleExcludeSelectedUseCase = toggleExcludeSelectedUseCase,
-            toggleRecipientFilterUseCase = toggleRecipientFilterUseCase,
-            addSelectedUsersUseCase = addSelectedUsersUseCase,
-            removeSelectedUserUseCase = removeSelectedUserUseCase,
-            addExcludedUsersUseCase = addExcludedUsersUseCase,
-            removeExcludedUserUseCase = removeExcludedUserUseCase,
-            checkChangesUseCase = checkRecipientsChangesUseCase,
-            validateUseCase = validateBusinessRecipientsUseCase,
-            resetUseCase = resetBusinessRecipientsUseCase
-        )
-    }
-
-    fun createPinchToZoomRepository(): PinchToZoomRepository {
-        return LegacyPinchToZoomRepository()
-    }
-
-    val pinchToZoomRepository: PinchToZoomRepository by lazy {
-        LegacyPinchToZoomRepository()
-    }
-
-    val observePinchZoomStateUseCase: ObservePinchZoomStateUseCase
-        get() = ObservePinchZoomStateUseCase(pinchToZoomRepository)
-
-    val getPinchZoomStateUseCase: GetPinchZoomStateUseCase
-        get() = GetPinchZoomStateUseCase(pinchToZoomRepository)
-
-    val calculatePinchScaleUseCase: CalculatePinchScaleUseCase
-        get() = CalculatePinchScaleUseCase(pinchToZoomRepository)
-
-    val calculatePinchTranslationUseCase: CalculatePinchTranslationUseCase
-        get() = CalculatePinchTranslationUseCase(pinchToZoomRepository)
-
-    val calculatePinchTransformUseCase: CalculatePinchTransformUseCase
-        get() = CalculatePinchTransformUseCase(pinchToZoomRepository)
-
-    val calculatePinchImageBoundsUseCase: CalculatePinchImageBoundsUseCase
-        get() = CalculatePinchImageBoundsUseCase(pinchToZoomRepository)
-
-    val evaluatePinchGestureUseCase: EvaluatePinchGestureUseCase
-        get() = EvaluatePinchGestureUseCase(pinchToZoomRepository)
-
-    val startPinchZoomUseCase: StartPinchZoomUseCase
-        get() = StartPinchZoomUseCase(pinchToZoomRepository)
-
-    val updatePinchZoomUseCase: UpdatePinchZoomUseCase
-        get() = UpdatePinchZoomUseCase(pinchToZoomRepository)
-
-    val finishPinchZoomUseCase: FinishPinchZoomUseCase
-        get() = FinishPinchZoomUseCase(pinchToZoomRepository)
-
-    val resetPinchZoomUseCase: ResetPinchZoomUseCase
-        get() = ResetPinchZoomUseCase(pinchToZoomRepository)
-
-    private var cachedPinchToZoomViewModel: PinchToZoomViewModel? = null
-
-    val pinchToZoomViewModel: PinchToZoomViewModel
-        get() {
-            var vm = cachedPinchToZoomViewModel
-            if (vm == null) {
-                vm = createPinchToZoomViewModel()
-                cachedPinchToZoomViewModel = vm
-            }
-            return vm
-        }
-
-    fun createPinchToZoomViewModel(): PinchToZoomViewModel {
-        return PinchToZoomViewModel(
-            observeZoomStateUseCase = observePinchZoomStateUseCase,
-            getZoomStateUseCase = getPinchZoomStateUseCase,
-            calculateScaleUseCase = calculatePinchScaleUseCase,
-            calculateTranslationUseCase = calculatePinchTranslationUseCase,
-            calculateTransformUseCase = calculatePinchTransformUseCase,
-            calculateImageBoundsUseCase = calculatePinchImageBoundsUseCase,
-            evaluatePinchGestureUseCase = evaluatePinchGestureUseCase,
-            startZoomUseCase = startPinchZoomUseCase,
-            updateZoomUseCase = updatePinchZoomUseCase,
-            finishZoomUseCase = finishPinchZoomUseCase,
-            resetUseCase = resetPinchZoomUseCase
-        )
-    }
-
-    fun createRecyclerScrollRepository(): RecyclerScrollRepository {
-        return LegacyRecyclerScrollRepository()
-    }
-
-    val recyclerScrollRepository: RecyclerScrollRepository by lazy {
-        LegacyRecyclerScrollRepository()
-    }
+        get() = business.businessRecipientsViewModel
 
-    val observeRecyclerScrollStateUseCase: ObserveRecyclerScrollStateUseCase
-        get() = ObserveRecyclerScrollStateUseCase(recyclerScrollRepository)
+    fun createBusinessRecipientsViewModel(): BusinessRecipientsViewModel = business.createBusinessRecipientsViewModel()
 
-    val getRecyclerScrollStateUseCase: GetRecyclerScrollStateUseCase
-        get() = GetRecyclerScrollStateUseCase(recyclerScrollRepository)
+    // ==================== MEDIA DOMAIN ====================
 
-    val evaluateScrollEligibilityUseCase: EvaluateScrollEligibilityUseCase
-        get() = EvaluateScrollEligibilityUseCase(recyclerScrollRepository)
+    var mediaRepository: MediaRepository
+        get() = media.mediaRepository
+        set(value) { media.mediaRepository = value }
 
-    val calculateScrollAnimationPlanUseCase: CalculateScrollAnimationPlanUseCase
-        get() = CalculateScrollAnimationPlanUseCase(recyclerScrollRepository)
+    val observeMediaAlbumsUseCase: ObserveMediaAlbumsUseCase
+        get() = media.observeMediaAlbumsUseCase
 
-    val calculateScrollLengthUseCase: CalculateScrollLengthUseCase
-        get() = CalculateScrollLengthUseCase(recyclerScrollRepository)
+    val getMediaAlbumsUseCase: GetMediaAlbumsUseCase
+        get() = media.getMediaAlbumsUseCase
 
-    val computeScrollViewTranslationsUseCase: ComputeScrollViewTranslationsUseCase
-        get() = ComputeScrollViewTranslationsUseCase(recyclerScrollRepository)
+    val getAlbumMediaUseCase: GetAlbumMediaUseCase
+        get() = media.getAlbumMediaUseCase
 
-    val startRecyclerScrollUseCase: StartRecyclerScrollUseCase
-        get() = StartRecyclerScrollUseCase(recyclerScrollRepository)
+    val getAllMediaUseCase: GetAllMediaUseCase
+        get() = media.getAllMediaUseCase
 
-    val updateRecyclerScrollProgressUseCase: UpdateRecyclerScrollProgressUseCase
-        get() = UpdateRecyclerScrollProgressUseCase(recyclerScrollRepository)
+    val mediaViewModel: MediaViewModel
+        get() = media.mediaViewModel
 
-    val finishRecyclerScrollUseCase: FinishRecyclerScrollUseCase
-        get() = FinishRecyclerScrollUseCase(recyclerScrollRepository)
+    fun createMediaViewModel(): MediaViewModel = media.createMediaViewModel()
 
-    val cancelRecyclerScrollUseCase: CancelRecyclerScrollUseCase
-        get() = CancelRecyclerScrollUseCase(recyclerScrollRepository)
+    var voipRepository: VoIPRepository
+        get() = media.voipRepository
+        set(value) { media.voipRepository = value }
 
-    val resetRecyclerScrollUseCase: ResetRecyclerScrollUseCase
-        get() = ResetRecyclerScrollUseCase(recyclerScrollRepository)
-
-    private var cachedRecyclerScrollViewModel: RecyclerScrollViewModel? = null
-
-    val recyclerScrollViewModel: RecyclerScrollViewModel
-        get() {
-            var vm = cachedRecyclerScrollViewModel
-            if (vm == null) {
-                vm = createRecyclerScrollViewModel()
-                cachedRecyclerScrollViewModel = vm
-            }
-            return vm
-        }
-
-    fun createRecyclerScrollViewModel(): RecyclerScrollViewModel {
-        return RecyclerScrollViewModel(
-            observeScrollStateUseCase = observeRecyclerScrollStateUseCase,
-            getScrollStateUseCase = getRecyclerScrollStateUseCase,
-            evaluateScrollEligibilityUseCase = evaluateScrollEligibilityUseCase,
-            calculateScrollAnimationPlanUseCase = calculateScrollAnimationPlanUseCase,
-            calculateScrollLengthUseCase = calculateScrollLengthUseCase,
-            computeScrollViewTranslationsUseCase = computeScrollViewTranslationsUseCase,
-            startRecyclerScrollUseCase = startRecyclerScrollUseCase,
-            updateRecyclerScrollProgressUseCase = updateRecyclerScrollProgressUseCase,
-            finishRecyclerScrollUseCase = finishRecyclerScrollUseCase,
-            cancelRecyclerScrollUseCase = cancelRecyclerScrollUseCase,
-            resetRecyclerScrollUseCase = resetRecyclerScrollUseCase
-        )
-    }
+    val observeCurrentCallUseCase: ObserveCurrentCallUseCase
+        get() = media.observeCurrentCallUseCase
 
-    fun createEmojiEffectsRepository(): EmojiEffectsRepository {
-        return LegacyEmojiEffectsRepository()
-    }
+    val getCurrentCallUseCase: GetCurrentCallUseCase
+        get() = media.getCurrentCallUseCase
 
-    val emojiEffectsRepository: EmojiEffectsRepository by lazy {
-        LegacyEmojiEffectsRepository()
-    }
+    val startCallUseCase: StartCallUseCase
+        get() = media.startCallUseCase
 
-    val normalizeEmojiUseCase: NormalizeEmojiUseCase
-        get() = NormalizeEmojiUseCase()
+    val acceptCallUseCase: AcceptCallUseCase
+        get() = media.acceptCallUseCase
 
-    val evaluateEmojiSupportUseCase: EvaluateEmojiSupportUseCase
-        get() = EvaluateEmojiSupportUseCase(normalizeEmojiUseCase)
+    val declineCallUseCase: DeclineCallUseCase
+        get() = media.declineCallUseCase
 
-    val recordEmojiTapUseCase: RecordEmojiTapUseCase
-        get() = RecordEmojiTapUseCase(emojiEffectsRepository, normalizeEmojiUseCase)
+    val hangUpCallUseCase: HangUpCallUseCase
+        get() = media.hangUpCallUseCase
 
-    val encodeEmojiInteractionsJsonUseCase: EncodeEmojiInteractionsJsonUseCase
-        get() = EncodeEmojiInteractionsJsonUseCase()
+    val toggleMuteUseCase: ToggleMuteUseCase
+        get() = media.toggleMuteUseCase
 
-    val decodeEmojiInteractionsJsonUseCase: DecodeEmojiInteractionsJsonUseCase
-        get() = DecodeEmojiInteractionsJsonUseCase()
+    val toggleSpeakerphoneUseCase: ToggleSpeakerphoneUseCase
+        get() = media.toggleSpeakerphoneUseCase
 
-    val calculateEmojiBoundsUseCase: CalculateEmojiBoundsUseCase
-        get() = CalculateEmojiBoundsUseCase()
+    val callViewModel: CallViewModel
+        get() = media.callViewModel
 
-    val calculateEmojiOverlayPositionUseCase: CalculateEmojiOverlayPositionUseCase
-        get() = CalculateEmojiOverlayPositionUseCase()
+    fun createCallViewModel(): CallViewModel = media.createCallViewModel()
 
-    val evaluateAnimationQuotaUseCase: EvaluateAnimationQuotaUseCase
-        get() = EvaluateAnimationQuotaUseCase()
-
-    val observeEmojiEffectsStateUseCase: ObserveEmojiEffectsStateUseCase
-        get() = ObserveEmojiEffectsStateUseCase(emojiEffectsRepository)
-
-    val getEmojiEffectsStateUseCase: GetEmojiEffectsStateUseCase
-        get() = GetEmojiEffectsStateUseCase(emojiEffectsRepository)
-
-    val startEmojiEffectUseCase: StartEmojiEffectUseCase
-        get() = StartEmojiEffectUseCase(emojiEffectsRepository, evaluateAnimationQuotaUseCase)
-
-    val updateEmojiEffectProgressUseCase: UpdateEmojiEffectProgressUseCase
-        get() = UpdateEmojiEffectProgressUseCase(emojiEffectsRepository)
-
-    val dismissEmojiEffectUseCase: DismissEmojiEffectUseCase
-        get() = DismissEmojiEffectUseCase(emojiEffectsRepository)
-
-    val clearEmojiEffectsUseCase: ClearEmojiEffectsUseCase
-        get() = ClearEmojiEffectsUseCase(emojiEffectsRepository)
-
-    private var cachedEmojiEffectsViewModel: EmojiEffectsViewModel? = null
-
-    val emojiEffectsViewModel: EmojiEffectsViewModel
-        get() {
-            var vm = cachedEmojiEffectsViewModel
-            if (vm == null) {
-                vm = createEmojiEffectsViewModel()
-                cachedEmojiEffectsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createEmojiEffectsViewModel(): EmojiEffectsViewModel {
-        return EmojiEffectsViewModel(
-            observeEmojiEffectsStateUseCase = observeEmojiEffectsStateUseCase,
-            recordEmojiTapUseCase = recordEmojiTapUseCase,
-            startEmojiEffectUseCase = startEmojiEffectUseCase,
-            updateEmojiEffectProgressUseCase = updateEmojiEffectProgressUseCase,
-            dismissEmojiEffectUseCase = dismissEmojiEffectUseCase,
-            clearEmojiEffectsUseCase = clearEmojiEffectsUseCase,
-            repository = emojiEffectsRepository
-        )
-    }
-
-    fun createMentionsRepository(): MentionsRepository {
-        return LegacyMentionsRepository()
-    }
-
-    val mentionsRepository: MentionsRepository by lazy {
-        LegacyMentionsRepository()
-    }
-
-    val validateUsernameUseCase: ValidateUsernameUseCase
-        get() = ValidateUsernameUseCase()
-
-    val parseMentionQueryUseCase: ParseMentionQueryUseCase
-        get() = ParseMentionQueryUseCase(validateUsernameUseCase)
-
-    val filterMentionsUseCase: FilterMentionsUseCase
-        get() = FilterMentionsUseCase()
-
-    val formatMentionReplacementUseCase: FormatMentionReplacementUseCase
-        get() = FormatMentionReplacementUseCase()
-
-    val observeMentionsStateUseCase: ObserveMentionsStateUseCase
-        get() = ObserveMentionsStateUseCase(mentionsRepository)
-
-    val getMentionsStateUseCase: GetMentionsStateUseCase
-        get() = GetMentionsStateUseCase(mentionsRepository)
-
-    val updateMentionQueryUseCase: UpdateMentionQueryUseCase
-        get() = UpdateMentionQueryUseCase(mentionsRepository, parseMentionQueryUseCase)
-
-    val setMentionCandidatesUseCase: SetMentionCandidatesUseCase
-        get() = SetMentionCandidatesUseCase(mentionsRepository, filterMentionsUseCase)
-
-    val dismissMentionsUseCase: DismissMentionsUseCase
-        get() = DismissMentionsUseCase(mentionsRepository)
-
-    val clearMentionsUseCase: ClearMentionsUseCase
-        get() = ClearMentionsUseCase(mentionsRepository)
-
-    private var cachedMentionsViewModel: MentionsViewModel? = null
-
-    val mentionsViewModel: MentionsViewModel
-        get() {
-            var vm = cachedMentionsViewModel
-            if (vm == null) {
-                vm = createMentionsViewModel()
-                cachedMentionsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createMentionsViewModel(): MentionsViewModel {
-        return MentionsViewModel(
-            observeMentionsStateUseCase = observeMentionsStateUseCase,
-            updateMentionQueryUseCase = updateMentionQueryUseCase,
-            setMentionCandidatesUseCase = setMentionCandidatesUseCase,
-            formatMentionReplacementUseCase = formatMentionReplacementUseCase,
-            dismissMentionsUseCase = dismissMentionsUseCase,
-            clearMentionsUseCase = clearMentionsUseCase
-        )
-    }
-
-    fun createSharedMediaRepository(): SharedMediaRepository {
-        return LegacySharedMediaRepository(
-            groupMediaByMonthUseCase = groupMediaByMonthUseCase,
-            calculateMediaSelectionUseCase = calculateMediaSelectionUseCase,
-            filterSharedMediaUseCase = filterSharedMediaUseCase
-        )
-    }
-
-    val sharedMediaRepository: SharedMediaRepository by lazy {
-        LegacySharedMediaRepository(
-            groupMediaByMonthUseCase = groupMediaByMonthUseCase,
-            calculateMediaSelectionUseCase = calculateMediaSelectionUseCase,
-            filterSharedMediaUseCase = filterSharedMediaUseCase
-        )
-    }
+    var fileLoaderRepository: FileLoaderRepository
+        get() = media.fileLoaderRepository
+        set(value) { media.fileLoaderRepository = value }
+
+    val observeTransfersUseCase: ObserveTransfersUseCase
+        get() = media.observeTransfersUseCase
+
+    val observeTransferUseCase: ObserveTransferUseCase
+        get() = media.observeTransferUseCase
+
+    val getActiveDownloadsUseCase: GetActiveDownloadsUseCase
+        get() = media.getActiveDownloadsUseCase
+
+    val getRecentDownloadsUseCase: GetRecentDownloadsUseCase
+        get() = media.getRecentDownloadsUseCase
+
+    val loadFileUseCase: LoadFileUseCase
+        get() = media.loadFileUseCase
+
+    val cancelLoadFileUseCase: CancelLoadFileUseCase
+        get() = media.cancelLoadFileUseCase
+
+    val cancelAllDownloadsUseCase: CancelAllDownloadsUseCase
+        get() = media.cancelAllDownloadsUseCase
+
+    val uploadFileUseCase: UploadFileUseCase
+        get() = media.uploadFileUseCase
+
+    val cancelFileUploadUseCase: CancelFileUploadUseCase
+        get() = media.cancelFileUploadUseCase
+
+    val fileLoaderViewModel: FileLoaderViewModel
+        get() = media.fileLoaderViewModel
+
+    fun createFileLoaderViewModel(): FileLoaderViewModel = media.createFileLoaderViewModel()
+
+    var storiesRepository: StoriesRepository
+        get() = media.storiesRepository
+        set(value) { media.storiesRepository = value }
+
+    val observeStoriesUseCase: ObserveStoriesUseCase
+        get() = media.observeStoriesUseCase
+
+    val observeHiddenStoriesUseCase: ObserveHiddenStoriesUseCase
+        get() = media.observeHiddenStoriesUseCase
+
+    val observeStealthModeUseCase: ObserveStealthModeUseCase
+        get() = media.observeStealthModeUseCase
+
+    val observeSelfStoriesUseCase: ObserveSelfStoriesUseCase
+        get() = media.observeSelfStoriesUseCase
+
+    val getPeerStoriesUseCase: GetPeerStoriesUseCase
+        get() = media.getPeerStoriesUseCase
+
+    val markStoryAsReadUseCase: MarkStoryAsReadUseCase
+        get() = media.markStoryAsReadUseCase
+
+    val deleteStoryUseCase: DeleteStoryUseCase
+        get() = media.deleteStoryUseCase
+
+    val toggleStoryPinUseCase: ToggleStoryPinUseCase
+        get() = media.toggleStoryPinUseCase
+
+    val toggleStoryHiddenUseCase: ToggleStoryHiddenUseCase
+        get() = media.toggleStoryHiddenUseCase
+
+    val activateStealthModeUseCase: ActivateStealthModeUseCase
+        get() = media.activateStealthModeUseCase
+
+    val getStoryLimitUseCase: GetStoryLimitUseCase
+        get() = media.getStoryLimitUseCase
+
+    val refreshStoriesUseCase: RefreshStoriesUseCase
+        get() = media.refreshStoriesUseCase
+
+    val storiesViewModel: StoriesViewModel
+        get() = media.storiesViewModel
+
+    fun createStoriesViewModel(): StoriesViewModel = media.createStoriesViewModel()
+
+    var chromecastRepository: ChromecastRepository
+        get() = media.chromecastRepository
+        set(value) { media.chromecastRepository = value }
+
+    val observeChromecastStateUseCase: ObserveChromecastStateUseCase
+        get() = media.observeChromecastStateUseCase
+
+    val getChromecastStateUseCase: GetChromecastStateUseCase
+        get() = media.getChromecastStateUseCase
+
+    val isCastingUseCase: IsCastingUseCase
+        get() = media.isCastingUseCase
+
+    val isMediaPlayingOnCastUseCase: IsMediaPlayingOnCastUseCase
+        get() = media.isMediaPlayingOnCastUseCase
+
+    val castMediaUseCase: CastMediaUseCase
+        get() = media.castMediaUseCase
+
+    val stopCastingUseCase: StopCastingUseCase
+        get() = media.stopCastingUseCase
+
+    val setCastCoverFileUseCase: SetCastCoverFileUseCase
+        get() = media.setCastCoverFileUseCase
+
+    val chromecastViewModel: ChromecastViewModel
+        get() = media.chromecastViewModel
+
+    fun createChromecastViewModel(): ChromecastViewModel = media.createChromecastViewModel()
+
+    var gallerySaveRepository: GallerySaveRepository
+        get() = media.gallerySaveRepository
+        set(value) { media.gallerySaveRepository = value }
+
+    val observeGallerySaveConfigUseCase: ObserveGallerySaveConfigUseCase
+        get() = media.observeGallerySaveConfigUseCase
+
+    val getGallerySaveConfigUseCase: GetGallerySaveConfigUseCase
+        get() = media.getGallerySaveConfigUseCase
+
+    val getGallerySaveSettingsUseCase: GetGallerySaveSettingsUseCase
+        get() = media.getGallerySaveSettingsUseCase
+
+    val updateGallerySaveSettingsUseCase: UpdateGallerySaveSettingsUseCase
+        get() = media.updateGallerySaveSettingsUseCase
+
+    val toggleGallerySavePeerTypeUseCase: ToggleGallerySavePeerTypeUseCase
+        get() = media.toggleGallerySavePeerTypeUseCase
+
+    val setGallerySaveVideoLimitUseCase: SetGallerySaveVideoLimitUseCase
+        get() = media.setGallerySaveVideoLimitUseCase
+
+    val getGallerySaveExceptionsUseCase: GetGallerySaveExceptionsUseCase
+        get() = media.getGallerySaveExceptionsUseCase
+
+    val setGallerySaveExceptionUseCase: SetGallerySaveExceptionUseCase
+        get() = media.setGallerySaveExceptionUseCase
+
+    val removeGallerySaveExceptionUseCase: RemoveGallerySaveExceptionUseCase
+        get() = media.removeGallerySaveExceptionUseCase
+
+    val removeAllGallerySaveExceptionsUseCase: RemoveAllGallerySaveExceptionsUseCase
+        get() = media.removeAllGallerySaveExceptionsUseCase
+
+    val gallerySaveViewModel: GallerySaveViewModel
+        get() = media.gallerySaveViewModel
+
+    fun createGallerySaveViewModel(): GallerySaveViewModel = media.createGallerySaveViewModel()
+
+    var pipRepository: PipRepository
+        get() = media.pipRepository
+        set(value) { media.pipRepository = value }
+
+    val observePipSessionUseCase: ObservePipSessionUseCase
+        get() = media.observePipSessionUseCase
+
+    val getPipSessionUseCase: GetPipSessionUseCase
+        get() = media.getPipSessionUseCase
+
+    val registerPipSourceUseCase: RegisterPipSourceUseCase
+        get() = media.registerPipSourceUseCase
+
+    val unregisterPipSourceUseCase: UnregisterPipSourceUseCase
+        get() = media.unregisterPipSourceUseCase
+
+    val updatePipSourceStateUseCase: UpdatePipSourceStateUseCase
+        get() = media.updatePipSourceStateUseCase
+
+    val dispatchPipStateUseCase: DispatchPipStateUseCase
+        get() = media.dispatchPipStateUseCase
+
+    val triggerPipActionUseCase: TriggerPipActionUseCase
+        get() = media.triggerPipActionUseCase
+
+    val evaluatePipEligibilityUseCase: EvaluatePipEligibilityUseCase
+        get() = media.evaluatePipEligibilityUseCase
+
+    val pipViewModel: PipViewModel
+        get() = media.pipViewModel
+
+    fun createPipViewModel(): PipViewModel = media.createPipViewModel()
+
+    var fileRefRepository: FileRefRepository
+        get() = media.fileRefRepository
+        set(value) { media.fileRefRepository = value }
+
+    val observeFileRefStatsUseCase: ObserveFileRefStatsUseCase
+        get() = media.observeFileRefStatsUseCase
+
+    val getFileRefStatsUseCase: GetFileRefStatsUseCase
+        get() = media.getFileRefStatsUseCase
+
+    val requestReferenceRenewalUseCase: RequestReferenceRenewalUseCase
+        get() = media.requestReferenceRenewalUseCase
+
+    val notifyReferenceRenewedUseCase: NotifyReferenceRenewedUseCase
+        get() = media.notifyReferenceRenewedUseCase
+
+    val cancelFileRefRequestUseCase: CancelFileRefRequestUseCase
+        get() = media.cancelFileRefRequestUseCase
+
+    val clearFileRefCacheUseCase: ClearFileRefCacheUseCase
+        get() = media.clearFileRefCacheUseCase
+
+    val fileRefViewModel: FileRefViewModel
+        get() = media.fileRefViewModel
+
+    fun createFileRefViewModel(): FileRefViewModel = media.createFileRefViewModel()
+
+    var cameraRepository: CameraRepository
+        get() = media.cameraRepository
+        set(value) { media.cameraRepository = value }
+
+    val observeCameraStateUseCase: ObserveCameraStateUseCase
+        get() = media.observeCameraStateUseCase
+
+    val getCameraStateUseCase: GetCameraStateUseCase
+        get() = media.getCameraStateUseCase
+
+    val initCamerasUseCase: InitCamerasUseCase
+        get() = media.initCamerasUseCase
+
+    val selectCameraUseCase: SelectCameraUseCase
+        get() = media.selectCameraUseCase
+
+    val switchCameraUseCase: SwitchCameraUseCase
+        get() = media.switchCameraUseCase
+
+    val setCameraFlashModeUseCase: SetCameraFlashModeUseCase
+        get() = media.setCameraFlashModeUseCase
+
+    val toggleMirrorFrontCameraUseCase: ToggleMirrorFrontCameraUseCase
+        get() = media.toggleMirrorFrontCameraUseCase
+
+    val chooseOptimalResolutionUseCase: ChooseOptimalResolutionUseCase
+        get() = media.chooseOptimalResolutionUseCase
+
+    val notifyCameraRecordingUseCase: NotifyCameraRecordingUseCase
+        get() = media.notifyCameraRecordingUseCase
+
+    val cameraViewModel: CameraViewModel
+        get() = media.cameraViewModel
+
+    fun createCameraViewModel(): CameraViewModel = media.createCameraViewModel()
+
+    var cacheByChatsRepository: CacheByChatsRepository
+        get() = media.cacheByChatsRepository
+        set(value) { media.cacheByChatsRepository = value }
+
+    val observeCacheByChatsConfigUseCase: ObserveCacheByChatsConfigUseCase
+        get() = media.observeCacheByChatsConfigUseCase
+
+    val getCacheByChatsConfigUseCase: GetCacheByChatsConfigUseCase
+        get() = media.getCacheByChatsConfigUseCase
+
+    val setKeepMediaDurationUseCase: SetKeepMediaDurationUseCase
+        get() = media.setKeepMediaDurationUseCase
+
+    val setKeepMediaExceptionUseCase: SetKeepMediaExceptionUseCase
+        get() = media.setKeepMediaExceptionUseCase
+
+    val removeKeepMediaExceptionUseCase: RemoveKeepMediaExceptionUseCase
+        get() = media.removeKeepMediaExceptionUseCase
+
+    val clearKeepMediaExceptionsUseCase: ClearKeepMediaExceptionsUseCase
+        get() = media.clearKeepMediaExceptionsUseCase
+
+    val cacheByChatsViewModel: CacheByChatsViewModel
+        get() = media.cacheByChatsViewModel
+
+    fun createCacheByChatsViewModel(): CacheByChatsViewModel = media.createCacheByChatsViewModel()
+
+    fun createSharedMediaRepository(): SharedMediaRepository = media.createSharedMediaRepository()
+
+    val sharedMediaRepository: SharedMediaRepository
+        get() = media.sharedMediaRepository
 
     val resolveAvailableTabsUseCase: ResolveAvailableTabsUseCase
-        get() = ResolveAvailableTabsUseCase()
+        get() = media.resolveAvailableTabsUseCase
 
     val filterSharedMediaUseCase: FilterSharedMediaUseCase
-        get() = FilterSharedMediaUseCase()
+        get() = media.filterSharedMediaUseCase
 
     val groupMediaByMonthUseCase: GroupMediaByMonthUseCase
-        get() = GroupMediaByMonthUseCase()
+        get() = media.groupMediaByMonthUseCase
 
     val calculateMediaSelectionUseCase: CalculateMediaSelectionUseCase
-        get() = CalculateMediaSelectionUseCase()
+        get() = media.calculateMediaSelectionUseCase
 
     val observeSharedMediaStateUseCase: ObserveSharedMediaStateUseCase
-        get() = ObserveSharedMediaStateUseCase(sharedMediaRepository)
+        get() = media.observeSharedMediaStateUseCase
 
     val getSharedMediaStateUseCase: GetSharedMediaStateUseCase
-        get() = GetSharedMediaStateUseCase(sharedMediaRepository)
+        get() = media.getSharedMediaStateUseCase
 
     val selectSharedMediaTabUseCase: SelectSharedMediaTabUseCase
-        get() = SelectSharedMediaTabUseCase(sharedMediaRepository)
+        get() = media.selectSharedMediaTabUseCase
 
     val setSharedMediaFilterUseCase: SetSharedMediaFilterUseCase
-        get() = SetSharedMediaFilterUseCase(sharedMediaRepository)
+        get() = media.setSharedMediaFilterUseCase
 
     val toggleMediaSelectionUseCase: ToggleMediaSelectionUseCase
-        get() = ToggleMediaSelectionUseCase(sharedMediaRepository)
+        get() = media.toggleMediaSelectionUseCase
 
     val clearMediaSelectionUseCase: ClearMediaSelectionUseCase
-        get() = ClearMediaSelectionUseCase(sharedMediaRepository)
-
-    private var cachedSharedMediaViewModel: SharedMediaViewModel? = null
+        get() = media.clearMediaSelectionUseCase
 
     val sharedMediaViewModel: SharedMediaViewModel
-        get() {
-            var vm = cachedSharedMediaViewModel
-            if (vm == null) {
-                vm = createSharedMediaViewModel()
-                cachedSharedMediaViewModel = vm
-            }
-            return vm
-        }
+        get() = media.sharedMediaViewModel
 
-    fun createSharedMediaViewModel(): SharedMediaViewModel {
-        return SharedMediaViewModel(
-            observeSharedMediaStateUseCase = observeSharedMediaStateUseCase,
-            selectSharedMediaTabUseCase = selectSharedMediaTabUseCase,
-            setSharedMediaFilterUseCase = setSharedMediaFilterUseCase,
-            toggleMediaSelectionUseCase = toggleMediaSelectionUseCase,
-            clearMediaSelectionUseCase = clearMediaSelectionUseCase,
-            repository = sharedMediaRepository
-        )
-    }
+    fun createSharedMediaViewModel(): SharedMediaViewModel = media.createSharedMediaViewModel()
 
-    fun createContentPreviewRepository(): ContentPreviewRepository {
-        return LegacyContentPreviewRepository()
-    }
+    fun createContentPreviewRepository(): ContentPreviewRepository = media.createContentPreviewRepository()
 
-    val contentPreviewRepository: ContentPreviewRepository by lazy {
-        LegacyContentPreviewRepository()
-    }
+    val contentPreviewRepository: ContentPreviewRepository
+        get() = media.contentPreviewRepository
 
     val evaluatePreviewEligibilityUseCase: EvaluatePreviewEligibilityUseCase
-        get() = EvaluatePreviewEligibilityUseCase()
+        get() = media.evaluatePreviewEligibilityUseCase
 
     val calculatePreviewDragUseCase: CalculatePreviewDragUseCase
-        get() = CalculatePreviewDragUseCase()
+        get() = media.calculatePreviewDragUseCase
 
     val resolvePreviewActionsUseCase: ResolvePreviewActionsUseCase
-        get() = ResolvePreviewActionsUseCase()
+        get() = media.resolvePreviewActionsUseCase
 
     val observeContentPreviewStateUseCase: ObserveContentPreviewStateUseCase
-        get() = ObserveContentPreviewStateUseCase(contentPreviewRepository)
+        get() = media.observeContentPreviewStateUseCase
 
     val getContentPreviewStateUseCase: GetContentPreviewStateUseCase
-        get() = GetContentPreviewStateUseCase(contentPreviewRepository)
+        get() = media.getContentPreviewStateUseCase
 
     val openContentPreviewUseCase: OpenContentPreviewUseCase
-        get() = OpenContentPreviewUseCase(
-            contentPreviewRepository,
-            evaluatePreviewEligibilityUseCase,
-            resolvePreviewActionsUseCase
-        )
+        get() = media.openContentPreviewUseCase
 
     val updatePreviewDragUseCase: UpdatePreviewDragUseCase
-        get() = UpdatePreviewDragUseCase(contentPreviewRepository, calculatePreviewDragUseCase)
+        get() = media.updatePreviewDragUseCase
 
     val triggerPreviewActionUseCase: TriggerPreviewActionUseCase
-        get() = TriggerPreviewActionUseCase(contentPreviewRepository)
+        get() = media.triggerPreviewActionUseCase
 
     val dismissContentPreviewUseCase: DismissContentPreviewUseCase
-        get() = DismissContentPreviewUseCase(contentPreviewRepository)
+        get() = media.dismissContentPreviewUseCase
 
     val clearContentPreviewUseCase: ClearContentPreviewUseCase
-        get() = ClearContentPreviewUseCase(contentPreviewRepository)
-
-    private var cachedContentPreviewViewModel: ContentPreviewViewModel? = null
+        get() = media.clearContentPreviewUseCase
 
     val contentPreviewViewModel: ContentPreviewViewModel
-        get() {
-            var vm = cachedContentPreviewViewModel
-            if (vm == null) {
-                vm = createContentPreviewViewModel()
-                cachedContentPreviewViewModel = vm
-            }
-            return vm
-        }
+        get() = media.contentPreviewViewModel
 
-    fun createContentPreviewViewModel(): ContentPreviewViewModel {
-        return ContentPreviewViewModel(
-            observeContentPreviewStateUseCase = observeContentPreviewStateUseCase,
-            openContentPreviewUseCase = openContentPreviewUseCase,
-            updatePreviewDragUseCase = updatePreviewDragUseCase,
-            triggerPreviewActionUseCase = triggerPreviewActionUseCase,
-            dismissContentPreviewUseCase = dismissContentPreviewUseCase,
-            clearContentPreviewUseCase = clearContentPreviewUseCase
-        )
-    }
-
-    fun createEmojiPickerRepository(): EmojiPickerRepository {
-        return LegacyEmojiPickerRepository(resolveAvailablePickerTabsUseCase)
-    }
-
-    val emojiPickerRepository: EmojiPickerRepository by lazy {
-        createEmojiPickerRepository()
-    }
-
-    val resolveAvailablePickerTabsUseCase: ResolveAvailablePickerTabsUseCase
-        get() = ResolveAvailablePickerTabsUseCase()
-
-    val filterEmojiItemsUseCase: FilterEmojiItemsUseCase
-        get() = FilterEmojiItemsUseCase()
-
-    val filterStickersUseCase: FilterStickersUseCase
-        get() = FilterStickersUseCase()
-
-    val filterGifsUseCase: FilterGifsUseCase
-        get() = FilterGifsUseCase()
-
-    val observeEmojiPickerStateUseCase: ObserveEmojiPickerStateUseCase
-        get() = ObserveEmojiPickerStateUseCase(emojiPickerRepository)
-
-    val getEmojiPickerStateUseCase: GetEmojiPickerStateUseCase
-        get() = GetEmojiPickerStateUseCase(emojiPickerRepository)
-
-    val selectPickerTabUseCase: SelectPickerTabUseCase
-        get() = SelectPickerTabUseCase(emojiPickerRepository)
-
-    val updatePickerSearchQueryUseCase: UpdatePickerSearchQueryUseCase
-        get() = UpdatePickerSearchQueryUseCase(emojiPickerRepository)
-
-    val toggleStickerFavoriteUseCase: ToggleStickerFavoriteUseCase
-        get() = ToggleStickerFavoriteUseCase(emojiPickerRepository)
-
-    val clearRecentPickerItemsUseCase: ClearRecentPickerItemsUseCase
-        get() = ClearRecentPickerItemsUseCase(emojiPickerRepository)
-
-    private var cachedEmojiPickerViewModel: EmojiPickerViewModel? = null
-
-    val emojiPickerViewModel: EmojiPickerViewModel
-        get() {
-            var vm = cachedEmojiPickerViewModel
-            if (vm == null) {
-                vm = createEmojiPickerViewModel()
-                cachedEmojiPickerViewModel = vm
-            }
-            return vm
-        }
-
-    fun createEmojiPickerViewModel(): EmojiPickerViewModel {
-        return EmojiPickerViewModel(
-            observeStateUseCase = observeEmojiPickerStateUseCase,
-            getStateUseCase = getEmojiPickerStateUseCase,
-            selectTabUseCase = selectPickerTabUseCase,
-            updateSearchQueryUseCase = updatePickerSearchQueryUseCase,
-            toggleFavoriteUseCase = toggleStickerFavoriteUseCase,
-            clearRecentUseCase = clearRecentPickerItemsUseCase,
-            repository = emojiPickerRepository
-        )
-    }
-
-    fun createChatAttachRepository(): ChatAttachRepository {
-        return LegacyChatAttachRepository()
-    }
-
-    val chatAttachRepository: ChatAttachRepository by lazy {
-        createChatAttachRepository()
-    }
-
-    val resolveAvailableAttachLayoutsUseCase: ResolveAvailableAttachLayoutsUseCase
-        get() = ResolveAvailableAttachLayoutsUseCase()
-
-    val calculateAttachCaptionLimitUseCase: CalculateAttachCaptionLimitUseCase
-        get() = CalculateAttachCaptionLimitUseCase()
-
-    val toggleAttachItemSelectionUseCase: ToggleAttachItemSelectionUseCase
-        get() = ToggleAttachItemSelectionUseCase(chatAttachRepository)
-
-    val validateSendOptionsUseCase: ValidateSendOptionsUseCase
-        get() = ValidateSendOptionsUseCase()
-
-    val observeChatAttachStateUseCase: ObserveChatAttachStateUseCase
-        get() = ObserveChatAttachStateUseCase(chatAttachRepository)
-
-    val getChatAttachStateUseCase: GetChatAttachStateUseCase
-        get() = GetChatAttachStateUseCase(chatAttachRepository)
-
-    val selectAttachLayoutUseCase: SelectAttachLayoutUseCase
-        get() = SelectAttachLayoutUseCase(chatAttachRepository)
-
-    val updateAttachSendOptionsUseCase: UpdateAttachSendOptionsUseCase
-        get() = UpdateAttachSendOptionsUseCase(chatAttachRepository)
-
-    val clearAttachSelectionUseCase: ClearAttachSelectionUseCase
-        get() = ClearAttachSelectionUseCase(chatAttachRepository)
-
-    val openChatAttachAlertUseCase: OpenChatAttachAlertUseCase
-        get() = OpenChatAttachAlertUseCase(chatAttachRepository, resolveAvailableAttachLayoutsUseCase)
-
-    private var cachedChatAttachViewModel: ChatAttachViewModel? = null
-
-    val chatAttachViewModel: ChatAttachViewModel
-        get() {
-            var vm = cachedChatAttachViewModel
-            if (vm == null) {
-                vm = createChatAttachViewModel()
-                cachedChatAttachViewModel = vm
-            }
-            return vm
-        }
-
-    fun createChatAttachViewModel(): ChatAttachViewModel {
-        return ChatAttachViewModel(
-            observeStateUseCase = observeChatAttachStateUseCase,
-            openAlertUseCase = openChatAttachAlertUseCase,
-            selectLayoutUseCase = selectAttachLayoutUseCase,
-            toggleSelectionUseCase = toggleAttachItemSelectionUseCase,
-            updateSendOptionsUseCase = updateAttachSendOptionsUseCase,
-            clearSelectionUseCase = clearAttachSelectionUseCase,
-            calculateCaptionLimitUseCase = calculateAttachCaptionLimitUseCase,
-            repository = chatAttachRepository
-        )
-    }
-
-    private var customPhotoViewerRepository: PhotoViewerRepository? = null
+    fun createContentPreviewViewModel(): ContentPreviewViewModel = media.createContentPreviewViewModel()
 
     var photoViewerRepository: PhotoViewerRepository
-        get() = customPhotoViewerRepository ?: LegacyPhotoViewerRepository(
-            pagingUseCase = calculateMediaPagingUseCase,
-            zoomUseCase = calculateZoomTransformUseCase,
-            actionsUseCase = validateViewerActionsUseCase
-        )
-        set(value) {
-            customPhotoViewerRepository = value
-        }
+        get() = media.photoViewerRepository
+        set(value) { media.photoViewerRepository = value }
 
     val calculateMediaPagingUseCase: CalculateMediaPagingUseCase
-        get() = CalculateMediaPagingUseCase()
+        get() = media.calculateMediaPagingUseCase
 
     val calculateZoomTransformUseCase: CalculateZoomTransformUseCase
-        get() = CalculateZoomTransformUseCase()
+        get() = media.calculateZoomTransformUseCase
 
     val validateViewerActionsUseCase: ValidateViewerActionsUseCase
-        get() = ValidateViewerActionsUseCase()
+        get() = media.validateViewerActionsUseCase
 
     val resolveMediaQualityUseCase: ResolveMediaQualityUseCase
-        get() = ResolveMediaQualityUseCase()
+        get() = media.resolveMediaQualityUseCase
 
     val observePhotoViewerStateUseCase: ObservePhotoViewerStateUseCase
-        get() = ObservePhotoViewerStateUseCase(photoViewerRepository)
+        get() = media.observePhotoViewerStateUseCase
 
     val getPhotoViewerStateUseCase: GetPhotoViewerStateUseCase
-        get() = GetPhotoViewerStateUseCase(photoViewerRepository)
+        get() = media.getPhotoViewerStateUseCase
 
     val openPhotoViewerUseCase: OpenPhotoViewerUseCase
-        get() = OpenPhotoViewerUseCase(photoViewerRepository)
+        get() = media.openPhotoViewerUseCase
 
     val navigatePhotoViewerUseCase: NavigatePhotoViewerUseCase
-        get() = NavigatePhotoViewerUseCase(photoViewerRepository)
+        get() = media.navigatePhotoViewerUseCase
 
     val updatePlaybackStateUseCase: UpdatePlaybackStateUseCase
-        get() = UpdatePlaybackStateUseCase(photoViewerRepository)
+        get() = media.updatePlaybackStateUseCase
 
     val closePhotoViewerUseCase: ClosePhotoViewerUseCase
-        get() = ClosePhotoViewerUseCase(photoViewerRepository)
-
-    private var cachedPhotoViewerViewModel: PhotoViewerViewModel? = null
+        get() = media.closePhotoViewerUseCase
 
     val photoViewerViewModel: PhotoViewerViewModel
-        get() {
-            var vm = cachedPhotoViewerViewModel
-            if (vm == null) {
-                vm = createPhotoViewerViewModel()
-                cachedPhotoViewerViewModel = vm
-            }
-            return vm
-        }
+        get() = media.photoViewerViewModel
 
-    fun createPhotoViewerViewModel(): PhotoViewerViewModel {
-        return PhotoViewerViewModel(
-            repository = photoViewerRepository
-        )
-    }
+    fun createPhotoViewerViewModel(): PhotoViewerViewModel = media.createPhotoViewerViewModel()
 
-    private var customChatInputRepository: ChatInputRepository? = null
-
-    var chatInputRepository: ChatInputRepository
-        get() = customChatInputRepository ?: LegacyChatInputRepository(
-            sendButtonStateUseCase = calculateSendButtonStateUseCase
-        )
-        set(value) {
-            customChatInputRepository = value
-        }
-
-    val calculateSendButtonStateUseCase: CalculateSendButtonStateUseCase
-        get() = CalculateSendButtonStateUseCase()
-
-    val formatTextSelectionUseCase: FormatTextSelectionUseCase
-        get() = FormatTextSelectionUseCase()
-
-    val validateVoiceRecordActionUseCase: ValidateVoiceRecordActionUseCase
-        get() = ValidateVoiceRecordActionUseCase()
-
-    val resolvePanelVisibilityUseCase: ResolvePanelVisibilityUseCase
-        get() = ResolvePanelVisibilityUseCase()
-
-    val observeChatInputStateUseCase: ObserveChatInputStateUseCase
-        get() = ObserveChatInputStateUseCase(chatInputRepository)
-
-    val getChatInputStateUseCase: GetChatInputStateUseCase
-        get() = GetChatInputStateUseCase(chatInputRepository)
-
-    val setChatInputTextUseCase: SetChatInputTextUseCase
-        get() = SetChatInputTextUseCase(chatInputRepository)
-
-    val setChatInputPanelModeUseCase: SetChatInputPanelModeUseCase
-        get() = SetChatInputPanelModeUseCase(chatInputRepository)
-
-    val setChatInputReplyUseCase: SetChatInputReplyUseCase
-        get() = SetChatInputReplyUseCase(chatInputRepository)
-
-    val clearChatInputReplyUseCase: ClearChatInputReplyUseCase
-        get() = ClearChatInputReplyUseCase(chatInputRepository)
-
-    private var cachedChatInputViewModel: ChatInputViewModel? = null
-
-    val chatInputViewModel: ChatInputViewModel
-        get() {
-            var vm = cachedChatInputViewModel
-            if (vm == null) {
-                vm = createChatInputViewModel()
-                cachedChatInputViewModel = vm
-            }
-            return vm
-        }
-
-    fun createChatInputViewModel(): ChatInputViewModel {
-        return ChatInputViewModel(
-            repository = chatInputRepository,
-            formatUseCase = formatTextSelectionUseCase,
-            resolvePanelUseCase = resolvePanelVisibilityUseCase
-        )
-    }
-
-    val audioPlayerRepository: AudioPlayerRepository by lazy {
-        LegacyAudioPlayerRepository(account)
-    }
+    val audioPlayerRepository: AudioPlayerRepository
+        get() = media.audioPlayerRepository
 
     val observeAudioPlaybackStateUseCase: ObservePlaybackStateUseCase
-        get() = ObservePlaybackStateUseCase(audioPlayerRepository)
+        get() = media.observeAudioPlaybackStateUseCase
 
     val getAudioPlaybackStateUseCase: GetPlaybackStateUseCase
-        get() = GetPlaybackStateUseCase(audioPlayerRepository)
+        get() = media.getAudioPlaybackStateUseCase
 
     val playTrackUseCase: PlayTrackUseCase
-        get() = PlayTrackUseCase(audioPlayerRepository)
+        get() = media.playTrackUseCase
 
     val toggleAudioPlayPauseUseCase: TogglePlayPauseUseCase
-        get() = TogglePlayPauseUseCase(audioPlayerRepository)
+        get() = media.toggleAudioPlayPauseUseCase
 
     val seekAudioUseCase: SeekAudioUseCase
-        get() = SeekAudioUseCase(audioPlayerRepository)
+        get() = media.seekAudioUseCase
 
     val navigatePlaylistUseCase: NavigatePlaylistUseCase
-        get() = NavigatePlaylistUseCase(audioPlayerRepository)
+        get() = media.navigatePlaylistUseCase
 
     val cyclePlaybackSpeedUseCase: CyclePlaybackSpeedUseCase
-        get() = CyclePlaybackSpeedUseCase(audioPlayerRepository)
+        get() = media.cyclePlaybackSpeedUseCase
 
     val cycleRepeatModeUseCase: CycleRepeatModeUseCase
-        get() = CycleRepeatModeUseCase(audioPlayerRepository)
+        get() = media.cycleRepeatModeUseCase
 
     val toggleShuffleUseCase: ToggleShuffleUseCase
-        get() = ToggleShuffleUseCase(audioPlayerRepository)
+        get() = media.toggleShuffleUseCase
 
     val handleProximitySensorUseCase: HandleProximitySensorUseCase
-        get() = HandleProximitySensorUseCase(audioPlayerRepository)
+        get() = media.handleProximitySensorUseCase
 
     val configureEqualizerUseCase: ConfigureEqualizerUseCase
-        get() = ConfigureEqualizerUseCase(audioPlayerRepository)
-
-    private var cachedAudioPlayerViewModel: AudioPlayerViewModel? = null
+        get() = media.configureEqualizerUseCase
 
     val audioPlayerViewModel: AudioPlayerViewModel
-        get() {
-            var vm = cachedAudioPlayerViewModel
-            if (vm == null) {
-                vm = createAudioPlayerViewModel()
-                cachedAudioPlayerViewModel = vm
-            }
-            return vm
-        }
+        get() = media.audioPlayerViewModel
 
-    fun createAudioPlayerViewModel(): AudioPlayerViewModel {
-        return AudioPlayerViewModel(
-            observePlaybackStateUseCase = observeAudioPlaybackStateUseCase,
-            getPlaybackStateUseCase = getAudioPlaybackStateUseCase,
-            playTrackUseCase = playTrackUseCase,
-            togglePlayPauseUseCase = toggleAudioPlayPauseUseCase,
-            seekAudioUseCase = seekAudioUseCase,
-            navigatePlaylistUseCase = navigatePlaylistUseCase,
-            cyclePlaybackSpeedUseCase = cyclePlaybackSpeedUseCase,
-            cycleRepeatModeUseCase = cycleRepeatModeUseCase,
-            toggleShuffleUseCase = toggleShuffleUseCase,
-            handleProximitySensorUseCase = handleProximitySensorUseCase,
-            configureEqualizerUseCase = configureEqualizerUseCase
-        )
-    }
+    fun createAudioPlayerViewModel(): AudioPlayerViewModel = media.createAudioPlayerViewModel()
 
-    val sendMessagesRepository: SendMessagesRepository by lazy {
-        LegacySendMessagesRepository(account)
-    }
-
-    val sendTextMessageUseCase: SendTextMessageUseCase
-        get() = SendTextMessageUseCase(sendMessagesRepository)
-
-    val sendMediaMessageUseCase: SendMediaMessageUseCase
-        get() = SendMediaMessageUseCase(sendMessagesRepository)
-
-    val sendMediaAlbumUseCase: SendMediaAlbumUseCase
-        get() = SendMediaAlbumUseCase(sendMessagesRepository)
-
-    val forwardMessagesUseCase: ForwardMessagesUseCase
-        get() = ForwardMessagesUseCase(sendMessagesRepository)
-
-    val retrySendMessageUseCase: RetrySendMessageUseCase
-        get() = RetrySendMessageUseCase(sendMessagesRepository)
-
-    val cancelSendMessageUseCase: CancelSendMessageUseCase
-        get() = CancelSendMessageUseCase(sendMessagesRepository)
-
-    val observePendingSendsUseCase: ObservePendingSendsUseCase
-        get() = ObservePendingSendsUseCase(sendMessagesRepository)
-
-    private var cachedSendMessagesViewModel: SendMessagesViewModel? = null
-
-    val sendMessagesViewModel: SendMessagesViewModel
-        get() {
-            var vm = cachedSendMessagesViewModel
-            if (vm == null) {
-                vm = createSendMessagesViewModel()
-                cachedSendMessagesViewModel = vm
-            }
-            return vm
-        }
-
-    fun createSendMessagesViewModel(): SendMessagesViewModel {
-        return SendMessagesViewModel(
-            sendTextMessageUseCase = sendTextMessageUseCase,
-            sendMediaMessageUseCase = sendMediaMessageUseCase,
-            sendMediaAlbumUseCase = sendMediaAlbumUseCase,
-            forwardMessagesUseCase = forwardMessagesUseCase,
-            retrySendMessageUseCase = retrySendMessageUseCase,
-            cancelSendMessageUseCase = cancelSendMessageUseCase,
-            observePendingSendsUseCase = observePendingSendsUseCase
-        )
-    }
-
-    val imageLoaderRepository: ImageLoaderRepository by lazy {
-        LegacyImageLoaderRepository(account)
-    }
+    val imageLoaderRepository: ImageLoaderRepository
+        get() = media.imageLoaderRepository
 
     val parseImageFilterUseCase: ParseImageFilterUseCase
-        get() = ParseImageFilterUseCase()
+        get() = media.parseImageFilterUseCase
 
     val formatImageFilterUseCase: FormatImageFilterUseCase
-        get() = FormatImageFilterUseCase()
+        get() = media.formatImageFilterUseCase
 
     val buildImageCacheKeyUseCase: BuildImageCacheKeyUseCase
-        get() = BuildImageCacheKeyUseCase()
+        get() = media.buildImageCacheKeyUseCase
 
     val calculateImageDownscaleUseCase: CalculateImageDownscaleUseCase
-        get() = CalculateImageDownscaleUseCase()
+        get() = media.calculateImageDownscaleUseCase
 
     val evaluateImageCacheEligibilityUseCase: EvaluateImageCacheEligibilityUseCase
-        get() = EvaluateImageCacheEligibilityUseCase()
+        get() = media.evaluateImageCacheEligibilityUseCase
 
     val observeImageLoaderStateUseCase: ObserveImageLoaderStateUseCase
-        get() = ObserveImageLoaderStateUseCase(imageLoaderRepository)
+        get() = media.observeImageLoaderStateUseCase
 
     val getImageLoaderStateUseCase: GetImageLoaderStateUseCase
-        get() = GetImageLoaderStateUseCase(imageLoaderRepository)
+        get() = media.getImageLoaderStateUseCase
 
     val enqueueImageRequestUseCase: EnqueueImageRequestUseCase
-        get() = EnqueueImageRequestUseCase(
-            repository = imageLoaderRepository,
-            evaluateTier = evaluateImageCacheEligibilityUseCase,
-            buildKey = buildImageCacheKeyUseCase
-        )
+        get() = media.enqueueImageRequestUseCase
 
     val cancelImageRequestUseCase: CancelImageRequestUseCase
-        get() = CancelImageRequestUseCase(imageLoaderRepository)
+        get() = media.cancelImageRequestUseCase
 
     val trimImageMemoryUseCase: TrimImageMemoryUseCase
-        get() = TrimImageMemoryUseCase(imageLoaderRepository)
+        get() = media.trimImageMemoryUseCase
 
     val clearImageCacheUseCase: ClearImageCacheUseCase
-        get() = ClearImageCacheUseCase(imageLoaderRepository)
-
-    private var cachedImageLoaderViewModel: ImageLoaderViewModel? = null
+        get() = media.clearImageCacheUseCase
 
     val imageLoaderViewModel: ImageLoaderViewModel
-        get() {
-            var vm = cachedImageLoaderViewModel
-            if (vm == null) {
-                vm = createImageLoaderViewModel()
-                cachedImageLoaderViewModel = vm
-            }
-            return vm
-        }
+        get() = media.imageLoaderViewModel
 
-    fun createImageLoaderViewModel(): ImageLoaderViewModel {
-        return ImageLoaderViewModel(
-            observeImageLoaderStateUseCase = observeImageLoaderStateUseCase,
-            enqueueImageRequestUseCase = enqueueImageRequestUseCase,
-            cancelImageRequestUseCase = cancelImageRequestUseCase,
-            trimImageMemoryUseCase = trimImageMemoryUseCase,
-            clearImageCacheUseCase = clearImageCacheUseCase
-        )
-    }
+    fun createImageLoaderViewModel(): ImageLoaderViewModel = media.createImageLoaderViewModel()
 
-    val downloadManagerRepository: DownloadManagerRepository by lazy {
-        LegacyDownloadManagerRepository(account)
-    }
+    val downloadManagerRepository: DownloadManagerRepository
+        get() = media.downloadManagerRepository
 
     val evaluateAutoDownloadEligibilityUseCase: EvaluateAutoDownloadEligibilityUseCase
-        get() = EvaluateAutoDownloadEligibilityUseCase(downloadManagerRepository)
+        get() = media.evaluateAutoDownloadEligibilityUseCase
 
     val observeDownloadManagerStateUseCase: ObserveDownloadManagerStateUseCase
-        get() = ObserveDownloadManagerStateUseCase(downloadManagerRepository)
+        get() = media.observeDownloadManagerStateUseCase
 
     val getDownloadManagerStateUseCase: GetDownloadManagerStateUseCase
-        get() = GetDownloadManagerStateUseCase(downloadManagerRepository)
+        get() = media.getDownloadManagerStateUseCase
 
     val enqueueDownloadUseCase: EnqueueDownloadUseCase
-        get() = EnqueueDownloadUseCase(downloadManagerRepository)
+        get() = media.enqueueDownloadUseCase
 
     val pauseDownloadUseCase: PauseDownloadUseCase
-        get() = PauseDownloadUseCase(downloadManagerRepository)
+        get() = media.pauseDownloadUseCase
 
     val resumeDownloadUseCase: ResumeDownloadUseCase
-        get() = ResumeDownloadUseCase(downloadManagerRepository)
+        get() = media.resumeDownloadUseCase
 
     val cancelDownloadUseCase: CancelDownloadUseCase
-        get() = CancelDownloadUseCase(downloadManagerRepository)
+        get() = media.cancelDownloadUseCase
 
     val retryDownloadUseCase: RetryDownloadUseCase
-        get() = RetryDownloadUseCase(downloadManagerRepository)
+        get() = media.retryDownloadUseCase
 
     val clearRecentDownloadsUseCase: ClearRecentDownloadsUseCase
-        get() = ClearRecentDownloadsUseCase(downloadManagerRepository)
+        get() = media.clearRecentDownloadsUseCase
 
     val markDownloadsAsViewedUseCase: MarkDownloadsAsViewedUseCase
-        get() = MarkDownloadsAsViewedUseCase(downloadManagerRepository)
+        get() = media.markDownloadsAsViewedUseCase
 
     val updateDownloadProgressUseCase: UpdateDownloadProgressUseCase
-        get() = UpdateDownloadProgressUseCase(downloadManagerRepository)
+        get() = media.updateDownloadProgressUseCase
 
     val setDownloadNetworkTypeUseCase: SetDownloadNetworkTypeUseCase
-        get() = SetDownloadNetworkTypeUseCase(downloadManagerRepository)
+        get() = media.setDownloadNetworkTypeUseCase
 
     val updateDownloadPresetUseCase: UpdateDownloadPresetUseCase
-        get() = UpdateDownloadPresetUseCase(downloadManagerRepository)
-
-    private var cachedDownloadManagerViewModel: DownloadManagerViewModel? = null
+        get() = media.updateDownloadPresetUseCase
 
     val downloadManagerViewModel: DownloadManagerViewModel
-        get() {
-            var vm = cachedDownloadManagerViewModel
-            if (vm == null) {
-                vm = createDownloadManagerViewModel()
-                cachedDownloadManagerViewModel = vm
-            }
-            return vm
-        }
+        get() = media.downloadManagerViewModel
 
-    fun createDownloadManagerViewModel(): DownloadManagerViewModel {
-        return DownloadManagerViewModel(
-            observeDownloadManagerStateUseCase = observeDownloadManagerStateUseCase,
-            enqueueDownloadUseCase = enqueueDownloadUseCase,
-            pauseDownloadUseCase = pauseDownloadUseCase,
-            resumeDownloadUseCase = resumeDownloadUseCase,
-            cancelDownloadUseCase = cancelDownloadUseCase,
-            retryDownloadUseCase = retryDownloadUseCase,
-            clearRecentDownloadsUseCase = clearRecentDownloadsUseCase,
-            markDownloadsAsViewedUseCase = markDownloadsAsViewedUseCase,
-            setDownloadNetworkTypeUseCase = setDownloadNetworkTypeUseCase,
-            updateDownloadPresetUseCase = updateDownloadPresetUseCase
-        )
-    }
+    fun createDownloadManagerViewModel(): DownloadManagerViewModel = media.createDownloadManagerViewModel()
 
-    val localizationRepository: LocalizationRepository by lazy {
-        LegacyLocalizationRepository(account)
-    }
-
-    val resolvePluralQuantityUseCase: ResolvePluralQuantityUseCase
-        get() = ResolvePluralQuantityUseCase()
-
-    val formatRelativeTimestampUseCase: FormatRelativeTimestampUseCase
-        get() = FormatRelativeTimestampUseCase()
-
-    val formatFullNameUseCase: FormatFullNameUseCase
-        get() = FormatFullNameUseCase()
-
-    val formatNumberWithSuffixUseCase: FormatNumberWithSuffixUseCase
-        get() = FormatNumberWithSuffixUseCase()
-
-    val detectRtlLanguageUseCase: DetectRtlLanguageUseCase
-        get() = DetectRtlLanguageUseCase()
-
-    val observeLocalizationStateUseCase: ObserveLocalizationStateUseCase
-        get() = ObserveLocalizationStateUseCase(localizationRepository)
-
-    val getLocalizationStateUseCase: GetLocalizationStateUseCase
-        get() = GetLocalizationStateUseCase(localizationRepository)
-
-    val applyLocaleUseCase: ApplyLocaleUseCase
-        get() = ApplyLocaleUseCase(localizationRepository, detectRtlLanguageUseCase)
-
-    val toggle24HourFormatUseCase: Toggle24HourFormatUseCase
-        get() = Toggle24HourFormatUseCase(localizationRepository)
-
-    val setNameDisplayOrderUseCase: SetNameDisplayOrderUseCase
-        get() = SetNameDisplayOrderUseCase(localizationRepository)
-
-    private var cachedLocalizationViewModel: LocalizationViewModel? = null
-
-    val localizationViewModel: LocalizationViewModel
-        get() {
-            var vm = cachedLocalizationViewModel
-            if (vm == null) {
-                vm = createLocalizationViewModel()
-                cachedLocalizationViewModel = vm
-            }
-            return vm
-        }
-
-    fun createLocalizationViewModel(): LocalizationViewModel {
-        return LocalizationViewModel(
-            observeLocalizationStateUseCase = observeLocalizationStateUseCase,
-            applyLocaleUseCase = applyLocaleUseCase,
-            toggle24HourFormatUseCase = toggle24HourFormatUseCase,
-            setNameDisplayOrderUseCase = setNameDisplayOrderUseCase,
-            repository = localizationRepository
-        )
-    }
-
-    val ringtoneRepository: RingtoneRepository by lazy {
-        LegacyRingtoneRepository(account)
-    }
-
-    val validateRingtoneEligibilityUseCase: ValidateRingtoneEligibilityUseCase
-        get() = ValidateRingtoneEligibilityUseCase()
-
-    val observeRingtonesUseCase: ObserveRingtonesUseCase
-        get() = ObserveRingtonesUseCase(ringtoneRepository)
-
-    val observeRingtoneStateUseCase: ObserveRingtoneStateUseCase
-        get() = ObserveRingtoneStateUseCase(ringtoneRepository)
-
-    val getRingtonesUseCase: GetRingtonesUseCase
-        get() = GetRingtonesUseCase(ringtoneRepository)
-
-    val getRingtoneByIdUseCase: GetRingtoneByIdUseCase
-        get() = GetRingtoneByIdUseCase(ringtoneRepository)
-
-    val getRingtoneSoundPathUseCase: GetRingtoneSoundPathUseCase
-        get() = GetRingtoneSoundPathUseCase(ringtoneRepository)
-
-    val addRingtoneUseCase: AddRingtoneUseCase
-        get() = AddRingtoneUseCase(ringtoneRepository, validateRingtoneEligibilityUseCase)
-
-    val removeRingtoneUseCase: RemoveRingtoneUseCase
-        get() = RemoveRingtoneUseCase(ringtoneRepository)
-
-    val saveRingtoneFromDocumentUseCase: SaveRingtoneFromDocumentUseCase
-        get() = SaveRingtoneFromDocumentUseCase(ringtoneRepository, validateRingtoneEligibilityUseCase)
-
-    val uploadRingtoneUseCase: UploadRingtoneUseCase
-        get() = UploadRingtoneUseCase(ringtoneRepository, validateRingtoneEligibilityUseCase)
-
-    val cancelRingtoneUploadUseCase: CancelRingtoneUploadUseCase
-        get() = CancelRingtoneUploadUseCase(ringtoneRepository)
-
-    val refreshRingtonesUseCase: RefreshRingtonesUseCase
-        get() = RefreshRingtonesUseCase(ringtoneRepository)
-
-    val selectRingtoneUseCase: SelectRingtoneUseCase
-        get() = SelectRingtoneUseCase(ringtoneRepository)
-
-    private var cachedRingtoneViewModel: RingtoneViewModel? = null
-
-    val ringtoneViewModel: RingtoneViewModel
-        get() {
-            var vm = cachedRingtoneViewModel
-            if (vm == null) {
-                vm = createRingtoneViewModel()
-                cachedRingtoneViewModel = vm
-            }
-            return vm
-        }
-
-    fun createRingtoneViewModel(): RingtoneViewModel {
-        return RingtoneViewModel(
-            observeRingtoneStateUseCase = observeRingtoneStateUseCase,
-            refreshRingtonesUseCase = refreshRingtonesUseCase,
-            selectRingtoneUseCase = selectRingtoneUseCase,
-            removeRingtoneUseCase = removeRingtoneUseCase,
-            saveRingtoneFromDocumentUseCase = saveRingtoneFromDocumentUseCase,
-            uploadRingtoneUseCase = uploadRingtoneUseCase,
-            cancelRingtoneUploadUseCase = cancelRingtoneUploadUseCase
-        )
-    }
-
-    private var customNetworkStatsRepository: NetworkStatsRepository? = null
-
-    var networkStatsRepository: NetworkStatsRepository
-        get() = customNetworkStatsRepository ?: LegacyNetworkStatsRepository(account)
-        set(value) {
-            customNetworkStatsRepository = value
-        }
-
-    val observeNetworkStatsUseCase: ObserveNetworkStatsUseCase
-        get() = ObserveNetworkStatsUseCase(networkStatsRepository)
-
-    val observeAllNetworkStatsUseCase: ObserveAllNetworkStatsUseCase
-        get() = ObserveAllNetworkStatsUseCase(networkStatsRepository)
-
-    val getNetworkStatsUseCase: GetNetworkStatsUseCase
-        get() = GetNetworkStatsUseCase(networkStatsRepository)
-
-    val getAllNetworkStatsUseCase: GetAllNetworkStatsUseCase
-        get() = GetAllNetworkStatsUseCase(networkStatsRepository)
-
-    val incrementTrafficBytesUseCase: IncrementTrafficBytesUseCase
-        get() = IncrementTrafficBytesUseCase(networkStatsRepository)
-
-    val incrementTrafficItemsUseCase: IncrementTrafficItemsUseCase
-        get() = IncrementTrafficItemsUseCase(networkStatsRepository)
-
-    val incrementCallsTimeUseCase: IncrementCallsTimeUseCase
-        get() = IncrementCallsTimeUseCase(networkStatsRepository)
-
-    val resetNetworkStatsUseCase: ResetNetworkStatsUseCase
-        get() = ResetNetworkStatsUseCase(networkStatsRepository)
-
-    val refreshNetworkStatsUseCase: RefreshNetworkStatsUseCase
-        get() = RefreshNetworkStatsUseCase(networkStatsRepository)
-
-    val calculateMessagesTrafficUseCase: CalculateMessagesTrafficUseCase
-        get() = CalculateMessagesTrafficUseCase()
-
-    val formatTrafficBytesUseCase: FormatTrafficBytesUseCase
-        get() = FormatTrafficBytesUseCase()
-
-    val formatCallsDurationUseCase: FormatCallsDurationUseCase
-        get() = FormatCallsDurationUseCase()
-
-    private var cachedNetworkStatsViewModel: NetworkStatsViewModel? = null
-
-    val networkStatsViewModel: NetworkStatsViewModel
-        get() {
-            var vm = cachedNetworkStatsViewModel
-            if (vm == null) {
-                vm = createNetworkStatsViewModel()
-                cachedNetworkStatsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createNetworkStatsViewModel(): NetworkStatsViewModel {
-        return NetworkStatsViewModel(
-            observeAllNetworkStatsUseCase = observeAllNetworkStatsUseCase,
-            getNetworkStatsUseCase = getNetworkStatsUseCase,
-            resetNetworkStatsUseCase = resetNetworkStatsUseCase,
-            refreshNetworkStatsUseCase = refreshNetworkStatsUseCase,
-            incrementTrafficBytesUseCase = incrementTrafficBytesUseCase,
-            incrementTrafficItemsUseCase = incrementTrafficItemsUseCase,
-            incrementCallsTimeUseCase = incrementCallsTimeUseCase,
-            formatTrafficBytesUseCase = formatTrafficBytesUseCase,
-            formatCallsDurationUseCase = formatCallsDurationUseCase
-        )
-    }
-
-    private var customPushListenerRepository: PushListenerRepository? = null
-
-    var pushListenerRepository: PushListenerRepository
-        get() = customPushListenerRepository ?: LegacyPushListenerRepository(account)
-        set(value) {
-            customPushListenerRepository = value
-        }
-
-    val observePushListenerStateUseCase: ObservePushListenerStateUseCase
-        get() = ObservePushListenerStateUseCase(pushListenerRepository)
-
-    val observeIncomingPushesUseCase: ObserveIncomingPushesUseCase
-        get() = ObserveIncomingPushesUseCase(pushListenerRepository)
-
-    val getPushListenerStateUseCase: GetPushListenerStateUseCase
-        get() = GetPushListenerStateUseCase(pushListenerRepository)
-
-    val processIncomingPushUseCase: ProcessIncomingPushUseCase
-        get() = ProcessIncomingPushUseCase(pushListenerRepository)
-
-    val registerPushListenerTokenUseCase: RegisterPushListenerTokenUseCase
-        get() = RegisterPushListenerTokenUseCase(pushListenerRepository)
-
-    val togglePushListeningUseCase: TogglePushListeningUseCase
-        get() = TogglePushListeningUseCase(pushListenerRepository)
-
-    val determinePushActionTypeUseCase: DeterminePushActionTypeUseCase
-        get() = DeterminePushActionTypeUseCase()
-
-    val parsePushJsonPayloadUseCase: ParsePushJsonPayloadUseCase
-        get() = ParsePushJsonPayloadUseCase()
-
-    private var cachedPushListenerViewModel: PushListenerViewModel? = null
-
-    val pushListenerViewModel: PushListenerViewModel
-        get() {
-            var vm = cachedPushListenerViewModel
-            if (vm == null) {
-                vm = createPushListenerViewModel()
-                cachedPushListenerViewModel = vm
-            }
-            return vm
-        }
-
-    fun createPushListenerViewModel(): PushListenerViewModel {
-        return PushListenerViewModel(
-            observeStateUseCase = observePushListenerStateUseCase,
-            processPushUseCase = processIncomingPushUseCase,
-            registerTokenUseCase = registerPushListenerTokenUseCase,
-            toggleListeningUseCase = togglePushListeningUseCase
-        )
-    }
-
-    // --- Feature: Browser (Slice #86) ---
-    val browserRepository: BrowserRepository by lazy {
-        LegacyBrowserRepository(account)
-    }
-
-    val classifyUrlTargetUseCase: ClassifyUrlTargetUseCase
-        get() = ClassifyUrlTargetUseCase()
-
-    val extractUsernameFromUrlUseCase: ExtractUsernameFromUrlUseCase
-        get() = ExtractUsernameFromUrlUseCase()
-
-    val checkUrlSafetyUseCase: CheckUrlSafetyUseCase
-        get() = CheckUrlSafetyUseCase(classifyUrlTargetUseCase, extractUsernameFromUrlUseCase)
-
-    val observeBrowserStateUseCase: ObserveBrowserStateUseCase
-        get() = ObserveBrowserStateUseCase(browserRepository)
-
-    val getBrowserStateUseCase: GetBrowserStateUseCase
-        get() = GetBrowserStateUseCase(browserRepository)
-
-    val updateBrowserSettingsUseCase: UpdateBrowserSettingsUseCase
-        get() = UpdateBrowserSettingsUseCase(browserRepository)
-
-    val openBrowserUrlUseCase: OpenBrowserUrlUseCase
-        get() = OpenBrowserUrlUseCase(browserRepository, checkUrlSafetyUseCase)
-
-    val manageBrowserHistoryUseCase: ManageBrowserHistoryUseCase
-        get() = ManageBrowserHistoryUseCase(browserRepository)
-
-    private var cachedBrowserViewModel: BrowserViewModel? = null
-
-    val browserViewModel: BrowserViewModel
-        get() {
-            var vm = cachedBrowserViewModel
-            if (vm == null) {
-                vm = createBrowserViewModel()
-                cachedBrowserViewModel = vm
-            }
-            return vm
-        }
-
-    fun createBrowserViewModel(): BrowserViewModel {
-        return BrowserViewModel(
-            observeBrowserState = observeBrowserStateUseCase,
-            updateBrowserSettings = updateBrowserSettingsUseCase,
-            checkUrlSafety = checkUrlSafetyUseCase,
-            openBrowserUrl = openBrowserUrlUseCase,
-            manageBrowserHistory = manageBrowserHistoryUseCase
-        )
-    }
-
-    // --- Feature: LiteMode (Slice #87) ---
-    val liteModeRepository: LiteModeRepository by lazy {
-        LegacyLiteModeRepository(account)
-    }
-
-    val calculateEffectiveFlagsUseCase: CalculateEffectiveFlagsUseCase
-        get() = CalculateEffectiveFlagsUseCase()
-
-    val checkLiteModeFlagUseCase: CheckLiteModeFlagUseCase
-        get() = CheckLiteModeFlagUseCase(calculateEffectiveFlagsUseCase)
-
-    val resolvePresetUseCase: ResolvePresetUseCase
-        get() = ResolvePresetUseCase()
-
-    val observeLiteModeStateUseCase: ObserveLiteModeStateUseCase
-        get() = ObserveLiteModeStateUseCase(liteModeRepository)
-
-    val getLiteModeStateUseCase: GetLiteModeStateUseCase
-        get() = GetLiteModeStateUseCase(liteModeRepository)
-
-    val toggleLiteModeFlagUseCase: ToggleLiteModeFlagUseCase
-        get() = ToggleLiteModeFlagUseCase(liteModeRepository)
-
-    val setLiteModePresetUseCase: SetLiteModePresetUseCase
-        get() = SetLiteModePresetUseCase(liteModeRepository)
-
-    val updatePowerSaverThresholdUseCase: UpdatePowerSaverThresholdUseCase
-        get() = UpdatePowerSaverThresholdUseCase(liteModeRepository)
-
-    private var cachedLiteModeViewModel: LiteModeViewModel? = null
-
-    val liteModeViewModel: LiteModeViewModel
-        get() {
-            var vm = cachedLiteModeViewModel
-            if (vm == null) {
-                vm = createLiteModeViewModel()
-                cachedLiteModeViewModel = vm
-            }
-            return vm
-        }
-
-    fun createLiteModeViewModel(): LiteModeViewModel {
-        return LiteModeViewModel(
-            observeLiteModeState = observeLiteModeStateUseCase,
-            toggleLiteModeFlag = toggleLiteModeFlagUseCase,
-            setLiteModePreset = setLiteModePresetUseCase,
-            updatePowerSaverThreshold = updatePowerSaverThresholdUseCase,
-            repository = liteModeRepository
-        )
-    }
-
-    val appConfigRepository: AppConfigRepository by lazy {
-        LegacyAppConfigRepository(account)
-    }
-
-    val getAppConfigUseCase: GetAppConfigUseCase
-        get() = GetAppConfigUseCase(appConfigRepository)
-
-    val observeAppConfigUseCase: ObserveAppConfigUseCase
-        get() = ObserveAppConfigUseCase(appConfigRepository)
-
-    val getMessageLimitsUseCase: GetMessageLimitsUseCase
-        get() = GetMessageLimitsUseCase(appConfigRepository)
-
-    val getStarsPricingConfigUseCase: GetStarsPricingConfigUseCase
-        get() = GetStarsPricingConfigUseCase(appConfigRepository)
-
-    val getTonPricingConfigUseCase: GetTonPricingConfigUseCase
-        get() = GetTonPricingConfigUseCase(appConfigRepository)
-
-    val getRichMessageLimitsUseCase: GetRichMessageLimitsUseCase
-        get() = GetRichMessageLimitsUseCase(appConfigRepository)
-
-    val getPollsConfigUseCase: GetPollsConfigUseCase
-        get() = GetPollsConfigUseCase(appConfigRepository)
-
-    val getAiComposeConfigUseCase: GetAiComposeConfigUseCase
-        get() = GetAiComposeConfigUseCase(appConfigRepository)
-
-    val getAppLimitsUseCase: GetAppLimitsUseCase
-        get() = GetAppLimitsUseCase(appConfigRepository)
-
-    val reloadAppConfigUseCase: ReloadAppConfigUseCase
-        get() = ReloadAppConfigUseCase(appConfigRepository)
-
-    val updateAppConfigValueUseCase: UpdateAppConfigValueUseCase
-        get() = UpdateAppConfigValueUseCase(appConfigRepository)
-
-    private var cachedAppConfigViewModel: AppConfigViewModel? = null
-
-    val appConfigViewModel: AppConfigViewModel
-        get() {
-            var vm = cachedAppConfigViewModel
-            if (vm == null) {
-                vm = createAppConfigViewModel()
-                cachedAppConfigViewModel = vm
-            }
-            return vm
-        }
-
-    fun createAppConfigViewModel(): AppConfigViewModel {
-        return AppConfigViewModel(
-            observeAppConfig = observeAppConfigUseCase,
-            reloadAppConfig = reloadAppConfigUseCase,
-            updateAppConfigValue = updateAppConfigValueUseCase,
-            repository = appConfigRepository
-        )
-    }
-
-    val autoDeleteMediaRepository: AutoDeleteMediaRepository by lazy {
-        LegacyAutoDeleteMediaRepository(account)
-    }
+    val autoDeleteMediaRepository: AutoDeleteMediaRepository
+        get() = media.autoDeleteMediaRepository
 
     val checkShouldRunCleanupUseCase: CheckShouldRunCleanupUseCase
-        get() = CheckShouldRunCleanupUseCase()
+        get() = media.checkShouldRunCleanupUseCase
 
     val calculateEvictionCandidatesUseCase: CalculateEvictionCandidatesUseCase
-        get() = CalculateEvictionCandidatesUseCase()
+        get() = media.calculateEvictionCandidatesUseCase
 
     val lockFileUseCase: LockFileUseCase
-        get() = LockFileUseCase(autoDeleteMediaRepository)
+        get() = media.lockFileUseCase
 
     val unlockFileUseCase: UnlockFileUseCase
-        get() = UnlockFileUseCase(autoDeleteMediaRepository)
+        get() = media.unlockFileUseCase
 
     val isFileLockedUseCase: IsFileLockedUseCase
-        get() = IsFileLockedUseCase(autoDeleteMediaRepository)
+        get() = media.isFileLockedUseCase
 
     val runAutoDeleteCleanupUseCase: RunAutoDeleteCleanupUseCase
-        get() = RunAutoDeleteCleanupUseCase(autoDeleteMediaRepository)
+        get() = media.runAutoDeleteCleanupUseCase
 
     val observeAutoDeleteStateUseCase: ObserveAutoDeleteStateUseCase
-        get() = ObserveAutoDeleteStateUseCase(autoDeleteMediaRepository)
+        get() = media.observeAutoDeleteStateUseCase
 
     val getAutoDeleteStateUseCase: GetAutoDeleteStateUseCase
-        get() = GetAutoDeleteStateUseCase(autoDeleteMediaRepository)
-
-    private var cachedAutoDeleteMediaViewModel: AutoDeleteMediaViewModel? = null
+        get() = media.getAutoDeleteStateUseCase
 
     val autoDeleteMediaViewModel: AutoDeleteMediaViewModel
-        get() {
-            var vm = cachedAutoDeleteMediaViewModel
-            if (vm == null) {
-                vm = createAutoDeleteMediaViewModel()
-                cachedAutoDeleteMediaViewModel = vm
-            }
-            return vm
-        }
+        get() = media.autoDeleteMediaViewModel
 
-    fun createAutoDeleteMediaViewModel(): AutoDeleteMediaViewModel {
-        return AutoDeleteMediaViewModel(
-            observeAutoDeleteState = observeAutoDeleteStateUseCase,
-            runAutoDeleteCleanup = runAutoDeleteCleanupUseCase,
-            lockFile = lockFileUseCase,
-            unlockFile = unlockFileUseCase,
-            repository = autoDeleteMediaRepository
-        )
-    }
-
-    val authTokensRepository: AuthTokensRepository by lazy {
-        LegacyAuthTokensRepository(account)
-    }
-
-    val pruneTokensListUseCase: PruneTokensListUseCase
-        get() = PruneTokensListUseCase()
-
-    val validateAuthTokenFormatUseCase: ValidateAuthTokenFormatUseCase
-        get() = ValidateAuthTokenFormatUseCase()
-
-    val observeAuthTokensStateUseCase: ObserveAuthTokensStateUseCase
-        get() = ObserveAuthTokensStateUseCase(authTokensRepository)
-
-    val getAuthTokensStateUseCase: GetAuthTokensStateUseCase
-        get() = GetAuthTokensStateUseCase(authTokensRepository)
-
-    val getSavedLoginTokensUseCase: GetSavedLoginTokensUseCase
-        get() = GetSavedLoginTokensUseCase(authTokensRepository)
-
-    val saveLoginTokenUseCase: SaveLoginTokenUseCase
-        get() = SaveLoginTokenUseCase(authTokensRepository, validateAuthTokenFormatUseCase)
-
-    val getSavedLogoutTokensUseCase: GetSavedLogoutTokensUseCase
-        get() = GetSavedLogoutTokensUseCase(authTokensRepository)
-
-    val saveLogoutTokensUseCase: SaveLogoutTokensUseCase
-        get() = SaveLogoutTokensUseCase(authTokensRepository, pruneTokensListUseCase)
-
-    val addLogoutTokenUseCase: AddLogoutTokenUseCase
-        get() = AddLogoutTokenUseCase(authTokensRepository, validateAuthTokenFormatUseCase)
-
-    val removeTokenUseCase: RemoveTokenUseCase
-        get() = RemoveTokenUseCase(authTokensRepository)
-
-    val clearAllTokensUseCase: ClearAllTokensUseCase
-        get() = ClearAllTokensUseCase(authTokensRepository)
-
-    val refreshAuthTokensUseCase: RefreshAuthTokensUseCase
-        get() = RefreshAuthTokensUseCase(authTokensRepository)
-
-    private var cachedAuthTokensViewModel: AuthTokensViewModel? = null
-
-    val authTokensViewModel: AuthTokensViewModel
-        get() {
-            var vm = cachedAuthTokensViewModel
-            if (vm == null) {
-                vm = createAuthTokensViewModel()
-                cachedAuthTokensViewModel = vm
-            }
-            return vm
-        }
-
-    fun createAuthTokensViewModel(): AuthTokensViewModel {
-        return AuthTokensViewModel(
-            observeAuthTokensState = observeAuthTokensStateUseCase,
-            saveLoginToken = saveLoginTokenUseCase,
-            addLogoutToken = addLogoutTokenUseCase,
-            removeToken = removeTokenUseCase,
-            clearAllTokens = clearAllTokensUseCase,
-            refreshAuthTokens = refreshAuthTokensUseCase,
-            repository = authTokensRepository
-        )
-    }
-
-    val messageCustomParamsRepository: MessageCustomParamsRepository by lazy {
-        LegacyMessageCustomParamsRepository(account)
-    }
-
-    val checkMessageCustomParamsEmptyUseCase: CheckMessageCustomParamsEmptyUseCase
-        get() = CheckMessageCustomParamsEmptyUseCase()
-
-    val mergeMessageCustomParamsUseCase: MergeMessageCustomParamsUseCase
-        get() = MergeMessageCustomParamsUseCase()
-
-    val observeMessageCustomParamsStateUseCase: ObserveMessageCustomParamsStateUseCase
-        get() = ObserveMessageCustomParamsStateUseCase(messageCustomParamsRepository)
-
-    val getMessageCustomParamsStateUseCase: GetMessageCustomParamsStateUseCase
-        get() = GetMessageCustomParamsStateUseCase(messageCustomParamsRepository)
-
-    val getMessageCustomParamsUseCase: GetMessageCustomParamsUseCase
-        get() = GetMessageCustomParamsUseCase(messageCustomParamsRepository)
-
-    val setMessageCustomParamsUseCase: SetMessageCustomParamsUseCase
-        get() = SetMessageCustomParamsUseCase(messageCustomParamsRepository, mergeMessageCustomParamsUseCase)
-
-    val updateVoiceTranscriptionUseCase: UpdateVoiceTranscriptionUseCase
-        get() = UpdateVoiceTranscriptionUseCase(messageCustomParamsRepository)
-
-    val updateMessageTranslationUseCase: UpdateMessageTranslationUseCase
-        get() = UpdateMessageTranslationUseCase(messageCustomParamsRepository)
-
-    val updateMessageSummaryUseCase: UpdateMessageSummaryUseCase
-        get() = UpdateMessageSummaryUseCase(messageCustomParamsRepository)
-
-    val copyMessageCustomParamsUseCase: CopyMessageCustomParamsUseCase
-        get() = CopyMessageCustomParamsUseCase(messageCustomParamsRepository)
-
-    val removeMessageCustomParamsUseCase: RemoveMessageCustomParamsUseCase
-        get() = RemoveMessageCustomParamsUseCase(messageCustomParamsRepository)
-
-    val clearAllMessageCustomParamsUseCase: ClearAllMessageCustomParamsUseCase
-        get() = ClearAllMessageCustomParamsUseCase(messageCustomParamsRepository)
-
-    private var cachedMessageCustomParamsViewModel: MessageCustomParamsViewModel? = null
-
-    val messageCustomParamsViewModel: MessageCustomParamsViewModel
-        get() {
-            var vm = cachedMessageCustomParamsViewModel
-            if (vm == null) {
-                vm = createMessageCustomParamsViewModel()
-                cachedMessageCustomParamsViewModel = vm
-            }
-            return vm
-        }
-
-    fun createMessageCustomParamsViewModel(): MessageCustomParamsViewModel {
-        return MessageCustomParamsViewModel(
-            observeState = observeMessageCustomParamsStateUseCase,
-            getParams = getMessageCustomParamsUseCase,
-            setParams = setMessageCustomParamsUseCase,
-            updateVoice = updateVoiceTranscriptionUseCase,
-            updateTranslation = updateMessageTranslationUseCase,
-            updateSummary = updateMessageSummaryUseCase,
-            copyParams = copyMessageCustomParamsUseCase,
-            removeParams = removeMessageCustomParamsUseCase,
-            clearAll = clearAllMessageCustomParamsUseCase,
-            repository = messageCustomParamsRepository
-        )
-    }
-
-    private var customBotForumRepository: BotForumRepository? = null
-
-    var botForumRepository: BotForumRepository
-        get() = customBotForumRepository ?: LegacyBotForumRepository(account)
-        set(value) {
-            customBotForumRepository = value
-        }
-
-    val deriveTopicNameFromMessageUseCase: DeriveTopicNameFromMessageUseCase
-        get() = DeriveTopicNameFromMessageUseCase()
-
-    val resolveStreamingButtonStateUseCase: ResolveStreamingButtonStateUseCase
-        get() = ResolveStreamingButtonStateUseCase()
-
-    val observeBotForumStateUseCase: ObserveBotForumStateUseCase
-        get() = ObserveBotForumStateUseCase(botForumRepository)
-
-    val getBotForumStateUseCase: GetBotForumStateUseCase
-        get() = GetBotForumStateUseCase(botForumRepository)
-
-    val getStreamingSendButtonStateUseCase: GetStreamingSendButtonStateUseCase
-        get() = GetStreamingSendButtonStateUseCase(botForumRepository)
-
-    val checkIsStreamingTopicUseCase: CheckIsStreamingTopicUseCase
-        get() = CheckIsStreamingTopicUseCase(botForumRepository)
-
-    val saveIsStreamingTopicUseCase: SaveIsStreamingTopicUseCase
-        get() = SaveIsStreamingTopicUseCase(botForumRepository)
-
-    val checkHasBotForumDraftsUseCase: CheckHasBotForumDraftsUseCase
-        get() = CheckHasBotForumDraftsUseCase(botForumRepository)
-
-    val stopStreamingDraftUseCase: StopStreamingDraftUseCase
-        get() = StopStreamingDraftUseCase(botForumRepository)
-
-    val updateBotForumDraftUseCase: UpdateBotForumDraftUseCase
-        get() = UpdateBotForumDraftUseCase(botForumRepository)
-
-    val removeMarkedRemovedDraftsUseCase: RemoveMarkedRemovedDraftsUseCase
-        get() = RemoveMarkedRemovedDraftsUseCase(botForumRepository)
-
-    val checkNewMessageDraftReplacementUseCase: CheckNewMessageDraftReplacementUseCase
-        get() = CheckNewMessageDraftReplacementUseCase(botForumRepository)
-
-    val checkIsBotForumUseCase: CheckIsBotForumUseCase
-        get() = CheckIsBotForumUseCase(botForumRepository)
-
-    private var cachedBotForumViewModel: BotForumViewModel? = null
-
-    val botForumViewModel: BotForumViewModel
-        get() {
-            var vm = cachedBotForumViewModel
-            if (vm == null) {
-                vm = createBotForumViewModel()
-                cachedBotForumViewModel = vm
-            }
-            return vm
-        }
-
-    fun createBotForumViewModel(): BotForumViewModel {
-        return BotForumViewModel(
-            observeBotForumStateUseCase = observeBotForumStateUseCase,
-            getStreamingSendButtonStateUseCase = getStreamingSendButtonStateUseCase,
-            checkIsStreamingTopicUseCase = checkIsStreamingTopicUseCase,
-            saveIsStreamingTopicUseCase = saveIsStreamingTopicUseCase,
-            stopStreamingDraftUseCase = stopStreamingDraftUseCase,
-            updateBotForumDraftUseCase = updateBotForumDraftUseCase,
-            removeMarkedRemovedDraftsUseCase = removeMarkedRemovedDraftsUseCase,
-            checkNewMessageDraftReplacementUseCase = checkNewMessageDraftReplacementUseCase,
-            checkHasBotForumDraftsUseCase = checkHasBotForumDraftsUseCase
-        )
-    }
-
-    private var customStoryCustomParamsRepository: StoryCustomParamsRepository? = null
+    fun createAutoDeleteMediaViewModel(): AutoDeleteMediaViewModel = media.createAutoDeleteMediaViewModel()
 
     var storyCustomParamsRepository: StoryCustomParamsRepository
-        get() = customStoryCustomParamsRepository ?: LegacyStoryCustomParamsRepository(account)
-        set(value) {
-            customStoryCustomParamsRepository = value
-        }
+        get() = media.storyCustomParamsRepository
+        set(value) { media.storyCustomParamsRepository = value }
 
     val checkStoryCustomParamsEmptyUseCase: CheckStoryCustomParamsEmptyUseCase
-        get() = CheckStoryCustomParamsEmptyUseCase()
+        get() = media.checkStoryCustomParamsEmptyUseCase
 
     val computeStoryCustomParamsFlagsUseCase: ComputeStoryCustomParamsFlagsUseCase
-        get() = ComputeStoryCustomParamsFlagsUseCase()
+        get() = media.computeStoryCustomParamsFlagsUseCase
 
     val observeStoryCustomParamsStateUseCase: ObserveStoryCustomParamsStateUseCase
-        get() = ObserveStoryCustomParamsStateUseCase(storyCustomParamsRepository)
+        get() = media.observeStoryCustomParamsStateUseCase
 
     val getStoryCustomParamsStateUseCase: GetStoryCustomParamsStateUseCase
-        get() = GetStoryCustomParamsStateUseCase(storyCustomParamsRepository)
+        get() = media.getStoryCustomParamsStateUseCase
 
     val getStoryCustomParamsUseCase: GetStoryCustomParamsUseCase
-        get() = GetStoryCustomParamsUseCase(storyCustomParamsRepository)
+        get() = media.getStoryCustomParamsUseCase
 
     val saveStoryCustomParamsUseCase: SaveStoryCustomParamsUseCase
-        get() = SaveStoryCustomParamsUseCase(storyCustomParamsRepository)
+        get() = media.saveStoryCustomParamsUseCase
 
     val updateStoryTranslationUseCase: UpdateStoryTranslationUseCase
-        get() = UpdateStoryTranslationUseCase(storyCustomParamsRepository)
+        get() = media.updateStoryTranslationUseCase
 
     val copyStoryCustomParamsUseCase: CopyStoryCustomParamsUseCase
-        get() = CopyStoryCustomParamsUseCase(storyCustomParamsRepository)
+        get() = media.copyStoryCustomParamsUseCase
 
     val removeStoryCustomParamsUseCase: RemoveStoryCustomParamsUseCase
-        get() = RemoveStoryCustomParamsUseCase(storyCustomParamsRepository)
+        get() = media.removeStoryCustomParamsUseCase
 
     val clearAllStoryCustomParamsUseCase: ClearAllStoryCustomParamsUseCase
-        get() = ClearAllStoryCustomParamsUseCase(storyCustomParamsRepository)
-
-    private var cachedStoryCustomParamsViewModel: StoryCustomParamsViewModel? = null
+        get() = media.clearAllStoryCustomParamsUseCase
 
     val storyCustomParamsViewModel: StoryCustomParamsViewModel
-        get() {
-            var vm = cachedStoryCustomParamsViewModel
-            if (vm == null) {
-                vm = createStoryCustomParamsViewModel()
-                cachedStoryCustomParamsViewModel = vm
-            }
-            return vm
-        }
+        get() = media.storyCustomParamsViewModel
 
-    fun createStoryCustomParamsViewModel(): StoryCustomParamsViewModel {
-        return StoryCustomParamsViewModel(
-            observeStateUseCase = observeStoryCustomParamsStateUseCase,
-            getParamsUseCase = getStoryCustomParamsUseCase,
-            saveParamsUseCase = saveStoryCustomParamsUseCase,
-            updateTranslationUseCase = updateStoryTranslationUseCase,
-            copyParamsUseCase = copyStoryCustomParamsUseCase,
-            removeParamsUseCase = removeStoryCustomParamsUseCase,
-            clearAllUseCase = clearAllStoryCustomParamsUseCase,
-            checkEmptyUseCase = checkStoryCustomParamsEmptyUseCase
-        )
-    }
+    fun createStoryCustomParamsViewModel(): StoryCustomParamsViewModel = media.createStoryCustomParamsViewModel()
 
-    private var customBotGuardRepository: BotGuardRepository? = null
+    // ==================== MESSAGING DOMAIN ====================
 
-    var botGuardRepository: BotGuardRepository
-        get() = customBotGuardRepository ?: LegacyBotGuardRepository(account)
-        set(value) {
-            customBotGuardRepository = value
-        }
+    var savedMessagesRepository: SavedMessagesRepository
+        get() = messaging.savedMessagesRepository
+        set(value) { messaging.savedMessagesRepository = value }
 
-    val isGuardBotConfirmationNeededUseCase: IsGuardBotConfirmationNeededUseCase
-        get() = IsGuardBotConfirmationNeededUseCase(botGuardRepository)
+    val getSavedDialogsUseCase: GetSavedDialogsUseCase
+        get() = messaging.getSavedDialogsUseCase
 
-    val determineGuardBotLaunchFlowUseCase: DetermineGuardBotLaunchFlowUseCase
-        get() = DetermineGuardBotLaunchFlowUseCase(isGuardBotConfirmationNeededUseCase)
+    val togglePinSavedDialogUseCase: TogglePinSavedDialogUseCase
+        get() = messaging.togglePinSavedDialogUseCase
 
-    val registerGuardBotSessionUseCase: RegisterGuardBotSessionUseCase
-        get() = RegisterGuardBotSessionUseCase(botGuardRepository)
+    val deleteSavedDialogUseCase: DeleteSavedDialogUseCase
+        get() = messaging.deleteSavedDialogUseCase
 
-    val getGuardBotSessionUseCase: GetGuardBotSessionUseCase
-        get() = GetGuardBotSessionUseCase(botGuardRepository)
+    val getSavedTagsUseCase: GetSavedTagsUseCase
+        get() = messaging.getSavedTagsUseCase
 
-    val getAllActiveGuardBotSessionsUseCase: GetAllActiveGuardBotSessionsUseCase
-        get() = GetAllActiveGuardBotSessionsUseCase(botGuardRepository)
+    val searchSavedDialogsUseCase: SearchSavedDialogsUseCase
+        get() = messaging.searchSavedDialogsUseCase
 
-    val closeGuardBotSessionUseCase: CloseGuardBotSessionUseCase
-        get() = CloseGuardBotSessionUseCase(botGuardRepository)
+    fun getSavedMessagesViewModel(): SavedMessagesViewModel = messaging.getSavedMessagesViewModel()
 
-    val setGuardBotConfirmationShownUseCase: SetGuardBotConfirmationShownUseCase
-        get() = SetGuardBotConfirmationShownUseCase(botGuardRepository)
+    fun createSavedMessagesViewModel(): SavedMessagesViewModel = messaging.createSavedMessagesViewModel()
 
-    val clearAllGuardBotSessionsUseCase: ClearAllGuardBotSessionsUseCase
-        get() = ClearAllGuardBotSessionsUseCase(botGuardRepository)
+    var dialogsRepository: DialogsRepository
+        get() = messaging.dialogsRepository
+        set(value) { messaging.dialogsRepository = value }
 
-    val observeGuardBotDecisionsUseCase: ObserveGuardBotDecisionsUseCase
-        get() = ObserveGuardBotDecisionsUseCase(botGuardRepository)
+    val getDialogsUseCase: GetDialogsUseCase
+        get() = messaging.getDialogsUseCase
 
-    val observeGuardBotStateUseCase: ObserveGuardBotStateUseCase
-        get() = ObserveGuardBotStateUseCase(botGuardRepository)
+    val loadMoreDialogsUseCase: LoadMoreDialogsUseCase
+        get() = messaging.loadMoreDialogsUseCase
 
-    val mapJoinChatBotResultUseCase: MapJoinChatBotResultUseCase
-        get() = MapJoinChatBotResultUseCase()
+    val pinDialogUseCase: PinDialogUseCase
+        get() = messaging.pinDialogUseCase
 
-    val formatGuardBotBulletinUseCase: FormatGuardBotBulletinUseCase
-        get() = FormatGuardBotBulletinUseCase()
+    val deleteDialogUseCase: DeleteDialogUseCase
+        get() = messaging.deleteDialogUseCase
 
-    private var cachedBotGuardViewModel: BotGuardViewModel? = null
+    val markDialogAsReadUseCase: MarkDialogAsReadUseCase
+        get() = messaging.markDialogAsReadUseCase
 
-    val botGuardViewModel: BotGuardViewModel
-        get() {
-            var vm = cachedBotGuardViewModel
-            if (vm == null) {
-                vm = createBotGuardViewModel()
-                cachedBotGuardViewModel = vm
-            }
-            return vm
-        }
+    fun getDialogsViewModel(): DialogsViewModel = messaging.getDialogsViewModel()
 
-    fun createBotGuardViewModel(): BotGuardViewModel {
-        return BotGuardViewModel(
-            determineLaunchFlowUseCase = determineGuardBotLaunchFlowUseCase,
-            registerSessionUseCase = registerGuardBotSessionUseCase,
-            closeSessionUseCase = closeGuardBotSessionUseCase,
-            setConfirmationShownUseCase = setGuardBotConfirmationShownUseCase,
-            observeDecisionsUseCase = observeGuardBotDecisionsUseCase,
-            observeStateUseCase = observeGuardBotStateUseCase,
-            formatBulletinUseCase = formatGuardBotBulletinUseCase
-        )
-    }
+    fun createDialogsViewModel(): DialogsViewModel = messaging.createDialogsViewModel()
 
-    private var customEphemeralMessagesRepository: EphemeralMessagesRepository? = null
+    var chatRepository: ChatRepository
+        get() = messaging.chatRepository
+        set(value) { messaging.chatRepository = value }
+
+    val observeMessagesUseCase: ObserveMessagesUseCase
+        get() = messaging.observeMessagesUseCase
+
+    val getMessagesUseCase: GetMessagesUseCase
+        get() = messaging.getMessagesUseCase
+
+    val loadHistoryUseCase: LoadHistoryUseCase
+        get() = messaging.loadHistoryUseCase
+
+    val sendMessageUseCase: SendMessageUseCase
+        get() = messaging.sendMessageUseCase
+
+    val deleteMessagesUseCase: DeleteMessagesUseCase
+        get() = messaging.deleteMessagesUseCase
+
+    fun getChatViewModel(dialogId: Long): ChatViewModel = messaging.getChatViewModel(dialogId)
+
+    fun createChatViewModel(dialogId: Long): ChatViewModel = messaging.createChatViewModel(dialogId)
+
+    var foldersRepository: FoldersRepository
+        get() = messaging.foldersRepository
+        set(value) { messaging.foldersRepository = value }
+
+    val observeFoldersUseCase: ObserveFoldersUseCase
+        get() = messaging.observeFoldersUseCase
+
+    val getFoldersUseCase: GetFoldersUseCase
+        get() = messaging.getFoldersUseCase
+
+    val getFolderUseCase: GetFolderUseCase
+        get() = messaging.getFolderUseCase
+
+    val createFolderUseCase: CreateFolderUseCase
+        get() = messaging.createFolderUseCase
+
+    val updateFolderUseCase: UpdateFolderUseCase
+        get() = messaging.updateFolderUseCase
+
+    val deleteFolderUseCase: DeleteFolderUseCase
+        get() = messaging.deleteFolderUseCase
+
+    val reorderFoldersUseCase: ReorderFoldersUseCase
+        get() = messaging.reorderFoldersUseCase
+
+    val getSuggestedFoldersUseCase: GetSuggestedFoldersUseCase
+        get() = messaging.getSuggestedFoldersUseCase
+
+    val foldersViewModel: FoldersViewModel
+        get() = messaging.foldersViewModel
+
+    fun createFoldersViewModel(): FoldersViewModel = messaging.createFoldersViewModel()
+
+    var stickersRepository: StickersRepository
+        get() = messaging.stickersRepository
+        set(value) { messaging.stickersRepository = value }
+
+    val observeStickerSetsUseCase: ObserveStickerSetsUseCase
+        get() = messaging.observeStickerSetsUseCase
+
+    val getStickerSetsUseCase: GetStickerSetsUseCase
+        get() = messaging.getStickerSetsUseCase
+
+    val getStickerSetUseCase: GetStickerSetUseCase
+        get() = messaging.getStickerSetUseCase
+
+    val getRecentStickersUseCase: GetRecentStickersUseCase
+        get() = messaging.getRecentStickersUseCase
+
+    val getStickersForEmojiUseCase: GetStickersForEmojiUseCase
+        get() = messaging.getStickersForEmojiUseCase
+
+    val toggleStickerSetInstalledUseCase: ToggleStickerSetInstalledUseCase
+        get() = messaging.toggleStickerSetInstalledUseCase
+
+    val toggleStickerSetArchivedUseCase: ToggleStickerSetArchivedUseCase
+        get() = messaging.toggleStickerSetArchivedUseCase
+
+    val stickersViewModel: StickersViewModel
+        get() = messaging.stickersViewModel
+
+    fun getStickersViewModel(type: Int = 0): StickersViewModel = messaging.getStickersViewModel(type)
+
+    fun createStickersViewModel(type: Int = 0): StickersViewModel = messaging.createStickersViewModel(type)
+
+    var searchRepository: SearchRepository
+        get() = messaging.searchRepository
+        set(value) { messaging.searchRepository = value }
+
+    val searchGlobalUseCase: SearchGlobalUseCase
+        get() = messaging.searchGlobalUseCase
+
+    val searchLocalUseCase: SearchLocalUseCase
+        get() = messaging.searchLocalUseCase
+
+    val getRecentSearchesUseCase: GetRecentSearchesUseCase
+        get() = messaging.getRecentSearchesUseCase
+
+    val clearRecentSearchesUseCase: ClearRecentSearchesUseCase
+        get() = messaging.clearRecentSearchesUseCase
+
+    val removeRecentSearchUseCase: RemoveRecentSearchUseCase
+        get() = messaging.removeRecentSearchUseCase
+
+    val getRecentHashtagsUseCase: GetRecentHashtagsUseCase
+        get() = messaging.getRecentHashtagsUseCase
+
+    val putRecentHashtagUseCase: PutRecentHashtagUseCase
+        get() = messaging.putRecentHashtagUseCase
+
+    val clearRecentHashtagsUseCase: ClearRecentHashtagsUseCase
+        get() = messaging.clearRecentHashtagsUseCase
+
+    val searchViewModel: SearchViewModel
+        get() = messaging.searchViewModel
+
+    fun createSearchViewModel(): SearchViewModel = messaging.createSearchViewModel()
+
+    var topicsRepository: TopicsRepository
+        get() = messaging.topicsRepository
+        set(value) { messaging.topicsRepository = value }
+
+    val observeTopicsUseCase: ObserveTopicsUseCase
+        get() = messaging.observeTopicsUseCase
+
+    val observeForumUnreadCountUseCase: ObserveForumUnreadCountUseCase
+        get() = messaging.observeForumUnreadCountUseCase
+
+    val getTopicsUseCase: GetTopicsUseCase
+        get() = messaging.getTopicsUseCase
+
+    val getTopicUseCase: GetTopicUseCase
+        get() = messaging.getTopicUseCase
+
+    val loadTopicsUseCase: LoadTopicsUseCase
+        get() = messaging.loadTopicsUseCase
+
+    val reloadTopicsUseCase: ReloadTopicsUseCase
+        get() = messaging.reloadTopicsUseCase
+
+    val toggleCloseTopicUseCase: ToggleCloseTopicUseCase
+        get() = messaging.toggleCloseTopicUseCase
+
+    val togglePinTopicUseCase: TogglePinTopicUseCase
+        get() = messaging.togglePinTopicUseCase
+
+    val toggleShowTopicUseCase: ToggleShowTopicUseCase
+        get() = messaging.toggleShowTopicUseCase
+
+    val deleteTopicsUseCase: DeleteTopicsUseCase
+        get() = messaging.deleteTopicsUseCase
+
+    val reorderPinnedTopicsUseCase: ReorderPinnedTopicsUseCase
+        get() = messaging.reorderPinnedTopicsUseCase
+
+    val markTopicReactionsAsReadUseCase: MarkTopicReactionsAsReadUseCase
+        get() = messaging.markTopicReactionsAsReadUseCase
+
+    val getForumUnreadCountUseCase: GetForumUnreadCountUseCase
+        get() = messaging.getForumUnreadCountUseCase
+
+    val topicsViewModel: TopicsViewModel
+        get() = messaging.topicsViewModel
+
+    fun createTopicsViewModel(): TopicsViewModel = messaging.createTopicsViewModel()
+
+    var translationRepository: TranslationRepository
+        get() = messaging.translationRepository
+        set(value) { messaging.translationRepository = value }
+
+    val observeTranslateSettingsUseCase: ObserveTranslateSettingsUseCase
+        get() = messaging.observeTranslateSettingsUseCase
+
+    val getTranslateSettingsUseCase: GetTranslateSettingsUseCase
+        get() = messaging.getTranslateSettingsUseCase
+
+    val setChatTranslateEnabledUseCase: SetChatTranslateEnabledUseCase
+        get() = messaging.setChatTranslateEnabledUseCase
+
+    val setContextTranslateEnabledUseCase: SetContextTranslateEnabledUseCase
+        get() = messaging.setContextTranslateEnabledUseCase
+
+    val setDoNotTranslateLanguagesUseCase: SetDoNotTranslateLanguagesUseCase
+        get() = messaging.setDoNotTranslateLanguagesUseCase
+
+    val addDoNotTranslateLanguageUseCase: AddDoNotTranslateLanguageUseCase
+        get() = messaging.addDoNotTranslateLanguageUseCase
+
+    val removeDoNotTranslateLanguageUseCase: RemoveDoNotTranslateLanguageUseCase
+        get() = messaging.removeDoNotTranslateLanguageUseCase
+
+    val observeDialogTranslationStateUseCase: ObserveDialogTranslationStateUseCase
+        get() = messaging.observeDialogTranslationStateUseCase
+
+    val getDialogTranslationStateUseCase: GetDialogTranslationStateUseCase
+        get() = messaging.getDialogTranslationStateUseCase
+
+    val toggleDialogTranslatingUseCase: ToggleDialogTranslatingUseCase
+        get() = messaging.toggleDialogTranslatingUseCase
+
+    val setDialogTargetLanguageUseCase: SetDialogTargetLanguageUseCase
+        get() = messaging.setDialogTargetLanguageUseCase
+
+    val translateTextUseCase: TranslateTextUseCase
+        get() = messaging.translateTextUseCase
+
+    val getAvailableLanguagesUseCase: GetAvailableLanguagesUseCase
+        get() = messaging.getAvailableLanguagesUseCase
+
+    val applyAppLanguageUseCase: ApplyAppLanguageUseCase
+        get() = messaging.applyAppLanguageUseCase
+
+    val translateViewModel: TranslateViewModel
+        get() = messaging.translateViewModel
+
+    fun createTranslateViewModel(): TranslateViewModel = messaging.createTranslateViewModel()
+
+    var reactionsRepository: ReactionsRepository
+        get() = messaging.reactionsRepository
+        set(value) { messaging.reactionsRepository = value }
+
+    val observeAvailableReactionsUseCase: ObserveAvailableReactionsUseCase
+        get() = messaging.observeAvailableReactionsUseCase
+
+    val getAvailableReactionsUseCase: GetAvailableReactionsUseCase
+        get() = messaging.getAvailableReactionsUseCase
+
+    val loadAvailableReactionsUseCase: LoadAvailableReactionsUseCase
+        get() = messaging.loadAvailableReactionsUseCase
+
+    val observeRecentReactionsUseCase: ObserveRecentReactionsUseCase
+        get() = messaging.observeRecentReactionsUseCase
+
+    val getRecentReactionsUseCase: GetRecentReactionsUseCase
+        get() = messaging.getRecentReactionsUseCase
+
+    val getReactionsSettingsUseCase: GetReactionsSettingsUseCase
+        get() = messaging.getReactionsSettingsUseCase
+
+    val getDoubleTapReactionUseCase: GetDoubleTapReactionUseCase
+        get() = messaging.getDoubleTapReactionUseCase
+
+    val setDoubleTapReactionUseCase: SetDoubleTapReactionUseCase
+        get() = messaging.setDoubleTapReactionUseCase
+
+    val sendReactionUseCase: SendReactionUseCase
+        get() = messaging.sendReactionUseCase
+
+    val clearReactionsUseCase: ClearReactionsUseCase
+        get() = messaging.clearReactionsUseCase
+
+    val sendVoteUseCase: SendVoteUseCase
+        get() = messaging.sendVoteUseCase
+
+    val reactionsViewModel: ReactionsViewModel
+        get() = messaging.reactionsViewModel
+
+    fun createReactionsViewModel(): ReactionsViewModel = messaging.createReactionsViewModel()
+
+    var factCheckRepository: FactCheckRepository
+        get() = messaging.factCheckRepository
+        set(value) { messaging.factCheckRepository = value }
+
+    val observeFactCheckLoadedUseCase: ObserveFactCheckLoadedUseCase
+        get() = messaging.observeFactCheckLoadedUseCase
+
+    val getFactCheckUseCase: GetFactCheckUseCase
+        get() = messaging.getFactCheckUseCase
+
+    val loadFactCheckUseCase: LoadFactCheckUseCase
+        get() = messaging.loadFactCheckUseCase
+
+    val applyFactCheckUseCase: ApplyFactCheckUseCase
+        get() = messaging.applyFactCheckUseCase
+
+    val deleteFactCheckUseCase: DeleteFactCheckUseCase
+        get() = messaging.deleteFactCheckUseCase
+
+    val getFactCheckLimitUseCase: GetFactCheckLimitUseCase
+        get() = messaging.getFactCheckLimitUseCase
+
+    val factCheckViewModel: FactCheckViewModel
+        get() = messaging.factCheckViewModel
+
+    fun createFactCheckViewModel(): FactCheckViewModel = messaging.createFactCheckViewModel()
+
+    var chatThemeRepository: ChatThemeRepository
+        get() = messaging.chatThemeRepository
+        set(value) { messaging.chatThemeRepository = value }
+
+    val observeDialogThemeUseCase: ObserveDialogThemeUseCase
+        get() = messaging.observeDialogThemeUseCase
+
+    val getDialogThemeStateUseCase: GetDialogThemeStateUseCase
+        get() = messaging.getDialogThemeStateUseCase
+
+    val getAvailableChatThemesUseCase: GetAvailableChatThemesUseCase
+        get() = messaging.getAvailableChatThemesUseCase
+
+    val setDialogThemeUseCase: SetDialogThemeUseCase
+        get() = messaging.setDialogThemeUseCase
+
+    val resetDialogThemeUseCase: ResetDialogThemeUseCase
+        get() = messaging.resetDialogThemeUseCase
+
+    val saveChatWallpaperUseCase: SaveChatWallpaperUseCase
+        get() = messaging.saveChatWallpaperUseCase
+
+    val chatThemeViewModel: ChatThemeViewModel
+        get() = messaging.chatThemeViewModel
+
+    fun createChatThemeViewModel(): ChatThemeViewModel = messaging.createChatThemeViewModel()
+
+    var autoDeleteRepository: AutoDeleteRepository
+        get() = messaging.autoDeleteRepository
+        set(value) { messaging.autoDeleteRepository = value }
+
+    val observeGlobalAutoDeleteUseCase: ObserveGlobalAutoDeleteUseCase
+        get() = messaging.observeGlobalAutoDeleteUseCase
+
+    val getGlobalAutoDeleteUseCase: GetGlobalAutoDeleteUseCase
+        get() = messaging.getGlobalAutoDeleteUseCase
+
+    val setGlobalAutoDeleteUseCase: SetGlobalAutoDeleteUseCase
+        get() = messaging.setGlobalAutoDeleteUseCase
+
+    val getChatAutoDeleteUseCase: GetChatAutoDeleteUseCase
+        get() = messaging.getChatAutoDeleteUseCase
+
+    val setChatAutoDeleteUseCase: SetChatAutoDeleteUseCase
+        get() = messaging.setChatAutoDeleteUseCase
+
+    val setChatsAutoDeleteBatchUseCase: SetChatsAutoDeleteBatchUseCase
+        get() = messaging.setChatsAutoDeleteBatchUseCase
+
+    val autoDeleteViewModel: AutoDeleteViewModel
+        get() = messaging.autoDeleteViewModel
+
+    fun createAutoDeleteViewModel(): AutoDeleteViewModel = messaging.createAutoDeleteViewModel()
+
+    var aiTonesRepository: AiTonesRepository
+        get() = messaging.aiTonesRepository
+        set(value) { messaging.aiTonesRepository = value }
+
+    val observeAiTonesUseCase: ObserveAiTonesUseCase
+        get() = messaging.observeAiTonesUseCase
+
+    val getAiTonesStateUseCase: GetAiTonesStateUseCase
+        get() = messaging.getAiTonesStateUseCase
+
+    val loadAiTonesUseCase: LoadAiTonesUseCase
+        get() = messaging.loadAiTonesUseCase
+
+    val addAiToneUseCase: AddAiToneUseCase
+        get() = messaging.addAiToneUseCase
+
+    val removeAiToneUseCase: RemoveAiToneUseCase
+        get() = messaging.removeAiToneUseCase
+
+    val unsaveAiToneUseCase: UnsaveAiToneUseCase
+        get() = messaging.unsaveAiToneUseCase
+
+    val editAiToneUseCase: EditAiToneUseCase
+        get() = messaging.editAiToneUseCase
+
+    val aiTonesViewModel: AiTonesViewModel
+        get() = messaging.aiTonesViewModel
+
+    fun createAiTonesViewModel(): AiTonesViewModel = messaging.createAiTonesViewModel()
+
+    var hashtagSearchRepository: HashtagSearchRepository
+        get() = messaging.hashtagSearchRepository
+        set(value) { messaging.hashtagSearchRepository = value }
+
+    val observeHashtagHistoryUseCase: ObserveHashtagHistoryUseCase
+        get() = messaging.observeHashtagHistoryUseCase
+
+    val getHashtagHistoryUseCase: GetHashtagHistoryUseCase
+        get() = messaging.getHashtagHistoryUseCase
+
+    val addHashtagToHistoryUseCase: AddHashtagToHistoryUseCase
+        get() = messaging.addHashtagToHistoryUseCase
+
+    val removeHashtagFromHistoryUseCase: RemoveHashtagFromHistoryUseCase
+        get() = messaging.removeHashtagFromHistoryUseCase
+
+    val clearHashtagHistoryUseCase: ClearHashtagHistoryUseCase
+        get() = messaging.clearHashtagHistoryUseCase
+
+    val observeHashtagSearchResultUseCase: ObserveHashtagSearchResultUseCase
+        get() = messaging.observeHashtagSearchResultUseCase
+
+    val searchHashtagUseCase: SearchHashtagUseCase
+        get() = messaging.searchHashtagUseCase
+
+    val jumpToHashtagMessageUseCase: JumpToHashtagMessageUseCase
+        get() = messaging.jumpToHashtagMessageUseCase
+
+    val clearHashtagSearchResultsUseCase: ClearHashtagSearchResultsUseCase
+        get() = messaging.clearHashtagSearchResultsUseCase
+
+    val hashtagSearchViewModel: HashtagSearchViewModel
+        get() = messaging.hashtagSearchViewModel
+
+    fun createHashtagSearchViewModel(): HashtagSearchViewModel = messaging.createHashtagSearchViewModel()
+
+    var groupCallMessagesRepository: GroupCallMessagesRepository
+        get() = messaging.groupCallMessagesRepository
+        set(value) { messaging.groupCallMessagesRepository = value }
+
+    val observeGroupCallMessagesUseCase: ObserveGroupCallMessagesUseCase
+        get() = messaging.observeGroupCallMessagesUseCase
+
+    val getGroupCallMessagesUseCase: GetGroupCallMessagesUseCase
+        get() = messaging.getGroupCallMessagesUseCase
+
+    val sendGroupCallMessageUseCase: SendGroupCallMessageUseCase
+        get() = messaging.sendGroupCallMessageUseCase
+
+    val popGroupCallMessageUseCase: PopGroupCallMessageUseCase
+        get() = messaging.popGroupCallMessageUseCase
+
+    val clearGroupCallMessagesUseCase: ClearGroupCallMessagesUseCase
+        get() = messaging.clearGroupCallMessagesUseCase
+
+    fun getGroupCallMessagesViewModel(callId: Long = 0L): GroupCallMessagesViewModel = messaging.getGroupCallMessagesViewModel(callId)
+
+    fun createGroupCallMessagesViewModel(callId: Long = 0L): GroupCallMessagesViewModel = messaging.createGroupCallMessagesViewModel(callId)
+
+    var chatMessagesMetadataRepository: ChatMessagesMetadataRepository
+        get() = messaging.chatMessagesMetadataRepository
+        set(value) { messaging.chatMessagesMetadataRepository = value }
+
+    val observeChatMetadataStatsUseCase: ObserveChatMetadataStatsUseCase
+        get() = messaging.observeChatMetadataStatsUseCase
+
+    val getChatMetadataStatsUseCase: GetChatMetadataStatsUseCase
+        get() = messaging.getChatMetadataStatsUseCase
+
+    val checkMessagesMetadataUseCase: CheckMessagesMetadataUseCase
+        get() = messaging.checkMessagesMetadataUseCase
+
+    val loadMessagesReactionsUseCase: LoadMessagesReactionsUseCase
+        get() = messaging.loadMessagesReactionsUseCase
+
+    val loadMessagesExtendedMediaUseCase: LoadMessagesExtendedMediaUseCase
+        get() = messaging.loadMessagesExtendedMediaUseCase
+
+    val cancelPendingMetadataRequestsUseCase: CancelPendingMetadataRequestsUseCase
+        get() = messaging.cancelPendingMetadataRequestsUseCase
+
+    val chatMetadataViewModel: ChatMetadataViewModel
+        get() = messaging.chatMetadataViewModel
+
+    fun createChatMetadataViewModel(): ChatMetadataViewModel = messaging.createChatMetadataViewModel()
+
+    var draftsRepository: DraftsRepository
+        get() = messaging.draftsRepository
+        set(value) { messaging.draftsRepository = value }
+
+    val observeDraftsStateUseCase: ObserveDraftsStateUseCase
+        get() = messaging.observeDraftsStateUseCase
+
+    val getDraftsStateUseCase: GetDraftsStateUseCase
+        get() = messaging.getDraftsStateUseCase
+
+    val loadDraftsUseCase: LoadDraftsUseCase
+        get() = messaging.loadDraftsUseCase
+
+    val saveDraftUseCase: SaveDraftUseCase
+        get() = messaging.saveDraftUseCase
+
+    val deleteDraftUseCase: DeleteDraftUseCase
+        get() = messaging.deleteDraftUseCase
+
+    val deleteForEditUseCase: DeleteForEditUseCase
+        get() = messaging.deleteForEditUseCase
+
+    val getDraftForEditUseCase: GetDraftForEditUseCase
+        get() = messaging.getDraftForEditUseCase
+
+    val cleanupExpiredDraftsUseCase: CleanupExpiredDraftsUseCase
+        get() = messaging.cleanupExpiredDraftsUseCase
+
+    val draftsViewModel: DraftsViewModel
+        get() = messaging.draftsViewModel
+
+    fun createDraftsViewModel(): DraftsViewModel = messaging.createDraftsViewModel()
+
+    fun createDraftMeasureRepository(legacyController: ChatActivityDraftMessageMeasureController? = null): DraftMeasureRepository = messaging.createDraftMeasureRepository(legacyController)
+
+    val draftMeasureRepository: DraftMeasureRepository
+        get() = messaging.draftMeasureRepository
+
+    val calculateDraftMeasureOverrideUseCase: CalculateDraftMeasureOverrideUseCase
+        get() = messaging.calculateDraftMeasureOverrideUseCase
+
+    val setDraftMeasureTargetUseCase: SetDraftMeasureTargetUseCase
+        get() = messaging.setDraftMeasureTargetUseCase
+
+    val onDraftMessageIdChangedUseCase: OnDraftMessageIdChangedUseCase
+        get() = messaging.onDraftMessageIdChangedUseCase
+
+    val setPreviousMessageHeightUseCase: SetPreviousMessageHeightUseCase
+        get() = messaging.setPreviousMessageHeightUseCase
+
+    val resetDraftMeasureTargetUseCase: ResetDraftMeasureTargetUseCase
+        get() = messaging.resetDraftMeasureTargetUseCase
+
+    val observeDraftMeasureConfigUseCase: ObserveDraftMeasureConfigUseCase
+        get() = messaging.observeDraftMeasureConfigUseCase
+
+    val getDraftMeasureConfigUseCase: GetDraftMeasureConfigUseCase
+        get() = messaging.getDraftMeasureConfigUseCase
+
+    val draftMeasureViewModel: DraftMeasureViewModel
+        get() = messaging.draftMeasureViewModel
+
+    fun createDraftMeasureViewModel(legacyController: ChatActivityDraftMessageMeasureController? = null): DraftMeasureViewModel = messaging.createDraftMeasureViewModel(legacyController)
+
+    fun createBottomViewsRepository(legacyController: ChatActivityBottomViewsVisibilityController? = null): BottomViewsVisibilityRepository = messaging.createBottomViewsRepository(legacyController)
+
+    val bottomViewsRepository: BottomViewsVisibilityRepository
+        get() = messaging.bottomViewsRepository
+
+    val getBottomViewVisibilityUseCase: GetBottomViewVisibilityUseCase
+        get() = messaging.getBottomViewVisibilityUseCase
+
+    val setBottomViewVisibleUseCase: SetBottomViewVisibleUseCase
+        get() = messaging.setBottomViewVisibleUseCase
+
+    val getPriorityBottomContainerUseCase: GetPriorityBottomContainerUseCase
+        get() = messaging.getPriorityBottomContainerUseCase
+
+    val getBottomViewsStateUseCase: GetBottomViewsStateUseCase
+        get() = messaging.getBottomViewsStateUseCase
+
+    val observeBottomViewsVisibilityUseCase: ObserveBottomViewsVisibilityUseCase
+        get() = messaging.observeBottomViewsVisibilityUseCase
+
+    val bottomViewsViewModel: BottomViewsViewModel
+        get() = messaging.bottomViewsViewModel
+
+    fun createBottomViewsViewModel(legacyController: ChatActivityBottomViewsVisibilityController? = null): BottomViewsViewModel = messaging.createBottomViewsViewModel(legacyController)
+
+    fun createRichCaptionRepository(): RichCaptionRepository = messaging.createRichCaptionRepository()
+
+    val richCaptionRepository: RichCaptionRepository
+        get() = messaging.richCaptionRepository
+
+    val observeRichCaptionUseCase: ObserveRichCaptionUseCase
+        get() = messaging.observeRichCaptionUseCase
+
+    val getRichCaptionUseCase: GetRichCaptionUseCase
+        get() = messaging.getRichCaptionUseCase
+
+    val setRichCaptionTextUseCase: SetRichCaptionTextUseCase
+        get() = messaging.setRichCaptionTextUseCase
+
+    val setRichCaptionCreditUseCase: SetRichCaptionCreditUseCase
+        get() = messaging.setRichCaptionCreditUseCase
+
+    val setRichCaptionLockedUseCase: SetRichCaptionLockedUseCase
+        get() = messaging.setRichCaptionLockedUseCase
+
+    val calculateCaptionMeasureWidthUseCase: CalculateCaptionMeasureWidthUseCase
+        get() = messaging.calculateCaptionMeasureWidthUseCase
+
+    val checkCaptionPressHitUseCase: CheckCaptionPressHitUseCase
+        get() = messaging.checkCaptionPressHitUseCase
+
+    val clearRichCaptionUseCase: ClearRichCaptionUseCase
+        get() = messaging.clearRichCaptionUseCase
+
+    val richCaptionViewModel: RichCaptionViewModel
+        get() = messaging.richCaptionViewModel
+
+    fun createRichCaptionViewModel(): RichCaptionViewModel = messaging.createRichCaptionViewModel()
+
+    fun createEmojiEffectsRepository(): EmojiEffectsRepository = messaging.createEmojiEffectsRepository()
+
+    val emojiEffectsRepository: EmojiEffectsRepository
+        get() = messaging.emojiEffectsRepository
+
+    val normalizeEmojiUseCase: NormalizeEmojiUseCase
+        get() = messaging.normalizeEmojiUseCase
+
+    val evaluateEmojiSupportUseCase: EvaluateEmojiSupportUseCase
+        get() = messaging.evaluateEmojiSupportUseCase
+
+    val recordEmojiTapUseCase: RecordEmojiTapUseCase
+        get() = messaging.recordEmojiTapUseCase
+
+    val encodeEmojiInteractionsJsonUseCase: EncodeEmojiInteractionsJsonUseCase
+        get() = messaging.encodeEmojiInteractionsJsonUseCase
+
+    val decodeEmojiInteractionsJsonUseCase: DecodeEmojiInteractionsJsonUseCase
+        get() = messaging.decodeEmojiInteractionsJsonUseCase
+
+    val calculateEmojiBoundsUseCase: CalculateEmojiBoundsUseCase
+        get() = messaging.calculateEmojiBoundsUseCase
+
+    val calculateEmojiOverlayPositionUseCase: CalculateEmojiOverlayPositionUseCase
+        get() = messaging.calculateEmojiOverlayPositionUseCase
+
+    val evaluateAnimationQuotaUseCase: EvaluateAnimationQuotaUseCase
+        get() = messaging.evaluateAnimationQuotaUseCase
+
+    val observeEmojiEffectsStateUseCase: ObserveEmojiEffectsStateUseCase
+        get() = messaging.observeEmojiEffectsStateUseCase
+
+    val getEmojiEffectsStateUseCase: GetEmojiEffectsStateUseCase
+        get() = messaging.getEmojiEffectsStateUseCase
+
+    val startEmojiEffectUseCase: StartEmojiEffectUseCase
+        get() = messaging.startEmojiEffectUseCase
+
+    val updateEmojiEffectProgressUseCase: UpdateEmojiEffectProgressUseCase
+        get() = messaging.updateEmojiEffectProgressUseCase
+
+    val dismissEmojiEffectUseCase: DismissEmojiEffectUseCase
+        get() = messaging.dismissEmojiEffectUseCase
+
+    val clearEmojiEffectsUseCase: ClearEmojiEffectsUseCase
+        get() = messaging.clearEmojiEffectsUseCase
+
+    val emojiEffectsViewModel: EmojiEffectsViewModel
+        get() = messaging.emojiEffectsViewModel
+
+    fun createEmojiEffectsViewModel(): EmojiEffectsViewModel = messaging.createEmojiEffectsViewModel()
+
+    fun createMentionsRepository(): MentionsRepository = messaging.createMentionsRepository()
+
+    val mentionsRepository: MentionsRepository
+        get() = messaging.mentionsRepository
+
+    val validateUsernameUseCase: ValidateUsernameUseCase
+        get() = messaging.validateUsernameUseCase
+
+    val parseMentionQueryUseCase: ParseMentionQueryUseCase
+        get() = messaging.parseMentionQueryUseCase
+
+    val filterMentionsUseCase: FilterMentionsUseCase
+        get() = messaging.filterMentionsUseCase
+
+    val formatMentionReplacementUseCase: FormatMentionReplacementUseCase
+        get() = messaging.formatMentionReplacementUseCase
+
+    val observeMentionsStateUseCase: ObserveMentionsStateUseCase
+        get() = messaging.observeMentionsStateUseCase
+
+    val getMentionsStateUseCase: GetMentionsStateUseCase
+        get() = messaging.getMentionsStateUseCase
+
+    val updateMentionQueryUseCase: UpdateMentionQueryUseCase
+        get() = messaging.updateMentionQueryUseCase
+
+    val setMentionCandidatesUseCase: SetMentionCandidatesUseCase
+        get() = messaging.setMentionCandidatesUseCase
+
+    val dismissMentionsUseCase: DismissMentionsUseCase
+        get() = messaging.dismissMentionsUseCase
+
+    val clearMentionsUseCase: ClearMentionsUseCase
+        get() = messaging.clearMentionsUseCase
+
+    val mentionsViewModel: MentionsViewModel
+        get() = messaging.mentionsViewModel
+
+    fun createMentionsViewModel(): MentionsViewModel = messaging.createMentionsViewModel()
+
+    fun createEmojiPickerRepository(): EmojiPickerRepository = messaging.createEmojiPickerRepository()
+
+    val emojiPickerRepository: EmojiPickerRepository
+        get() = messaging.emojiPickerRepository
+
+    val resolveAvailablePickerTabsUseCase: ResolveAvailablePickerTabsUseCase
+        get() = messaging.resolveAvailablePickerTabsUseCase
+
+    val filterEmojiItemsUseCase: FilterEmojiItemsUseCase
+        get() = messaging.filterEmojiItemsUseCase
+
+    val filterStickersUseCase: FilterStickersUseCase
+        get() = messaging.filterStickersUseCase
+
+    val filterGifsUseCase: FilterGifsUseCase
+        get() = messaging.filterGifsUseCase
+
+    val observeEmojiPickerStateUseCase: ObserveEmojiPickerStateUseCase
+        get() = messaging.observeEmojiPickerStateUseCase
+
+    val getEmojiPickerStateUseCase: GetEmojiPickerStateUseCase
+        get() = messaging.getEmojiPickerStateUseCase
+
+    val selectPickerTabUseCase: SelectPickerTabUseCase
+        get() = messaging.selectPickerTabUseCase
+
+    val updatePickerSearchQueryUseCase: UpdatePickerSearchQueryUseCase
+        get() = messaging.updatePickerSearchQueryUseCase
+
+    val toggleStickerFavoriteUseCase: ToggleStickerFavoriteUseCase
+        get() = messaging.toggleStickerFavoriteUseCase
+
+    val clearRecentPickerItemsUseCase: ClearRecentPickerItemsUseCase
+        get() = messaging.clearRecentPickerItemsUseCase
+
+    val emojiPickerViewModel: EmojiPickerViewModel
+        get() = messaging.emojiPickerViewModel
+
+    fun createEmojiPickerViewModel(): EmojiPickerViewModel = messaging.createEmojiPickerViewModel()
+
+    fun createChatAttachRepository(): ChatAttachRepository = messaging.createChatAttachRepository()
+
+    val chatAttachRepository: ChatAttachRepository
+        get() = messaging.chatAttachRepository
+
+    val resolveAvailableAttachLayoutsUseCase: ResolveAvailableAttachLayoutsUseCase
+        get() = messaging.resolveAvailableAttachLayoutsUseCase
+
+    val calculateAttachCaptionLimitUseCase: CalculateAttachCaptionLimitUseCase
+        get() = messaging.calculateAttachCaptionLimitUseCase
+
+    val toggleAttachItemSelectionUseCase: ToggleAttachItemSelectionUseCase
+        get() = messaging.toggleAttachItemSelectionUseCase
+
+    val validateSendOptionsUseCase: ValidateSendOptionsUseCase
+        get() = messaging.validateSendOptionsUseCase
+
+    val observeChatAttachStateUseCase: ObserveChatAttachStateUseCase
+        get() = messaging.observeChatAttachStateUseCase
+
+    val getChatAttachStateUseCase: GetChatAttachStateUseCase
+        get() = messaging.getChatAttachStateUseCase
+
+    val selectAttachLayoutUseCase: SelectAttachLayoutUseCase
+        get() = messaging.selectAttachLayoutUseCase
+
+    val updateAttachSendOptionsUseCase: UpdateAttachSendOptionsUseCase
+        get() = messaging.updateAttachSendOptionsUseCase
+
+    val clearAttachSelectionUseCase: ClearAttachSelectionUseCase
+        get() = messaging.clearAttachSelectionUseCase
+
+    val openChatAttachAlertUseCase: OpenChatAttachAlertUseCase
+        get() = messaging.openChatAttachAlertUseCase
+
+    val chatAttachViewModel: ChatAttachViewModel
+        get() = messaging.chatAttachViewModel
+
+    fun createChatAttachViewModel(): ChatAttachViewModel = messaging.createChatAttachViewModel()
+
+    var chatInputRepository: ChatInputRepository
+        get() = messaging.chatInputRepository
+        set(value) { messaging.chatInputRepository = value }
+
+    val calculateSendButtonStateUseCase: CalculateSendButtonStateUseCase
+        get() = messaging.calculateSendButtonStateUseCase
+
+    val formatTextSelectionUseCase: FormatTextSelectionUseCase
+        get() = messaging.formatTextSelectionUseCase
+
+    val validateVoiceRecordActionUseCase: ValidateVoiceRecordActionUseCase
+        get() = messaging.validateVoiceRecordActionUseCase
+
+    val resolvePanelVisibilityUseCase: ResolvePanelVisibilityUseCase
+        get() = messaging.resolvePanelVisibilityUseCase
+
+    val observeChatInputStateUseCase: ObserveChatInputStateUseCase
+        get() = messaging.observeChatInputStateUseCase
+
+    val getChatInputStateUseCase: GetChatInputStateUseCase
+        get() = messaging.getChatInputStateUseCase
+
+    val setChatInputTextUseCase: SetChatInputTextUseCase
+        get() = messaging.setChatInputTextUseCase
+
+    val setChatInputPanelModeUseCase: SetChatInputPanelModeUseCase
+        get() = messaging.setChatInputPanelModeUseCase
+
+    val setChatInputReplyUseCase: SetChatInputReplyUseCase
+        get() = messaging.setChatInputReplyUseCase
+
+    val clearChatInputReplyUseCase: ClearChatInputReplyUseCase
+        get() = messaging.clearChatInputReplyUseCase
+
+    val chatInputViewModel: ChatInputViewModel
+        get() = messaging.chatInputViewModel
+
+    fun createChatInputViewModel(): ChatInputViewModel = messaging.createChatInputViewModel()
+
+    val sendMessagesRepository: SendMessagesRepository
+        get() = messaging.sendMessagesRepository
+
+    val sendTextMessageUseCase: SendTextMessageUseCase
+        get() = messaging.sendTextMessageUseCase
+
+    val sendMediaMessageUseCase: SendMediaMessageUseCase
+        get() = messaging.sendMediaMessageUseCase
+
+    val sendMediaAlbumUseCase: SendMediaAlbumUseCase
+        get() = messaging.sendMediaAlbumUseCase
+
+    val forwardMessagesUseCase: ForwardMessagesUseCase
+        get() = messaging.forwardMessagesUseCase
+
+    val retrySendMessageUseCase: RetrySendMessageUseCase
+        get() = messaging.retrySendMessageUseCase
+
+    val cancelSendMessageUseCase: CancelSendMessageUseCase
+        get() = messaging.cancelSendMessageUseCase
+
+    val observePendingSendsUseCase: ObservePendingSendsUseCase
+        get() = messaging.observePendingSendsUseCase
+
+    val sendMessagesViewModel: SendMessagesViewModel
+        get() = messaging.sendMessagesViewModel
+
+    fun createSendMessagesViewModel(): SendMessagesViewModel = messaging.createSendMessagesViewModel()
+
+    val messageCustomParamsRepository: MessageCustomParamsRepository
+        get() = messaging.messageCustomParamsRepository
+
+    val checkMessageCustomParamsEmptyUseCase: CheckMessageCustomParamsEmptyUseCase
+        get() = messaging.checkMessageCustomParamsEmptyUseCase
+
+    val mergeMessageCustomParamsUseCase: MergeMessageCustomParamsUseCase
+        get() = messaging.mergeMessageCustomParamsUseCase
+
+    val observeMessageCustomParamsStateUseCase: ObserveMessageCustomParamsStateUseCase
+        get() = messaging.observeMessageCustomParamsStateUseCase
+
+    val getMessageCustomParamsStateUseCase: GetMessageCustomParamsStateUseCase
+        get() = messaging.getMessageCustomParamsStateUseCase
+
+    val getMessageCustomParamsUseCase: GetMessageCustomParamsUseCase
+        get() = messaging.getMessageCustomParamsUseCase
+
+    val setMessageCustomParamsUseCase: SetMessageCustomParamsUseCase
+        get() = messaging.setMessageCustomParamsUseCase
+
+    val updateVoiceTranscriptionUseCase: UpdateVoiceTranscriptionUseCase
+        get() = messaging.updateVoiceTranscriptionUseCase
+
+    val updateMessageTranslationUseCase: UpdateMessageTranslationUseCase
+        get() = messaging.updateMessageTranslationUseCase
+
+    val updateMessageSummaryUseCase: UpdateMessageSummaryUseCase
+        get() = messaging.updateMessageSummaryUseCase
+
+    val copyMessageCustomParamsUseCase: CopyMessageCustomParamsUseCase
+        get() = messaging.copyMessageCustomParamsUseCase
+
+    val removeMessageCustomParamsUseCase: RemoveMessageCustomParamsUseCase
+        get() = messaging.removeMessageCustomParamsUseCase
+
+    val clearAllMessageCustomParamsUseCase: ClearAllMessageCustomParamsUseCase
+        get() = messaging.clearAllMessageCustomParamsUseCase
+
+    val messageCustomParamsViewModel: MessageCustomParamsViewModel
+        get() = messaging.messageCustomParamsViewModel
+
+    fun createMessageCustomParamsViewModel(): MessageCustomParamsViewModel = messaging.createMessageCustomParamsViewModel()
+
+    var botForumRepository: BotForumRepository
+        get() = messaging.botForumRepository
+        set(value) { messaging.botForumRepository = value }
+
+    val deriveTopicNameFromMessageUseCase: DeriveTopicNameFromMessageUseCase
+        get() = messaging.deriveTopicNameFromMessageUseCase
+
+    val resolveStreamingButtonStateUseCase: ResolveStreamingButtonStateUseCase
+        get() = messaging.resolveStreamingButtonStateUseCase
+
+    val observeBotForumStateUseCase: ObserveBotForumStateUseCase
+        get() = messaging.observeBotForumStateUseCase
+
+    val getBotForumStateUseCase: GetBotForumStateUseCase
+        get() = messaging.getBotForumStateUseCase
+
+    val getStreamingSendButtonStateUseCase: GetStreamingSendButtonStateUseCase
+        get() = messaging.getStreamingSendButtonStateUseCase
+
+    val checkIsStreamingTopicUseCase: CheckIsStreamingTopicUseCase
+        get() = messaging.checkIsStreamingTopicUseCase
+
+    val saveIsStreamingTopicUseCase: SaveIsStreamingTopicUseCase
+        get() = messaging.saveIsStreamingTopicUseCase
+
+    val checkHasBotForumDraftsUseCase: CheckHasBotForumDraftsUseCase
+        get() = messaging.checkHasBotForumDraftsUseCase
+
+    val stopStreamingDraftUseCase: StopStreamingDraftUseCase
+        get() = messaging.stopStreamingDraftUseCase
+
+    val updateBotForumDraftUseCase: UpdateBotForumDraftUseCase
+        get() = messaging.updateBotForumDraftUseCase
+
+    val removeMarkedRemovedDraftsUseCase: RemoveMarkedRemovedDraftsUseCase
+        get() = messaging.removeMarkedRemovedDraftsUseCase
+
+    val checkNewMessageDraftReplacementUseCase: CheckNewMessageDraftReplacementUseCase
+        get() = messaging.checkNewMessageDraftReplacementUseCase
+
+    val checkIsBotForumUseCase: CheckIsBotForumUseCase
+        get() = messaging.checkIsBotForumUseCase
+
+    val botForumViewModel: BotForumViewModel
+        get() = messaging.botForumViewModel
+
+    fun createBotForumViewModel(): BotForumViewModel = messaging.createBotForumViewModel()
 
     var ephemeralMessagesRepository: EphemeralMessagesRepository
-        get() = customEphemeralMessagesRepository ?: LegacyEphemeralMessagesRepository(account)
-        set(value) {
-            customEphemeralMessagesRepository = value
-        }
+        get() = messaging.ephemeralMessagesRepository
+        set(value) { messaging.ephemeralMessagesRepository = value }
 
     val parseBotCommandUseCase: ParseBotCommandUseCase
-        get() = ParseBotCommandUseCase()
+        get() = messaging.parseBotCommandUseCase
 
     val getEphemeralCommandBotIdUseCase: GetEphemeralCommandBotIdUseCase
-        get() = GetEphemeralCommandBotIdUseCase(ephemeralMessagesRepository)
+        get() = messaging.getEphemeralCommandBotIdUseCase
 
     val isEphemeralCommandUseCase: IsEphemeralCommandUseCase
-        get() = IsEphemeralCommandUseCase(ephemeralMessagesRepository)
+        get() = messaging.isEphemeralCommandUseCase
 
     val packEphemeralMessageIdUseCase: PackEphemeralMessageIdUseCase
-        get() = PackEphemeralMessageIdUseCase()
+        get() = messaging.packEphemeralMessageIdUseCase
 
     val unpackEphemeralMessageIdUseCase: UnpackEphemeralMessageIdUseCase
-        get() = UnpackEphemeralMessageIdUseCase()
+        get() = messaging.unpackEphemeralMessageIdUseCase
 
     val isEphemeralMessageIdUseCase: IsEphemeralMessageIdUseCase
-        get() = IsEphemeralMessageIdUseCase()
+        get() = messaging.isEphemeralMessageIdUseCase
 
     val putWelcomeAnchorBindingUseCase: PutWelcomeAnchorBindingUseCase
-        get() = PutWelcomeAnchorBindingUseCase(ephemeralMessagesRepository)
+        get() = messaging.putWelcomeAnchorBindingUseCase
 
     val removeWelcomeAnchorBindingUseCase: RemoveWelcomeAnchorBindingUseCase
-        get() = RemoveWelcomeAnchorBindingUseCase(ephemeralMessagesRepository)
+        get() = messaging.removeWelcomeAnchorBindingUseCase
 
     val getWelcomeAnchorBindingsUseCase: GetWelcomeAnchorBindingsUseCase
-        get() = GetWelcomeAnchorBindingsUseCase(ephemeralMessagesRepository)
+        get() = messaging.getWelcomeAnchorBindingsUseCase
 
     val clearAllWelcomeAnchorBindingsUseCase: ClearAllWelcomeAnchorBindingsUseCase
-        get() = ClearAllWelcomeAnchorBindingsUseCase(ephemeralMessagesRepository)
+        get() = messaging.clearAllWelcomeAnchorBindingsUseCase
 
     val observeEphemeralMessagesStateUseCase: ObserveEphemeralMessagesStateUseCase
-        get() = ObserveEphemeralMessagesStateUseCase(ephemeralMessagesRepository)
+        get() = messaging.observeEphemeralMessagesStateUseCase
 
     val getEphemeralMessagesStateUseCase: GetEphemeralMessagesStateUseCase
-        get() = GetEphemeralMessagesStateUseCase(ephemeralMessagesRepository)
-
-    private var cachedEphemeralMessagesViewModel: EphemeralMessagesViewModel? = null
+        get() = messaging.getEphemeralMessagesStateUseCase
 
     val ephemeralMessagesViewModel: EphemeralMessagesViewModel
-        get() {
-            var vm = cachedEphemeralMessagesViewModel
-            if (vm == null) {
-                vm = createEphemeralMessagesViewModel()
-                cachedEphemeralMessagesViewModel = vm
-            }
-            return vm
-        }
+        get() = messaging.ephemeralMessagesViewModel
 
-    fun createEphemeralMessagesViewModel(): EphemeralMessagesViewModel {
-        return EphemeralMessagesViewModel(
-            parseBotCommandUseCase = parseBotCommandUseCase,
-            isEphemeralCommandUseCase = isEphemeralCommandUseCase,
-            putWelcomeAnchorBindingUseCase = putWelcomeAnchorBindingUseCase,
-            removeWelcomeAnchorBindingUseCase = removeWelcomeAnchorBindingUseCase,
-            getWelcomeAnchorBindingsUseCase = getWelcomeAnchorBindingsUseCase,
-            clearAllWelcomeAnchorBindingsUseCase = clearAllWelcomeAnchorBindingsUseCase,
-            observeStateUseCase = observeEphemeralMessagesStateUseCase
-        )
-    }
-
-    private var customBotKeyboardRepository: BotKeyboardRepository? = null
+    fun createEphemeralMessagesViewModel(): EphemeralMessagesViewModel = messaging.createEphemeralMessagesViewModel()
 
     var botKeyboardRepository: BotKeyboardRepository
-        get() = customBotKeyboardRepository ?: LegacyBotKeyboardRepository(account)
-        set(value) {
-            customBotKeyboardRepository = value
-        }
+        get() = messaging.botKeyboardRepository
+        set(value) { messaging.botKeyboardRepository = value }
 
     val buildBotKeyboardLayoutUseCase: BuildBotKeyboardLayoutUseCase
-        get() = BuildBotKeyboardLayoutUseCase()
+        get() = messaging.buildBotKeyboardLayoutUseCase
 
     val checkIsForceReplyUseCase: CheckIsForceReplyUseCase
-        get() = CheckIsForceReplyUseCase(botKeyboardRepository)
+        get() = messaging.checkIsForceReplyUseCase
 
     val checkIsButtonWebViewUseCase: CheckIsButtonWebViewUseCase
-        get() = CheckIsButtonWebViewUseCase(botKeyboardRepository)
+        get() = messaging.checkIsButtonWebViewUseCase
 
     val resolveCustomButtonTypeUseCase: ResolveCustomButtonTypeUseCase
-        get() = ResolveCustomButtonTypeUseCase()
+        get() = messaging.resolveCustomButtonTypeUseCase
 
     val getKeyboardForMessageUseCase: GetKeyboardForMessageUseCase
-        get() = GetKeyboardForMessageUseCase(botKeyboardRepository)
+        get() = messaging.getKeyboardForMessageUseCase
 
     val setKeyboardForMessageUseCase: SetKeyboardForMessageUseCase
-        get() = SetKeyboardForMessageUseCase(botKeyboardRepository)
+        get() = messaging.setKeyboardForMessageUseCase
 
     val removeKeyboardForMessageUseCase: RemoveKeyboardForMessageUseCase
-        get() = RemoveKeyboardForMessageUseCase(botKeyboardRepository)
+        get() = messaging.removeKeyboardForMessageUseCase
 
     val clearAllKeyboardsUseCase: ClearAllKeyboardsUseCase
-        get() = ClearAllKeyboardsUseCase(botKeyboardRepository)
+        get() = messaging.clearAllKeyboardsUseCase
 
     val recordButtonPressedUseCase: RecordButtonPressedUseCase
-        get() = RecordButtonPressedUseCase(botKeyboardRepository)
+        get() = messaging.recordButtonPressedUseCase
 
     val observeBotKeyboardStateUseCase: ObserveBotKeyboardStateUseCase
-        get() = ObserveBotKeyboardStateUseCase(botKeyboardRepository)
+        get() = messaging.observeBotKeyboardStateUseCase
 
     val getBotKeyboardStateUseCase: GetBotKeyboardStateUseCase
-        get() = GetBotKeyboardStateUseCase(botKeyboardRepository)
-
-    private var cachedBotKeyboardViewModel: BotKeyboardViewModel? = null
+        get() = messaging.getBotKeyboardStateUseCase
 
     val botKeyboardViewModel: BotKeyboardViewModel
-        get() {
-            var vm = cachedBotKeyboardViewModel
-            if (vm == null) {
-                vm = createBotKeyboardViewModel()
-                cachedBotKeyboardViewModel = vm
-            }
-            return vm
-        }
+        get() = messaging.botKeyboardViewModel
 
-    fun createBotKeyboardViewModel(): BotKeyboardViewModel {
-        return BotKeyboardViewModel(
-            getKeyboardUseCase = getKeyboardForMessageUseCase,
-            setKeyboardUseCase = setKeyboardForMessageUseCase,
-            removeKeyboardUseCase = removeKeyboardForMessageUseCase,
-            clearAllKeyboardsUseCase = clearAllKeyboardsUseCase,
-            recordButtonPressedUseCase = recordButtonPressedUseCase,
-            observeStateUseCase = observeBotKeyboardStateUseCase
-        )
-    }
-
-    private var customWindowVisibilityRepository: WindowVisibilityRepository? = null
-
-    var windowVisibilityRepository: WindowVisibilityRepository
-        get() = customWindowVisibilityRepository ?: LegacyWindowVisibilityRepository()
-        set(value) {
-            customWindowVisibilityRepository = value
-        }
-
-    val requestHideWindowUseCase: RequestHideWindowUseCase
-        get() = RequestHideWindowUseCase(windowVisibilityRepository)
-
-    val releaseHideWindowUseCase: ReleaseHideWindowUseCase
-        get() = ReleaseHideWindowUseCase(windowVisibilityRepository)
-
-    val toggleWindowHideUseCase: ToggleWindowHideUseCase
-        get() = ToggleWindowHideUseCase(windowVisibilityRepository)
-
-    val checkIsWindowVisibleUseCase: CheckIsWindowVisibleUseCase
-        get() = CheckIsWindowVisibleUseCase(windowVisibilityRepository)
-
-    val getWindowVisibilityStateUseCase: GetWindowVisibilityStateUseCase
-        get() = GetWindowVisibilityStateUseCase(windowVisibilityRepository)
-
-    val getActiveHideReasonsUseCase: GetActiveHideReasonsUseCase
-        get() = GetActiveHideReasonsUseCase(windowVisibilityRepository)
-
-    val resetWindowVisibilityUseCase: ResetWindowVisibilityUseCase
-        get() = ResetWindowVisibilityUseCase(windowVisibilityRepository)
-
-    val observeWindowVisibilityStateUseCase: ObserveWindowVisibilityStateUseCase
-        get() = ObserveWindowVisibilityStateUseCase(windowVisibilityRepository)
-
-    val observeWindowVisibilityChangesUseCase: ObserveWindowVisibilityChangesUseCase
-        get() = ObserveWindowVisibilityChangesUseCase(windowVisibilityRepository)
-
-    val createVisibilityControllerUseCase: CreateVisibilityControllerUseCase
-        get() = CreateVisibilityControllerUseCase(windowVisibilityRepository)
-
-    private var cachedWindowVisibilityViewModel: WindowVisibilityViewModel? = null
-
-    val windowVisibilityViewModel: WindowVisibilityViewModel
-        get() {
-            var vm = cachedWindowVisibilityViewModel
-            if (vm == null) {
-                vm = createWindowVisibilityViewModel()
-                cachedWindowVisibilityViewModel = vm
-            }
-            return vm
-        }
-
-    fun createWindowVisibilityViewModel(): WindowVisibilityViewModel {
-        return WindowVisibilityViewModel(
-            requestHideWindowUseCase = requestHideWindowUseCase,
-            releaseHideWindowUseCase = releaseHideWindowUseCase,
-            toggleWindowHideUseCase = toggleWindowHideUseCase,
-            checkIsWindowVisibleUseCase = checkIsWindowVisibleUseCase,
-            getWindowVisibilityStateUseCase = getWindowVisibilityStateUseCase,
-            getActiveHideReasonsUseCase = getActiveHideReasonsUseCase,
-            resetWindowVisibilityUseCase = resetWindowVisibilityUseCase,
-            observeWindowVisibilityStateUseCase = observeWindowVisibilityStateUseCase
-        )
-    }
-
-    private var customCountdownTimerRepository: CountdownTimerRepository? = null
-
-    var countdownTimerRepository: CountdownTimerRepository
-        get() = customCountdownTimerRepository ?: LegacyCountdownTimerRepository()
-        set(value) {
-            customCountdownTimerRepository = value
-        }
-
-    val startCountdownTimerUseCase: StartCountdownTimerUseCase
-        get() = StartCountdownTimerUseCase(countdownTimerRepository)
-
-    val stopCountdownTimerUseCase: StopCountdownTimerUseCase
-        get() = StopCountdownTimerUseCase(countdownTimerRepository)
-
-    val pauseCountdownTimerUseCase: PauseCountdownTimerUseCase
-        get() = PauseCountdownTimerUseCase(countdownTimerRepository)
-
-    val resumeCountdownTimerUseCase: ResumeCountdownTimerUseCase
-        get() = ResumeCountdownTimerUseCase(countdownTimerRepository)
-
-    val getCountdownTimerUseCase: GetCountdownTimerUseCase
-        get() = GetCountdownTimerUseCase(countdownTimerRepository)
-
-    val isCountdownTimerRunningUseCase: IsCountdownTimerRunningUseCase
-        get() = IsCountdownTimerRunningUseCase(countdownTimerRepository)
-
-    val tickCountdownTimerUseCase: TickCountdownTimerUseCase
-        get() = TickCountdownTimerUseCase(countdownTimerRepository)
-
-    val clearAllCountdownTimersUseCase: ClearAllCountdownTimersUseCase
-        get() = ClearAllCountdownTimersUseCase(countdownTimerRepository)
-
-    val observeCountdownTimerUseCase: ObserveCountdownTimerUseCase
-        get() = ObserveCountdownTimerUseCase(countdownTimerRepository)
-
-    val observeCountdownStateUseCase: ObserveCountdownStateUseCase
-        get() = ObserveCountdownStateUseCase(countdownTimerRepository)
-
-    val decomposeCountdownTimeUseCase: DecomposeCountdownTimeUseCase
-        get() = DecomposeCountdownTimeUseCase()
-
-    val formatCountdownTimeUseCase: FormatCountdownTimeUseCase
-        get() = FormatCountdownTimeUseCase(decomposeCountdownTimeUseCase)
-
-    private var cachedCountdownTimerViewModel: CountdownTimerViewModel? = null
-
-    val countdownTimerViewModel: CountdownTimerViewModel
-        get() {
-            var vm = cachedCountdownTimerViewModel
-            if (vm == null) {
-                vm = createCountdownTimerViewModel()
-                cachedCountdownTimerViewModel = vm
-            }
-            return vm
-        }
-
-    fun createCountdownTimerViewModel(): CountdownTimerViewModel {
-        return CountdownTimerViewModel(
-            startCountdownTimerUseCase = startCountdownTimerUseCase,
-            stopCountdownTimerUseCase = stopCountdownTimerUseCase,
-            pauseCountdownTimerUseCase = pauseCountdownTimerUseCase,
-            resumeCountdownTimerUseCase = resumeCountdownTimerUseCase,
-            getCountdownTimerUseCase = getCountdownTimerUseCase,
-            isCountdownTimerRunningUseCase = isCountdownTimerRunningUseCase,
-            tickCountdownTimerUseCase = tickCountdownTimerUseCase,
-            clearAllCountdownTimersUseCase = clearAllCountdownTimersUseCase,
-            observeCountdownStateUseCase = observeCountdownStateUseCase,
-            formatCountdownTimeUseCase = formatCountdownTimeUseCase
-        )
-    }
-
-    private var customTextHtmlRepository: org.telegram.messenger.feature.messaging.texthtml.domain.repository.TextHtmlRepository? = null
+    fun createBotKeyboardViewModel(): BotKeyboardViewModel = messaging.createBotKeyboardViewModel()
 
     var textHtmlRepository: org.telegram.messenger.feature.messaging.texthtml.domain.repository.TextHtmlRepository
-        get() = customTextHtmlRepository ?: org.telegram.messenger.feature.messaging.texthtml.data.repository.LegacyTextHtmlRepository()
-        set(value) {
-            customTextHtmlRepository = value
-        }
+        get() = messaging.textHtmlRepository
+        set(value) { messaging.textHtmlRepository = value }
 
     val convertToHtmlUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ConvertToHtmlUseCase
-        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ConvertToHtmlUseCase(textHtmlRepository)
+        get() = messaging.convertToHtmlUseCase
 
     val parseFromHtmlUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ParseFromHtmlUseCase
-        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ParseFromHtmlUseCase(textHtmlRepository)
+        get() = messaging.parseFromHtmlUseCase
 
     val escapeHtmlUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.EscapeHtmlUseCase
-        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.EscapeHtmlUseCase(textHtmlRepository)
+        get() = messaging.escapeHtmlUseCase
 
     val unescapeHtmlUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.UnescapeHtmlUseCase
-        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.UnescapeHtmlUseCase(textHtmlRepository)
+        get() = messaging.unescapeHtmlUseCase
 
     val stripHtmlFormattingUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.StripHtmlFormattingUseCase
-        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.StripHtmlFormattingUseCase(textHtmlRepository)
+        get() = messaging.stripHtmlFormattingUseCase
 
     val extractHtmlSpansUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ExtractHtmlSpansUseCase
-        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ExtractHtmlSpansUseCase()
+        get() = messaging.extractHtmlSpansUseCase
 
     val hasRichFormattingUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.HasRichFormattingUseCase
-        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.HasRichFormattingUseCase()
+        get() = messaging.hasRichFormattingUseCase
 
     val observeTextHtmlStateUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ObserveTextHtmlStateUseCase
-        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ObserveTextHtmlStateUseCase(textHtmlRepository)
+        get() = messaging.observeTextHtmlStateUseCase
 
     val clearTextHtmlStateUseCase: org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ClearTextHtmlStateUseCase
-        get() = org.telegram.messenger.feature.messaging.texthtml.domain.usecase.ClearTextHtmlStateUseCase(textHtmlRepository)
-
-    private var cachedTextHtmlViewModel: org.telegram.messenger.feature.messaging.texthtml.presentation.TextHtmlViewModel? = null
+        get() = messaging.clearTextHtmlStateUseCase
 
     val textHtmlViewModel: org.telegram.messenger.feature.messaging.texthtml.presentation.TextHtmlViewModel
-        get() {
-            var vm = cachedTextHtmlViewModel
-            if (vm == null) {
-                vm = createTextHtmlViewModel()
-                cachedTextHtmlViewModel = vm
-            }
-            return vm
-        }
-
-    fun createTextHtmlViewModel(): org.telegram.messenger.feature.messaging.texthtml.presentation.TextHtmlViewModel {
-        return org.telegram.messenger.feature.messaging.texthtml.presentation.TextHtmlViewModel(
-            convertToHtmlUseCase = convertToHtmlUseCase,
-            parseFromHtmlUseCase = parseFromHtmlUseCase,
-            escapeHtmlUseCase = escapeHtmlUseCase,
-            stripHtmlFormattingUseCase = stripHtmlFormattingUseCase,
-            observeTextHtmlStateUseCase = observeTextHtmlStateUseCase,
-            clearTextHtmlStateUseCase = clearTextHtmlStateUseCase
-        )
-    }
-
-    private var customLeakDetectorRepository: org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository? = null
-
-    var leakDetectorRepository: org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository
-        get() = customLeakDetectorRepository ?: org.telegram.messenger.feature.system.leakdetector.data.repository.LegacyLeakDetectorRepository()
-        set(value) {
-            customLeakDetectorRepository = value
-        }
-
-    val startLeakDetectionUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.StartLeakDetectionUseCase
-        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.StartLeakDetectionUseCase(leakDetectorRepository)
-
-    val stopLeakDetectionUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.StopLeakDetectionUseCase
-        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.StopLeakDetectionUseCase(leakDetectorRepository)
-
-    val trackInstanceUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.TrackInstanceUseCase
-        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.TrackInstanceUseCase(leakDetectorRepository)
-
-    val triggerLeakCheckUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.TriggerLeakCheckUseCase
-        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.TriggerLeakCheckUseCase(leakDetectorRepository)
-
-    val confirmLeakUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ConfirmLeakUseCase
-        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.ConfirmLeakUseCase(leakDetectorRepository)
-
-    val getTrackedClassesStatsUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.GetTrackedClassesStatsUseCase
-        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.GetTrackedClassesStatsUseCase(leakDetectorRepository)
-
-    val getConfirmedLeaksUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.GetConfirmedLeaksUseCase
-        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.GetConfirmedLeaksUseCase(leakDetectorRepository)
-
-    val resetLeakDetectorUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ResetLeakDetectorUseCase
-        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.ResetLeakDetectorUseCase(leakDetectorRepository)
-
-    val observeLeakDetectorStateUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ObserveLeakDetectorStateUseCase
-        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.ObserveLeakDetectorStateUseCase(leakDetectorRepository)
-
-    val observeConfirmedLeaksUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ObserveConfirmedLeaksUseCase
-        get() = org.telegram.messenger.feature.system.leakdetector.domain.usecase.ObserveConfirmedLeaksUseCase(leakDetectorRepository)
-
-    private var cachedLeakDetectorViewModel: org.telegram.messenger.feature.system.leakdetector.presentation.LeakDetectorViewModel? = null
-
-    val leakDetectorViewModel: org.telegram.messenger.feature.system.leakdetector.presentation.LeakDetectorViewModel
-        get() {
-            var vm = cachedLeakDetectorViewModel
-            if (vm == null) {
-                vm = createLeakDetectorViewModel()
-                cachedLeakDetectorViewModel = vm
-            }
-            return vm
-        }
-
-    fun createLeakDetectorViewModel(): org.telegram.messenger.feature.system.leakdetector.presentation.LeakDetectorViewModel {
-        return org.telegram.messenger.feature.system.leakdetector.presentation.LeakDetectorViewModel(
-            startLeakDetectionUseCase = startLeakDetectionUseCase,
-            stopLeakDetectionUseCase = stopLeakDetectionUseCase,
-            trackInstanceUseCase = trackInstanceUseCase,
-            triggerLeakCheckUseCase = triggerLeakCheckUseCase,
-            confirmLeakUseCase = confirmLeakUseCase,
-            getTrackedClassesStatsUseCase = getTrackedClassesStatsUseCase,
-            getConfirmedLeaksUseCase = getConfirmedLeaksUseCase,
-            resetLeakDetectorUseCase = resetLeakDetectorUseCase,
-            observeLeakDetectorStateUseCase = observeLeakDetectorStateUseCase
-        )
-    }
-
-    // --- 60 FPS Frame Rate & V-Sync Content Arbitration (feature.fpscontent) ---
-    private var customFpsContentRepository: org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository? = null
-
-    var fpsContentRepository: org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository
-        get() = customFpsContentRepository ?: org.telegram.messenger.feature.system.fpscontent.data.repository.LegacyFpsContentRepository()
-        set(value) {
-            customFpsContentRepository = value
-        }
-
-    val registerFrameCallbackUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RegisterFrameCallbackUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.RegisterFrameCallbackUseCase(fpsContentRepository)
-
-    val registerRunnableCallbackUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RegisterRunnableCallbackUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.RegisterRunnableCallbackUseCase(fpsContentRepository)
-
-    val unregisterCallbackUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.UnregisterCallbackUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.UnregisterCallbackUseCase(fpsContentRepository)
+        get() = messaging.textHtmlViewModel
 
-    val requestViewInvalidationUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RequestViewInvalidationUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.RequestViewInvalidationUseCase(fpsContentRepository)
+    fun createTextHtmlViewModel(): org.telegram.messenger.feature.messaging.texthtml.presentation.TextHtmlViewModel = messaging.createTextHtmlViewModel()
 
-    val requestDrawableInvalidationUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RequestDrawableInvalidationUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.RequestDrawableInvalidationUseCase(fpsContentRepository)
+    // ==================== NETWORK DOMAIN ====================
 
-    val dispatchVsyncTickUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.DispatchVsyncTickUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.DispatchVsyncTickUseCase(fpsContentRepository)
+    var proxyRepository: ProxyRepository
+        get() = network.proxyRepository
+        set(value) { network.proxyRepository = value }
 
-    val calculateFpsTimingUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.CalculateFpsTimingUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.CalculateFpsTimingUseCase()
-
-    val getFpsContentStatsUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.GetFpsContentStatsUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.GetFpsContentStatsUseCase(fpsContentRepository)
+    val observeProxySettingsUseCase: ObserveProxySettingsUseCase
+        get() = network.observeProxySettingsUseCase
 
-    val getFpsSubscriptionsUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.GetFpsSubscriptionsUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.GetFpsSubscriptionsUseCase(fpsContentRepository)
-
-    val observeFpsContentStatsUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.ObserveFpsContentStatsUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.ObserveFpsContentStatsUseCase(fpsContentRepository)
-
-    val observeFpsTicksUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.ObserveFpsTicksUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.ObserveFpsTicksUseCase(fpsContentRepository)
-
-    val resetFpsContentUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.ResetFpsContentUseCase
-        get() = org.telegram.messenger.feature.system.fpscontent.domain.usecase.ResetFpsContentUseCase(fpsContentRepository)
-
-    private var cachedFpsContentViewModel: org.telegram.messenger.feature.system.fpscontent.presentation.FpsContentViewModel? = null
-
-    val fpsContentViewModel: org.telegram.messenger.feature.system.fpscontent.presentation.FpsContentViewModel
-        get() {
-            var vm = cachedFpsContentViewModel
-            if (vm == null) {
-                vm = createFpsContentViewModel()
-                cachedFpsContentViewModel = vm
-            }
-            return vm
-        }
-
-    fun createFpsContentViewModel(): org.telegram.messenger.feature.system.fpscontent.presentation.FpsContentViewModel {
-        return org.telegram.messenger.feature.system.fpscontent.presentation.FpsContentViewModel(
-            registerFrameCallbackUseCase = registerFrameCallbackUseCase,
-            registerRunnableCallbackUseCase = registerRunnableCallbackUseCase,
-            unregisterCallbackUseCase = unregisterCallbackUseCase,
-            requestViewInvalidationUseCase = requestViewInvalidationUseCase,
-            requestDrawableInvalidationUseCase = requestDrawableInvalidationUseCase,
-            dispatchVsyncTickUseCase = dispatchVsyncTickUseCase,
-            getFpsContentStatsUseCase = getFpsContentStatsUseCase,
-            getFpsSubscriptionsUseCase = getFpsSubscriptionsUseCase,
-            observeFpsContentStatsUseCase = observeFpsContentStatsUseCase,
-            observeFpsTicksUseCase = observeFpsTicksUseCase,
-            resetFpsContentUseCase = resetFpsContentUseCase
-        )
-    }
-
-    // --- Main Thread ANR Watchdog & UI Freeze Diagnostics (feature.anrwatchdog) ---
-    private var customAnrWatchdogRepository: org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository? = null
-
-    var anrWatchdogRepository: org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository
-        get() = customAnrWatchdogRepository ?: org.telegram.messenger.feature.system.anrwatchdog.data.repository.LegacyAnrWatchdogRepository()
-        set(value) {
-            customAnrWatchdogRepository = value
-        }
-
-    val startAnrMonitoringUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.StartAnrMonitoringUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.StartAnrMonitoringUseCase(anrWatchdogRepository)
-
-    val stopAnrMonitoringUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.StopAnrMonitoringUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.StopAnrMonitoringUseCase(anrWatchdogRepository)
-
-    val setAppForegroundStatusUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.SetAppForegroundStatusUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.SetAppForegroundStatusUseCase(anrWatchdogRepository)
-
-    val sendMainThreadPingUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.SendMainThreadPingUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.SendMainThreadPingUseCase(anrWatchdogRepository)
-
-    val acknowledgePingUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.AcknowledgePingUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.AcknowledgePingUseCase(anrWatchdogRepository)
-
-    val checkMainThreadFreezeUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.CheckMainThreadFreezeUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.CheckMainThreadFreezeUseCase(anrWatchdogRepository)
-
-    val resolveIncidentUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ResolveIncidentUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ResolveIncidentUseCase(anrWatchdogRepository)
-
-    val getAnrWatchdogStateUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.GetAnrWatchdogStateUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.GetAnrWatchdogStateUseCase(anrWatchdogRepository)
-
-    val getAnrIncidentsUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.GetAnrIncidentsUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.GetAnrIncidentsUseCase(anrWatchdogRepository)
-
-    val clearAnrHistoryUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ClearAnrHistoryUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ClearAnrHistoryUseCase(anrWatchdogRepository)
-
-    val observeAnrWatchdogStateUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ObserveAnrWatchdogStateUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ObserveAnrWatchdogStateUseCase(anrWatchdogRepository)
-
-    val observeAnrIncidentsUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ObserveAnrIncidentsUseCase
-        get() = org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ObserveAnrIncidentsUseCase(anrWatchdogRepository)
-
-    private var cachedAnrWatchdogViewModel: org.telegram.messenger.feature.system.anrwatchdog.presentation.AnrWatchdogViewModel? = null
-
-    val anrWatchdogViewModel: org.telegram.messenger.feature.system.anrwatchdog.presentation.AnrWatchdogViewModel
-        get() {
-            var vm = cachedAnrWatchdogViewModel
-            if (vm == null) {
-                vm = createAnrWatchdogViewModel()
-                cachedAnrWatchdogViewModel = vm
-            }
-            return vm
-        }
-
-    fun createAnrWatchdogViewModel(): org.telegram.messenger.feature.system.anrwatchdog.presentation.AnrWatchdogViewModel {
-        return org.telegram.messenger.feature.system.anrwatchdog.presentation.AnrWatchdogViewModel(
-            startAnrMonitoringUseCase = startAnrMonitoringUseCase,
-            stopAnrMonitoringUseCase = stopAnrMonitoringUseCase,
-            setAppForegroundStatusUseCase = setAppForegroundStatusUseCase,
-            sendMainThreadPingUseCase = sendMainThreadPingUseCase,
-            acknowledgePingUseCase = acknowledgePingUseCase,
-            checkMainThreadFreezeUseCase = checkMainThreadFreezeUseCase,
-            resolveIncidentUseCase = resolveIncidentUseCase,
-            getAnrWatchdogStateUseCase = getAnrWatchdogStateUseCase,
-            getAnrIncidentsUseCase = getAnrIncidentsUseCase,
-            clearAnrHistoryUseCase = clearAnrHistoryUseCase,
-            observeAnrWatchdogStateUseCase = observeAnrWatchdogStateUseCase,
-            observeAnrIncidentsUseCase = observeAnrIncidentsUseCase
-        )
-    }
-
-    // --- EmuDetector ---
-    private var customEmuDetectorRepository: org.telegram.messenger.feature.system.emudetector.domain.repository.EmuDetectorRepository? = null
-
-    var emuDetectorRepository: org.telegram.messenger.feature.system.emudetector.domain.repository.EmuDetectorRepository
-        get() = customEmuDetectorRepository ?: org.telegram.messenger.feature.system.emudetector.data.repository.LegacyEmuDetectorRepository()
-        set(value) {
-            customEmuDetectorRepository = value
-        }
-
-    val detectEnvironmentUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.DetectEnvironmentUseCase
-        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.DetectEnvironmentUseCase(emuDetectorRepository)
-
-    val isEmulatorUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.IsEmulatorUseCase
-        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.IsEmulatorUseCase(emuDetectorRepository)
-
-    val getCachedDiagnosticsUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.GetCachedDiagnosticsUseCase
-        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.GetCachedDiagnosticsUseCase(emuDetectorRepository)
-
-    val observeDiagnosticsUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.ObserveDiagnosticsUseCase
-        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.ObserveDiagnosticsUseCase(emuDetectorRepository)
-
-    val observeIsEmulatorUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.ObserveIsEmulatorUseCase
-        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.ObserveIsEmulatorUseCase(emuDetectorRepository)
-
-    val getDetectorConfigUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.GetDetectorConfigUseCase
-        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.GetDetectorConfigUseCase(emuDetectorRepository)
-
-    val updateDetectorConfigUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.UpdateDetectorConfigUseCase
-        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.UpdateDetectorConfigUseCase(emuDetectorRepository)
-
-    val addCustomPackageNameUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.AddCustomPackageNameUseCase
-        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.AddCustomPackageNameUseCase(emuDetectorRepository)
-
-    val clearDetectorCacheUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.ClearDetectorCacheUseCase
-        get() = org.telegram.messenger.feature.system.emudetector.domain.usecase.ClearDetectorCacheUseCase(emuDetectorRepository)
-
-    private var cachedEmuDetectorViewModel: org.telegram.messenger.feature.system.emudetector.presentation.EmuDetectorViewModel? = null
-
-    val emuDetectorViewModel: org.telegram.messenger.feature.system.emudetector.presentation.EmuDetectorViewModel
-        get() {
-            var vm = cachedEmuDetectorViewModel
-            if (vm == null) {
-                vm = createEmuDetectorViewModel()
-                cachedEmuDetectorViewModel = vm
-            }
-            return vm
-        }
-
-    fun createEmuDetectorViewModel(): org.telegram.messenger.feature.system.emudetector.presentation.EmuDetectorViewModel {
-        return org.telegram.messenger.feature.system.emudetector.presentation.EmuDetectorViewModel(
-            detectEnvironmentUseCase = detectEnvironmentUseCase,
-            observeDiagnosticsUseCase = observeDiagnosticsUseCase,
-            getDetectorConfigUseCase = getDetectorConfigUseCase,
-            updateDetectorConfigUseCase = updateDetectorConfigUseCase,
-            addCustomPackageNameUseCase = addCustomPackageNameUseCase,
-            clearDetectorCacheUseCase = clearDetectorCacheUseCase
-        )
-    }
-
-    // --- FlagSecure ---
-    private var customFlagSecureRepository: org.telegram.messenger.feature.security.flagsecure.domain.repository.FlagSecureRepository? = null
+    val getProxySettingsUseCase: GetProxySettingsUseCase
+        get() = network.getProxySettingsUseCase
+
+    val addProxyUseCase: AddProxyUseCase
+        get() = network.addProxyUseCase
+
+    val deleteProxyUseCase: DeleteProxyUseCase
+        get() = network.deleteProxyUseCase
+
+    val enableProxyUseCase: EnableProxyUseCase
+        get() = network.enableProxyUseCase
+
+    val disableProxyUseCase: DisableProxyUseCase
+        get() = network.disableProxyUseCase
+
+    val toggleProxyRotationUseCase: ToggleProxyRotationUseCase
+        get() = network.toggleProxyRotationUseCase
+
+    val checkProxyPingUseCase: CheckProxyPingUseCase
+        get() = network.checkProxyPingUseCase
+
+    val proxyViewModel: ProxyViewModel
+        get() = network.proxyViewModel
+
+    fun createProxyViewModel(): ProxyViewModel = network.createProxyViewModel()
+
+    var pushRepository: PushRepository
+        get() = network.pushRepository
+        set(value) { network.pushRepository = value }
+
+    val observePushStatusUseCase: ObservePushStatusUseCase
+        get() = network.observePushStatusUseCase
+
+    val getPushStatusUseCase: GetPushStatusUseCase
+        get() = network.getPushStatusUseCase
+
+    val isPushAvailableUseCase: IsPushAvailableUseCase
+        get() = network.isPushAvailableUseCase
+
+    val requestPushTokenUseCase: RequestPushTokenUseCase
+        get() = network.requestPushTokenUseCase
+
+    val registerPushTokenUseCase: RegisterPushTokenUseCase
+        get() = network.registerPushTokenUseCase
+
+    val resetPushTokenUseCase: ResetPushTokenUseCase
+        get() = network.resetPushTokenUseCase
+
+    val pushViewModel: PushViewModel
+        get() = network.pushViewModel
+
+    fun createPushViewModel(): PushViewModel = network.createPushViewModel()
+
+    var networkStatsRepository: NetworkStatsRepository
+        get() = network.networkStatsRepository
+        set(value) { network.networkStatsRepository = value }
+
+    val observeNetworkStatsUseCase: ObserveNetworkStatsUseCase
+        get() = network.observeNetworkStatsUseCase
+
+    val observeAllNetworkStatsUseCase: ObserveAllNetworkStatsUseCase
+        get() = network.observeAllNetworkStatsUseCase
+
+    val getNetworkStatsUseCase: GetNetworkStatsUseCase
+        get() = network.getNetworkStatsUseCase
+
+    val getAllNetworkStatsUseCase: GetAllNetworkStatsUseCase
+        get() = network.getAllNetworkStatsUseCase
+
+    val incrementTrafficBytesUseCase: IncrementTrafficBytesUseCase
+        get() = network.incrementTrafficBytesUseCase
+
+    val incrementTrafficItemsUseCase: IncrementTrafficItemsUseCase
+        get() = network.incrementTrafficItemsUseCase
+
+    val incrementCallsTimeUseCase: IncrementCallsTimeUseCase
+        get() = network.incrementCallsTimeUseCase
+
+    val resetNetworkStatsUseCase: ResetNetworkStatsUseCase
+        get() = network.resetNetworkStatsUseCase
+
+    val refreshNetworkStatsUseCase: RefreshNetworkStatsUseCase
+        get() = network.refreshNetworkStatsUseCase
+
+    val calculateMessagesTrafficUseCase: CalculateMessagesTrafficUseCase
+        get() = network.calculateMessagesTrafficUseCase
+
+    val formatTrafficBytesUseCase: FormatTrafficBytesUseCase
+        get() = network.formatTrafficBytesUseCase
+
+    val formatCallsDurationUseCase: FormatCallsDurationUseCase
+        get() = network.formatCallsDurationUseCase
+
+    val networkStatsViewModel: NetworkStatsViewModel
+        get() = network.networkStatsViewModel
+
+    fun createNetworkStatsViewModel(): NetworkStatsViewModel = network.createNetworkStatsViewModel()
+
+    var pushListenerRepository: PushListenerRepository
+        get() = network.pushListenerRepository
+        set(value) { network.pushListenerRepository = value }
+
+    val observePushListenerStateUseCase: ObservePushListenerStateUseCase
+        get() = network.observePushListenerStateUseCase
+
+    val observeIncomingPushesUseCase: ObserveIncomingPushesUseCase
+        get() = network.observeIncomingPushesUseCase
+
+    val getPushListenerStateUseCase: GetPushListenerStateUseCase
+        get() = network.getPushListenerStateUseCase
+
+    val processIncomingPushUseCase: ProcessIncomingPushUseCase
+        get() = network.processIncomingPushUseCase
+
+    val registerPushListenerTokenUseCase: RegisterPushListenerTokenUseCase
+        get() = network.registerPushListenerTokenUseCase
+
+    val togglePushListeningUseCase: TogglePushListeningUseCase
+        get() = network.togglePushListeningUseCase
+
+    val determinePushActionTypeUseCase: DeterminePushActionTypeUseCase
+        get() = network.determinePushActionTypeUseCase
+
+    val parsePushJsonPayloadUseCase: ParsePushJsonPayloadUseCase
+        get() = network.parsePushJsonPayloadUseCase
+
+    val pushListenerViewModel: PushListenerViewModel
+        get() = network.pushListenerViewModel
+
+    fun createPushListenerViewModel(): PushListenerViewModel = network.createPushListenerViewModel()
+
+    // ==================== SECURITY DOMAIN ====================
+
+    var secretChatRepository: SecretChatRepository
+        get() = security.secretChatRepository
+        set(value) { security.secretChatRepository = value }
+
+    val observeSecretChatUseCase: ObserveSecretChatUseCase
+        get() = security.observeSecretChatUseCase
+
+    val observeSecretChatsUseCase: ObserveSecretChatsUseCase
+        get() = security.observeSecretChatsUseCase
+
+    val getSecretChatUseCase: GetSecretChatUseCase
+        get() = security.getSecretChatUseCase
+
+    val startSecretChatUseCase: StartSecretChatUseCase
+        get() = security.startSecretChatUseCase
+
+    val acceptSecretChatUseCase: AcceptSecretChatUseCase
+        get() = security.acceptSecretChatUseCase
+
+    val declineSecretChatUseCase: DeclineSecretChatUseCase
+        get() = security.declineSecretChatUseCase
+
+    val setSecretChatTtlUseCase: SetSecretChatTtlUseCase
+        get() = security.setSecretChatTtlUseCase
+
+    val sendScreenshotNotificationUseCase: SendScreenshotNotificationUseCase
+        get() = security.sendScreenshotNotificationUseCase
+
+    fun getSecretChatViewModel(chatId: Int): SecretChatViewModel = security.getSecretChatViewModel(chatId)
+
+    fun createSecretChatViewModel(chatId: Int): SecretChatViewModel = security.createSecretChatViewModel(chatId)
+
+    val privacyRepository: PrivacyRepository
+        get() = security.privacyRepository
+
+    val observePrivacyRulesUseCase: ObservePrivacyRulesUseCase
+        get() = security.observePrivacyRulesUseCase
+
+    val getPrivacyRulesUseCase: GetPrivacyRulesUseCase
+        get() = security.getPrivacyRulesUseCase
+
+    val setPrivacyRuleUseCase: SetPrivacyRuleUseCase
+        get() = security.setPrivacyRuleUseCase
+
+    val loadPrivacyRulesUseCase: LoadPrivacyRulesUseCase
+        get() = security.loadPrivacyRulesUseCase
+
+    val observeBlockedPeersUseCase: ObserveBlockedPeersUseCase
+        get() = security.observeBlockedPeersUseCase
+
+    val getBlockedPeersUseCase: GetBlockedPeersUseCase
+        get() = security.getBlockedPeersUseCase
+
+    val blockPrivacyPeerUseCase: BlockPrivacyPeerUseCase
+        get() = security.blockPrivacyPeerUseCase
+
+    val unblockPrivacyPeerUseCase: UnblockPrivacyPeerUseCase
+        get() = security.unblockPrivacyPeerUseCase
+
+    val getPasscodeSettingsUseCase: GetPasscodeSettingsUseCase
+        get() = security.getPasscodeSettingsUseCase
+
+    val setPasscodeUseCase: SetPasscodeUseCase
+        get() = security.setPasscodeUseCase
+
+    val checkPasscodeUseCase: CheckPasscodeUseCase
+        get() = security.checkPasscodeUseCase
+
+    val clearPasscodeUseCase: ClearPasscodeUseCase
+        get() = security.clearPasscodeUseCase
+
+    val observeTwoStepVerificationUseCase: ObserveTwoStepVerificationUseCase
+        get() = security.observeTwoStepVerificationUseCase
+
+    val loadTwoStepVerificationUseCase: LoadTwoStepVerificationUseCase
+        get() = security.loadTwoStepVerificationUseCase
+
+    val privacyViewModel: PrivacyViewModel
+        get() = security.privacyViewModel
+
+    fun createPrivacyViewModel(): PrivacyViewModel = security.createPrivacyViewModel()
+
+    var sessionsRepository: SessionsRepository
+        get() = security.sessionsRepository
+        set(value) { security.sessionsRepository = value }
+
+    val observeSessionsUseCase: ObserveSessionsUseCase
+        get() = security.observeSessionsUseCase
+
+    val observeWebSessionsUseCase: ObserveWebSessionsUseCase
+        get() = security.observeWebSessionsUseCase
+
+    val getSessionsUseCase: GetSessionsUseCase
+        get() = security.getSessionsUseCase
+
+    val loadSessionsUseCase: LoadSessionsUseCase
+        get() = security.loadSessionsUseCase
+
+    val getWebSessionsUseCase: GetWebSessionsUseCase
+        get() = security.getWebSessionsUseCase
+
+    val loadWebSessionsUseCase: LoadWebSessionsUseCase
+        get() = security.loadWebSessionsUseCase
+
+    val terminateSessionUseCase: TerminateSessionUseCase
+        get() = security.terminateSessionUseCase
+
+    val terminateAllOtherSessionsUseCase: TerminateAllOtherSessionsUseCase
+        get() = security.terminateAllOtherSessionsUseCase
+
+    val terminateWebSessionUseCase: TerminateWebSessionUseCase
+        get() = security.terminateWebSessionUseCase
+
+    val terminateAllWebSessionsUseCase: TerminateAllWebSessionsUseCase
+        get() = security.terminateAllWebSessionsUseCase
+
+    val updateSessionSettingsUseCase: UpdateSessionSettingsUseCase
+        get() = security.updateSessionSettingsUseCase
+
+    val setSessionsTtlUseCase: SetSessionsTtlUseCase
+        get() = security.setSessionsTtlUseCase
+
+    val acceptQrLoginUseCase: AcceptQrLoginUseCase
+        get() = security.acceptQrLoginUseCase
+
+    val sessionsViewModel: SessionsViewModel
+        get() = security.sessionsViewModel
+
+    fun createSessionsViewModel(): SessionsViewModel = security.createSessionsViewModel()
+
+    var passkeysRepository: PasskeysRepository
+        get() = security.passkeysRepository
+        set(value) { security.passkeysRepository = value }
+
+    val observePasskeysUseCase: ObservePasskeysUseCase
+        get() = security.observePasskeysUseCase
+
+    val getPasskeysUseCase: GetPasskeysUseCase
+        get() = security.getPasskeysUseCase
+
+    val deletePasskeyUseCase: DeletePasskeyUseCase
+        get() = security.deletePasskeyUseCase
+
+    val checkCanAddPasskeyUseCase: CheckCanAddPasskeyUseCase
+        get() = security.checkCanAddPasskeyUseCase
+
+    val isPasskeysSupportedUseCase: IsPasskeysSupportedUseCase
+        get() = security.isPasskeysSupportedUseCase
+
+    val passkeysViewModel: PasskeysViewModel
+        get() = security.passkeysViewModel
+
+    fun createPasskeysViewModel(): PasskeysViewModel = security.createPasskeysViewModel()
+
+    var unconfirmedAuthRepository: UnconfirmedAuthRepository
+        get() = security.unconfirmedAuthRepository
+        set(value) { security.unconfirmedAuthRepository = value }
+
+    val observeUnconfirmedAuthsUseCase: ObserveUnconfirmedAuthsUseCase
+        get() = security.observeUnconfirmedAuthsUseCase
+
+    val getUnconfirmedAuthsUseCase: GetUnconfirmedAuthsUseCase
+        get() = security.getUnconfirmedAuthsUseCase
+
+    val confirmAuthUseCase: ConfirmAuthUseCase
+        get() = security.confirmAuthUseCase
+
+    val denyAuthUseCase: DenyAuthUseCase
+        get() = security.denyAuthUseCase
+
+    val confirmAllAuthsUseCase: ConfirmAllAuthsUseCase
+        get() = security.confirmAllAuthsUseCase
+
+    val denyAllAuthsUseCase: DenyAllAuthsUseCase
+        get() = security.denyAllAuthsUseCase
+
+    val clearUnconfirmedAuthsUseCase: ClearUnconfirmedAuthsUseCase
+        get() = security.clearUnconfirmedAuthsUseCase
+
+    val unconfirmedAuthViewModel: UnconfirmedAuthViewModel
+        get() = security.unconfirmedAuthViewModel
+
+    fun createUnconfirmedAuthViewModel(): UnconfirmedAuthViewModel = security.createUnconfirmedAuthViewModel()
+
+    var captchaRepository: CaptchaRepository
+        get() = security.captchaRepository
+        set(value) { security.captchaRepository = value }
+
+    val observeActiveCaptchaRequestsUseCase: ObserveActiveCaptchaRequestsUseCase
+        get() = security.observeActiveCaptchaRequestsUseCase
+
+    val getActiveCaptchaRequestsUseCase: GetActiveCaptchaRequestsUseCase
+        get() = security.getActiveCaptchaRequestsUseCase
+
+    val verifyCaptchaUseCase: VerifyCaptchaUseCase
+        get() = security.verifyCaptchaUseCase
+
+    val submitCaptchaResultUseCase: SubmitCaptchaResultUseCase
+        get() = security.submitCaptchaResultUseCase
+
+    val cancelCaptchaUseCase: CancelCaptchaUseCase
+        get() = security.cancelCaptchaUseCase
+
+    val captchaViewModel: CaptchaViewModel
+        get() = security.captchaViewModel
+
+    fun createCaptchaViewModel(): CaptchaViewModel = security.createCaptchaViewModel()
+
+    var biometricsRepository: BiometricsRepository
+        get() = security.biometricsRepository
+        set(value) { security.biometricsRepository = value }
+
+    val observeBiometricKeyStateUseCase: ObserveBiometricKeyStateUseCase
+        get() = security.observeBiometricKeyStateUseCase
+
+    val getBiometricKeyStateUseCase: GetBiometricKeyStateUseCase
+        get() = security.getBiometricKeyStateUseCase
+
+    val checkBiometricKeyReadyUseCase: CheckBiometricKeyReadyUseCase
+        get() = security.checkBiometricKeyReadyUseCase
+
+    val deleteInvalidBiometricKeyUseCase: DeleteInvalidBiometricKeyUseCase
+        get() = security.deleteInvalidBiometricKeyUseCase
+
+    val isBiometricKeyReadyUseCase: IsBiometricKeyReadyUseCase
+        get() = security.isBiometricKeyReadyUseCase
+
+    val hasDeviceBiometricsChangedUseCase: HasDeviceBiometricsChangedUseCase
+        get() = security.hasDeviceBiometricsChangedUseCase
+
+    val biometricsViewModel: BiometricsViewModel
+        get() = security.biometricsViewModel
+
+    fun createBiometricsViewModel(): BiometricsViewModel = security.createBiometricsViewModel()
+
+    val authTokensRepository: AuthTokensRepository
+        get() = security.authTokensRepository
+
+    val pruneTokensListUseCase: PruneTokensListUseCase
+        get() = security.pruneTokensListUseCase
+
+    val validateAuthTokenFormatUseCase: ValidateAuthTokenFormatUseCase
+        get() = security.validateAuthTokenFormatUseCase
+
+    val observeAuthTokensStateUseCase: ObserveAuthTokensStateUseCase
+        get() = security.observeAuthTokensStateUseCase
+
+    val getAuthTokensStateUseCase: GetAuthTokensStateUseCase
+        get() = security.getAuthTokensStateUseCase
+
+    val getSavedLoginTokensUseCase: GetSavedLoginTokensUseCase
+        get() = security.getSavedLoginTokensUseCase
+
+    val saveLoginTokenUseCase: SaveLoginTokenUseCase
+        get() = security.saveLoginTokenUseCase
+
+    val getSavedLogoutTokensUseCase: GetSavedLogoutTokensUseCase
+        get() = security.getSavedLogoutTokensUseCase
+
+    val saveLogoutTokensUseCase: SaveLogoutTokensUseCase
+        get() = security.saveLogoutTokensUseCase
+
+    val addLogoutTokenUseCase: AddLogoutTokenUseCase
+        get() = security.addLogoutTokenUseCase
+
+    val removeTokenUseCase: RemoveTokenUseCase
+        get() = security.removeTokenUseCase
+
+    val clearAllTokensUseCase: ClearAllTokensUseCase
+        get() = security.clearAllTokensUseCase
+
+    val refreshAuthTokensUseCase: RefreshAuthTokensUseCase
+        get() = security.refreshAuthTokensUseCase
+
+    val authTokensViewModel: AuthTokensViewModel
+        get() = security.authTokensViewModel
+
+    fun createAuthTokensViewModel(): AuthTokensViewModel = security.createAuthTokensViewModel()
+
+    var botGuardRepository: BotGuardRepository
+        get() = security.botGuardRepository
+        set(value) { security.botGuardRepository = value }
+
+    val isGuardBotConfirmationNeededUseCase: IsGuardBotConfirmationNeededUseCase
+        get() = security.isGuardBotConfirmationNeededUseCase
+
+    val determineGuardBotLaunchFlowUseCase: DetermineGuardBotLaunchFlowUseCase
+        get() = security.determineGuardBotLaunchFlowUseCase
+
+    val registerGuardBotSessionUseCase: RegisterGuardBotSessionUseCase
+        get() = security.registerGuardBotSessionUseCase
+
+    val getGuardBotSessionUseCase: GetGuardBotSessionUseCase
+        get() = security.getGuardBotSessionUseCase
+
+    val getAllActiveGuardBotSessionsUseCase: GetAllActiveGuardBotSessionsUseCase
+        get() = security.getAllActiveGuardBotSessionsUseCase
+
+    val closeGuardBotSessionUseCase: CloseGuardBotSessionUseCase
+        get() = security.closeGuardBotSessionUseCase
+
+    val setGuardBotConfirmationShownUseCase: SetGuardBotConfirmationShownUseCase
+        get() = security.setGuardBotConfirmationShownUseCase
+
+    val clearAllGuardBotSessionsUseCase: ClearAllGuardBotSessionsUseCase
+        get() = security.clearAllGuardBotSessionsUseCase
+
+    val observeGuardBotDecisionsUseCase: ObserveGuardBotDecisionsUseCase
+        get() = security.observeGuardBotDecisionsUseCase
+
+    val observeGuardBotStateUseCase: ObserveGuardBotStateUseCase
+        get() = security.observeGuardBotStateUseCase
+
+    val mapJoinChatBotResultUseCase: MapJoinChatBotResultUseCase
+        get() = security.mapJoinChatBotResultUseCase
+
+    val formatGuardBotBulletinUseCase: FormatGuardBotBulletinUseCase
+        get() = security.formatGuardBotBulletinUseCase
+
+    val botGuardViewModel: BotGuardViewModel
+        get() = security.botGuardViewModel
+
+    fun createBotGuardViewModel(): BotGuardViewModel = security.createBotGuardViewModel()
 
     var flagSecureRepository: org.telegram.messenger.feature.security.flagsecure.domain.repository.FlagSecureRepository
-        get() = customFlagSecureRepository ?: org.telegram.messenger.feature.security.flagsecure.data.repository.LegacyFlagSecureRepository()
-        set(value) {
-            customFlagSecureRepository = value
-        }
+        get() = security.flagSecureRepository
+        set(value) { security.flagSecureRepository = value }
 
     val attachSecurityReasonUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.AttachSecurityReasonUseCase
-        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.AttachSecurityReasonUseCase(flagSecureRepository)
+        get() = security.attachSecurityReasonUseCase
 
     val detachSecurityReasonUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.DetachSecurityReasonUseCase
-        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.DetachSecurityReasonUseCase(flagSecureRepository)
+        get() = security.detachSecurityReasonUseCase
 
     val invalidateWindowSecurityUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.InvalidateWindowSecurityUseCase
-        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.InvalidateWindowSecurityUseCase(flagSecureRepository)
+        get() = security.invalidateWindowSecurityUseCase
 
     val isWindowSecuredUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.IsWindowSecuredUseCase
-        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.IsWindowSecuredUseCase(flagSecureRepository)
+        get() = security.isWindowSecuredUseCase
 
     val getWindowSecurityStateUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.GetWindowSecurityStateUseCase
-        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.GetWindowSecurityStateUseCase(flagSecureRepository)
+        get() = security.getWindowSecurityStateUseCase
 
     val getAllWindowStatesUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.GetAllWindowStatesUseCase
-        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.GetAllWindowStatesUseCase(flagSecureRepository)
+        get() = security.getAllWindowStatesUseCase
 
     val resetWindowSecurityUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.ResetWindowSecurityUseCase
-        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.ResetWindowSecurityUseCase(flagSecureRepository)
+        get() = security.resetWindowSecurityUseCase
 
     val observeWindowStateUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.ObserveWindowStateUseCase
-        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.ObserveWindowStateUseCase(flagSecureRepository)
+        get() = security.observeWindowStateUseCase
 
     val observeAllWindowStatesUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.ObserveAllWindowStatesUseCase
-        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.ObserveAllWindowStatesUseCase(flagSecureRepository)
+        get() = security.observeAllWindowStatesUseCase
 
     val evaluateSecurityRuleUseCase: org.telegram.messenger.feature.security.flagsecure.domain.usecase.EvaluateSecurityRuleUseCase
-        get() = org.telegram.messenger.feature.security.flagsecure.domain.usecase.EvaluateSecurityRuleUseCase()
+        get() = security.evaluateSecurityRuleUseCase
 
-    private val cachedFlagSecureViewModels = ConcurrentHashMap<String, org.telegram.messenger.feature.security.flagsecure.presentation.FlagSecureViewModel>()
+    fun getFlagSecureViewModel(windowId: String = "main"): org.telegram.messenger.feature.security.flagsecure.presentation.FlagSecureViewModel = security.getFlagSecureViewModel(windowId)
 
-    fun getFlagSecureViewModel(windowId: String = "main"): org.telegram.messenger.feature.security.flagsecure.presentation.FlagSecureViewModel {
-        return cachedFlagSecureViewModels.computeIfAbsent(windowId) { createFlagSecureViewModel(it) }
-    }
+    fun createFlagSecureViewModel(windowId: String = "main"): org.telegram.messenger.feature.security.flagsecure.presentation.FlagSecureViewModel = security.createFlagSecureViewModel(windowId)
 
-    fun createFlagSecureViewModel(windowId: String = "main"): org.telegram.messenger.feature.security.flagsecure.presentation.FlagSecureViewModel {
-        return org.telegram.messenger.feature.security.flagsecure.presentation.FlagSecureViewModel(
-            initialWindowId = windowId,
-            attachSecurityReasonUseCase = attachSecurityReasonUseCase,
-            detachSecurityReasonUseCase = detachSecurityReasonUseCase,
-            invalidateWindowSecurityUseCase = invalidateWindowSecurityUseCase,
-            getWindowSecurityStateUseCase = getWindowSecurityStateUseCase,
-            resetWindowSecurityUseCase = resetWindowSecurityUseCase,
-            observeWindowStateUseCase = observeWindowStateUseCase,
-            observeAllWindowStatesUseCase = observeAllWindowStatesUseCase
-        )
-    }
+    // ==================== SOCIAL DOMAIN ====================
 
-    // --- AnimationLocker ---
-    private var customAnimationLockerRepository: org.telegram.messenger.feature.system.animationlocker.domain.repository.AnimationLockerRepository? = null
+    var profileRepository: ProfileRepository
+        get() = social.profileRepository
+        set(value) { social.profileRepository = value }
+
+    val observeProfileUseCase: ObserveProfileUseCase
+        get() = social.observeProfileUseCase
+
+    val getProfileUseCase: GetProfileUseCase
+        get() = social.getProfileUseCase
+
+    val loadFullProfileUseCase: LoadFullProfileUseCase
+        get() = social.loadFullProfileUseCase
+
+    val blockPeerUseCase: BlockPeerUseCase
+        get() = social.blockPeerUseCase
+
+    val unblockPeerUseCase: UnblockPeerUseCase
+        get() = social.unblockPeerUseCase
+
+    fun getProfileViewModel(peerId: Long): ProfileViewModel = social.getProfileViewModel(peerId)
+
+    fun createProfileViewModel(peerId: Long): ProfileViewModel = social.createProfileViewModel(peerId)
+
+    var contactsRepository: ContactsRepository
+        get() = social.contactsRepository
+        set(value) { social.contactsRepository = value }
+
+    val observeContactsUseCase: ObserveContactsUseCase
+        get() = social.observeContactsUseCase
+
+    val getContactsUseCase: GetContactsUseCase
+        get() = social.getContactsUseCase
+
+    val getContactUseCase: GetContactUseCase
+        get() = social.getContactUseCase
+
+    val addContactUseCase: AddContactUseCase
+        get() = social.addContactUseCase
+
+    val deleteContactUseCase: DeleteContactUseCase
+        get() = social.deleteContactUseCase
+
+    val searchContactsUseCase: SearchContactsUseCase
+        get() = social.searchContactsUseCase
+
+    val contactsViewModel: ContactsViewModel
+        get() = social.contactsViewModel
+
+    fun createContactsViewModel(): ContactsViewModel = social.createContactsViewModel()
+
+    var locationRepository: LocationRepository
+        get() = social.locationRepository
+        set(value) { social.locationRepository = value }
+
+    val observeActiveSharingsUseCase: ObserveActiveSharingsUseCase
+        get() = social.observeActiveSharingsUseCase
+
+    val observePeerLocationsUseCase: ObservePeerLocationsUseCase
+        get() = social.observePeerLocationsUseCase
+
+    val observeLastKnownLocationUseCase: ObserveLastKnownLocationUseCase
+        get() = social.observeLastKnownLocationUseCase
+
+    val getActiveSharingsUseCase: GetActiveSharingsUseCase
+        get() = social.getActiveSharingsUseCase
+
+    val isSharingLocationUseCase: IsSharingLocationUseCase
+        get() = social.isSharingLocationUseCase
+
+    val getSharingInfoUseCase: GetSharingInfoUseCase
+        get() = social.getSharingInfoUseCase
+
+    val getLastKnownLocationUseCase: GetLastKnownLocationUseCase
+        get() = social.getLastKnownLocationUseCase
+
+    val loadPeerLiveLocationsUseCase: LoadPeerLiveLocationsUseCase
+        get() = social.loadPeerLiveLocationsUseCase
+
+    val stopLocationSharingUseCase: StopLocationSharingUseCase
+        get() = social.stopLocationSharingUseCase
+
+    val stopAllLocationSharingsUseCase: StopAllLocationSharingsUseCase
+        get() = social.stopAllLocationSharingsUseCase
+
+    val setProximityAlertUseCase: SetProximityAlertUseCase
+        get() = social.setProximityAlertUseCase
+
+    val sendStaticLocationUseCase: SendStaticLocationUseCase
+        get() = social.sendStaticLocationUseCase
+
+    val sendLiveLocationUseCase: SendLiveLocationUseCase
+        get() = social.sendLiveLocationUseCase
+
+    val markLiveLocationsAsReadUseCase: MarkLiveLocationsAsReadUseCase
+        get() = social.markLiveLocationsAsReadUseCase
+
+    val locationViewModel: LocationViewModel
+        get() = social.locationViewModel
+
+    fun createLocationViewModel(): LocationViewModel = social.createLocationViewModel()
+
+    var boostsRepository: BoostsRepository
+        get() = social.boostsRepository
+        set(value) { social.boostsRepository = value }
+
+    val getBoostsStatusUseCase: GetBoostsStatusUseCase
+        get() = social.getBoostsStatusUseCase
+
+    val getMyBoostsUseCase: GetMyBoostsUseCase
+        get() = social.getMyBoostsUseCase
+
+    val checkCanApplyBoostUseCase: CheckCanApplyBoostUseCase
+        get() = social.checkCanApplyBoostUseCase
+
+    val applyBoostUseCase: ApplyBoostUseCase
+        get() = social.applyBoostUseCase
+
+    val boostsViewModel: BoostsViewModel
+        get() = social.boostsViewModel
+
+    fun createBoostsViewModel(): BoostsViewModel = social.createBoostsViewModel()
+
+    var joinRequestsRepository: JoinRequestsRepository
+        get() = social.joinRequestsRepository
+        set(value) { social.joinRequestsRepository = value }
+
+    val observePendingRequestsUseCase: ObservePendingRequestsUseCase
+        get() = social.observePendingRequestsUseCase
+
+    val getPendingRequestsCountUseCase: GetPendingRequestsCountUseCase
+        get() = social.getPendingRequestsCountUseCase
+
+    val getCachedJoinRequestsUseCase: GetCachedJoinRequestsUseCase
+        get() = social.getCachedJoinRequestsUseCase
+
+    val loadJoinRequestsUseCase: LoadJoinRequestsUseCase
+        get() = social.loadJoinRequestsUseCase
+
+    val approveJoinRequestUseCase: ApproveJoinRequestUseCase
+        get() = social.approveJoinRequestUseCase
+
+    val dismissJoinRequestUseCase: DismissJoinRequestUseCase
+        get() = social.dismissJoinRequestUseCase
+
+    val approveAllJoinRequestsUseCase: ApproveAllJoinRequestsUseCase
+        get() = social.approveAllJoinRequestsUseCase
+
+    val dismissAllJoinRequestsUseCase: DismissAllJoinRequestsUseCase
+        get() = social.dismissAllJoinRequestsUseCase
+
+    val joinRequestsViewModel: JoinRequestsViewModel
+        get() = social.joinRequestsViewModel
+
+    fun createJoinRequestsViewModel(): JoinRequestsViewModel = social.createJoinRequestsViewModel()
+
+    var birthdaysRepository: BirthdaysRepository
+        get() = social.birthdaysRepository
+        set(value) { social.birthdaysRepository = value }
+
+    val observeBirthdaysUseCase: ObserveBirthdaysUseCase
+        get() = social.observeBirthdaysUseCase
+
+    val getBirthdaysStateUseCase: GetBirthdaysStateUseCase
+        get() = social.getBirthdaysStateUseCase
+
+    val checkBirthdaysUseCase: CheckBirthdaysUseCase
+        get() = social.checkBirthdaysUseCase
+
+    val hideTodayBirthdaysUseCase: HideTodayBirthdaysUseCase
+        get() = social.hideTodayBirthdaysUseCase
+
+    val isBirthdayTodayUseCase: IsBirthdayTodayUseCase
+        get() = social.isBirthdayTodayUseCase
+
+    val hasBirthdaysTodayUseCase: HasBirthdaysTodayUseCase
+        get() = social.hasBirthdaysTodayUseCase
+
+    val birthdaysViewModel: BirthdaysViewModel
+        get() = social.birthdaysViewModel
+
+    fun createBirthdaysViewModel(): BirthdaysViewModel = social.createBirthdaysViewModel()
+
+    // ==================== SYSTEM DOMAIN ====================
+
+    var settingsRepository: SettingsRepository
+        get() = system.settingsRepository
+        set(value) { system.settingsRepository = value }
+
+    val observeSettingsUseCase: ObserveSettingsUseCase
+        get() = system.observeSettingsUseCase
+
+    val getSettingsUseCase: GetSettingsUseCase
+        get() = system.getSettingsUseCase
+
+    val updateFontSizeUseCase: UpdateFontSizeUseCase
+        get() = system.updateFontSizeUseCase
+
+    val updateBubbleRadiusUseCase: UpdateBubbleRadiusUseCase
+        get() = system.updateBubbleRadiusUseCase
+
+    val updateSaveToGalleryUseCase: UpdateSaveToGalleryUseCase
+        get() = system.updateSaveToGalleryUseCase
+
+    val updateStreamMediaUseCase: UpdateStreamMediaUseCase
+        get() = system.updateStreamMediaUseCase
+
+    val updateSyncContactsUseCase: UpdateSyncContactsUseCase
+        get() = system.updateSyncContactsUseCase
+
+    val settingsViewModel: SettingsViewModel
+        get() = system.settingsViewModel
+
+    fun createSettingsViewModel(): SettingsViewModel = system.createSettingsViewModel()
+
+    var notificationsRepository: NotificationsRepository
+        get() = system.notificationsRepository
+        set(value) { system.notificationsRepository = value }
+
+    val observeNotificationSettingsUseCase: ObserveNotificationSettingsUseCase
+        get() = system.observeNotificationSettingsUseCase
+
+    val getNotificationSettingsUseCase: GetNotificationSettingsUseCase
+        get() = system.getNotificationSettingsUseCase
+
+    val observeBadgeUseCase: ObserveBadgeUseCase
+        get() = system.observeBadgeUseCase
+
+    val getBadgeUseCase: GetBadgeUseCase
+        get() = system.getBadgeUseCase
+
+    val observeBadgeSettingsUseCase: ObserveBadgeSettingsUseCase
+        get() = system.observeBadgeSettingsUseCase
+
+    val getBadgeSettingsUseCase: GetBadgeSettingsUseCase
+        get() = system.getBadgeSettingsUseCase
+
+    val togglePeerNotificationsUseCase: TogglePeerNotificationsUseCase
+        get() = system.togglePeerNotificationsUseCase
+
+    val toggleInChatSoundUseCase: ToggleInChatSoundUseCase
+        get() = system.toggleInChatSoundUseCase
+
+    val toggleInAppSoundsUseCase: ToggleInAppSoundsUseCase
+        get() = system.toggleInAppSoundsUseCase
+
+    val toggleInAppVibrateUseCase: ToggleInAppVibrateUseCase
+        get() = system.toggleInAppVibrateUseCase
+
+    val toggleInAppPreviewUseCase: ToggleInAppPreviewUseCase
+        get() = system.toggleInAppPreviewUseCase
+
+    val toggleContactJoinedNotificationsUseCase: ToggleContactJoinedNotificationsUseCase
+        get() = system.toggleContactJoinedNotificationsUseCase
+
+    val togglePinnedMessagesNotificationsUseCase: TogglePinnedMessagesNotificationsUseCase
+        get() = system.togglePinnedMessagesNotificationsUseCase
+
+    val updateBadgeSettingsUseCase: UpdateBadgeSettingsUseCase
+        get() = system.updateBadgeSettingsUseCase
+
+    val muteDialogUseCase: MuteDialogUseCase
+        get() = system.muteDialogUseCase
+
+    val isDialogMutedUseCase: IsDialogMutedUseCase
+        get() = system.isDialogMutedUseCase
+
+    val refreshBadgeUseCase: RefreshBadgeUseCase
+        get() = system.refreshBadgeUseCase
+
+    val notificationsViewModel: NotificationsViewModel
+        get() = system.notificationsViewModel
+
+    fun createNotificationsViewModel(): NotificationsViewModel = system.createNotificationsViewModel()
+
+    val themeRepository: ThemeRepository
+        get() = system.themeRepository
+
+    val observeAppearanceSettingsUseCase: ObserveAppearanceSettingsUseCase
+        get() = system.observeAppearanceSettingsUseCase
+
+    val getAppearanceSettingsUseCase: GetAppearanceSettingsUseCase
+        get() = system.getAppearanceSettingsUseCase
+
+    val observeAvailableThemesUseCase: ObserveAvailableThemesUseCase
+        get() = system.observeAvailableThemesUseCase
+
+    val getAvailableThemesUseCase: GetAvailableThemesUseCase
+        get() = system.getAvailableThemesUseCase
+
+    val applyThemeUseCase: ApplyThemeUseCase
+        get() = system.applyThemeUseCase
+
+    val observeNightModeUseCase: ObserveNightModeUseCase
+        get() = system.observeNightModeUseCase
+
+    val setNightModeTypeUseCase: SetNightModeTypeUseCase
+        get() = system.setNightModeTypeUseCase
+
+    val setNightModeSettingsUseCase: SetNightModeSettingsUseCase
+        get() = system.setNightModeSettingsUseCase
+
+    val setThemeAccentUseCase: SetThemeAccentUseCase
+        get() = system.setThemeAccentUseCase
+
+    val setBubbleRadiusUseCase: SetBubbleRadiusUseCase
+        get() = system.setBubbleRadiusUseCase
+
+    val resetAppearanceSettingsUseCase: ResetAppearanceSettingsUseCase
+        get() = system.resetAppearanceSettingsUseCase
+
+    val themeViewModel: ThemeViewModel
+        get() = system.themeViewModel
+
+    fun createThemeViewModel(): ThemeViewModel = system.createThemeViewModel()
+
+    var dataStorageRepository: DataStorageRepository
+        get() = system.dataStorageRepository
+        set(value) { system.dataStorageRepository = value }
+
+    val observeNetworkUsageUseCase: ObserveNetworkUsageUseCase
+        get() = system.observeNetworkUsageUseCase
+
+    val observeStorageUsageUseCase: ObserveStorageUsageUseCase
+        get() = system.observeStorageUsageUseCase
+
+    val observeAutoDownloadPresetUseCase: ObserveAutoDownloadPresetUseCase
+        get() = system.observeAutoDownloadPresetUseCase
+
+    val observeKeepMediaSettingsUseCase: ObserveKeepMediaSettingsUseCase
+        get() = system.observeKeepMediaSettingsUseCase
+
+    val getNetworkUsageUseCase: GetNetworkUsageUseCase
+        get() = system.getNetworkUsageUseCase
+
+    val resetNetworkUsageUseCase: ResetNetworkUsageUseCase
+        get() = system.resetNetworkUsageUseCase
+
+    val getStorageUsageUseCase: GetStorageUsageUseCase
+        get() = system.getStorageUsageUseCase
+
+    val clearCacheUseCase: ClearCacheUseCase
+        get() = system.clearCacheUseCase
+
+    val clearDatabaseUseCase: ClearDatabaseUseCase
+        get() = system.clearDatabaseUseCase
+
+    val getAutoDownloadPresetUseCase: GetAutoDownloadPresetUseCase
+        get() = system.getAutoDownloadPresetUseCase
+
+    val updateAutoDownloadPresetUseCase: UpdateAutoDownloadPresetUseCase
+        get() = system.updateAutoDownloadPresetUseCase
+
+    val getKeepMediaSettingsUseCase: GetKeepMediaSettingsUseCase
+        get() = system.getKeepMediaSettingsUseCase
+
+    val updateKeepMediaUseCase: UpdateKeepMediaUseCase
+        get() = system.updateKeepMediaUseCase
+
+    val refreshStorageUsageUseCase: RefreshStorageUsageUseCase
+        get() = system.refreshStorageUsageUseCase
+
+    val dataStorageViewModel: DataStorageViewModel
+        get() = system.dataStorageViewModel
+
+    fun createDataStorageViewModel(): DataStorageViewModel = system.createDataStorageViewModel()
+
+    var launcherIconRepository: LauncherIconRepository
+        get() = system.launcherIconRepository
+        set(value) { system.launcherIconRepository = value }
+
+    val observeLauncherIconsUseCase: ObserveLauncherIconsUseCase
+        get() = system.observeLauncherIconsUseCase
+
+    val getLauncherIconsUseCase: GetLauncherIconsUseCase
+        get() = system.getLauncherIconsUseCase
+
+    val getActiveLauncherIconUseCase: GetActiveLauncherIconUseCase
+        get() = system.getActiveLauncherIconUseCase
+
+    val isLauncherIconEnabledUseCase: IsLauncherIconEnabledUseCase
+        get() = system.isLauncherIconEnabledUseCase
+
+    val setLauncherIconUseCase: SetLauncherIconUseCase
+        get() = system.setLauncherIconUseCase
+
+    val fixLauncherIconIfNeededUseCase: FixLauncherIconIfNeededUseCase
+        get() = system.fixLauncherIconIfNeededUseCase
+
+    val launcherIconViewModel: LauncherIconViewModel
+        get() = system.launcherIconViewModel
+
+    fun createLauncherIconViewModel(): LauncherIconViewModel = system.createLauncherIconViewModel()
+
+    var hintsRepository: HintsRepository
+        get() = system.hintsRepository
+        set(value) { system.hintsRepository = value }
+
+    val observeHintsUseCase: ObserveHintsUseCase
+        get() = system.observeHintsUseCase
+
+    val getHintsStateUseCase: GetHintsStateUseCase
+        get() = system.getHintsStateUseCase
+
+    val getHintUseCase: GetHintUseCase
+        get() = system.getHintUseCase
+
+    val shouldShowHintUseCase: ShouldShowHintUseCase
+        get() = system.shouldShowHintUseCase
+
+    val incrementHintUseCase: IncrementHintUseCase
+        get() = system.incrementHintUseCase
+
+    val doNotShowAgainHintUseCase: DoNotShowAgainHintUseCase
+        get() = system.doNotShowAgainHintUseCase
+
+    val resetHintUseCase: ResetHintUseCase
+        get() = system.resetHintUseCase
+
+    val resetAllHintsUseCase: ResetAllHintsUseCase
+        get() = system.resetAllHintsUseCase
+
+    val hintsViewModel: HintsViewModel
+        get() = system.hintsViewModel
+
+    fun createHintsViewModel(): HintsViewModel = system.createHintsViewModel()
+
+    var refreshRateRepository: RefreshRateRepository
+        get() = system.refreshRateRepository
+        set(value) { system.refreshRateRepository = value }
+
+    val observeRefreshRateStateUseCase: ObserveRefreshRateStateUseCase
+        get() = system.observeRefreshRateStateUseCase
+
+    val getRefreshRateStateUseCase: GetRefreshRateStateUseCase
+        get() = system.getRefreshRateStateUseCase
+
+    val startRefreshRateTrackingUseCase: StartRefreshRateTrackingUseCase
+        get() = system.startRefreshRateTrackingUseCase
+
+    val stopRefreshRateTrackingUseCase: StopRefreshRateTrackingUseCase
+        get() = system.stopRefreshRateTrackingUseCase
+
+    val toggleAdaptiveRefreshRateUseCase: ToggleAdaptiveRefreshRateUseCase
+        get() = system.toggleAdaptiveRefreshRateUseCase
+
+    val setPreferredRefreshRateModeUseCase: SetPreferredRefreshRateModeUseCase
+        get() = system.setPreferredRefreshRateModeUseCase
+
+    val recordFrameMetricUseCase: RecordFrameMetricUseCase
+        get() = system.recordFrameMetricUseCase
+
+    val resetRefreshRateStatsUseCase: ResetRefreshRateStatsUseCase
+        get() = system.resetRefreshRateStatsUseCase
+
+    val getDisplayRefreshModesUseCase: GetDisplayRefreshModesUseCase
+        get() = system.getDisplayRefreshModesUseCase
+
+    val refreshRateViewModel: RefreshRateViewModel
+        get() = system.refreshRateViewModel
+
+    fun createRefreshRateViewModel(): RefreshRateViewModel = system.createRefreshRateViewModel()
+
+    fun createFloatingDebugRepository(activityProvider: (() -> LaunchActivity?)? = null): FloatingDebugRepository = system.createFloatingDebugRepository(activityProvider)
+
+    val floatingDebugRepository: FloatingDebugRepository
+        get() = system.floatingDebugRepository
+
+    val isFloatingDebugActiveUseCase: IsFloatingDebugActiveUseCase
+        get() = system.isFloatingDebugActiveUseCase
+
+    val setFloatingDebugActiveUseCase: SetFloatingDebugActiveUseCase
+        get() = system.setFloatingDebugActiveUseCase
+
+    val toggleFloatingDebugActiveUseCase: ToggleFloatingDebugActiveUseCase
+        get() = system.toggleFloatingDebugActiveUseCase
+
+    val getFloatingDebugItemsUseCase: GetFloatingDebugItemsUseCase
+        get() = system.getFloatingDebugItemsUseCase
+
+    val registerFloatingDebugItemsUseCase: RegisterFloatingDebugItemsUseCase
+        get() = system.registerFloatingDebugItemsUseCase
+
+    val clearFloatingDebugItemsUseCase: ClearFloatingDebugItemsUseCase
+        get() = system.clearFloatingDebugItemsUseCase
+
+    val observeFloatingDebugStateUseCase: ObserveFloatingDebugStateUseCase
+        get() = system.observeFloatingDebugStateUseCase
+
+    val getFloatingDebugStateUseCase: GetFloatingDebugStateUseCase
+        get() = system.getFloatingDebugStateUseCase
+
+    val floatingDebugViewModel: FloatingDebugViewModel
+        get() = system.floatingDebugViewModel
+
+    fun createFloatingDebugViewModel(activityProvider: (() -> LaunchActivity?)? = null): FloatingDebugViewModel = system.createFloatingDebugViewModel(activityProvider)
+
+    fun createKeyboardInsetsRepository(inAppController: WindowInsetsInAppController? = null): KeyboardInsetsRepository = system.createKeyboardInsetsRepository(inAppController)
+
+    val keyboardInsetsRepository: KeyboardInsetsRepository
+        get() = system.keyboardInsetsRepository
+
+    val requestInAppKeyboardHeightUseCase: RequestInAppKeyboardHeightUseCase
+        get() = system.requestInAppKeyboardHeightUseCase
+
+    val resetInAppKeyboardHeightUseCase: ResetInAppKeyboardHeightUseCase
+        get() = system.resetInAppKeyboardHeightUseCase
+
+    val requestInAppKeyboardHeightWithNavbarUseCase: RequestInAppKeyboardHeightWithNavbarUseCase
+        get() = system.requestInAppKeyboardHeightWithNavbarUseCase
+
+    val updateSystemInsetsUseCase: UpdateSystemInsetsUseCase
+        get() = system.updateSystemInsetsUseCase
+
+    val getKeyboardInsetsUseCase: GetKeyboardInsetsUseCase
+        get() = system.getKeyboardInsetsUseCase
+
+    val observeKeyboardInsetsUseCase: ObserveKeyboardInsetsUseCase
+        get() = system.observeKeyboardInsetsUseCase
+
+    val keyboardInsetsViewModel: KeyboardInsetsViewModel
+        get() = system.keyboardInsetsViewModel
+
+    fun createKeyboardInsetsViewModel(inAppController: WindowInsetsInAppController? = null): KeyboardInsetsViewModel = system.createKeyboardInsetsViewModel(inAppController)
+
+    fun createMainTabsRepository(controller: MainTabsActivityController? = null): MainTabsRepository = system.createMainTabsRepository(controller)
+
+    val mainTabsRepository: MainTabsRepository
+        get() = system.mainTabsRepository
+
+    val observeMainTabsConfigUseCase: ObserveMainTabsConfigUseCase
+        get() = system.observeMainTabsConfigUseCase
+
+    val getMainTabsConfigUseCase: GetMainTabsConfigUseCase
+        get() = system.getMainTabsConfigUseCase
+
+    val setMainTabsVisibleUseCase: SetMainTabsVisibleUseCase
+        get() = system.setMainTabsVisibleUseCase
+
+    val selectMainTabUseCase: SelectMainTabUseCase
+        get() = system.selectMainTabUseCase
+
+    val setShowCallsTabUseCase: SetShowCallsTabUseCase
+        get() = system.setShowCallsTabUseCase
+
+    val updateChatsUnreadCountUseCase: UpdateChatsUnreadCountUseCase
+        get() = system.updateChatsUnreadCountUseCase
+
+    val setContactsPermissionWarningUseCase: SetContactsPermissionWarningUseCase
+        get() = system.setContactsPermissionWarningUseCase
+
+    val mainTabsViewModel: MainTabsViewModel
+        get() = system.mainTabsViewModel
+
+    fun createMainTabsViewModel(controller: MainTabsActivityController? = null): MainTabsViewModel = system.createMainTabsViewModel(controller)
+
+    fun createAdjustPanRepository(): AdjustPanRepository = system.createAdjustPanRepository()
+
+    val adjustPanRepository: AdjustPanRepository
+        get() = system.adjustPanRepository
+
+    val calculatePanTransitionPlanUseCase: CalculatePanTransitionPlanUseCase
+        get() = system.calculatePanTransitionPlanUseCase
+
+    val computePanProgressUseCase: ComputePanProgressUseCase
+        get() = system.computePanProgressUseCase
+
+    val observeAdjustPanStateUseCase: ObserveAdjustPanStateUseCase
+        get() = system.observeAdjustPanStateUseCase
+
+    val getAdjustPanStateUseCase: GetAdjustPanStateUseCase
+        get() = system.getAdjustPanStateUseCase
+
+    val setAdjustPanEnabledUseCase: SetAdjustPanEnabledUseCase
+        get() = system.setAdjustPanEnabledUseCase
+
+    val startAdjustPanTransitionUseCase: StartAdjustPanTransitionUseCase
+        get() = system.startAdjustPanTransitionUseCase
+
+    val updateAdjustPanTransitionUseCase: UpdateAdjustPanTransitionUseCase
+        get() = system.updateAdjustPanTransitionUseCase
+
+    val stopAdjustPanTransitionUseCase: StopAdjustPanTransitionUseCase
+        get() = system.stopAdjustPanTransitionUseCase
+
+    val resetAdjustPanUseCase: ResetAdjustPanUseCase
+        get() = system.resetAdjustPanUseCase
+
+    val adjustPanViewModel: AdjustPanViewModel
+        get() = system.adjustPanViewModel
+
+    fun createAdjustPanViewModel(): AdjustPanViewModel = system.createAdjustPanViewModel()
+
+    fun createKeyboardHideRepository(): KeyboardHideRepository = system.createKeyboardHideRepository()
+
+    val keyboardHideRepository: KeyboardHideRepository
+        get() = system.keyboardHideRepository
+
+    val calculateKeyboardHideProgressUseCase: CalculateKeyboardHideProgressUseCase
+        get() = system.calculateKeyboardHideProgressUseCase
+
+    val evaluateKeyboardDismissDecisionUseCase: EvaluateKeyboardDismissDecisionUseCase
+        get() = system.evaluateKeyboardDismissDecisionUseCase
+
+    val observeKeyboardHideStateUseCase: ObserveKeyboardHideStateUseCase
+        get() = system.observeKeyboardHideStateUseCase
+
+    val getKeyboardHideStateUseCase: GetKeyboardHideStateUseCase
+        get() = system.getKeyboardHideStateUseCase
+
+    val setKeyboardHideEnabledUseCase: SetKeyboardHideEnabledUseCase
+        get() = system.setKeyboardHideEnabledUseCase
+
+    val startKeyboardHideMovingUseCase: StartKeyboardHideMovingUseCase
+        get() = system.startKeyboardHideMovingUseCase
+
+    val updateKeyboardHideMovingUseCase: UpdateKeyboardHideMovingUseCase
+        get() = system.updateKeyboardHideMovingUseCase
+
+    val endKeyboardHideMovingUseCase: EndKeyboardHideMovingUseCase
+        get() = system.endKeyboardHideMovingUseCase
+
+    val finishKeyboardHideDismissUseCase: FinishKeyboardHideDismissUseCase
+        get() = system.finishKeyboardHideDismissUseCase
+
+    val resetKeyboardHideUseCase: ResetKeyboardHideUseCase
+        get() = system.resetKeyboardHideUseCase
+
+    val keyboardHideViewModel: KeyboardHideViewModel
+        get() = system.keyboardHideViewModel
+
+    fun createKeyboardHideViewModel(): KeyboardHideViewModel = system.createKeyboardHideViewModel()
+
+    fun createPinchToZoomRepository(): PinchToZoomRepository = system.createPinchToZoomRepository()
+
+    val pinchToZoomRepository: PinchToZoomRepository
+        get() = system.pinchToZoomRepository
+
+    val observePinchZoomStateUseCase: ObservePinchZoomStateUseCase
+        get() = system.observePinchZoomStateUseCase
+
+    val getPinchZoomStateUseCase: GetPinchZoomStateUseCase
+        get() = system.getPinchZoomStateUseCase
+
+    val calculatePinchScaleUseCase: CalculatePinchScaleUseCase
+        get() = system.calculatePinchScaleUseCase
+
+    val calculatePinchTranslationUseCase: CalculatePinchTranslationUseCase
+        get() = system.calculatePinchTranslationUseCase
+
+    val calculatePinchTransformUseCase: CalculatePinchTransformUseCase
+        get() = system.calculatePinchTransformUseCase
+
+    val calculatePinchImageBoundsUseCase: CalculatePinchImageBoundsUseCase
+        get() = system.calculatePinchImageBoundsUseCase
+
+    val evaluatePinchGestureUseCase: EvaluatePinchGestureUseCase
+        get() = system.evaluatePinchGestureUseCase
+
+    val startPinchZoomUseCase: StartPinchZoomUseCase
+        get() = system.startPinchZoomUseCase
+
+    val updatePinchZoomUseCase: UpdatePinchZoomUseCase
+        get() = system.updatePinchZoomUseCase
+
+    val finishPinchZoomUseCase: FinishPinchZoomUseCase
+        get() = system.finishPinchZoomUseCase
+
+    val resetPinchZoomUseCase: ResetPinchZoomUseCase
+        get() = system.resetPinchZoomUseCase
+
+    val pinchToZoomViewModel: PinchToZoomViewModel
+        get() = system.pinchToZoomViewModel
+
+    fun createPinchToZoomViewModel(): PinchToZoomViewModel = system.createPinchToZoomViewModel()
+
+    fun createRecyclerScrollRepository(): RecyclerScrollRepository = system.createRecyclerScrollRepository()
+
+    val recyclerScrollRepository: RecyclerScrollRepository
+        get() = system.recyclerScrollRepository
+
+    val observeRecyclerScrollStateUseCase: ObserveRecyclerScrollStateUseCase
+        get() = system.observeRecyclerScrollStateUseCase
+
+    val getRecyclerScrollStateUseCase: GetRecyclerScrollStateUseCase
+        get() = system.getRecyclerScrollStateUseCase
+
+    val evaluateScrollEligibilityUseCase: EvaluateScrollEligibilityUseCase
+        get() = system.evaluateScrollEligibilityUseCase
+
+    val calculateScrollAnimationPlanUseCase: CalculateScrollAnimationPlanUseCase
+        get() = system.calculateScrollAnimationPlanUseCase
+
+    val calculateScrollLengthUseCase: CalculateScrollLengthUseCase
+        get() = system.calculateScrollLengthUseCase
+
+    val computeScrollViewTranslationsUseCase: ComputeScrollViewTranslationsUseCase
+        get() = system.computeScrollViewTranslationsUseCase
+
+    val startRecyclerScrollUseCase: StartRecyclerScrollUseCase
+        get() = system.startRecyclerScrollUseCase
+
+    val updateRecyclerScrollProgressUseCase: UpdateRecyclerScrollProgressUseCase
+        get() = system.updateRecyclerScrollProgressUseCase
+
+    val finishRecyclerScrollUseCase: FinishRecyclerScrollUseCase
+        get() = system.finishRecyclerScrollUseCase
+
+    val cancelRecyclerScrollUseCase: CancelRecyclerScrollUseCase
+        get() = system.cancelRecyclerScrollUseCase
+
+    val resetRecyclerScrollUseCase: ResetRecyclerScrollUseCase
+        get() = system.resetRecyclerScrollUseCase
+
+    val recyclerScrollViewModel: RecyclerScrollViewModel
+        get() = system.recyclerScrollViewModel
+
+    fun createRecyclerScrollViewModel(): RecyclerScrollViewModel = system.createRecyclerScrollViewModel()
+
+    val localizationRepository: LocalizationRepository
+        get() = system.localizationRepository
+
+    val resolvePluralQuantityUseCase: ResolvePluralQuantityUseCase
+        get() = system.resolvePluralQuantityUseCase
+
+    val formatRelativeTimestampUseCase: FormatRelativeTimestampUseCase
+        get() = system.formatRelativeTimestampUseCase
+
+    val formatFullNameUseCase: FormatFullNameUseCase
+        get() = system.formatFullNameUseCase
+
+    val formatNumberWithSuffixUseCase: FormatNumberWithSuffixUseCase
+        get() = system.formatNumberWithSuffixUseCase
+
+    val detectRtlLanguageUseCase: DetectRtlLanguageUseCase
+        get() = system.detectRtlLanguageUseCase
+
+    val observeLocalizationStateUseCase: ObserveLocalizationStateUseCase
+        get() = system.observeLocalizationStateUseCase
+
+    val getLocalizationStateUseCase: GetLocalizationStateUseCase
+        get() = system.getLocalizationStateUseCase
+
+    val applyLocaleUseCase: ApplyLocaleUseCase
+        get() = system.applyLocaleUseCase
+
+    val toggle24HourFormatUseCase: Toggle24HourFormatUseCase
+        get() = system.toggle24HourFormatUseCase
+
+    val setNameDisplayOrderUseCase: SetNameDisplayOrderUseCase
+        get() = system.setNameDisplayOrderUseCase
+
+    val localizationViewModel: LocalizationViewModel
+        get() = system.localizationViewModel
+
+    fun createLocalizationViewModel(): LocalizationViewModel = system.createLocalizationViewModel()
+
+    val ringtoneRepository: RingtoneRepository
+        get() = system.ringtoneRepository
+
+    val validateRingtoneEligibilityUseCase: ValidateRingtoneEligibilityUseCase
+        get() = system.validateRingtoneEligibilityUseCase
+
+    val observeRingtonesUseCase: ObserveRingtonesUseCase
+        get() = system.observeRingtonesUseCase
+
+    val observeRingtoneStateUseCase: ObserveRingtoneStateUseCase
+        get() = system.observeRingtoneStateUseCase
+
+    val getRingtonesUseCase: GetRingtonesUseCase
+        get() = system.getRingtonesUseCase
+
+    val getRingtoneByIdUseCase: GetRingtoneByIdUseCase
+        get() = system.getRingtoneByIdUseCase
+
+    val getRingtoneSoundPathUseCase: GetRingtoneSoundPathUseCase
+        get() = system.getRingtoneSoundPathUseCase
+
+    val addRingtoneUseCase: AddRingtoneUseCase
+        get() = system.addRingtoneUseCase
+
+    val removeRingtoneUseCase: RemoveRingtoneUseCase
+        get() = system.removeRingtoneUseCase
+
+    val saveRingtoneFromDocumentUseCase: SaveRingtoneFromDocumentUseCase
+        get() = system.saveRingtoneFromDocumentUseCase
+
+    val uploadRingtoneUseCase: UploadRingtoneUseCase
+        get() = system.uploadRingtoneUseCase
+
+    val cancelRingtoneUploadUseCase: CancelRingtoneUploadUseCase
+        get() = system.cancelRingtoneUploadUseCase
+
+    val refreshRingtonesUseCase: RefreshRingtonesUseCase
+        get() = system.refreshRingtonesUseCase
+
+    val selectRingtoneUseCase: SelectRingtoneUseCase
+        get() = system.selectRingtoneUseCase
+
+    val ringtoneViewModel: RingtoneViewModel
+        get() = system.ringtoneViewModel
+
+    fun createRingtoneViewModel(): RingtoneViewModel = system.createRingtoneViewModel()
+
+    val browserRepository: BrowserRepository
+        get() = system.browserRepository
+
+    val classifyUrlTargetUseCase: ClassifyUrlTargetUseCase
+        get() = system.classifyUrlTargetUseCase
+
+    val extractUsernameFromUrlUseCase: ExtractUsernameFromUrlUseCase
+        get() = system.extractUsernameFromUrlUseCase
+
+    val checkUrlSafetyUseCase: CheckUrlSafetyUseCase
+        get() = system.checkUrlSafetyUseCase
+
+    val observeBrowserStateUseCase: ObserveBrowserStateUseCase
+        get() = system.observeBrowserStateUseCase
+
+    val getBrowserStateUseCase: GetBrowserStateUseCase
+        get() = system.getBrowserStateUseCase
+
+    val updateBrowserSettingsUseCase: UpdateBrowserSettingsUseCase
+        get() = system.updateBrowserSettingsUseCase
+
+    val openBrowserUrlUseCase: OpenBrowserUrlUseCase
+        get() = system.openBrowserUrlUseCase
+
+    val manageBrowserHistoryUseCase: ManageBrowserHistoryUseCase
+        get() = system.manageBrowserHistoryUseCase
+
+    val browserViewModel: BrowserViewModel
+        get() = system.browserViewModel
+
+    fun createBrowserViewModel(): BrowserViewModel = system.createBrowserViewModel()
+
+    val liteModeRepository: LiteModeRepository
+        get() = system.liteModeRepository
+
+    val calculateEffectiveFlagsUseCase: CalculateEffectiveFlagsUseCase
+        get() = system.calculateEffectiveFlagsUseCase
+
+    val checkLiteModeFlagUseCase: CheckLiteModeFlagUseCase
+        get() = system.checkLiteModeFlagUseCase
+
+    val resolvePresetUseCase: ResolvePresetUseCase
+        get() = system.resolvePresetUseCase
+
+    val observeLiteModeStateUseCase: ObserveLiteModeStateUseCase
+        get() = system.observeLiteModeStateUseCase
+
+    val getLiteModeStateUseCase: GetLiteModeStateUseCase
+        get() = system.getLiteModeStateUseCase
+
+    val toggleLiteModeFlagUseCase: ToggleLiteModeFlagUseCase
+        get() = system.toggleLiteModeFlagUseCase
+
+    val setLiteModePresetUseCase: SetLiteModePresetUseCase
+        get() = system.setLiteModePresetUseCase
+
+    val updatePowerSaverThresholdUseCase: UpdatePowerSaverThresholdUseCase
+        get() = system.updatePowerSaverThresholdUseCase
+
+    val liteModeViewModel: LiteModeViewModel
+        get() = system.liteModeViewModel
+
+    fun createLiteModeViewModel(): LiteModeViewModel = system.createLiteModeViewModel()
+
+    val appConfigRepository: AppConfigRepository
+        get() = system.appConfigRepository
+
+    val getAppConfigUseCase: GetAppConfigUseCase
+        get() = system.getAppConfigUseCase
+
+    val observeAppConfigUseCase: ObserveAppConfigUseCase
+        get() = system.observeAppConfigUseCase
+
+    val getMessageLimitsUseCase: GetMessageLimitsUseCase
+        get() = system.getMessageLimitsUseCase
+
+    val getStarsPricingConfigUseCase: GetStarsPricingConfigUseCase
+        get() = system.getStarsPricingConfigUseCase
+
+    val getTonPricingConfigUseCase: GetTonPricingConfigUseCase
+        get() = system.getTonPricingConfigUseCase
+
+    val getRichMessageLimitsUseCase: GetRichMessageLimitsUseCase
+        get() = system.getRichMessageLimitsUseCase
+
+    val getPollsConfigUseCase: GetPollsConfigUseCase
+        get() = system.getPollsConfigUseCase
+
+    val getAiComposeConfigUseCase: GetAiComposeConfigUseCase
+        get() = system.getAiComposeConfigUseCase
+
+    val getAppLimitsUseCase: GetAppLimitsUseCase
+        get() = system.getAppLimitsUseCase
+
+    val reloadAppConfigUseCase: ReloadAppConfigUseCase
+        get() = system.reloadAppConfigUseCase
+
+    val updateAppConfigValueUseCase: UpdateAppConfigValueUseCase
+        get() = system.updateAppConfigValueUseCase
+
+    val appConfigViewModel: AppConfigViewModel
+        get() = system.appConfigViewModel
+
+    fun createAppConfigViewModel(): AppConfigViewModel = system.createAppConfigViewModel()
+
+    var windowVisibilityRepository: WindowVisibilityRepository
+        get() = system.windowVisibilityRepository
+        set(value) { system.windowVisibilityRepository = value }
+
+    val requestHideWindowUseCase: RequestHideWindowUseCase
+        get() = system.requestHideWindowUseCase
+
+    val releaseHideWindowUseCase: ReleaseHideWindowUseCase
+        get() = system.releaseHideWindowUseCase
+
+    val toggleWindowHideUseCase: ToggleWindowHideUseCase
+        get() = system.toggleWindowHideUseCase
+
+    val checkIsWindowVisibleUseCase: CheckIsWindowVisibleUseCase
+        get() = system.checkIsWindowVisibleUseCase
+
+    val getWindowVisibilityStateUseCase: GetWindowVisibilityStateUseCase
+        get() = system.getWindowVisibilityStateUseCase
+
+    val getActiveHideReasonsUseCase: GetActiveHideReasonsUseCase
+        get() = system.getActiveHideReasonsUseCase
+
+    val resetWindowVisibilityUseCase: ResetWindowVisibilityUseCase
+        get() = system.resetWindowVisibilityUseCase
+
+    val observeWindowVisibilityStateUseCase: ObserveWindowVisibilityStateUseCase
+        get() = system.observeWindowVisibilityStateUseCase
+
+    val observeWindowVisibilityChangesUseCase: ObserveWindowVisibilityChangesUseCase
+        get() = system.observeWindowVisibilityChangesUseCase
+
+    val createVisibilityControllerUseCase: CreateVisibilityControllerUseCase
+        get() = system.createVisibilityControllerUseCase
+
+    val windowVisibilityViewModel: WindowVisibilityViewModel
+        get() = system.windowVisibilityViewModel
+
+    fun createWindowVisibilityViewModel(): WindowVisibilityViewModel = system.createWindowVisibilityViewModel()
+
+    var countdownTimerRepository: CountdownTimerRepository
+        get() = system.countdownTimerRepository
+        set(value) { system.countdownTimerRepository = value }
+
+    val startCountdownTimerUseCase: StartCountdownTimerUseCase
+        get() = system.startCountdownTimerUseCase
+
+    val stopCountdownTimerUseCase: StopCountdownTimerUseCase
+        get() = system.stopCountdownTimerUseCase
+
+    val pauseCountdownTimerUseCase: PauseCountdownTimerUseCase
+        get() = system.pauseCountdownTimerUseCase
+
+    val resumeCountdownTimerUseCase: ResumeCountdownTimerUseCase
+        get() = system.resumeCountdownTimerUseCase
+
+    val getCountdownTimerUseCase: GetCountdownTimerUseCase
+        get() = system.getCountdownTimerUseCase
+
+    val isCountdownTimerRunningUseCase: IsCountdownTimerRunningUseCase
+        get() = system.isCountdownTimerRunningUseCase
+
+    val tickCountdownTimerUseCase: TickCountdownTimerUseCase
+        get() = system.tickCountdownTimerUseCase
+
+    val clearAllCountdownTimersUseCase: ClearAllCountdownTimersUseCase
+        get() = system.clearAllCountdownTimersUseCase
+
+    val observeCountdownTimerUseCase: ObserveCountdownTimerUseCase
+        get() = system.observeCountdownTimerUseCase
+
+    val observeCountdownStateUseCase: ObserveCountdownStateUseCase
+        get() = system.observeCountdownStateUseCase
+
+    val decomposeCountdownTimeUseCase: DecomposeCountdownTimeUseCase
+        get() = system.decomposeCountdownTimeUseCase
+
+    val formatCountdownTimeUseCase: FormatCountdownTimeUseCase
+        get() = system.formatCountdownTimeUseCase
+
+    val countdownTimerViewModel: CountdownTimerViewModel
+        get() = system.countdownTimerViewModel
+
+    fun createCountdownTimerViewModel(): CountdownTimerViewModel = system.createCountdownTimerViewModel()
+
+    var leakDetectorRepository: org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository
+        get() = system.leakDetectorRepository
+        set(value) { system.leakDetectorRepository = value }
+
+    val startLeakDetectionUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.StartLeakDetectionUseCase
+        get() = system.startLeakDetectionUseCase
+
+    val stopLeakDetectionUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.StopLeakDetectionUseCase
+        get() = system.stopLeakDetectionUseCase
+
+    val trackInstanceUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.TrackInstanceUseCase
+        get() = system.trackInstanceUseCase
+
+    val triggerLeakCheckUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.TriggerLeakCheckUseCase
+        get() = system.triggerLeakCheckUseCase
+
+    val confirmLeakUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ConfirmLeakUseCase
+        get() = system.confirmLeakUseCase
+
+    val getTrackedClassesStatsUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.GetTrackedClassesStatsUseCase
+        get() = system.getTrackedClassesStatsUseCase
+
+    val getConfirmedLeaksUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.GetConfirmedLeaksUseCase
+        get() = system.getConfirmedLeaksUseCase
+
+    val resetLeakDetectorUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ResetLeakDetectorUseCase
+        get() = system.resetLeakDetectorUseCase
+
+    val observeLeakDetectorStateUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ObserveLeakDetectorStateUseCase
+        get() = system.observeLeakDetectorStateUseCase
+
+    val observeConfirmedLeaksUseCase: org.telegram.messenger.feature.system.leakdetector.domain.usecase.ObserveConfirmedLeaksUseCase
+        get() = system.observeConfirmedLeaksUseCase
+
+    val leakDetectorViewModel: org.telegram.messenger.feature.system.leakdetector.presentation.LeakDetectorViewModel
+        get() = system.leakDetectorViewModel
+
+    fun createLeakDetectorViewModel(): org.telegram.messenger.feature.system.leakdetector.presentation.LeakDetectorViewModel = system.createLeakDetectorViewModel()
+
+    var fpsContentRepository: org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository
+        get() = system.fpsContentRepository
+        set(value) { system.fpsContentRepository = value }
+
+    val registerFrameCallbackUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RegisterFrameCallbackUseCase
+        get() = system.registerFrameCallbackUseCase
+
+    val registerRunnableCallbackUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RegisterRunnableCallbackUseCase
+        get() = system.registerRunnableCallbackUseCase
+
+    val unregisterCallbackUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.UnregisterCallbackUseCase
+        get() = system.unregisterCallbackUseCase
+
+    val requestViewInvalidationUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RequestViewInvalidationUseCase
+        get() = system.requestViewInvalidationUseCase
+
+    val requestDrawableInvalidationUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.RequestDrawableInvalidationUseCase
+        get() = system.requestDrawableInvalidationUseCase
+
+    val dispatchVsyncTickUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.DispatchVsyncTickUseCase
+        get() = system.dispatchVsyncTickUseCase
+
+    val calculateFpsTimingUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.CalculateFpsTimingUseCase
+        get() = system.calculateFpsTimingUseCase
+
+    val getFpsContentStatsUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.GetFpsContentStatsUseCase
+        get() = system.getFpsContentStatsUseCase
+
+    val getFpsSubscriptionsUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.GetFpsSubscriptionsUseCase
+        get() = system.getFpsSubscriptionsUseCase
+
+    val observeFpsContentStatsUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.ObserveFpsContentStatsUseCase
+        get() = system.observeFpsContentStatsUseCase
+
+    val observeFpsTicksUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.ObserveFpsTicksUseCase
+        get() = system.observeFpsTicksUseCase
+
+    val resetFpsContentUseCase: org.telegram.messenger.feature.system.fpscontent.domain.usecase.ResetFpsContentUseCase
+        get() = system.resetFpsContentUseCase
+
+    val fpsContentViewModel: org.telegram.messenger.feature.system.fpscontent.presentation.FpsContentViewModel
+        get() = system.fpsContentViewModel
+
+    fun createFpsContentViewModel(): org.telegram.messenger.feature.system.fpscontent.presentation.FpsContentViewModel = system.createFpsContentViewModel()
+
+    var anrWatchdogRepository: org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository
+        get() = system.anrWatchdogRepository
+        set(value) { system.anrWatchdogRepository = value }
+
+    val startAnrMonitoringUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.StartAnrMonitoringUseCase
+        get() = system.startAnrMonitoringUseCase
+
+    val stopAnrMonitoringUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.StopAnrMonitoringUseCase
+        get() = system.stopAnrMonitoringUseCase
+
+    val setAppForegroundStatusUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.SetAppForegroundStatusUseCase
+        get() = system.setAppForegroundStatusUseCase
+
+    val sendMainThreadPingUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.SendMainThreadPingUseCase
+        get() = system.sendMainThreadPingUseCase
+
+    val acknowledgePingUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.AcknowledgePingUseCase
+        get() = system.acknowledgePingUseCase
+
+    val checkMainThreadFreezeUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.CheckMainThreadFreezeUseCase
+        get() = system.checkMainThreadFreezeUseCase
+
+    val resolveIncidentUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ResolveIncidentUseCase
+        get() = system.resolveIncidentUseCase
+
+    val getAnrWatchdogStateUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.GetAnrWatchdogStateUseCase
+        get() = system.getAnrWatchdogStateUseCase
+
+    val getAnrIncidentsUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.GetAnrIncidentsUseCase
+        get() = system.getAnrIncidentsUseCase
+
+    val clearAnrHistoryUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ClearAnrHistoryUseCase
+        get() = system.clearAnrHistoryUseCase
+
+    val observeAnrWatchdogStateUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ObserveAnrWatchdogStateUseCase
+        get() = system.observeAnrWatchdogStateUseCase
+
+    val observeAnrIncidentsUseCase: org.telegram.messenger.feature.system.anrwatchdog.domain.usecase.ObserveAnrIncidentsUseCase
+        get() = system.observeAnrIncidentsUseCase
+
+    val anrWatchdogViewModel: org.telegram.messenger.feature.system.anrwatchdog.presentation.AnrWatchdogViewModel
+        get() = system.anrWatchdogViewModel
+
+    fun createAnrWatchdogViewModel(): org.telegram.messenger.feature.system.anrwatchdog.presentation.AnrWatchdogViewModel = system.createAnrWatchdogViewModel()
+
+    var emuDetectorRepository: org.telegram.messenger.feature.system.emudetector.domain.repository.EmuDetectorRepository
+        get() = system.emuDetectorRepository
+        set(value) { system.emuDetectorRepository = value }
+
+    val detectEnvironmentUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.DetectEnvironmentUseCase
+        get() = system.detectEnvironmentUseCase
+
+    val isEmulatorUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.IsEmulatorUseCase
+        get() = system.isEmulatorUseCase
+
+    val getCachedDiagnosticsUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.GetCachedDiagnosticsUseCase
+        get() = system.getCachedDiagnosticsUseCase
+
+    val observeDiagnosticsUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.ObserveDiagnosticsUseCase
+        get() = system.observeDiagnosticsUseCase
+
+    val observeIsEmulatorUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.ObserveIsEmulatorUseCase
+        get() = system.observeIsEmulatorUseCase
+
+    val getDetectorConfigUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.GetDetectorConfigUseCase
+        get() = system.getDetectorConfigUseCase
+
+    val updateDetectorConfigUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.UpdateDetectorConfigUseCase
+        get() = system.updateDetectorConfigUseCase
+
+    val addCustomPackageNameUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.AddCustomPackageNameUseCase
+        get() = system.addCustomPackageNameUseCase
+
+    val clearDetectorCacheUseCase: org.telegram.messenger.feature.system.emudetector.domain.usecase.ClearDetectorCacheUseCase
+        get() = system.clearDetectorCacheUseCase
+
+    val emuDetectorViewModel: org.telegram.messenger.feature.system.emudetector.presentation.EmuDetectorViewModel
+        get() = system.emuDetectorViewModel
+
+    fun createEmuDetectorViewModel(): org.telegram.messenger.feature.system.emudetector.presentation.EmuDetectorViewModel = system.createEmuDetectorViewModel()
 
     var animationLockerRepository: org.telegram.messenger.feature.system.animationlocker.domain.repository.AnimationLockerRepository
-        get() = customAnimationLockerRepository ?: org.telegram.messenger.feature.system.animationlocker.data.repository.LegacyAnimationLockerRepository(account)
-        set(value) {
-            customAnimationLockerRepository = value
-        }
+        get() = system.animationLockerRepository
+        set(value) { system.animationLockerRepository = value }
 
     val acquireAnimationLockUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.AcquireAnimationLockUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.AcquireAnimationLockUseCase(animationLockerRepository)
+        get() = system.acquireAnimationLockUseCase
 
     val releaseAnimationLockUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.ReleaseAnimationLockUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.ReleaseAnimationLockUseCase(animationLockerRepository)
+        get() = system.releaseAnimationLockUseCase
 
     val releaseAllAnimationLocksUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.ReleaseAllAnimationLocksUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.ReleaseAllAnimationLocksUseCase(animationLockerRepository)
+        get() = system.releaseAllAnimationLocksUseCase
 
     val setAnimationLockerDisabledUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.SetAnimationLockerDisabledUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.SetAnimationLockerDisabledUseCase(animationLockerRepository)
+        get() = system.setAnimationLockerDisabledUseCase
 
     val isAnimationLockedUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.IsAnimationLockedUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.IsAnimationLockedUseCase(animationLockerRepository)
+        get() = system.isAnimationLockedUseCase
 
     val isNotificationAllowedUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.IsNotificationAllowedUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.IsNotificationAllowedUseCase(animationLockerRepository)
+        get() = system.isNotificationAllowedUseCase
 
     val getAnimationLockerStateUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.GetAnimationLockerStateUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.GetAnimationLockerStateUseCase(animationLockerRepository)
+        get() = system.getAnimationLockerStateUseCase
 
     val getAnimationLockerConfigUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.GetAnimationLockerConfigUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.GetAnimationLockerConfigUseCase(animationLockerRepository)
+        get() = system.getAnimationLockerConfigUseCase
 
     val updateAnimationLockerConfigUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.UpdateAnimationLockerConfigUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.UpdateAnimationLockerConfigUseCase(animationLockerRepository)
+        get() = system.updateAnimationLockerConfigUseCase
 
     val observeAnimationLockerStateUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.ObserveAnimationLockerStateUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.ObserveAnimationLockerStateUseCase(animationLockerRepository)
+        get() = system.observeAnimationLockerStateUseCase
 
     val observeIsAnimationLockedUseCase: org.telegram.messenger.feature.system.animationlocker.domain.usecase.ObserveIsAnimationLockedUseCase
-        get() = org.telegram.messenger.feature.system.animationlocker.domain.usecase.ObserveIsAnimationLockedUseCase(animationLockerRepository)
-
-    private var cachedAnimationLockerViewModel: org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel? = null
+        get() = system.observeIsAnimationLockedUseCase
 
     val animationLockerViewModel: org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel
-        get() {
-            var vm = cachedAnimationLockerViewModel
-            if (vm == null) {
-                vm = createAnimationLockerViewModel()
-                cachedAnimationLockerViewModel = vm
-            }
-            return vm
-        }
+        get() = system.animationLockerViewModel
 
-    fun createAnimationLockerViewModel(): org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel {
-        return org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel(
-            acquireAnimationLockUseCase = acquireAnimationLockUseCase,
-            releaseAnimationLockUseCase = releaseAnimationLockUseCase,
-            releaseAllAnimationLocksUseCase = releaseAllAnimationLocksUseCase,
-            setAnimationLockerDisabledUseCase = setAnimationLockerDisabledUseCase,
-            getAnimationLockerStateUseCase = getAnimationLockerStateUseCase,
-            getAnimationLockerConfigUseCase = getAnimationLockerConfigUseCase,
-            updateAnimationLockerConfigUseCase = updateAnimationLockerConfigUseCase,
-            observeAnimationLockerStateUseCase = observeAnimationLockerStateUseCase
-        )
-    }
+    fun createAnimationLockerViewModel(): org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel = system.createAnimationLockerViewModel()
 
     companion object {
         private val instances = ConcurrentHashMap<Int, AccountFeatureContainer>()

@@ -98,7 +98,7 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 │   ├── events/
 │   │   └── NotificationCenterFlowBridge.kt# Cold Flow wrapper for NotificationCenter
 │   └── di/
-│       └── AccountFeatureContainer.kt     # Scoped Service Locator per currentAccount (test-overridable)
+│       └── AccountFeatureContainer.kt     # Facade delegating to 7 domain containers per currentAccount
 │
 └── feature/                               # Migrated feature slices (7 Clean Domains, 105 Features)
     ├── business/                          # Commercial, Telegram Business, Stars (10 features)
@@ -833,10 +833,41 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Use cases: `AcquireAnimationLockUseCase`, `ReleaseAnimationLockUseCase`, `ReleaseAllAnimationLocksUseCase`, `SetAnimationLockerDisabledUseCase`, `IsAnimationLockedUseCase`, `IsNotificationAllowedUseCase`, `GetAnimationLockerStateUseCase`, `GetAnimationLockerConfigUseCase`, `UpdateAnimationLockerConfigUseCase`, `ObserveAnimationLockerStateUseCase`, `ObserveIsAnimationLockedUseCase`
   - [x] Data layer: `AnimationLockerMapper`, `LegacyAnimationLockerRepository` (thread-safe lock registry adapting `AnimationNotificationsLocker.java`'s 48 lines, multi-account and global notification suspension, and allowed notifications whitelist)
   - [x] Presentation layer: `AnimationLockerUiState`, `AnimationLockerEvent`, `AnimationLockerViewModel`
+- [x] Domain Modularization (7 Domains, 105 Features) & Containerization
+  - [x] 7 Semantic subdomains restructured (`business`, `media`, `messaging`, `network`, `security`, `social`, `system`).
+  - [x] 7 Domain-specific DI containers created under `feature.<domain>.di`:
+    - `BusinessContainer.kt` (10 features, 135 properties/factories)
+    - `MediaContainer.kt` (18 features, 248 properties/factories)
+    - `MessagingContainer.kt` (31 features, 421 properties/factories)
+    - `NetworkContainer.kt` (4 features, 54 properties/factories)
+    - `SecurityContainer.kt` (10 features, 140 properties/factories)
+    - `SocialContainer.kt` (6 features, 73 properties/factories)
+    - `SystemContainer.kt` (26 features, 384 properties/factories)
+  - [x] `AccountFeatureContainer.kt` converted into lightweight Facade with 100% backward-compatible delegated accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 110: Modular Domain Containers & AccountFeatureContainer Facade
+- **Context:** Following the 7-domain package restructuring (ADR 109), `AccountFeatureContainer.kt` had expanded into a monolithic Service Locator file (~7,400 lines) registering 105 features, 1,270+ properties/methods, and dozens of ViewModel factories. This file was cumbersome to navigate, created a single point of failure for DI merge conflicts, and introduced severe Kotlin compiler CFG (Control Flow Graph) overhead. The user required modularizing DI into 7 domain-specific containers while strictly maintaining a single monolithic Gradle module (`TMessagesProj`) and 100% backward compatibility for all existing callers.
+- **Decision:** Split the monolithic `AccountFeatureContainer.kt` into 7 isolated domain containers under `feature.<domain>.di`:
+  1. `feature.business.di.BusinessContainer` (10 features, 135 properties/factories)
+  2. `feature.media.di.MediaContainer` (18 features, 248 properties/factories)
+  3. `feature.messaging.di.MessagingContainer` (31 features, 421 properties/factories)
+  4. `feature.network.di.NetworkContainer` (4 features, 54 properties/factories)
+  5. `feature.security.di.SecurityContainer` (10 features, 140 properties/factories)
+  6. `feature.social.di.SocialContainer` (6 features, 73 properties/factories)
+  7. `feature.system.di.SystemContainer` (26 features, 384 properties/factories)
+  Each domain container is scoped to `currentAccount` and `Context`, containing only the dependencies, repositories, use cases, and view models belonging to its domain.
+  Convert `AccountFeatureContainer.kt` into a lightweight facade:
+  - Expose domain sub-containers directly: `val business by lazy { BusinessContainer(account, context) }`, etc.
+  - Retain 100% backward compatibility by delegating all properties and methods to their domain containers (`var billingRepository get() = business.billingRepository; set(v) { business.billingRepository = v }`).
+- **Consequences:**
+  - Strict domain separation: DI definitions now reside within their respective domain packages, maximizing cohesion.
+  - Zero breakages: Existing callsites like `AccountFeatureContainer.get(account).savedMessagesRepository` and UI ViewModel factories continue to function without modifying a single line of client code.
+  - Compilation stability: Resolves Kotlin K2 compiler CFG combinatorial complexity and avoids monolithic class bloat.
+  - Zero Gradle changes: Operates completely within `TMessagesProj` without requiring multi-module Gradle setups.
 
 ### ADR 109: Domain Modularization into 7 Semantic Subdomains (105 Features)
 - **Context:** Following the isolation of all 105 architectural feature slices across Telegram Android, the root package `org.telegram.messenger.feature` contained 105 top-level directories. This flat namespace created cognitive overhead, cluttered project navigation, and obscured domain-level cohesion across related functional areas. User explicitly requested to group these into 7 clean business/technical domains while strictly maintaining a single monolithic Gradle module (`TMessagesProj`) without creating individual `:feature:*` Gradle modules.
