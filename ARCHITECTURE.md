@@ -856,6 +856,19 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 
 ## 6. Architecture Decision Records (ADRs)
 
+### ADR 115: PhotoViewer Media Viewing, Zoom & PiP UI Wiring via Strangler Fig
+- **Context:** In Telegram Android, `PhotoViewer.java` (~11,700 lines) is the central media viewing overlay singleton (`PhotoViewer.getInstance()`, `PipInstance`) responsible for fullscreen images, video playback, animated stickers, pinch-to-zoom gestures, PiP transitions, and action bar controls. Historically, `PhotoViewer` manipulated low-level UI flags and legacy controllers directly without presentation layer abstractions.
+- **Decision:** Apply the Strangler Fig pattern at the UI layer. Acquire `PhotoViewerViewModel`, `PinchToZoomViewModel`, `ContentPreviewViewModel`, and `PipViewModel` from `AccountFeatureContainer.Companion.get(currentAccount)` in `initViewModels(int account)` (triggered on `setParentActivity()` and `openPhoto()`). Wire media events through null-safe event dispatches:
+  1. Media display initialization -> `photoViewerViewModel.onEvent(new PhotoViewerEvent.Open(...))`.
+  2. Slide / index selection -> `photoViewerViewModel.onEvent(new PhotoViewerEvent.SelectIndex(currentIndex))`.
+  3. Action bar toggling -> `photoViewerViewModel.onEvent(PhotoViewerEvent.ToggleActionBar.INSTANCE)`.
+  4. Video / web playback toggles (in `playVideoOrWeb` and `pauseVideoOrWeb`) -> `photoViewerViewModel.onEvent(PhotoViewerEvent.TogglePlayback.INSTANCE)`.
+  5. Picture-in-Picture entry (in `gallery_menu_pip`) -> `pipViewModel.onEvent(new PipEvent.SetPipState(PipState.IN_PIP))`.
+  6. Pinch-to-zoom gesture tracking (in pinch detector callbacks) -> `pinchToZoomViewModel.onEvent(new PinchToZoomEvent.UpdateZoom(scale))` and `pinchToZoomViewModel.onEvent(new PinchToZoomEvent.UpdateTransform(translationX, translationY, scale))`.
+  7. Closing and cleanup (in `onHideView` and `destroyPhotoViewer`) -> `photoViewerViewModel.onEvent(PhotoViewerEvent.Close.INSTANCE)`, reset pinch-to-zoom and PiP states, and null out ViewModel references.
+  All additions are strictly additive, non-invasive, and preserve 100% compatibility with Telegram's rendering pipeline and animations.
+- **Consequences:** PhotoViewer's lifecycle, zooming, playback, and PiP states are now cleanly bridged to pure domain ViewModels, providing observability and testability while protecting the complex UI drawing loop from breaking changes.
+
 ### ADR 114: ProfileActivity User & Peer Info UI Wiring via Strangler Fig
 - **Context:** In Telegram Android, `ProfileActivity.java` (~17,000 lines) is the central screen displaying user, group, channel, and bot profiles, as well as shared media, contacts, birthdays, privacy/security settings, and peer blocking. Historically, `ProfileActivity` directly invoked legacy controllers (`MessagesController`, `ContactsController`, `SharedMediaLayout`, `SharedMediaPreloader`, etc.) without presentation abstractions.
 - **Decision:** Apply the Strangler Fig pattern at the UI layer. Acquire `ProfileViewModel`, `ContactsViewModel`, `BirthdaysViewModel`, `PrivacyViewModel`, and `SharedMediaViewModel` from `AccountFeatureContainer.Companion.get(currentAccount)` during `initViewModels()` called from `onFragmentCreate()`. Wire user actions through null-safe event dispatches:

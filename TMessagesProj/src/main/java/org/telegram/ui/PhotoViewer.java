@@ -344,9 +344,39 @@ import me.vkryl.android.animator.BoolAnimator;
 import me.vkryl.android.animator.FactorAnimator;
 import me.vkryl.core.reference.ReferenceList;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.media.photoviewer.presentation.PhotoViewerViewModel;
+import org.telegram.messenger.feature.media.photoviewer.presentation.PhotoViewerEvent;
+import org.telegram.messenger.feature.system.pinchtozoom.presentation.PinchToZoomViewModel;
+import org.telegram.messenger.feature.system.pinchtozoom.presentation.PinchToZoomEvent;
+import org.telegram.messenger.feature.media.contentpreview.presentation.ContentPreviewViewModel;
+import org.telegram.messenger.feature.media.contentpreview.presentation.ContentPreviewEvent;
+import org.telegram.messenger.feature.media.pip.presentation.PipViewModel;
+import org.telegram.messenger.feature.media.pip.presentation.PipEvent;
+import org.telegram.messenger.feature.media.pip.domain.model.PipState;
+
 @SuppressLint("WrongConstant")
 @SuppressWarnings("unchecked")
 public class PhotoViewer implements NotificationCenter.NotificationCenterDelegate, GestureDetector2.OnGestureListener, GestureDetector2.OnDoubleTapListener, IPipSourceDelegate, FactorAnimator.Target {
+
+    private PhotoViewerViewModel photoViewerViewModel;
+    private PinchToZoomViewModel pinchToZoomViewModel;
+    private ContentPreviewViewModel contentPreviewViewModel;
+    private PipViewModel pipViewModel;
+
+    private void initViewModels(int account) {
+        try {
+            AccountFeatureContainer accountContainer = AccountFeatureContainer.get(account);
+            if (accountContainer != null) {
+                photoViewerViewModel = accountContainer.getPhotoViewerViewModel();
+                pinchToZoomViewModel = accountContainer.getPinchToZoomViewModel();
+                contentPreviewViewModel = accountContainer.getContentPreviewViewModel();
+                pipViewModel = accountContainer.getPipViewModel();
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
 
     private static final int ANIMATOR_ID_POLL_ATTACH_BUTTONS_VISIBLE = 0;
     private final BoolAnimator animatorPollAttachButtonsVisibility = new BoolAnimator(ANIMATOR_ID_POLL_ATTACH_BUTTONS_VISIBLE, this, CubicBezierInterpolator.EASE_OUT_QUINT, 380);
@@ -4734,6 +4764,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         this.resourcesProvider = resourcesProvider;
         this.parentFragment = fragment;
         currentAccount = UserConfig.selectedAccount;
+        initViewModels(currentAccount);
         centerImage.setCurrentAccount(currentAccount);
         leftImage.setCurrentAccount(currentAccount);
         rightImage.setCurrentAccount(currentAccount);
@@ -5562,6 +5593,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 } else if (id == gallery_menu_pip) {
                     if (!menuItem.isSubItemVisible(gallery_menu_pip)) {
                         return;
+                    }
+                    if (pipViewModel != null) {
+                        pipViewModel.onEvent(new PipEvent.TransitionPipState(PipState.IN_PIP));
                     }
                     if (isEmbedVideo) {
                         if (photoViewerWebView.openInPip()) {
@@ -9482,6 +9516,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void onHideView() {
+        if (photoViewerViewModel != null) {
+            photoViewerViewModel.onEvent(PhotoViewerEvent.Close.INSTANCE);
+        }
+        if (pipViewModel != null) {
+            pipViewModel.onEvent(new PipEvent.TransitionPipState(PipState.IDLE));
+        }
+        if (pinchToZoomViewModel != null) {
+            pinchToZoomViewModel.onEvent(PinchToZoomEvent.Reset.INSTANCE);
+        }
         if (parentActivity instanceof LaunchActivity) {
             LaunchActivity launchActivity = (LaunchActivity) parentActivity;
             launchActivity.removeOnUserLeaveHintListener(onUserLeaveHintListener);
@@ -10300,6 +10343,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void playVideoOrWeb() {
+        if (photoViewerViewModel != null) {
+            photoViewerViewModel.onEvent(PhotoViewerEvent.TogglePlayback.INSTANCE);
+        }
         if (videoPlayer != null) {
             videoPlayer.play();
         } else if (photoViewerWebView != null) {
@@ -10308,6 +10354,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void pauseVideoOrWeb() {
+        if (photoViewerViewModel != null) {
+            photoViewerViewModel.onEvent(PhotoViewerEvent.TogglePlayback.INSTANCE);
+        }
         if (videoPlayer != null) {
             videoPlayer.pause();
         } else if (photoViewerWebView != null) {
@@ -13283,6 +13332,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
     }
 
     private void toggleActionBar(final boolean show, final boolean animated) {
+        if (photoViewerViewModel != null) {
+            photoViewerViewModel.onEvent(PhotoViewerEvent.ToggleActionBar.INSTANCE);
+        }
         toggleActionBar(show, animated, ActionBarToggleParams.DEFAULT);
     }
 
@@ -15624,6 +15676,9 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         int prevIndex = currentIndex;
         currentIndex = index;
+        if (photoViewerViewModel != null) {
+            photoViewerViewModel.onEvent(new PhotoViewerEvent.SelectIndex(index));
+        }
         setIsAboutToSwitchToIndex(currentIndex, init, animateCaption);
 
         boolean isVideo = false;
@@ -17521,6 +17576,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
         isVisible = true;
         isVisibleOrAnimating = true;
+        initViewModels(currentAccount);
 
         togglePhotosListView(false, false);
 
@@ -18636,6 +18692,11 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             Instance = null;
         }
         onHideView();
+
+        photoViewerViewModel = null;
+        pinchToZoomViewModel = null;
+        contentPreviewViewModel = null;
+        pipViewModel = null;
     }
 
     private void onPhotoClosed(PlaceProviderObject object) {
@@ -19057,6 +19118,12 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 scale = (float) Math.hypot(ev.getX(1) - ev.getX(0), ev.getY(1) - ev.getY(0)) / pinchStartDistance * pinchStartScale;
                 translationX = (pinchCenterX - getContainerViewWidth() / 2) - ((pinchCenterX - getContainerViewWidth() / 2) - pinchStartX) * (scale / pinchStartScale);
                 translationY = (pinchCenterY - getContainerViewHeight() / 2) - ((pinchCenterY - getContainerViewHeight() / 2) - pinchStartY) * (scale / pinchStartScale);
+                if (pinchToZoomViewModel != null) {
+                    pinchToZoomViewModel.onEvent(new PinchToZoomEvent.UpdateZoom(scale, translationX, translationY));
+                }
+                if (photoViewerViewModel != null) {
+                    photoViewerViewModel.onEvent(new PhotoViewerEvent.UpdateTransform(scale, translationX, translationY, rotate));
+                }
                 updateMinMax(scale);
                 invalidateBlur();
                 containerView.invalidate();

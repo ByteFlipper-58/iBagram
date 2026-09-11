@@ -1,4 +1,4 @@
-﻿package org.telegram.messenger.feature.media.photoviewer.presentation
+package org.telegram.messenger.feature.media.photoviewer.presentation
 
 import org.telegram.messenger.feature.media.photoviewer.domain.model.PhotoViewerMediaItem
 import org.telegram.messenger.feature.media.photoviewer.domain.model.ViewerActionType
@@ -10,7 +10,7 @@ import org.telegram.messenger.feature.media.photoviewer.domain.model.ViewerSelec
  */
 sealed class PhotoViewerEvent {
 
-    data class Open(
+    data class Open @JvmOverloads constructor(
         val items: List<PhotoViewerMediaItem>,
         val initialIndex: Int = 0,
         val selectType: ViewerSelectType = ViewerSelectType.NO_SELECT
