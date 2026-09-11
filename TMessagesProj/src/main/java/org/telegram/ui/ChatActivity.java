@@ -289,6 +289,9 @@ import org.telegram.messenger.feature.messaging.draftmeasure.presentation.DraftM
 import org.telegram.messenger.feature.messaging.reactions.domain.model.ReactionItemModel;
 import org.telegram.messenger.feature.messaging.reactions.presentation.ReactionsEvent;
 import org.telegram.messenger.feature.messaging.reactions.presentation.ReactionsViewModel;
+import org.telegram.messenger.feature.media.audioplayer.presentation.AudioPlayerViewModel;
+import org.telegram.messenger.feature.messaging.factcheck.presentation.FactCheckViewModel;
+import org.telegram.messenger.feature.messaging.mentions.presentation.MentionsViewModel;
 import org.telegram.messenger.feature.messaging.sendmessages.presentation.SendMessagesViewModel;
 import org.telegram.ui.Components.chat.ChatActivityMessageMetricsView;
 import org.telegram.ui.Components.chat.ChatActivitySearchContainer;
@@ -457,6 +460,9 @@ public class ChatActivity extends BaseFragment implements
     private ChatInputViewModel chatInputViewModel;
     private BottomViewsViewModel bottomViewsViewModel;
     private DraftMeasureViewModel draftMeasureViewModel;
+    private MentionsViewModel mentionsViewModel;
+    private AudioPlayerViewModel audioPlayerViewModel;
+    private FactCheckViewModel factCheckViewModel;
     private ActionBarMenuItem.Item timeItem2;
     private ComposeDrawable otherIcon;
     private ActionBarMenu.LazyItem attachItem;
@@ -3218,6 +3224,9 @@ public class ChatActivity extends BaseFragment implements
         chatInputViewModel = accountContainer.getChatInputViewModel();
         bottomViewsViewModel = accountContainer.getMessaging().createBottomViewsViewModel(bottomViewsVisibilityController);
         draftMeasureViewModel = accountContainer.getMessaging().createDraftMeasureViewModel(botDraftHeightController);
+        mentionsViewModel = accountContainer.getMentionsViewModel();
+        audioPlayerViewModel = accountContainer.getAudioPlayerViewModel();
+        factCheckViewModel = accountContainer.getFactCheckViewModel();
 
         return true;
     }
@@ -3490,6 +3499,9 @@ public class ChatActivity extends BaseFragment implements
             AndroidUtilities.removeFromParent(starReactionsOverlay);
             starReactionsOverlay = null;
         }
+        mentionsViewModel = null;
+        audioPlayerViewModel = null;
+        factCheckViewModel = null;
     }
 
     private static class ChatActivityTextSelectionHelper extends TextSelectionHelper.ChatListTextSelectionHelper {

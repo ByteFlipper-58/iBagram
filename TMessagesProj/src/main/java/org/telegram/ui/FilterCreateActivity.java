@@ -103,11 +103,15 @@ import org.telegram.ui.Components.Text;
 import org.telegram.ui.Components.UndoView;
 import org.telegram.ui.Components.spoilers.SpoilersTextView;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.messaging.folders.presentation.FoldersViewModel;
+
 import java.util.ArrayList;
 import java.util.Collections;
 
 public class FilterCreateActivity extends BaseFragment {
 
+    private FoldersViewModel foldersViewModel;
     private RecyclerListView listView;
     private ListAdapter adapter;
     private ActionBarMenuItem doneItem;
@@ -221,6 +225,10 @@ public class FilterCreateActivity extends BaseFragment {
 
     @Override
     public boolean onFragmentCreate() {
+        foldersViewModel = AccountFeatureContainer.Companion.get(currentAccount).getFoldersViewModel();
+        if (foldersViewModel != null) {
+            foldersViewModel.refresh();
+        }
         updateRows();
         return super.onFragmentCreate();
     }
@@ -257,6 +265,7 @@ public class FilterCreateActivity extends BaseFragment {
         if (requestingInvitesReqId != 0) {
             getConnectionsManager().cancelRequest(requestingInvitesReqId, true);
         }
+        foldersViewModel = null;
     }
 
     private void updateRows() {
@@ -1072,6 +1081,9 @@ public class FilterCreateActivity extends BaseFragment {
             checkDoneButton(true);
 
             getNotificationCenter().postNotificationName(NotificationCenter.dialogFiltersUpdated);
+            if (foldersViewModel != null) {
+                foldersViewModel.refresh();
+            }
 
             if (after != null) {
                 after.run();

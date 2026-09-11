@@ -74,11 +74,17 @@ import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.TextStyleSpan;
 import org.telegram.ui.bots.BotBiometry;
 import org.telegram.ui.bots.BotBiometrySettings;
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.security.privacy.presentation.PrivacyViewModel;
+import org.telegram.messenger.feature.security.privacy.presentation.PrivacyEvent;
+import org.telegram.messenger.feature.security.passkeys.presentation.PasskeysViewModel;
 
 import java.util.ArrayList;
 
 public class PrivacySettingsActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
 
+    private PrivacyViewModel privacyViewModel;
+    private PasskeysViewModel passkeysViewModel;
     private ListAdapter listAdapter;
     private RecyclerListView listView;
     private AlertDialog progressDialog;
@@ -181,6 +187,11 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
     @Override
     public boolean onFragmentCreate() {
         super.onFragmentCreate();
+        privacyViewModel = AccountFeatureContainer.Companion.get(currentAccount).getPrivacyViewModel();
+        passkeysViewModel = AccountFeatureContainer.Companion.get(currentAccount).getPasskeysViewModel();
+        if (passkeysViewModel != null) {
+            passkeysViewModel.loadPasskeys(false);
+        }
 
         getContactsController().loadPrivacySettings();
         getMessagesController().getBlockedPeers(true);
@@ -229,6 +240,8 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        privacyViewModel = null;
+        passkeysViewModel = null;
         getNotificationCenter().removeObserver(this, NotificationCenter.privacyRulesUpdated);
         getNotificationCenter().removeObserver(this, NotificationCenter.blockedUsersDidLoad);
         getNotificationCenter().removeObserver(this, NotificationCenter.didSetOrRemoveTwoStepPassword);
@@ -672,6 +685,9 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.privacyRulesUpdated) {
+            if (privacyViewModel != null) {
+                privacyViewModel.onEvent(PrivacyEvent.ReloadRules.INSTANCE);
+            }
             TLRPC.GlobalPrivacySettings privacySettings = getContactsController().getGlobalPrivacySettings();
             if (privacySettings != null) {
                 archiveChats = privacySettings.archive_and_mute_new_noncontact_peers;
@@ -684,6 +700,9 @@ public class PrivacySettingsActivity extends BaseFragment implements Notificatio
         } else if (id == NotificationCenter.blockedUsersDidLoad) {
             listAdapter.notifyItemChanged(blockedRow);
         } else if (id == NotificationCenter.didSetOrRemoveTwoStepPassword) {
+            if (privacyViewModel != null) {
+                privacyViewModel.onEvent(PrivacyEvent.ReloadTwoStepVerification.INSTANCE);
+            }
             if (args.length > 0) {
                 currentPassword = (TL_account.Password) args[0];
                 if (listAdapter != null) {

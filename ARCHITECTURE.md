@@ -856,6 +856,20 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 
 ## 6. Architecture Decision Records (ADRs)
 
+### ADR 119: Specialized Screens UI Wiring via Strangler Fig (Folders, VoIP, Privacy, Passcode, Chat)
+- **Context:** Following the stabilization of core navigation screens (`DialogsActivity`, `ProfileActivity`, `SettingsActivity`, `LaunchActivity`, `PhotoViewer`), several specialized legacy UI screens remained unwired to the modular Architecture v2 containers:
+  1. `FiltersSetupActivity.java` & `FilterCreateActivity.java`: Folder management, suggested filters, and custom chat filter creation.
+  2. `VoIPFragment.java`: 1-on-1 audio and video calling overlay view controller.
+  3. `PrivacySettingsActivity.java` & `PasscodeActivity.java`: Privacy rules, two-step verification, passkeys, and biometric lock authentication.
+  4. `ChatActivity.java`: Specialized chat subsystems: mention autocomplete (`MentionsViewModel`), audio player controls (`AudioPlayerViewModel`), and message fact-check cards (`FactCheckViewModel`).
+- **Decision:** Wire these screens via the Strangler Fig pattern strictly honoring the **Single Execution Principle**:
+  1. `FiltersSetupActivity` & `FilterCreateActivity`: Connect `FoldersViewModel`. Initialize in `onFragmentCreate()`, refresh on `NotificationCenter.dialogFiltersUpdated` and `suggestedFiltersLoaded`, notify on filter save, and nullify in `onFragmentDestroy()`.
+  2. `VoIPFragment`: Connect `CallViewModel` in constructor `VoIPFragment(int account)` via `AccountFeatureContainer.Companion.get(account).getCallViewModel()`. Cleanly nullify in `destroy()`.
+  3. `PrivacySettingsActivity`: Connect `PrivacyViewModel` and `PasskeysViewModel`. Trigger `passkeysViewModel.loadPasskeys(false)` on create, dispatch `PrivacyEvent.ReloadRules.INSTANCE` and `PrivacyEvent.ReloadTwoStepVerification.INSTANCE` on notifications, and nullify on destroy.
+  4. `PasscodeActivity`: Connect `BiometricsViewModel` via `AccountFeatureContainer.Companion.get(currentAccount).getBiometricsViewModel()`. Nullify on destroy.
+  5. `ChatActivity`: Connect `MentionsViewModel`, `AudioPlayerViewModel`, and `FactCheckViewModel` via `accountContainer`. Nullify in `onFragmentDestroy()` to ensure zero memory leaks.
+- **Consequences:** All specialized screens are securely bound to Architecture v2 ViewModels without duplicate network mutations, background thread contention, or lifecycle leaks. Verified with clean Kotlin/Java compilation, successful unit test suite passes, and tested with real device deployment (`RZCW41MQNVV`) showing zero runtime errors.
+
 ### ADR 118: DialogsActivity Search Stabilization via Deconfliction of AnimationLocker and SearchViewModel
 - **Context:** Following the initial Strangler Fig wiring in `DialogsActivity.java`, users reported that search in `DialogsActivity` was broken: search overlay failed to open smoothly or froze, typing queries showed empty or erratic results, and search transitions locked up. Deep inspection revealed two critical conflicts:
   1. **Double Animation Locking:** In `DialogsActivity.showSearch()`, both `animationLockerViewModel.onEvent(AcquireLock)` and Telegram's native `notificationsLocker.lock()` were invoked concurrently. `LegacyAnimationLockerRepository` registered a lock in `NotificationCenter.setAnimationInProgress()` with `allowed = null`, halting heavy operations and placing notifications (`dialogsNeedReload`, search events, layout passes) into `delayedPosts`. Incomplete or unaligned releases left `NotificationCenter` in an animation state.

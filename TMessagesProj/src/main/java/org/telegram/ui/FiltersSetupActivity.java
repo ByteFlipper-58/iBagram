@@ -68,11 +68,14 @@ import org.telegram.ui.Components.ProgressButton;
 import org.telegram.ui.Components.RLottieImageView;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.UndoView;
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.messaging.folders.presentation.FoldersViewModel;
 
 import java.util.ArrayList;
 
 public class FiltersSetupActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
 
+    private FoldersViewModel foldersViewModel;
     private RecyclerListView listView;
     private ListAdapter adapter;
     private ItemTouchHelper itemTouchHelper;
@@ -530,6 +533,10 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
 
     @Override
     public boolean onFragmentCreate() {
+        foldersViewModel = AccountFeatureContainer.Companion.get(currentAccount).getFoldersViewModel();
+        if (foldersViewModel != null) {
+            foldersViewModel.refresh();
+        }
         updateRows(false);
         getMessagesController().loadRemoteFilters(true);
         getNotificationCenter().addObserver(this, NotificationCenter.dialogFiltersUpdated);
@@ -629,6 +636,10 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
 
             });
         }
+        if (foldersViewModel != null && orderChanged) {
+            foldersViewModel.refresh();
+        }
+        foldersViewModel = null;
         super.onFragmentDestroy();
     }
 
@@ -768,11 +779,17 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.dialogFiltersUpdated) {
+            if (foldersViewModel != null) {
+                foldersViewModel.refresh();
+            }
             if (ignoreUpdates) {
                 return;
             }
             updateRows(true);
         } else if (id == NotificationCenter.suggestedFiltersLoaded) {
+            if (foldersViewModel != null) {
+                foldersViewModel.loadSuggestedFolders();
+            }
             updateRows(true);
         }
     }

@@ -83,6 +83,9 @@ import org.telegram.ui.Components.TextViewSwitcher;
 import org.telegram.ui.Components.TransformableLoginButtonView;
 import org.telegram.ui.Components.VerticalPositionAutoAnimator;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.security.biometrics.presentation.BiometricsViewModel;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.nio.charset.StandardCharsets;
@@ -90,6 +93,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PasscodeActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
+    private BiometricsViewModel biometricsViewModel;
     public final static int TYPE_MANAGE_CODE_SETTINGS = 0,
             TYPE_SETUP_CODE = 1,
             TYPE_ENTER_CODE_TO_MANAGE_SETTINGS = 2;
@@ -166,6 +170,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     @Override
     public boolean onFragmentCreate() {
         super.onFragmentCreate();
+        biometricsViewModel = AccountFeatureContainer.Companion.get(currentAccount).getBiometricsViewModel();
         updateRows();
         if (type == TYPE_MANAGE_CODE_SETTINGS) {
             NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.didSetPasscode);
@@ -176,6 +181,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        biometricsViewModel = null;
         if (type == TYPE_MANAGE_CODE_SETTINGS) {
             NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.didSetPasscode);
         }

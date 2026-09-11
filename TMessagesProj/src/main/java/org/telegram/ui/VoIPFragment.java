@@ -87,6 +87,8 @@ import org.telegram.messenger.pip.activity.IPipActivityActionListener;
 import org.telegram.messenger.pip.source.IPipSourceDelegate;
 import org.telegram.messenger.pip.utils.PipActions;
 import org.telegram.messenger.pip.utils.PipPermissions;
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.media.voip.presentation.CallViewModel;
 import org.telegram.messenger.pip.PipSource;
 import org.telegram.messenger.pip.utils.PipUtils;
 import org.telegram.messenger.voip.EncryptionKeyEmojifier;
@@ -160,6 +162,7 @@ public class VoIPFragment implements
     private final static int STATE_FLOATING = 2;
 
     private final int currentAccount;
+    private CallViewModel callViewModel;
 
     Activity activity;
 
@@ -522,6 +525,7 @@ public class VoIPFragment implements
 
     public VoIPFragment(int account) {
         currentAccount = account;
+        callViewModel = AccountFeatureContainer.Companion.get(currentAccount).getCallViewModel();
         currentUser = MessagesController.getInstance(currentAccount).getUser(UserConfig.getInstance(currentAccount).getClientUserId());
         final VoIPServiceState state = VoIPService.getSharedState();
         if (state == null) return;
@@ -556,6 +560,7 @@ public class VoIPFragment implements
             addPeopleSheet.dismiss();
             addPeopleSheet = null;
         }
+        callViewModel = null;
     }
 
     @Override
