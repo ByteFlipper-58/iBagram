@@ -2093,6 +2093,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = messaging.savedMessagesRepository
         set(value) { messaging.savedMessagesRepository = value }
 
+    fun createSavedMessagesRepository(): SavedMessagesRepository = messaging.createSavedMessagesRepository()
+
     val getSavedDialogsUseCase: GetSavedDialogsUseCase
         get() = messaging.getSavedDialogsUseCase
 

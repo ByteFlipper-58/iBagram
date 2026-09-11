@@ -277,7 +277,10 @@ import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRi
 import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionLockedUseCase
 import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.SetRichCaptionTextUseCase
 import org.telegram.messenger.feature.messaging.richcaption.presentation.RichCaptionViewModel
+import org.telegram.messenger.feature.messaging.savedmessages.data.datasource.SavedMessagesLocalDataSource
+import org.telegram.messenger.feature.messaging.savedmessages.data.datasource.SavedMessagesRemoteDataSource
 import org.telegram.messenger.feature.messaging.savedmessages.data.repository.LegacySavedMessagesRepository
+import org.telegram.messenger.feature.messaging.savedmessages.data.repository.SavedMessagesRepositoryImpl
 import org.telegram.messenger.feature.messaging.savedmessages.domain.repository.SavedMessagesRepository
 import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.DeleteSavedDialogUseCase
 import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.GetSavedDialogsUseCase
@@ -354,6 +357,22 @@ import org.telegram.ui.Components.chat.ChatActivityDraftMessageMeasureController
 
 class MessagingContainer(val account: Int) {
 
+    val savedMessagesRemoteDataSource: SavedMessagesRemoteDataSource by lazy {
+        SavedMessagesRemoteDataSource(account)
+    }
+
+    val savedMessagesLocalDataSource: SavedMessagesLocalDataSource by lazy {
+        SavedMessagesLocalDataSource(account)
+    }
+
+    fun createSavedMessagesRepository(): SavedMessagesRepository {
+        return SavedMessagesRepositoryImpl(
+            account = account,
+            localDataSource = savedMessagesLocalDataSource,
+            remoteDataSource = savedMessagesRemoteDataSource
+        )
+    }
+
     private var customSavedMessagesRepository: SavedMessagesRepository? = null
 
     /**
@@ -361,7 +380,7 @@ class MessagingContainer(val account: Int) {
      * Can be replaced or mocked via custom setter for testing.
      */
     var savedMessagesRepository: SavedMessagesRepository
-        get() = customSavedMessagesRepository ?: LegacySavedMessagesRepository(account)
+        get() = customSavedMessagesRepository ?: createSavedMessagesRepository()
         set(value) {
             customSavedMessagesRepository = value
         }

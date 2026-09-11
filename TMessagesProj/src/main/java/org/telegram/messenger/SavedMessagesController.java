@@ -16,6 +16,8 @@ import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.AnimatedEmojiDrawable;
 import org.telegram.ui.LaunchActivity;
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.messaging.savedmessages.domain.repository.SavedMessagesRepository;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,6 +28,16 @@ public class SavedMessagesController {
 
     private final int currentAccount;
     public boolean unsupported;
+
+    // Strangler Fig: Clean Architecture v2 repository
+    private SavedMessagesRepository repository;
+
+    public SavedMessagesRepository getRepository() {
+        if (repository == null) {
+            repository = AccountFeatureContainer.Companion.get(currentAccount).getSavedMessagesRepository();
+        }
+        return repository;
+    }
 
     public SavedMessagesController(int account) {
         this.currentAccount = account;

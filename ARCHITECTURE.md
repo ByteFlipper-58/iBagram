@@ -858,10 +858,33 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] `VoIPFragment.java`: Connected `CallViewModel` (call state observation and safe lifecycle cleanup).
   - [x] `PrivacySettingsActivity.java` & `PasscodeActivity.java`: Connected `PrivacyViewModel`, `PasskeysViewModel`, and `BiometricsViewModel`.
   - [x] `SharedMediaLayout.java`: Connected `SavedMessagesViewModel` for saved messages tabs.
+- [/] Phase 3: Strangling Legacy Controllers from Within (In Progress)
+  - [x] Standardized Data Sources Infrastructure (`core.data`):
+    - `BaseRemoteDataSource.kt`: MTProto RPC execution via `ConnectionsManager.sendRequest`, coroutine cancellation (`suspendCancellableCoroutine`), typed `Result<T>`.
+    - `BaseLocalDataSource.kt`: Safe database operations on `MessagesStorage` via `Dispatchers.IO`.
+  - [x] Pilot Feature: `SavedMessagesController` Strangling (`feature.messaging.savedmessages`):
+    - `SavedMessagesRemoteDataSource.kt` (MTProto RPC requests)
+    - `SavedMessagesLocalDataSource.kt` (SQLite persistence & memory cache)
+    - `SavedMessagesRepositoryImpl.kt` (Local + remote coordination)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `SavedMessagesController.java` strangler boundary with `getRepository()` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 120: Phase 3 Kickoff — Core Data Sources Infrastructure & SavedMessagesController Strangling
+- **Context:** Following the completion of Phase 1 (Domain/Data layer boundaries for all features) and Phase 2 (UI Wiring of ViewModels across all screens), Phase 3 begins the internal strangling of legacy Telegram controllers. Legacy controllers (such as `SavedMessagesController`) conflate MTProto RPC transport, SQLite database persistence (`MessagesStorage`), and in-memory caching in large monolithic classes.
+- **Decision:**
+  1. Introduce core data source abstractions in `core.data`:
+     - `BaseRemoteDataSource`: Executes MTProto RPC requests asynchronously via `ConnectionsManager.sendRequest` with coroutine cancellation (`suspendCancellableCoroutine`) and typed `Result<T>` mapping.
+     - `BaseLocalDataSource`: Executes safe SQLite operations against `MessagesStorage` on `Dispatchers.IO` with structured error handling.
+  2. Implement clean data sources for `SavedMessages`:
+     - `SavedMessagesRemoteDataSource`: MTProto RPC calls (`TL_messages_getSavedDialogs`, `TL_messages_reorderPinnedSavedDialogs`).
+     - `SavedMessagesLocalDataSource`: SQLite persistence (`putUsersAndChats`, `putMessages`) and safe in-memory cache reads.
+     - `SavedMessagesRepositoryImpl`: Coordinates remote and local data sources, gradually replacing `LegacySavedMessagesRepository`.
+  3. Wire `SavedMessagesRepositoryImpl` into `MessagingContainer` and `AccountFeatureContainer` as the default repository, while exposing `getRepository()` in `SavedMessagesController.java` to allow legacy code to consume domain operations.
+- **Consequences:** Provides a clean, reusable blueprint for Phase 3 controller strangling. Network and database concerns are isolated without modifying MTProto protocol serialization, maintaining 100% backward compatibility and testability.
 
 ### ADR 119: Specialized Screens UI Wiring via Strangler Fig (Folders, VoIP, Privacy, Passcode, Chat)
 - **Context:** Following the stabilization of core navigation screens (`DialogsActivity`, `ProfileActivity`, `SettingsActivity`, `LaunchActivity`, `PhotoViewer`), several specialized legacy UI screens remained unwired to the modular Architecture v2 containers:
