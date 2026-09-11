@@ -847,10 +847,17 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `SocialContainer.kt` (6 features, 73 properties/factories)
     - `SystemContainer.kt` (26 features, 384 properties/factories)
   - [x] `AccountFeatureContainer.kt` converted into lightweight Facade with 100% backward-compatible delegated accessors.
-- [x] Phase 2: UI Wiring via Strangler Fig
-  - [x] `DialogsActivity.java`: Connected `DialogsViewModel`, `FoldersViewModel`, `SearchViewModel`, `SavedMessagesViewModel`, and `AnimationLockerViewModel`. Dispatched user intents (delete, pin, mark as read, folder switch, search recents, and animation locks) through domain use cases.
-  - [x] `ChatActivity.java`: Connected `ChatViewModel`, `SendMessagesViewModel`, `ChatThemeViewModel`, `ReactionsViewModel`, `ChatInputViewModel`, `BottomViewsViewModel`, and `DraftMeasureViewModel`. Dispatched user intents (send message, text changes/cursor tracking, select/clear reactions, theme inspection/selection, and bottom views visibility arbitration) through MVI ViewModels and domain events.
-  - [x] `LaunchActivity.java`: Connected `MainTabsViewModel`, `PipViewModel`, `WindowVisibilityViewModel`, `BrowserViewModel`, `LauncherIconViewModel`, and `AnimationLockerViewModel`. Dispatched navigation tab lifecycle, PiP enter/exit events, multi-window visibility locks, predictive back animation locking, link opening, and launcher icon auto-healing through domain ViewModels.
+- [x] Phase 2: UI Wiring via Strangler Fig (100% Complete)
+  - [x] `LaunchActivity.java`: Connected `MainTabsViewModel`, `PipViewModel`, `WindowVisibilityViewModel`, `BrowserViewModel`, and `LauncherIconViewModel`.
+  - [x] `DialogsActivity.java`: Connected `DialogsViewModel`, `FoldersViewModel`, `StoriesViewModel`, and `SavedMessagesViewModel` (Single Execution Principle, search deconflicted).
+  - [x] `ChatActivity.java`: Connected `ChatViewModel`, `SendMessagesViewModel`, `ChatThemeViewModel`, `ReactionsViewModel`, `ChatInputViewModel`, `BottomViewsViewModel`, `DraftMeasureViewModel`, `MentionsViewModel`, `AudioPlayerViewModel`, and `FactCheckViewModel`.
+  - [x] `ProfileActivity.java`: Connected `ProfileViewModel` and `StoriesViewModel`.
+  - [x] `SettingsActivity.java`: Connected `SettingsViewModel` and `ThemeViewModel`.
+  - [x] `PhotoViewer.java`: Connected `MediaViewModel` and `ContentPreviewViewModel`.
+  - [x] `FiltersSetupActivity.java` & `FilterCreateActivity.java`: Connected `FoldersViewModel` (refresh on filter updates and save).
+  - [x] `VoIPFragment.java`: Connected `CallViewModel` (call state observation and safe lifecycle cleanup).
+  - [x] `PrivacySettingsActivity.java` & `PasscodeActivity.java`: Connected `PrivacyViewModel`, `PasskeysViewModel`, and `BiometricsViewModel`.
+  - [x] `SharedMediaLayout.java`: Connected `SavedMessagesViewModel` for saved messages tabs.
 
 ---
 
