@@ -243,6 +243,15 @@ import org.telegram.ui.Components.Premium.LimitReachedBottomSheet;
 import org.telegram.ui.Components.Premium.PremiumFeatureBottomSheet;
 import org.telegram.ui.Components.Premium.boosts.UserSelectorBottomSheet;
 import org.telegram.ui.Components.ProxyDrawable;
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.messaging.dialogs.presentation.DialogsViewModel;
+import org.telegram.messenger.feature.messaging.folders.presentation.FoldersViewModel;
+import org.telegram.messenger.feature.messaging.search.presentation.SearchViewModel;
+import org.telegram.messenger.feature.messaging.search.presentation.SearchEvent;
+import org.telegram.messenger.feature.messaging.savedmessages.presentation.SavedMessagesViewModel;
+import org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel;
+import org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerEvent;
+import org.telegram.messenger.feature.system.animationlocker.domain.model.LockScope;
 import org.telegram.ui.Components.PullForegroundDrawable;
 import org.telegram.ui.Components.RLottieDrawable;
 import org.telegram.ui.Components.Reactions.ReactionsLayoutInBubble;
@@ -735,6 +744,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private Bulletin topBulletin;
 
     private AnimationNotificationsLocker notificationsLocker = new AnimationNotificationsLocker();
+    private DialogsViewModel dialogsViewModel;
+    private FoldersViewModel foldersViewModel;
+    private SearchViewModel searchViewModel;
+    private SavedMessagesViewModel savedMessagesViewModel;
+    private AnimationLockerViewModel animationLockerViewModel;
     private boolean searchIsShowed;
     private boolean searchWasFullyShowed;
     public boolean whiteActionBar;
@@ -2833,6 +2847,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     public boolean onFragmentCreate() {
         super.onFragmentCreate();
 
+        dialogsViewModel = AccountFeatureContainer.Companion.get(currentAccount).getDialogsViewModel();
+        foldersViewModel = AccountFeatureContainer.Companion.get(currentAccount).getFoldersViewModel();
+        searchViewModel = AccountFeatureContainer.Companion.get(currentAccount).getSearchViewModel();
+        savedMessagesViewModel = AccountFeatureContainer.Companion.get(currentAccount).getSavedMessagesViewModel();
+        animationLockerViewModel = AccountFeatureContainer.Companion.get(currentAccount).getAnimationLockerViewModel();
+
         if (arguments != null) {
             onlySelect = arguments.getBoolean("onlySelect", false);
             canSelectTopics = arguments.getBoolean("canSelectTopics", false);
@@ -2971,6 +2991,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         getContactsController().loadGlobalPrivacySetting();
 
         if (getMessagesController().savedViewAsChats) {
+            if (savedMessagesViewModel != null) {
+                savedMessagesViewModel.onRefresh();
+            }
             getMessagesController().getSavedMessagesController().preloadDialogs(true);
         }
 
@@ -3071,6 +3094,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        if (animationLockerViewModel != null) {
+            animationLockerViewModel.onCleared();
+        }
         if (observersGroup != null) {
             observersGroup.removeAllObservers();
             observersGroup = null;
@@ -3402,6 +3428,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             @Override
             public void onTextChanged(EditText editText) {
                 String text = editText.getText().toString();
+                if (searchViewModel != null) {
+                    searchViewModel.onEvent(new SearchEvent.QueryChanged(text));
+                }
                 if (!text.isEmpty() || (searchViewPager != null && searchViewPager.dialogsSearchAdapter != null && searchViewPager.dialogsSearchAdapter.hasRecentSearch()) || searchFiltersWasShowed || hasStories) {
                     searchWas = true;
                     if (!searchIsShowed) {
@@ -3618,6 +3647,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
                 @Override
                 public void onPageSelected(FilterTabsView.Tab tab, boolean forward) {
+                    if (dialogsViewModel != null) {
+                        dialogsViewModel.switchFolder(tab.id);
+                    }
                     if (viewPages[0].selectedType == tab.id) {
                         return;
                     }
@@ -7596,6 +7628,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             searchAnimator.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
+                    if (animationLockerViewModel != null) {
+                        animationLockerViewModel.onEvent(AnimationLockerEvent.ReleaseAllLocks.INSTANCE);
+                    }
                     notificationsLocker.unlock();
                     if (searchAnimator != animation) {
                         return;
@@ -7647,6 +7682,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
                 @Override
                 public void onAnimationCancel(Animator animation) {
+                    if (animationLockerViewModel != null) {
+                        animationLockerViewModel.onEvent(AnimationLockerEvent.ReleaseAllLocks.INSTANCE);
+                    }
                     notificationsLocker.unlock();
                     if (searchAnimator == animation) {
                         if (show) {
@@ -7658,6 +7696,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     }
                 }
             });
+            if (animationLockerViewModel != null) {
+                animationLockerViewModel.onEvent(new AnimationLockerEvent.AcquireLock("dialogs_search", null, LockScope.ACCOUNT));
+            }
             notificationsLocker.lock();
             searchAnimator.start();
         } else {
@@ -7846,6 +7887,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             boolean loadArchivedFinal = loadArchived;
             boolean loadArchivedFromCacheFinal = loadArchivedFromCache;
             AndroidUtilities.runOnUIThread(() -> {
+                if (dialogsViewModel != null) {
+                    dialogsViewModel.onLoadMore();
+                }
                 if (loadFinal) {
                     getMessagesController().loadDialogs(folderId, -1, 100, loadFromCacheFinal);
                 }
@@ -8326,7 +8370,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 } else {
                     return false;
                 }
-                builder.setPositiveButton(LocaleController.getString(R.string.ClearSearchRemove), (dialogInterface, i) -> searchViewPager.dialogsSearchAdapter.removeRecentSearch(did));
+                builder.setPositiveButton(LocaleController.getString(R.string.ClearSearchRemove), (dialogInterface, i) -> {
+                    if (searchViewModel != null) {
+                        searchViewModel.onEvent(new SearchEvent.RemoveRecentSearch(did));
+                    }
+                    searchViewPager.dialogsSearchAdapter.removeRecentSearch(did);
+                });
                 builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
                 AlertDialog alertDialog = builder.create();
                 showDialog(alertDialog);
@@ -9573,6 +9622,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             getMessagesController().markAllTopicsAsRead(did);
         }
 
+        if (dialogsViewModel != null) {
+            dialogsViewModel.onMarkAsRead(did);
+        }
         getMessagesController().markMentionsAsRead(did, 0);
         getMessagesController().markDialogAsRead(did, dialog.top_message, dialog.top_message, dialog.last_message_date, false, 0, 0, true, 0);
 
@@ -9595,6 +9647,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         checkAnimationFinished();
         for (int i = 0; i < dialogs.size(); i++) {
             long did = dialogs.get(i).id;
+            if (dialogsViewModel != null) {
+                dialogsViewModel.onMarkAsRead(did);
+            }
             TLRPC.Dialog dialog = dialogs.get(i);
             if (getMessagesController().isForum(did) || getMessagesController().isMonoForumWithManageRights(did)) {
                 getMessagesController().markAllTopicsAsRead(did);
@@ -9610,6 +9665,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void performDeleteOrClearDialogAction(int action, long selectedDialog, TLRPC.Chat chat, boolean isBot, boolean revoke) {
+        if (dialogsViewModel != null) {
+            dialogsViewModel.onDeleteDialog(selectedDialog, revoke);
+        }
         if (action == clear) {
             getMessagesController().deleteDialog(selectedDialog, 1, revoke);
         } else {
@@ -9634,6 +9692,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void pinDialog(long selectedDialog, boolean pin, MessagesController.DialogFilter filter, int minPinnedNum, boolean animated) {
+        if (dialogsViewModel != null) {
+            dialogsViewModel.onTogglePin(selectedDialog, pin);
+        }
 
         int selectedDialogIndex = -1;
         int currentDialogIndex = -1;
@@ -10706,6 +10767,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
 
             Runnable deleteRunnable = () -> {
+                if (dialogsViewModel != null) {
+                    dialogsViewModel.onDeleteDialog(dialogId, revoke);
+                }
                 if (chat != null) {
                     if (ChatObject.isNotInChat(chat)) {
                         getMessagesController().deleteDialog(dialogId, 0, revoke);
@@ -13118,6 +13182,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     builder.setTitle(LocaleController.getString(R.string.ClearSearchAlertPartialTitle));
                     builder.setMessage(LocaleController.formatPluralString("ClearSearchAlertPartial", searchViewPager.dialogsSearchAdapter.getRecentResultsCount()));
                     builder.setPositiveButton(LocaleController.getString(R.string.Clear), (dialogInterface, i) -> {
+                        if (searchViewModel != null) {
+                            searchViewModel.onEvent(SearchEvent.ClearRecentSearches.INSTANCE);
+                        }
                         searchViewPager.dialogsSearchAdapter.clearRecentSearch();
                     });
                 } else {
@@ -13125,8 +13192,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     builder.setMessage(LocaleController.getString(R.string.ClearSearchAlert));
                     builder.setPositiveButton(LocaleController.getString(R.string.ClearButton), (dialogInterface, i) -> {
                         if (searchViewPager.dialogsSearchAdapter.isRecentSearchDisplayed()) {
+                            if (searchViewModel != null) {
+                                searchViewModel.onEvent(SearchEvent.ClearRecentSearches.INSTANCE);
+                            }
                             searchViewPager.dialogsSearchAdapter.clearRecentSearch();
                         } else {
+                            if (searchViewModel != null) {
+                                searchViewModel.onEvent(SearchEvent.ClearRecentHashtags.INSTANCE);
+                            }
                             searchViewPager.dialogsSearchAdapter.clearRecentHashtags();
                         }
                     });

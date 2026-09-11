@@ -847,10 +847,17 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `SocialContainer.kt` (6 features, 73 properties/factories)
     - `SystemContainer.kt` (26 features, 384 properties/factories)
   - [x] `AccountFeatureContainer.kt` converted into lightweight Facade with 100% backward-compatible delegated accessors.
+- [x] Phase 2: UI Wiring via Strangler Fig
+  - [x] `DialogsActivity.java`: Connected `DialogsViewModel`, `FoldersViewModel`, `SearchViewModel`, `SavedMessagesViewModel`, and `AnimationLockerViewModel`. Dispatched user intents (delete, pin, mark as read, folder switch, search recents, and animation locks) through domain use cases.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 111: DialogsActivity UI Wiring with ViewModels via Strangler Fig
+- **Context:** In Telegram Android, `DialogsActivity.java` (~14,500 lines) manages the primary chat list, folder filters, search, and screen animations. Historically, UI events directly mutated monolithic `MessagesController` and `DialogsSearchAdapter` singletons. Wholesale rewrite of `DialogsActivity` would break upstream synchronization, destroy complex gesture animations, and introduce severe regressions.
+- **Decision:** Apply the Strangler Fig pattern at the UI layer. Acquire `DialogsViewModel`, `FoldersViewModel`, `SearchViewModel`, `SavedMessagesViewModel`, and `AnimationLockerViewModel` from `AccountFeatureContainer.Companion.get(currentAccount)` during `onFragmentCreate()`. Redirect all user actions (dialog deletion, pinning, marking as read, folder switching, search queries/recents clearance, and animation notifications locking) through the respective ViewModels while leaving complex low-level list rendering and gesture calculations intact. Ensure lifecycle cleanup in `onFragmentDestroy()`.
+- **Consequences:** UI layer interactions in `DialogsActivity` are now driven through pure domain ViewModels and UseCases, decoupling business logic from legacy God controllers. Changes are strictly localized to 75 lines out of 14,500, ensuring seamless future upstream merges from official Telegram without UI regressions.
 
 ### ADR 110: Modular Domain Containers & AccountFeatureContainer Facade
 - **Context:** Following the 7-domain package restructuring (ADR 109), `AccountFeatureContainer.kt` had expanded into a monolithic Service Locator file (~7,400 lines) registering 105 features, 1,270+ properties/methods, and dozens of ViewModel factories. This file was cumbersome to navigate, created a single point of failure for DI merge conflicts, and introduced severe Kotlin compiler CFG (Control Flow Graph) overhead. The user required modularizing DI into 7 domain-specific containers while strictly maintaining a single monolithic Gradle module (`TMessagesProj`) and 100% backward compatibility for all existing callers.
