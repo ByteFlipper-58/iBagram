@@ -246,14 +246,9 @@ import org.telegram.ui.Components.ProxyDrawable;
 import org.telegram.messenger.core.di.AccountFeatureContainer;
 import org.telegram.messenger.feature.messaging.dialogs.presentation.DialogsViewModel;
 import org.telegram.messenger.feature.messaging.folders.presentation.FoldersViewModel;
-import org.telegram.messenger.feature.messaging.search.presentation.SearchViewModel;
-import org.telegram.messenger.feature.messaging.search.presentation.SearchEvent;
 import org.telegram.messenger.feature.messaging.savedmessages.presentation.SavedMessagesViewModel;
 import org.telegram.messenger.feature.media.stories.presentation.StoriesEvent;
 import org.telegram.messenger.feature.media.stories.presentation.StoriesViewModel;
-import org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel;
-import org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerEvent;
-import org.telegram.messenger.feature.system.animationlocker.domain.model.LockScope;
 import org.telegram.ui.Components.PullForegroundDrawable;
 import org.telegram.ui.Components.RLottieDrawable;
 import org.telegram.ui.Components.Reactions.ReactionsLayoutInBubble;
@@ -748,10 +743,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private AnimationNotificationsLocker notificationsLocker = new AnimationNotificationsLocker();
     private DialogsViewModel dialogsViewModel;
     private FoldersViewModel foldersViewModel;
-    private SearchViewModel searchViewModel;
     private StoriesViewModel storiesViewModel;
     private SavedMessagesViewModel savedMessagesViewModel;
-    private AnimationLockerViewModel animationLockerViewModel;
     private boolean searchIsShowed;
     private boolean searchWasFullyShowed;
     public boolean whiteActionBar;
@@ -2852,10 +2845,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         dialogsViewModel = AccountFeatureContainer.Companion.get(currentAccount).getDialogsViewModel();
         foldersViewModel = AccountFeatureContainer.Companion.get(currentAccount).getFoldersViewModel();
-        searchViewModel = AccountFeatureContainer.Companion.get(currentAccount).getSearchViewModel();
         storiesViewModel = AccountFeatureContainer.Companion.get(currentAccount).getStoriesViewModel();
         savedMessagesViewModel = AccountFeatureContainer.Companion.get(currentAccount).getSavedMessagesViewModel();
-        animationLockerViewModel = AccountFeatureContainer.Companion.get(currentAccount).getAnimationLockerViewModel();
 
         if (foldersViewModel != null) {
             foldersViewModel.refresh();
@@ -3105,15 +3096,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
-        if (animationLockerViewModel != null) {
-            animationLockerViewModel.onCleared();
-        }
         dialogsViewModel = null;
         foldersViewModel = null;
-        searchViewModel = null;
         storiesViewModel = null;
         savedMessagesViewModel = null;
-        animationLockerViewModel = null;
         if (observersGroup != null) {
             observersGroup.removeAllObservers();
             observersGroup = null;
@@ -3445,9 +3431,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             @Override
             public void onTextChanged(EditText editText) {
                 String text = editText.getText().toString();
-                if (searchViewModel != null) {
-                    searchViewModel.onEvent(new SearchEvent.QueryChanged(text));
-                }
                 if (!text.isEmpty() || (searchViewPager != null && searchViewPager.dialogsSearchAdapter != null && searchViewPager.dialogsSearchAdapter.hasRecentSearch()) || searchFiltersWasShowed || hasStories) {
                     searchWas = true;
                     if (!searchIsShowed) {
@@ -7645,9 +7628,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             searchAnimator.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
-                    if (animationLockerViewModel != null) {
-                        animationLockerViewModel.onEvent(AnimationLockerEvent.ReleaseAllLocks.INSTANCE);
-                    }
                     notificationsLocker.unlock();
                     if (searchAnimator != animation) {
                         return;
@@ -7699,9 +7679,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
                 @Override
                 public void onAnimationCancel(Animator animation) {
-                    if (animationLockerViewModel != null) {
-                        animationLockerViewModel.onEvent(AnimationLockerEvent.ReleaseAllLocks.INSTANCE);
-                    }
                     notificationsLocker.unlock();
                     if (searchAnimator == animation) {
                         if (show) {
@@ -7713,9 +7690,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     }
                 }
             });
-            if (animationLockerViewModel != null) {
-                animationLockerViewModel.onEvent(new AnimationLockerEvent.AcquireLock("dialogs_search", null, LockScope.ACCOUNT));
-            }
             notificationsLocker.lock();
             searchAnimator.start();
         } else {
