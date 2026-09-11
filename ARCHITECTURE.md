@@ -856,6 +856,18 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 
 ## 6. Architecture Decision Records (ADRs)
 
+### ADR 114: ProfileActivity User & Peer Info UI Wiring via Strangler Fig
+- **Context:** In Telegram Android, `ProfileActivity.java` (~17,000 lines) is the central screen displaying user, group, channel, and bot profiles, as well as shared media, contacts, birthdays, privacy/security settings, and peer blocking. Historically, `ProfileActivity` directly invoked legacy controllers (`MessagesController`, `ContactsController`, `SharedMediaLayout`, `SharedMediaPreloader`, etc.) without presentation abstractions.
+- **Decision:** Apply the Strangler Fig pattern at the UI layer. Acquire `ProfileViewModel`, `ContactsViewModel`, `BirthdaysViewModel`, `PrivacyViewModel`, and `SharedMediaViewModel` from `AccountFeatureContainer.Companion.get(currentAccount)` during `initViewModels()` called from `onFragmentCreate()`. Wire user actions through null-safe event dispatches:
+  1. Profile initialization and full loading -> `profileViewModel.onLoadFullProfile()`.
+  2. Blocking and unblocking actions (in `onBlockContactClicked` and list click `unblockRow`) -> `profileViewModel.onToggleBlock()` and `privacyViewModel.onEvent(new PrivacyEvent.BlockPeer / UnblockPeer(userId))`.
+  3. Contact additions and deletions (in `add_contact`, `delete_contact`, `addToContactsRow`) -> `contactsViewModel.refresh()` and `contactsViewModel.deleteContact(userId)`.
+  4. Birthday checks and interactions (in `initViewModels()` and `birthdayRow` clicks) -> `birthdaysViewModel.onEvent(new BirthdaysEvent.CheckBirthdays(false))`.
+  5. Shared media tab switching (in `sharedMediaLayout.onSelectedTabChanged()`) -> `sharedMediaViewModel.onEvent(new SharedMediaEvent.OnTabSelected(SharedMediaTabType.fromId(getClosestTab())))`.
+  6. Memory leak prevention: explicitly clear all ViewModel references in `onFragmentDestroy()`.
+  All additions are strictly additive, non-invasive, and maintain 100% backward compatibility with Telegram's complex list rendering, layout animations, and upstream changes.
+- **Consequences:** Profile screen state transitions, peer moderation, contacts management, and shared media interactions are now cleanly bridged to pure domain ViewModels, paving the way for testing and UI decoupling without touching legacy rendering pipeline.
+
 ### ADR 113: LaunchActivity Navigation & System UI Wiring via Strangler Fig
 - **Context:** In Telegram Android, `LaunchActivity.java` (~9,250 lines) is the root application Activity responsible for windowing, session lifecycle, account switching, bottom navigation tabs (`MainTabsActivity`), Picture-in-Picture (`PipActivityController`), window content visibility (`WindowVisibilityManager`), web browsing (`Browser`), predictive back animations, and launcher app icons (`LauncherIconController`). Historically, `LaunchActivity` mutated legacy global singletons and controllers directly, making system-level interactions tightly coupled and opaque to unit tests.
 - **Decision:** Apply the Strangler Fig pattern at the UI layer. Acquire `MainTabsViewModel`, `PipViewModel`, `WindowVisibilityViewModel`, `BrowserViewModel`, `LauncherIconViewModel`, and `AnimationLockerViewModel` from `AccountFeatureContainer.Companion.get(currentAccount)` during `checkCurrentAccount()` (supporting runtime account switching via `switchToAccount()`). Wire system events through null-safe event dispatches:

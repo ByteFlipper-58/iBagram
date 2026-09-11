@@ -1,4 +1,4 @@
-﻿package org.telegram.messenger.feature.media.sharedmedia.domain.model
+package org.telegram.messenger.feature.media.sharedmedia.domain.model
 
 /**
  * Типы вкладок общего медиа (соответствуют TAB_* в SharedMediaLayout).
@@ -22,6 +22,7 @@ enum class SharedMediaTabType(val id: Int) {
     POLLS(15);
 
     companion object {
+        @JvmStatic
         fun fromId(id: Int): SharedMediaTabType {
             return entries.firstOrNull { it.id == id } ?: PHOTO_VIDEO
         }
@@ -37,6 +38,7 @@ enum class SharedMediaFilterType(val id: Int) {
     VIDEOS_ONLY(2);
 
     companion object {
+        @JvmStatic
         fun fromId(id: Int): SharedMediaFilterType {
             return entries.firstOrNull { it.id == id } ?: ALL
         }

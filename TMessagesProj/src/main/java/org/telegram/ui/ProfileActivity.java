@@ -346,7 +346,26 @@ import java.util.zip.ZipOutputStream;
 import me.vkryl.android.animator.BoolAnimator;
 import me.vkryl.core.reference.ReferenceList;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.social.profile.presentation.ProfileViewModel;
+import org.telegram.messenger.feature.social.profile.presentation.ProfileEvent;
+import org.telegram.messenger.feature.social.contacts.presentation.ContactsViewModel;
+import org.telegram.messenger.feature.social.contacts.presentation.ContactsEvent;
+import org.telegram.messenger.feature.social.birthdays.presentation.BirthdaysViewModel;
+import org.telegram.messenger.feature.social.birthdays.presentation.BirthdaysEvent;
+import org.telegram.messenger.feature.security.privacy.presentation.PrivacyViewModel;
+import org.telegram.messenger.feature.security.privacy.presentation.PrivacyEvent;
+import org.telegram.messenger.feature.media.sharedmedia.presentation.SharedMediaViewModel;
+import org.telegram.messenger.feature.media.sharedmedia.presentation.SharedMediaEvent;
+import org.telegram.messenger.feature.media.sharedmedia.domain.model.SharedMediaTabType;
+
 public class ProfileActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, DialogsActivity.DialogsActivityDelegate, SharedMediaLayout.SharedMediaPreloaderDelegate, ImageUpdater.ImageUpdaterDelegate, SharedMediaLayout.Delegate, MainTabsActivity.TabFragmentDelegate {
+    private ProfileViewModel profileViewModel;
+    private ContactsViewModel contactsViewModel;
+    private BirthdaysViewModel birthdaysViewModel;
+    private PrivacyViewModel privacyViewModel;
+    private SharedMediaViewModel sharedMediaViewModel;
+
     private RecyclerListView listView;
     private RecyclerListView searchListView;
     private LinearLayoutManager layoutManager;
@@ -2085,6 +2104,33 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         scrimBlur3Factory.setLinkedViewsRef(new ReferenceList<>());
     }
 
+    private void initViewModels() {
+        try {
+            AccountFeatureContainer accountContainer = AccountFeatureContainer.get(currentAccount);
+            if (accountContainer != null) {
+                long peerId = userId != 0 ? userId : (chatId != 0 ? -chatId : dialogId);
+                profileViewModel = accountContainer.getProfileViewModel(peerId);
+                contactsViewModel = accountContainer.getContactsViewModel();
+                birthdaysViewModel = accountContainer.getBirthdaysViewModel();
+                privacyViewModel = accountContainer.getPrivacyViewModel();
+                sharedMediaViewModel = accountContainer.getSharedMediaViewModel();
+
+                if (sharedMediaViewModel != null) {
+                    boolean isEncrypted = currentEncryptedChat != null;
+                    sharedMediaViewModel.onEvent(new SharedMediaEvent.OnDialogConfigured(peerId, isEncrypted));
+                }
+                if (profileViewModel != null) {
+                    profileViewModel.onLoadFullProfile();
+                }
+                if (birthdaysViewModel != null) {
+                    birthdaysViewModel.onEvent(new BirthdaysEvent.CheckBirthdays(false));
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
     @Override
     public boolean onFragmentCreate() {
         userId = arguments.getLong("user_id", 0);
@@ -2212,6 +2258,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             myProfile = true;
             // AndroidUtilities.printStackTrace("myProfile flag debug");
         }
+
+        initViewModels();
 
 
         if (sharedMediaPreloader != null && sharedMediaPreloader.getTopicId() != topicId) {
@@ -2432,6 +2480,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
 
         Bulletin.removeDelegate(this);
+
+        profileViewModel = null;
+        contactsViewModel = null;
+        birthdaysViewModel = null;
+        privacyViewModel = null;
+        sharedMediaViewModel = null;
     }
 
     @Override
@@ -2552,6 +2606,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 } else if (id == block_contact) {
                     onBlockContactClicked(false);
                 } else if (id == add_contact) {
+                    if (contactsViewModel != null) {
+                        contactsViewModel.refresh();
+                    }
                     TLRPC.User user = getMessagesController().getUser(userId);
                     Bundle args = new Bundle();
                     args.putLong("user_id", user.id);
@@ -2582,6 +2639,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         ArrayList<TLRPC.User> arrayList = new ArrayList<>();
                         arrayList.add(user);
                         getContactsController().deleteContact(arrayList, true);
+                        if (contactsViewModel != null) {
+                            contactsViewModel.deleteContact(userId);
+                        }
                         if (user != null) {
                             user.contact = false;
                             updateListAnimated(false);
@@ -3689,6 +3749,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             @Override
             protected void onSelectedTabChanged() {
                 updateSelectedMediaTabText();
+                if (sharedMediaViewModel != null) {
+                    sharedMediaViewModel.onEvent(new SharedMediaEvent.OnTabSelected(SharedMediaTabType.fromId(getClosestTab())));
+                }
             }
 
             @Override
@@ -4349,6 +4412,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     listAdapter.notifyItemChanged(notificationsSimpleRow);
                 }
             } else if (position == addToContactsRow) {
+                if (contactsViewModel != null) {
+                    contactsViewModel.refresh();
+                }
                 TLRPC.User user = getMessagesController().getUser(userId);
                 Bundle args = new Bundle();
                 args.putLong("user_id", user.id);
@@ -4453,6 +4519,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
             } else if (position == unblockRow) {
                 getMessagesController().unblockPeer(userId);
+                if (profileViewModel != null) {
+                    profileViewModel.onToggleBlock();
+                }
+                if (privacyViewModel != null) {
+                    privacyViewModel.onEvent(new PrivacyEvent.UnblockPeer(userId));
+                }
                 if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
                     BulletinFactory.createBanBulletin(ProfileActivity.this, false).show();
                 }
@@ -4640,6 +4712,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 args.putLong("chat_id", userInfo.personal_channel_id);
                 presentFragment(new ChatActivity(args));
             } else if (position == birthdayRow) {
+                if (birthdaysViewModel != null) {
+                    birthdaysViewModel.onEvent(new BirthdaysEvent.CheckBirthdays(false));
+                }
                 if (birthdayEffect != null && birthdayEffect.start()) {
                     return;
                 }
@@ -6121,6 +6196,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         if (!isBot || MessagesController.isSupportUser(user)) {
             if (userBlocked) {
                 getMessagesController().unblockPeer(userId);
+                if (profileViewModel != null) {
+                    profileViewModel.onToggleBlock();
+                }
+                if (privacyViewModel != null) {
+                    privacyViewModel.onEvent(new PrivacyEvent.UnblockPeer(userId));
+                }
                 if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
                     BulletinFactory.createBanBulletin(ProfileActivity.this, false).show();
                 }
@@ -6142,6 +6223,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     builder.setMessage(AndroidUtilities.replaceTags(formatString("AreYouSureBlockContact2", R.string.AreYouSureBlockContact2, ContactsController.formatName(user.first_name, user.last_name))));
                     builder.setPositiveButton(LocaleController.getString(R.string.BlockContact), (dialogInterface, i) -> {
                         getMessagesController().blockPeer(userId);
+                        if (profileViewModel != null) {
+                            profileViewModel.onToggleBlock();
+                        }
+                        if (privacyViewModel != null) {
+                            privacyViewModel.onEvent(new PrivacyEvent.BlockPeer(userId));
+                        }
                         if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
                             BulletinFactory.createBanBulletin(ProfileActivity.this, true).show();
                         }
