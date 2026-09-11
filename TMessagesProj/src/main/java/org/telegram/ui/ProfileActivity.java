@@ -2639,9 +2639,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         ArrayList<TLRPC.User> arrayList = new ArrayList<>();
                         arrayList.add(user);
                         getContactsController().deleteContact(arrayList, true);
-                        if (contactsViewModel != null) {
-                            contactsViewModel.deleteContact(userId);
-                        }
                         if (user != null) {
                             user.contact = false;
                             updateListAnimated(false);
@@ -4519,12 +4516,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
             } else if (position == unblockRow) {
                 getMessagesController().unblockPeer(userId);
-                if (profileViewModel != null) {
-                    profileViewModel.onToggleBlock();
-                }
-                if (privacyViewModel != null) {
-                    privacyViewModel.onEvent(new PrivacyEvent.UnblockPeer(userId));
-                }
                 if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
                     BulletinFactory.createBanBulletin(ProfileActivity.this, false).show();
                 }
@@ -6196,12 +6187,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         if (!isBot || MessagesController.isSupportUser(user)) {
             if (userBlocked) {
                 getMessagesController().unblockPeer(userId);
-                if (profileViewModel != null) {
-                    profileViewModel.onToggleBlock();
-                }
-                if (privacyViewModel != null) {
-                    privacyViewModel.onEvent(new PrivacyEvent.UnblockPeer(userId));
-                }
                 if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
                     BulletinFactory.createBanBulletin(ProfileActivity.this, false).show();
                 }
@@ -6223,12 +6208,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     builder.setMessage(AndroidUtilities.replaceTags(formatString("AreYouSureBlockContact2", R.string.AreYouSureBlockContact2, ContactsController.formatName(user.first_name, user.last_name))));
                     builder.setPositiveButton(LocaleController.getString(R.string.BlockContact), (dialogInterface, i) -> {
                         getMessagesController().blockPeer(userId);
-                        if (profileViewModel != null) {
-                            profileViewModel.onToggleBlock();
-                        }
-                        if (privacyViewModel != null) {
-                            privacyViewModel.onEvent(new PrivacyEvent.BlockPeer(userId));
-                        }
                         if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
                             BulletinFactory.createBanBulletin(ProfileActivity.this, true).show();
                         }

@@ -2006,9 +2006,6 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void onMessageSend(CharSequence message, boolean notify, int scheduleDate, int scheduleRepeatPeriod, long payStars) {
-            if (chatViewModel != null && !TextUtils.isEmpty(message)) {
-                chatViewModel.onSendMessage(message.toString());
-            }
             if (chatListItemAnimator != null) {
                 chatActivityEnterViewAnimateFromTop = chatActivityEnterView.getBackgroundTop();
                 if (chatActivityEnterViewAnimateFromTop != 0) {
@@ -32922,24 +32919,6 @@ public class ChatActivity extends BaseFragment implements
 
         int finalMessageIdForCell = messageIdForCell;
 
-        if (reactionsViewModel != null && visibleReaction != null) {
-            if (added) {
-                ReactionItemModel reactionItem = new ReactionItemModel(
-                    visibleReaction.emojicon != null ? visibleReaction.emojicon : "",
-                    "",
-                    visibleReaction.documentId != 0,
-                    visibleReaction.documentId,
-                    false,
-                    visibleReaction.premium,
-                    visibleReaction.isStar,
-                    0
-                );
-                reactionsViewModel.onEvent(new ReactionsEvent.SendReaction(dialog_id, primaryMessage.getId(), reactionItem, bigEmoji, addToRecent));
-            } else {
-                reactionsViewModel.onEvent(new ReactionsEvent.ClearReactions(dialog_id, primaryMessage.getId()));
-            }
-        }
-
         if (added) {
             cell = findMessageCell(finalMessageIdForCell, true);
             showMultipleReactionsPromo(cell, visibleReaction, currentChosenReactions);
@@ -43380,15 +43359,6 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void setChatThemeEmoticon(final TLRPC.ChatTheme theme) {
-        if (chatThemeViewModel != null) {
-            if (theme == null) {
-                chatThemeViewModel.resetTheme(dialog_id);
-            } else if (theme instanceof TLRPC.TL_chatTheme && ((TLRPC.TL_chatTheme) theme).emoticon != null) {
-                chatThemeViewModel.applyTheme(dialog_id, new ChatThemeModel(((TLRPC.TL_chatTheme) theme).emoticon, null, false, false, 0L, 0L, null, java.util.Collections.emptyList()));
-            } else if (theme instanceof TLRPC.TL_chatThemeUniqueGift && ((TLRPC.TL_chatThemeUniqueGift) theme).gift != null) {
-                chatThemeViewModel.applyTheme(dialog_id, new ChatThemeModel(null, ((TLRPC.TL_chatThemeUniqueGift) theme).gift.slug, false, false, 0L, 0L, null, java.util.Collections.emptyList()));
-            }
-        }
         if (themeDelegate == null || parentThemeDelegate != null) {
             return;
         }
