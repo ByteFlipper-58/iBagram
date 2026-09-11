@@ -856,6 +856,18 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 
 ## 6. Architecture Decision Records (ADRs)
 
+### ADR 116: SettingsActivity Preferences, Appearance, Storage & Billing UI Wiring via Strangler Fig
+- **Context:** In Telegram Android, `SettingsActivity.java` (~2,150 lines) serves as the primary application settings hub, giving users access to profile information, chat/appearance customization, privacy controls, data & storage policies, notification settings, device sessions, and Telegram Premium/Stars purchases. Historically, `SettingsActivity` directly interacted with static controllers and singletons (`SharedConfig`, `UserConfig`, `MessagesController`, `StarsController`, etc.) without presentation layer abstractions.
+- **Decision:** Apply the Strangler Fig pattern at the UI layer. Acquire `SettingsViewModel`, `ThemeViewModel`, `DataStorageViewModel`, and `BillingViewModel` from `AccountFeatureContainer.Companion.get(currentAccount)` during `initViewModels()` called from `onFragmentCreate()`. Wire user actions and system notifications through null-safe event dispatches:
+  1. Initialization and settings refresh -> `settingsViewModel.refreshSettings()`, `themeViewModel.onEvent(ThemeEvent.Load.INSTANCE)`, `billingViewModel.onEvent(BillingEvent.Connect.INSTANCE)`.
+  2. Appearance & Chat theme navigation (`onClick` item id 2) -> `themeViewModel.onEvent(ThemeEvent.Load.INSTANCE)`.
+  3. Data & Storage usage navigation (`onClick` item id 6) -> `dataStorageViewModel.onEvent(DataStorageEvent.RefreshStorage.INSTANCE)`.
+  4. Telegram Premium navigation & Grace Period suggestion handling (`onClick` item id 11 and suggestion button click) -> `billingViewModel.onEvent(new BillingEvent.ManageSubscription("telegram_premium"))`.
+  5. Account & logout operations (in action bar logout item 2 and `didReceivedNotification` for `updateInterfaces`) -> `settingsViewModel.refreshSettings()`.
+  6. Memory leak prevention: explicitly null out all ViewModel references in `onFragmentDestroy()`.
+  All additions are strictly additive, non-invasive, and maintain 100% backward compatibility with upstream Telegram settings layout and list rendering.
+- **Consequences:** Settings, appearance, storage, and billing flows are now connected to modern MVI ViewModels, making the settings dashboard testable and reactive while leaving legacy settings fragments undisturbed.
+
 ### ADR 115: PhotoViewer Media Viewing, Zoom & PiP UI Wiring via Strangler Fig
 - **Context:** In Telegram Android, `PhotoViewer.java` (~11,700 lines) is the central media viewing overlay singleton (`PhotoViewer.getInstance()`, `PipInstance`) responsible for fullscreen images, video playback, animated stickers, pinch-to-zoom gestures, PiP transitions, and action bar controls. Historically, `PhotoViewer` manipulated low-level UI flags and legacy controllers directly without presentation layer abstractions.
 - **Decision:** Apply the Strangler Fig pattern at the UI layer. Acquire `PhotoViewerViewModel`, `PinchToZoomViewModel`, `ContentPreviewViewModel`, and `PipViewModel` from `AccountFeatureContainer.Companion.get(currentAccount)` in `initViewModels(int account)` (triggered on `setParentActivity()` and `openPhoto()`). Wire media events through null-safe event dispatches:

@@ -140,6 +140,16 @@ import org.telegram.ui.bots.BotLocation;
 import org.telegram.ui.bots.BotWebViewSheet;
 import org.telegram.ui.bots.SetupEmojiStatusSheet;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.system.settings.presentation.SettingsViewModel;
+import org.telegram.messenger.feature.system.settings.presentation.SettingsEvent;
+import org.telegram.messenger.feature.system.themes.presentation.ThemeViewModel;
+import org.telegram.messenger.feature.system.themes.presentation.ThemeEvent;
+import org.telegram.messenger.feature.system.datastorage.presentation.DataStorageViewModel;
+import org.telegram.messenger.feature.system.datastorage.presentation.DataStorageEvent;
+import org.telegram.messenger.feature.business.billing.presentation.BillingViewModel;
+import org.telegram.messenger.feature.business.billing.presentation.BillingEvent;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -189,6 +199,33 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
 
     private int versionViewPressCount = 0;
 
+    private SettingsViewModel settingsViewModel;
+    private ThemeViewModel themeViewModel;
+    private DataStorageViewModel dataStorageViewModel;
+    private BillingViewModel billingViewModel;
+
+    private void initViewModels() {
+        try {
+            AccountFeatureContainer accountContainer = AccountFeatureContainer.get(currentAccount);
+            settingsViewModel = accountContainer.getSettingsViewModel();
+            themeViewModel = accountContainer.getThemeViewModel();
+            dataStorageViewModel = accountContainer.getDataStorageViewModel();
+            billingViewModel = accountContainer.getBillingViewModel();
+
+            if (settingsViewModel != null) {
+                settingsViewModel.refreshSettings();
+            }
+            if (themeViewModel != null) {
+                themeViewModel.onEvent(ThemeEvent.Load.INSTANCE);
+            }
+            if (billingViewModel != null) {
+                billingViewModel.onEvent(BillingEvent.Connect.INSTANCE);
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
     public SettingsActivity() {
         this(null);
     }
@@ -218,6 +255,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
 
         additionNavigationBarHeight = hasMainTabs ? dp(DialogsActivity.MAIN_TABS_HEIGHT_WITH_MARGINS) : 0;
+        initViewModels();
         return super.onFragmentCreate();
     }
 
@@ -301,6 +339,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 if (id == -1) {
                     finishFragment();
                 } else if (id == 2) {
+                    if (settingsViewModel != null) {
+                        settingsViewModel.refreshSettings();
+                    }
                     presentSettingFragment(new LogoutActivity());
                 }
             }
@@ -505,6 +546,11 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         getNotificationCenter().removeObserver(this, NotificationCenter.updateInterfaces);
         getNotificationCenter().removeObserver(this, NotificationCenter.starBalanceUpdated);
         getNotificationCenter().removeObserver(this, NotificationCenter.newSuggestionsAvailable);
+
+        settingsViewModel = null;
+        themeViewModel = null;
+        dataStorageViewModel = null;
+        billingViewModel = null;
     }
 
     @Override
@@ -514,8 +560,14 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             if (listView != null) {
                 listView.adapter.update(true);
             }
+            if (billingViewModel != null) {
+                billingViewModel.onEvent(BillingEvent.Connect.INSTANCE);
+            }
         } else if (id == NotificationCenter.updateInterfaces) {
             setInfo();
+            if (settingsViewModel != null) {
+                settingsViewModel.refreshSettings();
+            }
         } else if (id == NotificationCenter.newSuggestionsAvailable) {
             if (listView != null) {
                 listView.adapter.update(true);
@@ -649,6 +701,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 getString(R.string.GraceSuggestionButton), v -> {
                     Browser.openUrl(getContext(), getMessagesController().premiumManageSubscriptionUrl);
                     getMessagesController().removeSuggestion(0, "PREMIUM_GRACE");
+                    if (billingViewModel != null) {
+                        billingViewModel.onEvent(new BillingEvent.ManageSubscription("telegram_premium"));
+                    }
                 }
             ));
             items.add(UItem.asShadow(null));
@@ -810,9 +865,15 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
         switch (item.id) {
             case 1:
+                if (settingsViewModel != null) {
+                    settingsViewModel.refreshSettings();
+                }
                 presentSettingFragment(new UserInfoActivity());
                 break;
             case 2:
+                if (themeViewModel != null) {
+                    themeViewModel.onEvent(ThemeEvent.Load.INSTANCE);
+                }
                 presentSettingFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));
                 break;
             case 3:
@@ -822,6 +883,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 presentSettingFragment(new NotificationsSettingsActivity());
                 break;
             case 6:
+                if (dataStorageViewModel != null) {
+                    dataStorageViewModel.onEvent(DataStorageEvent.RefreshStorage.INSTANCE);
+                }
                 presentSettingFragment(new DataSettingsActivity());
                 break;
             case 7:
@@ -838,6 +902,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 break;
 
             case 11:
+                if (billingViewModel != null) {
+                    billingViewModel.onEvent(new BillingEvent.ManageSubscription("telegram_premium"));
+                }
                 presentSettingFragment(new PremiumPreviewFragment("settings"));
                 break;
             case 12:
