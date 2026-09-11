@@ -137,6 +137,22 @@ import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.browser.Browser;
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.media.pip.domain.model.PipState;
+import org.telegram.messenger.feature.media.pip.presentation.PipEvent;
+import org.telegram.messenger.feature.media.pip.presentation.PipViewModel;
+import org.telegram.messenger.feature.system.animationlocker.domain.model.LockScope;
+import org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerEvent;
+import org.telegram.messenger.feature.system.animationlocker.presentation.AnimationLockerViewModel;
+import org.telegram.messenger.feature.system.browser.presentation.BrowserEvent;
+import org.telegram.messenger.feature.system.browser.presentation.BrowserViewModel;
+import org.telegram.messenger.feature.system.launchericon.presentation.LauncherIconEvent;
+import org.telegram.messenger.feature.system.launchericon.presentation.LauncherIconViewModel;
+import org.telegram.messenger.feature.system.maintabs.domain.model.MainTabType;
+import org.telegram.messenger.feature.system.maintabs.presentation.MainTabsEvent;
+import org.telegram.messenger.feature.system.maintabs.presentation.MainTabsViewModel;
+import org.telegram.messenger.feature.system.windowvisibility.presentation.WindowVisibilityEvent;
+import org.telegram.messenger.feature.system.windowvisibility.presentation.WindowVisibilityViewModel;
 import org.telegram.messenger.pip.PipActivityController;
 import org.telegram.messenger.pip.activity.IPipActivity;
 import org.telegram.messenger.pip.activity.IPipActivityHandler;
@@ -297,6 +313,13 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     private boolean isInPictureInPictureMode;
     private final PipActivityController pipActivityController = new PipActivityController(this);
     private final IPipActivityHandler pipActivityHandler = pipActivityController.getHandler();
+
+    private MainTabsViewModel mainTabsViewModel;
+    private PipViewModel pipViewModel;
+    private WindowVisibilityViewModel windowVisibilityViewModel;
+    private BrowserViewModel browserViewModel;
+    private LauncherIconViewModel launcherIconViewModel;
+    private AnimationLockerViewModel animationLockerViewModel;
 
     private ImageView themeSwitchImageView;
     private ImageView themeSwitchSunView;
@@ -464,17 +487,29 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 isInPictureInPictureMode = true;
                 activityVisibilityController.hide();
                 checkDecorViewVisibility();
+                if (pipViewModel != null) {
+                    pipViewModel.onEvent(new PipEvent.TransitionPipState(PipState.IN_PIP, false));
+                }
+                if (windowVisibilityViewModel != null) {
+                    windowVisibilityViewModel.onEvent(new WindowVisibilityEvent.HideRequested("pip", "PictureInPicture active"));
+                }
             }
 
             @Override
             public void onStartExitFromPip(boolean byActivityStop) {
                 activityVisibilityController.show();
+                if (windowVisibilityViewModel != null) {
+                    windowVisibilityViewModel.onEvent(new WindowVisibilityEvent.ReleaseRequested("pip"));
+                }
             }
 
             @Override
             public void onCompleteExitFromPip(boolean byActivityStop) {
                 isInPictureInPictureMode = false;
                 checkDecorViewVisibility();
+                if (pipViewModel != null) {
+                    pipViewModel.onEvent(new PipEvent.TransitionPipState(PipState.IDLE, byActivityStop));
+                }
             }
         });
 
@@ -744,6 +779,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                         if (locked) {
                             locker.unlock();
                             locked = false;
+                            if (animationLockerViewModel != null) {
+                                animationLockerViewModel.onEvent(AnimationLockerEvent.ReleaseAllLocks.INSTANCE);
+                            }
                         }
 
                         if (AndroidUtilities.isTablet()) {
@@ -774,6 +812,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                             if (started && !locked) {
                                 locker.lock();
                                 locked = true;
+                                if (animationLockerViewModel != null) {
+                                    animationLockerViewModel.onEvent(new AnimationLockerEvent.AcquireLock("predictive_back", java.util.Collections.emptySet(), LockScope.ALL));
+                                }
                             }
                         }
                     }
@@ -807,6 +848,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                         if (locked) {
                             locker.unlock();
                             locked = false;
+                            if (animationLockerViewModel != null) {
+                                animationLockerViewModel.onEvent(AnimationLockerEvent.ReleaseAllLocks.INSTANCE);
+                            }
                         }
 
                         if (AndroidUtilities.isTablet()) return;
@@ -1218,6 +1262,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         }
         MainTabsActivity mainTabsActivity = dialogsActivityProvider.provide(null);
         actionBarLayout.addFragmentToStack(mainTabsActivity, INavigationLayout.FORCE_ATTACH_VIEW_AS_FIRST);
+        if (mainTabsViewModel != null) {
+            mainTabsViewModel.onEvent(new MainTabsEvent.SetTabsVisible(true));
+        }
         actionBarLayout.rebuildFragments(INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
         if (AndroidUtilities.isTablet()) {
             layersActionBarLayout.rebuildFragments(INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
@@ -1315,6 +1362,21 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             .add(NotificationCenter.currentUserPremiumStatusChanged)
             .add(NotificationCenter.chatSwitchedForum)
             .add(NotificationCenter.guardBotDecisionResult);
+
+        initViewModels(currentAccount);
+    }
+
+    private void initViewModels(int account) {
+        AccountFeatureContainer container = AccountFeatureContainer.get(account);
+        mainTabsViewModel = container.getMainTabsViewModel();
+        pipViewModel = container.getPipViewModel();
+        windowVisibilityViewModel = container.getWindowVisibilityViewModel();
+        browserViewModel = container.getBrowserViewModel();
+        launcherIconViewModel = container.getLauncherIconViewModel();
+        animationLockerViewModel = container.getAnimationLockerViewModel();
+        if (launcherIconViewModel != null) {
+            launcherIconViewModel.onEvent(LauncherIconEvent.FixIconIfNeeded.INSTANCE);
+        }
     }
 
     private void checkLayout() {
@@ -1953,6 +2015,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                         if (scheme != null) {
                             switch (scheme) {
                                 case "tonsite":
+                                    if (browserViewModel != null && data != null) {
+                                        browserViewModel.onEvent(new BrowserEvent.OpenUrl(data.toString(), false));
+                                    }
                                     Browser.openUrl(this, data);
                                     intent.setAction(null);
                                     if (progress != null) {
@@ -6895,6 +6960,12 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
 
         clearFragments();
         super.onDestroy();
+        mainTabsViewModel = null;
+        pipViewModel = null;
+        windowVisibilityViewModel = null;
+        browserViewModel = null;
+        launcherIconViewModel = null;
+        animationLockerViewModel = null;
         onFinish();
         if (flagSecureReason != null) {
             flagSecureReason.detach();

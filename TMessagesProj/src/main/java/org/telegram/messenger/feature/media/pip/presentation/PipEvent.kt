@@ -1,4 +1,4 @@
-﻿package org.telegram.messenger.feature.media.pip.presentation
+package org.telegram.messenger.feature.media.pip.presentation
 
 import org.telegram.messenger.feature.media.pip.domain.model.PipSourceModel
 import org.telegram.messenger.feature.media.pip.domain.model.PipState
@@ -13,7 +13,7 @@ sealed class PipEvent {
     data class SetSourceAvailability(val tag: String, val isAvailable: Boolean) : PipEvent()
     data class SetSourceRatio(val tag: String, val width: Int, val height: Int) : PipEvent()
     data class SetSourceAttached(val tag: String, val isAttached: Boolean) : PipEvent()
-    data class TransitionPipState(val state: PipState, val byActivityStop: Boolean = false) : PipEvent()
+    data class TransitionPipState @JvmOverloads constructor(val state: PipState, val byActivityStop: Boolean = false) : PipEvent()
     data class TriggerAction(val tag: String, val actionId: Int) : PipEvent()
     object Refresh : PipEvent()
 }

@@ -850,10 +850,23 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 - [x] Phase 2: UI Wiring via Strangler Fig
   - [x] `DialogsActivity.java`: Connected `DialogsViewModel`, `FoldersViewModel`, `SearchViewModel`, `SavedMessagesViewModel`, and `AnimationLockerViewModel`. Dispatched user intents (delete, pin, mark as read, folder switch, search recents, and animation locks) through domain use cases.
   - [x] `ChatActivity.java`: Connected `ChatViewModel`, `SendMessagesViewModel`, `ChatThemeViewModel`, `ReactionsViewModel`, `ChatInputViewModel`, `BottomViewsViewModel`, and `DraftMeasureViewModel`. Dispatched user intents (send message, text changes/cursor tracking, select/clear reactions, theme inspection/selection, and bottom views visibility arbitration) through MVI ViewModels and domain events.
+  - [x] `LaunchActivity.java`: Connected `MainTabsViewModel`, `PipViewModel`, `WindowVisibilityViewModel`, `BrowserViewModel`, `LauncherIconViewModel`, and `AnimationLockerViewModel`. Dispatched navigation tab lifecycle, PiP enter/exit events, multi-window visibility locks, predictive back animation locking, link opening, and launcher icon auto-healing through domain ViewModels.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 113: LaunchActivity Navigation & System UI Wiring via Strangler Fig
+- **Context:** In Telegram Android, `LaunchActivity.java` (~9,250 lines) is the root application Activity responsible for windowing, session lifecycle, account switching, bottom navigation tabs (`MainTabsActivity`), Picture-in-Picture (`PipActivityController`), window content visibility (`WindowVisibilityManager`), web browsing (`Browser`), predictive back animations, and launcher app icons (`LauncherIconController`). Historically, `LaunchActivity` mutated legacy global singletons and controllers directly, making system-level interactions tightly coupled and opaque to unit tests.
+- **Decision:** Apply the Strangler Fig pattern at the UI layer. Acquire `MainTabsViewModel`, `PipViewModel`, `WindowVisibilityViewModel`, `BrowserViewModel`, `LauncherIconViewModel`, and `AnimationLockerViewModel` from `AccountFeatureContainer.Companion.get(currentAccount)` during `checkCurrentAccount()` (supporting runtime account switching via `switchToAccount()`). Wire system events through null-safe event dispatches:
+  1. PiP transitions in `pipActivityController.addPipListener` -> `pipViewModel.onEvent(new PipEvent.TransitionPipState(PipState.IN_PIP / IDLE))` and `windowVisibilityViewModel.onEvent(new WindowVisibilityEvent.HideRequested / ReleaseRequested("pip"))`.
+  2. Tab visibility on account switch in `switchToAccount()` -> `mainTabsViewModel.onEvent(new MainTabsEvent.SetTabsVisible(true))`.
+  3. Predictive back animation locks in `onBackAnimationCallback` -> `animationLockerViewModel.onEvent(new AnimationLockerEvent.AcquireLock / ReleaseAllLocks)`.
+  4. Web URL routing in `tonsite` handling -> `browserViewModel.onEvent(new BrowserEvent.OpenUrl(data.toString()))`.
+  5. Launcher icon verification upon initialization -> `launcherIconViewModel.onEvent(LauncherIconEvent.FixIconIfNeeded.INSTANCE)`.
+  6. Memory leak prevention: null out all ViewModels in `onDestroy()`.
+  All modifications are purely additive, null-safe, and do not alter legacy Android window mechanics, back stacks, or rendering.
+- **Consequences:** Root navigation and system coordination in `LaunchActivity` are now cleanly observable and routed through pure domain ViewModels, decoupling window management from legacy singletons while guaranteeing 100% backward compatibility and seamless future upstream merges.
 
 ### ADR 112: ChatActivity UI Wiring with Messaging ViewModels via Strangler Fig
 - **Context:** In Telegram Android, `ChatActivity.java` (~47,300 lines) is the core messaging UI handling chat history, text input, media sending, reactions, themes, drafts, and bottom bar visibility. Historically, user actions directly invoked monolithic controllers (`SendMessagesHelper`, `ChatThemeController`, `ReactionsLayoutInBubble`, `ChatActivityEnterView`, `ChatActivityBottomViewsVisibilityController`, etc.). A full rewrite of `ChatActivity` would be disastrous for upstream synchronization and risk message loss, animation regressions, or UI glitches.

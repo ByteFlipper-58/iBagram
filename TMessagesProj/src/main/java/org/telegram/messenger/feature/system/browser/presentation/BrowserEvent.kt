@@ -1,4 +1,4 @@
-﻿package org.telegram.messenger.feature.system.browser.presentation
+package org.telegram.messenger.feature.system.browser.presentation
 
 import org.telegram.messenger.feature.system.browser.domain.model.BrowserSettingsModel
 import org.telegram.messenger.feature.system.browser.domain.model.BrowserType
@@ -8,7 +8,7 @@ sealed class BrowserEvent {
     data class UpdateSettings(val settings: BrowserSettingsModel) : BrowserEvent()
     data class ToggleWarnExternalLinks(val enabled: Boolean) : BrowserEvent()
     data class CheckUrl(val url: String) : BrowserEvent()
-    data class OpenUrl(val url: String, val forceExternal: Boolean = false) : BrowserEvent()
+    data class OpenUrl @JvmOverloads constructor(val url: String, val forceExternal: Boolean = false) : BrowserEvent()
     object ClearHistory : BrowserEvent()
     object ClearCacheAndCookies : BrowserEvent()
     object DismissError : BrowserEvent()
