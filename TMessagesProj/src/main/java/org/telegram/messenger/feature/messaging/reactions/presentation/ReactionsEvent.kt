@@ -1,4 +1,4 @@
-﻿package org.telegram.messenger.feature.messaging.reactions.presentation
+package org.telegram.messenger.feature.messaging.reactions.presentation
 
 import org.telegram.messenger.feature.messaging.reactions.domain.model.ReactionItemModel
 
@@ -7,7 +7,7 @@ sealed class ReactionsEvent {
     object LoadRecentReactions : ReactionsEvent()
     object LoadSettings : ReactionsEvent()
     data class SetDoubleTapReaction(val reaction: String) : ReactionsEvent()
-    data class SendReaction(
+    data class SendReaction @JvmOverloads constructor(
         val dialogId: Long,
         val messageId: Int,
         val reaction: ReactionItemModel,

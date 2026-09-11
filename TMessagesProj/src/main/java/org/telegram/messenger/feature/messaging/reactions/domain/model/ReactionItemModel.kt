@@ -1,6 +1,6 @@
-﻿package org.telegram.messenger.feature.messaging.reactions.domain.model
+package org.telegram.messenger.feature.messaging.reactions.domain.model
 
-data class ReactionItemModel(
+data class ReactionItemModel @JvmOverloads constructor(
     val reaction: String,
     val title: String = "",
     val isCustom: Boolean = false,

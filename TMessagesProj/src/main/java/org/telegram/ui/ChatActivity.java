@@ -277,6 +277,19 @@ import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceWrapped;
 import org.telegram.ui.Components.blur3.utils.Blur3Utils;
 import org.telegram.ui.Components.chat.ChatActivityBottomViewsVisibilityController;
 import org.telegram.ui.Components.chat.ChatActivityDraftMessageMeasureController;
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.messaging.bottomviews.presentation.BottomViewsEvent;
+import org.telegram.messenger.feature.messaging.bottomviews.presentation.BottomViewsViewModel;
+import org.telegram.messenger.feature.messaging.chat.presentation.ChatViewModel;
+import org.telegram.messenger.feature.messaging.chatinput.presentation.ChatInputEvent;
+import org.telegram.messenger.feature.messaging.chatinput.presentation.ChatInputViewModel;
+import org.telegram.messenger.feature.messaging.chattheme.domain.model.ChatThemeModel;
+import org.telegram.messenger.feature.messaging.chattheme.presentation.ChatThemeViewModel;
+import org.telegram.messenger.feature.messaging.draftmeasure.presentation.DraftMeasureViewModel;
+import org.telegram.messenger.feature.messaging.reactions.domain.model.ReactionItemModel;
+import org.telegram.messenger.feature.messaging.reactions.presentation.ReactionsEvent;
+import org.telegram.messenger.feature.messaging.reactions.presentation.ReactionsViewModel;
+import org.telegram.messenger.feature.messaging.sendmessages.presentation.SendMessagesViewModel;
 import org.telegram.ui.Components.chat.ChatActivityMessageMetricsView;
 import org.telegram.ui.Components.chat.ChatActivitySearchContainer;
 import org.telegram.ui.Components.chat.layouts.ChatActivityActionsButtonsLayout;
@@ -437,6 +450,13 @@ public class ChatActivity extends BaseFragment implements
     private ChatReplyContainer replyLayout;
     private int chatActivityEnterViewAnimateFromTop;
     private boolean chatActivityEnterViewAnimateBeforeSending;
+    private ChatViewModel chatViewModel;
+    private SendMessagesViewModel sendMessagesViewModel;
+    private ChatThemeViewModel chatThemeViewModel;
+    private ReactionsViewModel reactionsViewModel;
+    private ChatInputViewModel chatInputViewModel;
+    private BottomViewsViewModel bottomViewsViewModel;
+    private DraftMeasureViewModel draftMeasureViewModel;
     private ActionBarMenuItem.Item timeItem2;
     private ComposeDrawable otherIcon;
     private ActionBarMenu.LazyItem attachItem;
@@ -1986,6 +2006,9 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void onMessageSend(CharSequence message, boolean notify, int scheduleDate, int scheduleRepeatPeriod, long payStars) {
+            if (chatViewModel != null && !TextUtils.isEmpty(message)) {
+                chatViewModel.onSendMessage(message.toString());
+            }
             if (chatListItemAnimator != null) {
                 chatActivityEnterViewAnimateFromTop = chatActivityEnterView.getBackgroundTop();
                 if (chatActivityEnterViewAnimateFromTop != 0) {
@@ -2113,6 +2136,10 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void onTextSelectionChanged(int start, int end) {
+            if (chatInputViewModel != null) {
+                CharSequence currentText = chatActivityEnterView != null ? chatActivityEnterView.getFieldText() : "";
+                chatInputViewModel.onEvent(new ChatInputEvent.TextChanged(currentText != null ? currentText.toString() : "", start, end));
+            }
             if (editTextItem == null) {
                 return;
             }
@@ -2220,6 +2247,10 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void onTextChanged(final CharSequence text, boolean bigChange, boolean fromDraft) {
+            if (chatInputViewModel != null) {
+                int cursor = chatActivityEnterView != null ? chatActivityEnterView.getCursorPosition() : 0;
+                chatInputViewModel.onEvent(new ChatInputEvent.TextChanged(text != null ? text.toString() : "", cursor, cursor));
+            }
             MediaController.getInstance().setInputFieldHasText(!TextUtils.isEmpty(text) || chatActivityEnterView.isEditingMessage());
             if (mentionContainer != null && mentionContainer.getAdapter() != null) {
                 mentionContainer.getAdapter().searchUsernameOrHashtag(text, chatActivityEnterView.getCursorPosition(), messages, false, false);
@@ -3181,6 +3212,15 @@ public class ChatActivity extends BaseFragment implements
         if (chatMode == MODE_SAVED) {
             getMessagesController().getSavedMessagesController().checkSavedDialogCount(getTopicId());
         }
+
+        AccountFeatureContainer accountContainer = AccountFeatureContainer.get(currentAccount);
+        chatViewModel = accountContainer.getChatViewModel(dialog_id);
+        sendMessagesViewModel = accountContainer.getSendMessagesViewModel();
+        chatThemeViewModel = accountContainer.getChatThemeViewModel();
+        reactionsViewModel = accountContainer.getReactionsViewModel();
+        chatInputViewModel = accountContainer.getChatInputViewModel();
+        bottomViewsViewModel = accountContainer.getMessaging().createBottomViewsViewModel(bottomViewsVisibilityController);
+        draftMeasureViewModel = accountContainer.getMessaging().createDraftMeasureViewModel(botDraftHeightController);
 
         return true;
     }
@@ -32882,6 +32922,24 @@ public class ChatActivity extends BaseFragment implements
 
         int finalMessageIdForCell = messageIdForCell;
 
+        if (reactionsViewModel != null && visibleReaction != null) {
+            if (added) {
+                ReactionItemModel reactionItem = new ReactionItemModel(
+                    visibleReaction.emojicon != null ? visibleReaction.emojicon : "",
+                    "",
+                    visibleReaction.documentId != 0,
+                    visibleReaction.documentId,
+                    false,
+                    visibleReaction.premium,
+                    visibleReaction.isStar,
+                    0
+                );
+                reactionsViewModel.onEvent(new ReactionsEvent.SendReaction(dialog_id, primaryMessage.getId(), reactionItem, bigEmoji, addToRecent));
+            } else {
+                reactionsViewModel.onEvent(new ReactionsEvent.ClearReactions(dialog_id, primaryMessage.getId()));
+            }
+        }
+
         if (added) {
             cell = findMessageCell(finalMessageIdForCell, true);
             showMultipleReactionsPromo(cell, visibleReaction, currentChosenReactions);
@@ -43274,6 +43332,9 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void showChatThemeBottomSheet() {
+        if (chatThemeViewModel != null) {
+            chatThemeViewModel.loadThemes(dialog_id);
+        }
         if (currentChat != null) {
             if (ChatObject.isMegagroup(currentChat)) {
                 if (ChatObject.hasAdminRights(currentChat)) {
@@ -43319,6 +43380,15 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void setChatThemeEmoticon(final TLRPC.ChatTheme theme) {
+        if (chatThemeViewModel != null) {
+            if (theme == null) {
+                chatThemeViewModel.resetTheme(dialog_id);
+            } else if (theme instanceof TLRPC.TL_chatTheme && ((TLRPC.TL_chatTheme) theme).emoticon != null) {
+                chatThemeViewModel.applyTheme(dialog_id, new ChatThemeModel(((TLRPC.TL_chatTheme) theme).emoticon, null, false, false, 0L, 0L, null, java.util.Collections.emptyList()));
+            } else if (theme instanceof TLRPC.TL_chatThemeUniqueGift && ((TLRPC.TL_chatThemeUniqueGift) theme).gift != null) {
+                chatThemeViewModel.applyTheme(dialog_id, new ChatThemeModel(null, ((TLRPC.TL_chatThemeUniqueGift) theme).gift.slug, false, false, 0L, 0L, null, java.util.Collections.emptyList()));
+            }
+        }
         if (themeDelegate == null || parentThemeDelegate != null) {
             return;
         }
@@ -46699,6 +46769,14 @@ public class ChatActivity extends BaseFragment implements
         }
 
         checkUi_inputIslandHeight();
+
+        if (bottomViewsViewModel != null) {
+            bottomViewsViewModel.onEvent(new BottomViewsEvent.SetViewVisible(
+                bottomViewsVisibilityController.getCurrentPriorityContainerId(),
+                true,
+                false
+            ));
+        }
     }
 
     private void invalidateAllGlassAttachedViews() {

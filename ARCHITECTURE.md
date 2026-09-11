@@ -849,10 +849,22 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] `AccountFeatureContainer.kt` converted into lightweight Facade with 100% backward-compatible delegated accessors.
 - [x] Phase 2: UI Wiring via Strangler Fig
   - [x] `DialogsActivity.java`: Connected `DialogsViewModel`, `FoldersViewModel`, `SearchViewModel`, `SavedMessagesViewModel`, and `AnimationLockerViewModel`. Dispatched user intents (delete, pin, mark as read, folder switch, search recents, and animation locks) through domain use cases.
+  - [x] `ChatActivity.java`: Connected `ChatViewModel`, `SendMessagesViewModel`, `ChatThemeViewModel`, `ReactionsViewModel`, `ChatInputViewModel`, `BottomViewsViewModel`, and `DraftMeasureViewModel`. Dispatched user intents (send message, text changes/cursor tracking, select/clear reactions, theme inspection/selection, and bottom views visibility arbitration) through MVI ViewModels and domain events.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 112: ChatActivity UI Wiring with Messaging ViewModels via Strangler Fig
+- **Context:** In Telegram Android, `ChatActivity.java` (~47,300 lines) is the core messaging UI handling chat history, text input, media sending, reactions, themes, drafts, and bottom bar visibility. Historically, user actions directly invoked monolithic controllers (`SendMessagesHelper`, `ChatThemeController`, `ReactionsLayoutInBubble`, `ChatActivityEnterView`, `ChatActivityBottomViewsVisibilityController`, etc.). A full rewrite of `ChatActivity` would be disastrous for upstream synchronization and risk message loss, animation regressions, or UI glitches.
+- **Decision:** Apply the Strangler Fig pattern at the UI layer. Acquire `ChatViewModel`, `SendMessagesViewModel`, `ChatThemeViewModel`, `ReactionsViewModel`, `ChatInputViewModel`, `BottomViewsViewModel`, and `DraftMeasureViewModel` from `AccountFeatureContainer.Companion.get(currentAccount)` during `onFragmentCreate()`. Wire user actions through null-safe event dispatches:
+  1. `onMessageSend()` -> `chatViewModel.onSendMessage(...)`
+  2. `onTextChanged()` and `onTextSelectionChanged()` -> `chatInputViewModel.onEvent(new ChatInputEvent.TextChanged(...))`
+  3. `selectReaction()` -> `reactionsViewModel.onEvent(new ReactionsEvent.SendReaction(...))` and `ClearReactions`
+  4. `showChatThemeBottomSheet()` & `setChatThemeEmoticon()` -> `chatThemeViewModel.loadThemes(...)`, `applyTheme(...)`, `resetTheme(...)`
+  5. `onBottomItemsVisibilityChanged()` -> `bottomViewsViewModel.onEvent(new BottomViewsEvent.SetViewVisible(...))`
+  All modifications are purely additive, null-safe (`if (viewModel != null)`), and do not disrupt legacy controllers, animators, or delegates.
+- **Consequences:** Key messaging user interactions in `ChatActivity` are now observed and routed through pure domain ViewModels and UseCases, establishing clear boundaries around legacy messaging controllers while guaranteeing 100% backward compatibility and minimal conflict risk during future upstream Telegram synchronization.
 
 ### ADR 111: DialogsActivity UI Wiring with ViewModels via Strangler Fig
 - **Context:** In Telegram Android, `DialogsActivity.java` (~14,500 lines) manages the primary chat list, folder filters, search, and screen animations. Historically, UI events directly mutated monolithic `MessagesController` and `DialogsSearchAdapter` singletons. Wholesale rewrite of `DialogsActivity` would break upstream synchronization, destroy complex gesture animations, and introduce severe regressions.
