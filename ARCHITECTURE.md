@@ -191,6 +191,9 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 | **State & Business Logic** | `MessagesController`, `SavedMessagesController` | `*Repository`, `*UseCase` | High | Implement repository on top of controller methods. Strangler pattern. |
 | **UI** | `ChatActivity`, `DialogsActivity`, `Cells` | `ViewModel`, `UiState` | Medium | Extract presentation state and delegate user intents to ViewModel. |
 
+> [!TIP]
+> Подробный пошаговый регламент слияния обновлений официального Telegram, стратегию веток и матрицу разрешения конфликтов см. в файле [`UPSTREAM_SYNC.md`](UPSTREAM_SYNC.md).
+
 ---
 
 ## 5. Migration Checklist
