@@ -910,10 +910,37 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `BiometricsRepositoryImpl.kt` (Coordinating BiometricsLocalDataSource with NotificationCenter didGenerateFingerprintKeyPair event stream)
     - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `PasskeysController.java` & `FingerprintController.java` strangler boundaries (`getPasskeysRepository()`, `getBiometricsRepository()`).
+  - [x] Feature: `BirthdayController` & `ChannelBoostsController` Strangling (`feature.social.birthdays` & `feature.social.boosts` - ADR 128):
+    - `BirthdayRemoteDataSource.kt` & `BirthdayLocalDataSource.kt`
+    - `BirthdaysRepositoryImpl.kt`
+    - `BoostsRemoteDataSource.kt` & `BoostsLocalDataSource.kt`
+    - `BoostsRepositoryImpl.kt`
+    - `SocialContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `BirthdayController.java` & `ChannelBoostsController.java` strangler boundaries (`getBirthdaysRepository()`, `getBoostsRepository()`).
+  - [x] Feature: `MemberRequestsController` Strangling (`feature.social.joinrequests` - ADR 129):
+    - `JoinRequestsRemoteDataSource.kt` (MTProto RPC requests: getChatInviteImporters, hideChatJoinRequest, hideAllChatJoinRequests)
+    - `JoinRequestsLocalDataSource.kt` (ChatFull, InputPeer/User resolution, firstImportersCache & processUpdates)
+    - `JoinRequestsRepositoryImpl.kt` (Local + remote coordination, approve/dismiss mutations, and reactive observePendingRequests)
+    - `SocialContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `MemberRequestsController.java` strangler boundary with `getJoinRequestsRepository()` accessor and `putCachedImporters()`.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 129: MemberRequestsController Strangling via Clean DataSources & JoinRequestsRepositoryImpl
+- **Context:** In Telegram Android, chat join requests and pending invite importers were managed by `MemberRequestsController.java` (~200 lines). `MemberRequestsController` coupled MTProto RPCs (`TLRPC.TL_messages_getChatInviteImporters`, `TLRPC.TL_messages_hideChatJoinRequest`, `TLRPC.TL_messages_hideAllChatJoinRequests`), in-memory cache of initial invite importers (`firstImportersCache` as `LongSparseArray<TLRPC.TL_messages_chatInviteImporters>`), updates processing via `MessagesController.processUpdates()`, and `ChatFull.requests_pending` synchronization. UI components (`MemberRequestsDelegate`, `ChatUsersActivity`) and legacy controllers directly accessed `MemberRequestsController.getInstance(account)`.
+- **Decision:** Apply the Strangler Fig pattern to `MemberRequestsController`:
+  1. Implement `JoinRequestsRemoteDataSource`:
+     - Encapsulates MTProto RPC requests: `getChatInviteImporters(peer, requested, limit, query, offsetUser, offsetDate)`, `hideChatJoinRequest(peer, inputUser, approved)`, and `hideAllChatJoinRequests(peer, inviteLink, approved)` using `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `JoinRequestsLocalDataSource`:
+     - Encapsulates `ChatFull` access, `InputPeer` and `InputUser` resolution, cached invite importers via `MemberRequestsController.firstImportersCache` with bidirectional synchronization (`getCachedImporters`, `putCachedImporters`), and updates application (`processUpdates`).
+  3. Implement `JoinRequestsRepositoryImpl`:
+     - Implements `JoinRequestsRepository`, coordinating remote RPC execution with local cache updates, handling approvals/dismissals of single or batch join requests, reactive `observePendingRequests()` via `NotificationCenterFlowBridge`, and domain model mapping (`ChatPendingRequestsModel`, `JoinRequestsListModel`, `JoinRequestModel`) via `JoinRequestMapper`.
+  4. Expose `putCachedImporters(chatId, importers)` in `MemberRequestsController.java` to allow clean data sources to synchronize the legacy in-memory cache.
+  5. Update `SocialContainer` and `AccountFeatureContainer` to wire `JoinRequestsRepositoryImpl` as the primary default implementation while supporting custom mocks for testing.
+  6. Introduce strangler boundary: `MemberRequestsController.getJoinRequestsRepository(account)`.
+- **Consequences:** All chat join request operations, approvals, dismissals, and pending counters are cleanly decoupled behind testable domain contracts and data sources. 100% test coverage achieved with `JoinRequestsRepositoryImplTest.kt` passing, full backwards compatibility preserved, and verified with APK assembly (`assembleAfatDebug`).
 
 ### ADR 128: BirthdayController & ChannelBoostsController Strangling via Clean DataSources & Repository Implementations
 - **Context:** In Telegram Android, contact birthdays tracking and channel boosting operations were managed across `BirthdayController.java` (~310 lines) and `ChannelBoostsController.java` (~190 lines). `BirthdayController` coupled MTProto RPCs (`TL_account.getBirthdays`), raw binary serialization of `TL_birthdays` into hex strings stored in SharedPreferences (`bday_contacts`, `bday_check`, `bday_hidden`), SQLite database updates in `MessagesStorage`, in-memory users cache in `MessagesController`, and global event notifications on `NotificationCenter.premiumPromoUpdated`. `ChannelBoostsController` coupled MTProto RPCs (`TL_stories.TL_premium_getBoostsStatus`, `TL_stories.TL_premium_getMyBoosts`, `TL_stories.TL_premium_applyBoost`), UI alert dialogs (`AlertDialog.Builder`), global bulletins (`BulletinFactory`), and slot replacement arithmetic with negative dialog ID negations.

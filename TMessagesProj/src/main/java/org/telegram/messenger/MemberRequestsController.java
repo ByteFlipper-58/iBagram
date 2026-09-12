@@ -38,6 +38,17 @@ public class MemberRequestsController extends BaseController {
         return firstImportersCache.get(chatId);
     }
 
+    public void putCachedImporters(long chatId, TLRPC.TL_messages_chatInviteImporters importers) {
+        firstImportersCache.put(chatId, importers);
+    }
+
+    /**
+     * Strangler hook: returns the modern JoinRequestsRepository instance for the given account.
+     */
+    public static org.telegram.messenger.feature.social.joinrequests.domain.repository.JoinRequestsRepository getJoinRequestsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSocial().getJoinRequestsRepository();
+    }
+
     public int getImporters(final long chatId, final String query, TLRPC.TL_chatInviteImporter lastImporter, LongSparseArray<TLRPC.User> users, RequestDelegate onComplete) {
         boolean isEmptyQuery = TextUtils.isEmpty(query);
         TLRPC.TL_messages_getChatInviteImporters req = new TLRPC.TL_messages_getChatInviteImporters();

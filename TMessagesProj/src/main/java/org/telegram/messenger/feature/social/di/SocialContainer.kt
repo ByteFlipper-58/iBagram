@@ -35,6 +35,9 @@ import org.telegram.messenger.feature.social.contacts.domain.usecase.GetContacts
 import org.telegram.messenger.feature.social.contacts.domain.usecase.ObserveContactsUseCase
 import org.telegram.messenger.feature.social.contacts.domain.usecase.SearchContactsUseCase
 import org.telegram.messenger.feature.social.contacts.presentation.ContactsViewModel
+import org.telegram.messenger.feature.social.joinrequests.data.datasource.JoinRequestsLocalDataSource
+import org.telegram.messenger.feature.social.joinrequests.data.datasource.JoinRequestsRemoteDataSource
+import org.telegram.messenger.feature.social.joinrequests.data.repository.JoinRequestsRepositoryImpl
 import org.telegram.messenger.feature.social.joinrequests.data.repository.LegacyJoinRequestsRepository
 import org.telegram.messenger.feature.social.joinrequests.domain.repository.JoinRequestsRepository
 import org.telegram.messenger.feature.social.joinrequests.domain.usecase.ApproveAllJoinRequestsUseCase
@@ -336,10 +339,26 @@ class SocialContainer(val account: Int) {
         )
     }
 
+    val joinRequestsRemoteDataSource: JoinRequestsRemoteDataSource by lazy {
+        JoinRequestsRemoteDataSource(account)
+    }
+
+    val joinRequestsLocalDataSource: JoinRequestsLocalDataSource by lazy {
+        JoinRequestsLocalDataSource(account)
+    }
+
+    fun createJoinRequestsRepository(): JoinRequestsRepository {
+        return JoinRequestsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = joinRequestsLocalDataSource,
+            remoteDataSource = joinRequestsRemoteDataSource
+        )
+    }
+
     private var customJoinRequestsRepository: JoinRequestsRepository? = null
 
     var joinRequestsRepository: JoinRequestsRepository
-        get() = customJoinRequestsRepository ?: LegacyJoinRequestsRepository(account)
+        get() = customJoinRequestsRepository ?: createJoinRequestsRepository()
         set(value) {
             customJoinRequestsRepository = value
         }

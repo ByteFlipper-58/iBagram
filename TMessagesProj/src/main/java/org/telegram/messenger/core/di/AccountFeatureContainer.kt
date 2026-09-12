@@ -3819,6 +3819,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = social.joinRequestsRepository
         set(value) { social.joinRequestsRepository = value }
 
+    fun createJoinRequestsRepository(): JoinRequestsRepository = social.createJoinRequestsRepository()
+
     val observePendingRequestsUseCase: ObservePendingRequestsUseCase
         get() = social.observePendingRequestsUseCase
 
