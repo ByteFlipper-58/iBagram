@@ -1,4 +1,4 @@
-﻿package org.telegram.messenger.feature.media.downloadmanager.data.mapper
+package org.telegram.messenger.feature.media.downloadmanager.data.mapper
 
 import org.telegram.messenger.feature.media.downloadmanager.domain.model.AutoDownloadMediaType
 import org.telegram.messenger.feature.media.downloadmanager.domain.model.DownloadPresetModel
@@ -71,6 +71,26 @@ object DownloadManagerMapper {
             maxVideoBitrate = maxBitrate,
             enabled = enabled
         )
+    }
+
+    fun presetToString(preset: DownloadPresetModel): String {
+        val presets = PeerTypePreset.values()
+        val maskParts = (0 until 4).map { i ->
+            val peerType = presets.getOrNull(i) ?: PeerTypePreset.CONTACTS
+            encodeMediaMask(preset.mask[peerType] ?: emptySet())
+        }
+        val photoSize = preset.maxSizes[AutoDownloadMediaType.PHOTO] ?: 0L
+        val videoSize = preset.maxSizes[AutoDownloadMediaType.VIDEO] ?: 0L
+        val docSize = preset.maxSizes[AutoDownloadMediaType.DOCUMENT] ?: 0L
+        val audioSize = preset.maxSizes[AutoDownloadMediaType.AUDIO] ?: 0L
+        val pv = if (preset.preloadVideo) 1 else 0
+        val pm = if (preset.preloadMusic) 1 else 0
+        val en = if (preset.enabled) 1 else 0
+        val ld = if (preset.lessCallData) 1 else 0
+        val bitrate = preset.maxVideoBitrate
+        val ps = if (preset.preloadStories) 1 else 0
+
+        return "${maskParts.joinToString("_")}_${photoSize}_${videoSize}_${docSize}_${audioSize}_${pv}_${pm}_${en}_${ld}_${bitrate}_${ps}"
     }
 
     fun formatFileSize(bytes: Long): String {

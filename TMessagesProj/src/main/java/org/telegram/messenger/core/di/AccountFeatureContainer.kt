@@ -1969,8 +1969,11 @@ class AccountFeatureContainer private constructor(val account: Int) {
 
     fun createImageLoaderViewModel(): ImageLoaderViewModel = media.createImageLoaderViewModel()
 
-    val downloadManagerRepository: DownloadManagerRepository
+    var downloadManagerRepository: DownloadManagerRepository
         get() = media.downloadManagerRepository
+        set(value) { media.downloadManagerRepository = value }
+
+    fun createDownloadManagerRepository(): DownloadManagerRepository = media.createDownloadManagerRepository()
 
     val evaluateAutoDownloadEligibilityUseCase: EvaluateAutoDownloadEligibilityUseCase
         get() = media.evaluateAutoDownloadEligibilityUseCase

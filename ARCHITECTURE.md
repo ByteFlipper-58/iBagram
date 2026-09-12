@@ -892,10 +892,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `SecretChatRepositoryImpl.kt` (Local + remote coordination, pure bitwise encrypted dialog ID calculations, and safe NotificationCenter dispatch)
     - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `SecretChatHelper.java` strangler boundary with `getSecretChatRepository()` accessor.
+  - [x] Feature: `DownloadController` Strangling (`feature.media.downloadmanager`):
+    - `DownloadManagerRemoteDataSource.kt` (MTProto RPC requests: getAutoDownloadConfig, saveAutoDownloadSettings)
+    - `DownloadManagerLocalDataSource.kt` (SharedPreferences auto-download presets + MessagesStorage SQLite document deletion & in-memory DownloadController access)
+    - `DownloadManagerRepositoryImpl.kt` (Local + remote coordination, reactive state observation, queue mutations, download speed calculation, and preset persistence)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `DownloadController.java` strangler boundary with `getDownloadManagerRepository()` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 125: DownloadController Strangling via BaseDataSources & DownloadManagerRepositoryImpl
+- **Context:** In Telegram Android, `DownloadController.java` (~1,810 lines) manages global auto-download presets (Wi-Fi, cellular, roaming), in-memory download queues (`downloadingFiles`, `recentDownloadingFiles`, `unviewedDownloads`), speed metrics calculation, and auto-download configuration persistence in `SharedPreferences` and MTProto (`TL_account.getAutoDownloadSettings`, `TL_account.saveAutoDownloadSettings`). UI components and background loaders directly touched `DownloadController.getInstance(currentAccount)`, creating high coupling between media loading, network policy, and presentation.
+- **Decision:** Apply the Strangler Fig pattern to `DownloadController`:
+  1. Implement `DownloadManagerRemoteDataSource`:
+     - Encapsulates MTProto RPC requests: `getAutoDownloadConfig()` (`TL_account.getAutoDownloadSettings`) and `saveAutoDownloadSettings(settings, low, high)` (`TL_account.saveAutoDownloadSettings`) with coroutine cancellation support.
+  2. Implement `DownloadManagerLocalDataSource`:
+     - Dispatches SQLite database mutations (`clearRecentDownloadedDocuments`, `deleteRecentDocument`) to `MessagesStorage` via `Dispatchers.IO`.
+     - Handles SharedPreferences preset serialization and deserialization (`mobilePreset`, `wifiPreset`, `roamingPreset`).
+     - Provides thread-safe, non-throwing access to in-memory queues and delegations in `DownloadController`.
+  3. Implement `DownloadManagerRepositoryImpl`:
+     - Implements `DownloadManagerRepository`, managing thread-safe in-memory maps (`downloadingMap`, `recentMap`, `unviewedMap`), active network presets, and reactive flows `observeState()`, `observeDownloadingFiles()`, and `observeRecentFiles()`.
+     - Calculates dynamic download speeds and coordinates preset updates between local SharedPreferences and remote MTProto.
+  4. Wire into `MediaContainer` and `AccountFeatureContainer` as the default `DownloadManagerRepository` implementation.
+  5. Add strangler hook `getDownloadManagerRepository()` in `DownloadController.java` allowing callers to migrate incrementally.
+- **Consequences:** Auto-download policies, queue state, and remote configuration syncing are encapsulated in pure testable data sources and repository, with full unit test coverage (`DownloadManagerRepositoryImplTest.kt`) passing and verified with clean APK assembly (`assembleAfatDebug`).
 
 ### ADR 124: SecretChatHelper Strangling via BaseDataSources & SecretChatRepositoryImpl
 - **Context:** In Telegram Android, `SecretChatHelper.java` is a core cryptographic and message dispatch controller (~2,050 lines) managing Diffie-Hellman key exchange, encrypted layer negotiation, TTL timers, secret holes checking, and SQLite secret chat persistence (`MessagesStorage`). Direct calls to `SecretChatHelper.getInstance(account)` and raw MTProto requests (`TL_messages_requestEncryption`, `TL_messages_acceptEncryption`, `TL_messages_discardEncryption`) were scattered across the codebase.

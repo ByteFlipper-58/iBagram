@@ -255,6 +255,16 @@ public class DownloadController extends BaseController implements NotificationCe
         return localInstance;
     }
 
+    /**
+     * Strangler hook providing access to the clean domain DownloadManagerRepository.
+     */
+    public org.telegram.messenger.feature.media.downloadmanager.domain.repository.DownloadManagerRepository getDownloadManagerRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion
+                .get(currentAccount)
+                .getMedia()
+                .getDownloadManagerRepository();
+    }
+
     public DownloadController(int instance) {
         super(instance);
         SharedPreferences preferences = MessagesController.getMainSettings(currentAccount);

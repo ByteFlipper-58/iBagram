@@ -69,6 +69,9 @@ import org.telegram.messenger.feature.media.contentpreview.domain.usecase.Resolv
 import org.telegram.messenger.feature.media.contentpreview.domain.usecase.TriggerPreviewActionUseCase
 import org.telegram.messenger.feature.media.contentpreview.domain.usecase.UpdatePreviewDragUseCase
 import org.telegram.messenger.feature.media.contentpreview.presentation.ContentPreviewViewModel
+import org.telegram.messenger.feature.media.downloadmanager.data.datasource.DownloadManagerLocalDataSource
+import org.telegram.messenger.feature.media.downloadmanager.data.datasource.DownloadManagerRemoteDataSource
+import org.telegram.messenger.feature.media.downloadmanager.data.repository.DownloadManagerRepositoryImpl
 import org.telegram.messenger.feature.media.downloadmanager.data.repository.LegacyDownloadManagerRepository
 import org.telegram.messenger.feature.media.downloadmanager.domain.repository.DownloadManagerRepository
 import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.CancelDownloadUseCase
@@ -1107,9 +1110,29 @@ class MediaContainer(val account: Int) {
         )
     }
 
-    val downloadManagerRepository: DownloadManagerRepository by lazy {
-        LegacyDownloadManagerRepository(account)
+    val downloadManagerRemoteDataSource: DownloadManagerRemoteDataSource by lazy {
+        DownloadManagerRemoteDataSource(account)
     }
+
+    val downloadManagerLocalDataSource: DownloadManagerLocalDataSource by lazy {
+        DownloadManagerLocalDataSource(account)
+    }
+
+    fun createDownloadManagerRepository(): DownloadManagerRepository {
+        return DownloadManagerRepositoryImpl(
+            currentAccount = account,
+            localDataSource = downloadManagerLocalDataSource,
+            remoteDataSource = downloadManagerRemoteDataSource
+        )
+    }
+
+    private var customDownloadManagerRepository: DownloadManagerRepository? = null
+
+    var downloadManagerRepository: DownloadManagerRepository
+        get() = customDownloadManagerRepository ?: createDownloadManagerRepository()
+        set(value) {
+            customDownloadManagerRepository = value
+        }
 
     val evaluateAutoDownloadEligibilityUseCase: EvaluateAutoDownloadEligibilityUseCase
         get() = EvaluateAutoDownloadEligibilityUseCase(downloadManagerRepository)
