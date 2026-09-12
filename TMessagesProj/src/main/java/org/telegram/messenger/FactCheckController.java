@@ -77,6 +77,10 @@ public class FactCheckController {
         return localInstance;
     }
 
+    public static org.telegram.messenger.feature.messaging.factcheck.domain.repository.FactCheckRepository getFactCheckRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getFactCheckRepository();
+    }
+
     public final int currentAccount;
 
     private FactCheckController(int account) {
@@ -84,6 +88,17 @@ public class FactCheckController {
     }
 
     private final LongSparseArray<TLRPC.TL_factCheck> localCache = new LongSparseArray<>();
+
+    public TLRPC.TL_factCheck getCachedFactCheck(long hash) {
+        return localCache.get(hash);
+    }
+
+    public void putCachedFactCheck(long hash, TLRPC.TL_factCheck factCheck) {
+        if (factCheck != null) {
+            localCache.put(hash, factCheck);
+        }
+    }
+
     private final LongSparseArray<HashMap<Key, Utilities.Callback<TLRPC.TL_factCheck>>> toload = new LongSparseArray<>();
     private final ArrayList<Key> loading = new ArrayList<>();
 

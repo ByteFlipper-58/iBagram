@@ -2315,6 +2315,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = messaging.translationRepository
         set(value) { messaging.translationRepository = value }
 
+    fun createTranslationRepository(): TranslationRepository = messaging.createTranslationRepository()
+
     val observeTranslateSettingsUseCase: ObserveTranslateSettingsUseCase
         get() = messaging.observeTranslateSettingsUseCase
 
@@ -2407,6 +2409,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
     var factCheckRepository: FactCheckRepository
         get() = messaging.factCheckRepository
         set(value) { messaging.factCheckRepository = value }
+
+    fun createFactCheckRepository(): FactCheckRepository = messaging.createFactCheckRepository()
 
     val observeFactCheckLoadedUseCase: ObserveFactCheckLoadedUseCase
         get() = messaging.observeFactCheckLoadedUseCase

@@ -81,6 +81,14 @@ public class TranslateController extends BaseController {
         Set<Integer> certainlyNotTranslatable = new HashSet<>();
     }
 
+    public static org.telegram.messenger.feature.messaging.translate.domain.repository.TranslationRepository getTranslationRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getTranslationRepository();
+    }
+
+    public org.telegram.messenger.feature.messaging.translate.domain.repository.TranslationRepository getTranslationRepository() {
+        return getTranslationRepository(currentAccount);
+    }
+
     private MessagesController messagesController;
 
     public TranslateController(MessagesController messagesController) {

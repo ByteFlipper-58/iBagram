@@ -929,10 +929,48 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `ChatThemeRepositoryImpl.kt` (Coordinating remote reload with local cache fallback, dialog theme mutations, reactive observeDialogTheme)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `ChatThemeController.java` strangler boundary with `getChatThemeRepository()` accessor.
+  - [x] Feature: `FactCheckController` Strangling (`feature.messaging.factcheck` - ADR 131):
+    - `FactCheckRemoteDataSource.kt` (MTProto RPC requests: messages.getFactCheck, messages.editFactCheck, messages.deleteFactCheck via BaseRemoteDataSource)
+    - `FactCheckLocalDataSource.kt` (SQLite queries on fact_checks table, in-memory cache, max character limits)
+    - `FactCheckRepositoryImpl.kt` (Memory-first cache with SQLite fallback, MTProto mutations, reactive observeFactCheckLoaded)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `FactCheckController.java` strangler boundary with `getFactCheckRepository(account)` accessor and cache accessors.
+  - [x] Feature: `TranslateController` Strangling (`feature.messaging.translate` - ADR 132):
+    - `TranslationRemoteDataSource.kt` (MTProto RPC requests: messages.translateText via BaseRemoteDataSource)
+    - `TranslationLocalDataSource.kt` (Restricted languages preferences, dialog translation states, app language application)
+    - `TranslationRepositoryImpl.kt` (MTProto text translation, dialog translation state toggles, reactive observeTranslateSettings & observeDialogTranslationState)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `TranslateController.java` strangler boundary with `getTranslationRepository(account)` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 132: TranslateController Strangling via Clean DataSources & TranslationRepositoryImpl
+- **Context:** In Telegram Android, message and chat translation and language settings were managed across `TranslateController.java` (~2450 lines), `LocaleController.java`, and UI activities like `RestrictedLanguagesSelectActivity`. `TranslateController` directly handled MTProto RPCs (`TLRPC.TL_messages_translateText`), SharedPreferences settings (`translate_button`, `translate_chat_button`), dialog translation states in `LongSparseArray`, restricted language sets, and unread dialog message translation caches. Legacy UI components directly invoked `TranslateController.getInstance(account)`.
+- **Decision:** Apply the Strangler Fig pattern to `TranslateController`:
+  1. Implement `TranslationRemoteDataSource`:
+     - Encapsulates MTProto RPC execution `translateText(text, toLanguage)` (`TLRPC.TL_messages_translateText`) via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `TranslationLocalDataSource`:
+     - Encapsulates SharedPreferences translation settings, restricted language sets, dialog translation status and target language lookups, available `LocaleInfo` enumerations, and application language switching.
+  3. Implement `TranslationRepositoryImpl`:
+     - Implements `TranslationRepository`, coordinating MTProto text translation, dialog translation toggles, target language updates, do-not-translate language exception management, available languages discovery, and reactive `observeTranslateSettings` & `observeDialogTranslationState(dialogId)` via `NotificationCenterFlowBridge`.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to instantiate and provide `TranslationRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `TranslateController.getTranslationRepository(account)` and instance `getTranslationRepository()`.
+- **Consequences:** Translation operations and preferences are cleanly decoupled behind testable domain contracts and reactive flows. Full backward compatibility is preserved for all legacy Java callers, with 100% unit tests passing and APK assembly validated.
+
+### ADR 131: FactCheckController Strangling via Clean DataSources & FactCheckRepositoryImpl
+- **Context:** In Telegram Android, message fact-checks and community annotations were managed by `FactCheckController.java` (~590 lines). `FactCheckController` tightly coupled MTProto RPCs (`TLRPC.TL_getFactCheck`, `TLRPC.TL_editFactCheck`, `TLRPC.TL_deleteFactCheck`), SQLite database caching (`MessagesStorage.getDatabase()` queries on the `fact_checks` table), in-memory caching (`LongSparseArray<TLRPC.TL_factCheck>`), character length limits, and heavy Android UI dialog construction (`openFactCheckEditor` with `AlertDialog`, custom `EditTextCaption`, spans, haptics, and bulletin messages).
+- **Decision:** Apply the Strangler Fig pattern to `FactCheckController`:
+  1. Implement `FactCheckRemoteDataSource`:
+     - Encapsulates MTProto RPC execution: `getFactCheck(peer, msgId)` (`TLRPC.TL_getFactCheck`), `editFactCheck(peer, msgId, text)` (`TLRPC.TL_editFactCheck`), and `deleteFactCheck(peer, msgId)` (`TLRPC.TL_deleteFactCheck`) using `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `FactCheckLocalDataSource`:
+     - Encapsulates SQLite queries on the `fact_checks` table, memory caching (`LongSparseArray`), character limit calculations, and `MessagesController.processUpdates()`.
+  3. Implement `FactCheckRepositoryImpl`:
+     - Implements `FactCheckRepository`, coordinating memory-first fact-check retrieval with SQLite database fallback, remote MTProto loading, fact-check application/editing, deletion, and reactive `observeFactCheckLoaded(dialogId, messageId)` via `NotificationCenterFlowBridge`.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to instantiate and provide `FactCheckRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `FactCheckController.getFactCheckRepository(account)` and cache accessors (`getCachedFactCheck`, `putCachedFactCheck`).
+- **Consequences:** Message fact-checking, editing, persistence, and reactive updates are cleanly decoupled behind testable domain contracts. Full backward compatibility is preserved for all legacy Java callers, with 100% unit tests passing and APK assembly validated.
 
 ### ADR 130: ChatThemeController Strangling via Clean DataSources & ChatThemeRepositoryImpl
 - **Context:** In Telegram Android, chat themes, emoji themes, and dialog wallpapers were managed across `ChatThemeController.java` (~430 lines) and `EmojiThemes.java`. `ChatThemeController` tightly coupled MTProto RPCs (`TL_account.getChatThemes`, `TL_messages.setChatTheme`), SharedPreferences serialization of themes and hash values (`chattheme_pref`), in-memory caches (`allChatThemes`, `dialogsThemesMap`), wallpaper saving (`saveChatWallpaper`), and `processUpdates()`. UI components (`ChatActivity`, `ChatAttachAlert`, `ThemePreviewActivity`) directly accessed `ChatThemeController.getInstance(account)`. Additionally, `ThemeKey.java` and `EmojiThemes.java` had static dependencies on unmocked Android framework classes (`android.text.TextUtils`, `Theme.java` drawable initialization) preventing clean JVM unit testing.

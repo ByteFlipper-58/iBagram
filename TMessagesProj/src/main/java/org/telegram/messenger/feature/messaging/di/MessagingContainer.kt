@@ -187,6 +187,9 @@ import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase
 import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.RemoveWelcomeAnchorBindingUseCase
 import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.UnpackEphemeralMessageIdUseCase
 import org.telegram.messenger.feature.messaging.ephemeralmessages.presentation.EphemeralMessagesViewModel
+import org.telegram.messenger.feature.messaging.factcheck.data.datasource.FactCheckLocalDataSource
+import org.telegram.messenger.feature.messaging.factcheck.data.datasource.FactCheckRemoteDataSource
+import org.telegram.messenger.feature.messaging.factcheck.data.repository.FactCheckRepositoryImpl
 import org.telegram.messenger.feature.messaging.factcheck.data.repository.LegacyFactCheckRepository
 import org.telegram.messenger.feature.messaging.factcheck.domain.repository.FactCheckRepository
 import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.ApplyFactCheckUseCase
@@ -341,7 +344,10 @@ import org.telegram.messenger.feature.messaging.topics.domain.usecase.ToggleClos
 import org.telegram.messenger.feature.messaging.topics.domain.usecase.TogglePinTopicUseCase
 import org.telegram.messenger.feature.messaging.topics.domain.usecase.ToggleShowTopicUseCase
 import org.telegram.messenger.feature.messaging.topics.presentation.TopicsViewModel
+import org.telegram.messenger.feature.messaging.translate.data.datasource.TranslationLocalDataSource
+import org.telegram.messenger.feature.messaging.translate.data.datasource.TranslationRemoteDataSource
 import org.telegram.messenger.feature.messaging.translate.data.repository.LegacyTranslationRepository
+import org.telegram.messenger.feature.messaging.translate.data.repository.TranslationRepositoryImpl
 import org.telegram.messenger.feature.messaging.translate.domain.repository.TranslationRepository
 import org.telegram.messenger.feature.messaging.translate.domain.usecase.AddDoNotTranslateLanguageUseCase
 import org.telegram.messenger.feature.messaging.translate.domain.usecase.ApplyAppLanguageUseCase
@@ -765,10 +771,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val translationRemoteDataSource: TranslationRemoteDataSource by lazy {
+        TranslationRemoteDataSource(account)
+    }
+
+    val translationLocalDataSource: TranslationLocalDataSource by lazy {
+        TranslationLocalDataSource(account)
+    }
+
+    fun createTranslationRepository(): TranslationRepository {
+        return TranslationRepositoryImpl(
+            account = account,
+            localDataSource = translationLocalDataSource,
+            remoteDataSource = translationRemoteDataSource
+        )
+    }
+
     private var customTranslationRepository: TranslationRepository? = null
 
     var translationRepository: TranslationRepository
-        get() = customTranslationRepository ?: LegacyTranslationRepository(account)
+        get() = customTranslationRepository ?: createTranslationRepository()
         set(value) {
             customTranslationRepository = value
         }
@@ -915,10 +937,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val factCheckRemoteDataSource: FactCheckRemoteDataSource by lazy {
+        FactCheckRemoteDataSource(account)
+    }
+
+    val factCheckLocalDataSource: FactCheckLocalDataSource by lazy {
+        FactCheckLocalDataSource(account)
+    }
+
+    fun createFactCheckRepository(): FactCheckRepository {
+        return FactCheckRepositoryImpl(
+            account = account,
+            localDataSource = factCheckLocalDataSource,
+            remoteDataSource = factCheckRemoteDataSource
+        )
+    }
+
     private var customFactCheckRepository: FactCheckRepository? = null
 
     var factCheckRepository: FactCheckRepository
-        get() = customFactCheckRepository ?: LegacyFactCheckRepository(account)
+        get() = customFactCheckRepository ?: createFactCheckRepository()
         set(value) {
             customFactCheckRepository = value
         }
