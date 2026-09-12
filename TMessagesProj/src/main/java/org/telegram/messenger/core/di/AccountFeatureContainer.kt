@@ -1747,6 +1747,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = media.cacheByChatsRepository
         set(value) { media.cacheByChatsRepository = value }
 
+    fun createCacheByChatsRepository(): CacheByChatsRepository = media.createCacheByChatsRepository()
+
     val observeCacheByChatsConfigUseCase: ObserveCacheByChatsConfigUseCase
         get() = media.observeCacheByChatsConfigUseCase
 

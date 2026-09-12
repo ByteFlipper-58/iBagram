@@ -35,6 +35,14 @@ public class CacheByChatsController {
         this.currentAccount = currentAccount;
     }
 
+    public static org.telegram.messenger.feature.media.cachebychats.domain.repository.CacheByChatsRepository getCacheByChatsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getCacheByChatsRepository();
+    }
+
+    public org.telegram.messenger.feature.media.cachebychats.domain.repository.CacheByChatsRepository getCacheByChatsRepository() {
+        return getCacheByChatsRepository(currentAccount);
+    }
+
     public static int getDefault(int type) {
         if (type == KEEP_MEDIA_TYPE_USER) {
             return KEEP_MEDIA_FOREVER;

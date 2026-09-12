@@ -959,10 +959,29 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `FileRefRepositoryImpl.kt` (Clean repository coordinating renewal deduplication, caching, metrics, and reactive observeStats)
     - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `FileRefController.java` strangler boundary with `getFileRefRepository(account)` accessor.
+  - [x] Feature: `CacheByChatsController` Strangling (`feature.media.cachebychats` - ADR 136):
+    - `CacheByChatsRemoteDataSource.kt` (MTProto cache retention sync extension points via BaseRemoteDataSource)
+    - `CacheByChatsLocalDataSource.kt` (Retention periods and hex-encoded exception byte buffers via SharedConfig and UserConfig)
+    - `CacheByChatsRepositoryImpl.kt` (Clean repository coordinating retention periods, exceptions, and reactive observeConfig)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `CacheByChatsController.java` strangler boundary with `getCacheByChatsRepository(account)` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 136: CacheByChatsController Strangling via Clean DataSources & CacheByChatsRepositoryImpl
+- **Context:** In Telegram Android, automatic media cache retention policies, cleanup rules by chat categories (User, Group, Channel, Stories), and per-dialog retention exceptions were managed by `CacheByChatsController.java` (~215 lines) in `org.telegram.messenger`. `CacheByChatsController` coupled `SharedConfig` global preferences (`keep_media_type_*`), `UserConfig` account preferences storing binary hex-encoded `ByteBuffer` arrays of exceptions (`keep_media_exceptions_*`), and SQLite dialog lookups via `FileDatabase`. UI activities like `CacheControlActivity` directly instantiated `new CacheByChatsController(currentAccount)`.
+- **Decision:** Apply the Strangler Fig pattern to `CacheByChatsController`:
+  1. Implement `CacheByChatsRemoteDataSource`:
+     - Provides MTProto cache retention synchronization extension points via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `CacheByChatsLocalDataSource`:
+     - Encapsulates reading/writing retention periods (`getKeepMedia`, `setKeepMedia`), hex-encoded exception lists (`getKeepMediaExceptions`, `saveKeepMediaExceptions`), and fallback in-memory cache for headless environments.
+  3. Implement `CacheByChatsRepositoryImpl`:
+     - Implements `CacheByChatsRepository`, managing category duration lookups/updates, per-dialog exception mutations, and reactive `observeConfig()` via `StateFlow`.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to instantiate and provide `CacheByChatsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `CacheByChatsController.getCacheByChatsRepository(account)` and instance `getCacheByChatsRepository()`.
+- **Consequences:** Cache retention periods and per-chat exception rules are cleanly isolated behind testable domain contracts and repository implementations. Full backward compatibility is preserved for all legacy Java callers, with 100% unit tests passing and full APK assembly and device installation validated.
 
 ### ADR 135: FileRefController Strangling via Clean DataSources & FileRefRepositoryImpl
 - **Context:** In Telegram Android, refreshing expired MTProto file references (e.g. `FILE_REFERENCE_EXPIRED`) across messages, stories, stickers, wallpapers, saved gifs, and bots was centralized in `FileRefController.java` (~2347 lines). `FileRefController` directly coupled low-level `ConnectionsManager` RPCs, multi-level request deduplication structures (`locationRequester`, `parentRequester`), in-memory cached responses (`responseCache`), and specialized waiter lists (`wallpaperWaiters`, `savedGifsWaiters`, `recentStickersWaiter`, `favStickersWaiter`).

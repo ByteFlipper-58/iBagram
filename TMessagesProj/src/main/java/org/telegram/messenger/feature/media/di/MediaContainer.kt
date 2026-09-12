@@ -25,6 +25,9 @@ import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.Obser
 import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.RunAutoDeleteCleanupUseCase
 import org.telegram.messenger.feature.media.autodeletemedia.domain.usecase.UnlockFileUseCase
 import org.telegram.messenger.feature.media.autodeletemedia.presentation.AutoDeleteMediaViewModel
+import org.telegram.messenger.feature.media.cachebychats.data.datasource.CacheByChatsLocalDataSource
+import org.telegram.messenger.feature.media.cachebychats.data.datasource.CacheByChatsRemoteDataSource
+import org.telegram.messenger.feature.media.cachebychats.data.repository.CacheByChatsRepositoryImpl
 import org.telegram.messenger.feature.media.cachebychats.data.repository.LegacyCacheByChatsRepository
 import org.telegram.messenger.feature.media.cachebychats.domain.repository.CacheByChatsRepository
 import org.telegram.messenger.feature.media.cachebychats.domain.usecase.ClearKeepMediaExceptionsUseCase
@@ -760,10 +763,26 @@ class MediaContainer(val account: Int) {
     // Feature: CacheByChats (Keep-Media Cache Retention & Exceptions)
     // ==========================================
 
+    val cacheByChatsRemoteDataSource: CacheByChatsRemoteDataSource by lazy {
+        CacheByChatsRemoteDataSource(account)
+    }
+
+    val cacheByChatsLocalDataSource: CacheByChatsLocalDataSource by lazy {
+        CacheByChatsLocalDataSource(account)
+    }
+
+    fun createCacheByChatsRepository(): CacheByChatsRepository {
+        return CacheByChatsRepositoryImpl(
+            account = account,
+            localDataSource = cacheByChatsLocalDataSource,
+            remoteDataSource = cacheByChatsRemoteDataSource
+        )
+    }
+
     private var customCacheByChatsRepository: CacheByChatsRepository? = null
 
     var cacheByChatsRepository: CacheByChatsRepository
-        get() = customCacheByChatsRepository ?: LegacyCacheByChatsRepository(account)
+        get() = customCacheByChatsRepository ?: createCacheByChatsRepository()
         set(value) { customCacheByChatsRepository = value }
 
     val observeCacheByChatsConfigUseCase: ObserveCacheByChatsConfigUseCase
