@@ -75,6 +75,14 @@ public class FileRefController extends BaseController {
         super(instance);
     }
 
+    public static org.telegram.messenger.feature.media.fileref.domain.repository.FileRefRepository getFileRefRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getFileRefRepository();
+    }
+
+    public org.telegram.messenger.feature.media.fileref.domain.repository.FileRefRepository getFileRefRepository() {
+        return getFileRefRepository(currentAccount);
+    }
+
     public static String getKeyForParentObject(Object parentObject) {
         if (parentObject instanceof StoriesController.BotPreview) {
             StoriesController.BotPreview storyItem = (StoriesController.BotPreview) parentObject;

@@ -15,7 +15,10 @@ import org.telegram.messenger.feature.network.networkstats.domain.usecase.Observ
 import org.telegram.messenger.feature.network.networkstats.domain.usecase.RefreshNetworkStatsUseCase
 import org.telegram.messenger.feature.network.networkstats.domain.usecase.ResetNetworkStatsUseCase
 import org.telegram.messenger.feature.network.networkstats.presentation.NetworkStatsViewModel
+import org.telegram.messenger.feature.network.proxy.data.datasource.ProxyLocalDataSource
+import org.telegram.messenger.feature.network.proxy.data.datasource.ProxyRemoteDataSource
 import org.telegram.messenger.feature.network.proxy.data.repository.LegacyProxyRepository
+import org.telegram.messenger.feature.network.proxy.data.repository.ProxyRepositoryImpl
 import org.telegram.messenger.feature.network.proxy.domain.repository.ProxyRepository
 import org.telegram.messenger.feature.network.proxy.domain.usecase.AddProxyUseCase
 import org.telegram.messenger.feature.network.proxy.domain.usecase.CheckProxyPingUseCase
@@ -49,10 +52,26 @@ import org.telegram.messenger.feature.network.pushlistener.presentation.PushList
 
 class NetworkContainer(val account: Int) {
 
+    val proxyRemoteDataSource: ProxyRemoteDataSource by lazy {
+        ProxyRemoteDataSource(account)
+    }
+
+    val proxyLocalDataSource: ProxyLocalDataSource by lazy {
+        ProxyLocalDataSource(account)
+    }
+
+    fun createProxyRepository(): ProxyRepository {
+        return ProxyRepositoryImpl(
+            account = account,
+            localDataSource = proxyLocalDataSource,
+            remoteDataSource = proxyRemoteDataSource
+        )
+    }
+
     private var customProxyRepository: ProxyRepository? = null
 
     var proxyRepository: ProxyRepository
-        get() = customProxyRepository ?: LegacyProxyRepository(account)
+        get() = customProxyRepository ?: createProxyRepository()
         set(value) {
             customProxyRepository = value
         }

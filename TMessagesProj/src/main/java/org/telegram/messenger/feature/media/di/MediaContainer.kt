@@ -100,6 +100,9 @@ import org.telegram.messenger.feature.media.fileloader.domain.usecase.ObserveTra
 import org.telegram.messenger.feature.media.fileloader.domain.usecase.ObserveTransfersUseCase
 import org.telegram.messenger.feature.media.fileloader.domain.usecase.UploadFileUseCase
 import org.telegram.messenger.feature.media.fileloader.presentation.FileLoaderViewModel
+import org.telegram.messenger.feature.media.fileref.data.datasource.FileRefLocalDataSource
+import org.telegram.messenger.feature.media.fileref.data.datasource.FileRefRemoteDataSource
+import org.telegram.messenger.feature.media.fileref.data.repository.FileRefRepositoryImpl
 import org.telegram.messenger.feature.media.fileref.data.repository.LegacyFileRefRepository
 import org.telegram.messenger.feature.media.fileref.domain.repository.FileRefRepository
 import org.telegram.messenger.feature.media.fileref.domain.usecase.CancelFileRefRequestUseCase
@@ -627,10 +630,26 @@ class MediaContainer(val account: Int) {
         )
     }
 
+    val fileRefRemoteDataSource: FileRefRemoteDataSource by lazy {
+        FileRefRemoteDataSource(account)
+    }
+
+    val fileRefLocalDataSource: FileRefLocalDataSource by lazy {
+        FileRefLocalDataSource(account)
+    }
+
+    fun createFileRefRepository(): FileRefRepository {
+        return FileRefRepositoryImpl(
+            account = account,
+            localDataSource = fileRefLocalDataSource,
+            remoteDataSource = fileRefRemoteDataSource
+        )
+    }
+
     private var customFileRefRepository: FileRefRepository? = null
 
     var fileRefRepository: FileRefRepository
-        get() = customFileRefRepository ?: LegacyFileRefRepository(account)
+        get() = customFileRefRepository ?: createFileRefRepository()
         set(value) { customFileRefRepository = value }
 
     val observeFileRefStatsUseCase: ObserveFileRefStatsUseCase

@@ -51,6 +51,18 @@ public class ProxyRotationController implements NotificationCenter.NotificationC
         }
     };
 
+    public static ProxyRotationController getInstance() {
+        return INSTANCE;
+    }
+
+    public static org.telegram.messenger.feature.network.proxy.domain.repository.ProxyRepository getProxyRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getProxyRepository();
+    }
+
+    public org.telegram.messenger.feature.network.proxy.domain.repository.ProxyRepository getProxyRepository() {
+        return getProxyRepository(UserConfig.selectedAccount);
+    }
+
     public static void init() {
         INSTANCE.initInternal();
     }

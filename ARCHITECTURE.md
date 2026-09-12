@@ -947,10 +947,48 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `TopicsRepositoryImpl.kt` (Clean repository coordinating local caches, remote RPCs, and reactive observeTopics & observeForumUnreadCount)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `TopicsController.java` strangler boundary with `getTopicsRepository(account)` accessor.
+  - [x] Feature: `ProxyRotationController` Strangling (`feature.network.proxy` - ADR 134):
+    - `ProxyRemoteDataSource.kt` (Proxy ping checks via ConnectionsManager.checkProxy and ConnectionsManager.setProxySettings)
+    - `ProxyLocalDataSource.kt` (SharedConfig.proxyList, currentProxy, proxyRotationEnabled, timeout preferences, SharedPreferences persistence)
+    - `ProxyRepositoryImpl.kt` (Clean repository coordinating local settings, remote pings, and reactive observeProxySettings)
+    - `NetworkContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ProxyRotationController.java` strangler boundary with `getProxyRepository(account)` accessor.
+  - [x] Feature: `FileRefController` Strangling (`feature.media.fileref` - ADR 135):
+    - `FileRefRemoteDataSource.kt` (MTProto file reference renewal requests and request cancellation)
+    - `FileRefLocalDataSource.kt` (FileRefController bridge, parent key mapping, memory cache fallback)
+    - `FileRefRepositoryImpl.kt` (Clean repository coordinating renewal deduplication, caching, metrics, and reactive observeStats)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `FileRefController.java` strangler boundary with `getFileRefRepository(account)` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 135: FileRefController Strangling via Clean DataSources & FileRefRepositoryImpl
+- **Context:** In Telegram Android, refreshing expired MTProto file references (e.g. `FILE_REFERENCE_EXPIRED`) across messages, stories, stickers, wallpapers, saved gifs, and bots was centralized in `FileRefController.java` (~2347 lines). `FileRefController` directly coupled low-level `ConnectionsManager` RPCs, multi-level request deduplication structures (`locationRequester`, `parentRequester`), in-memory cached responses (`responseCache`), and specialized waiter lists (`wallpaperWaiters`, `savedGifsWaiters`, `recentStickersWaiter`, `favStickersWaiter`).
+- **Decision:** Apply the Strangler Fig pattern to `FileRefController`:
+  1. Implement `FileRefRemoteDataSource`:
+     - Encapsulates MTProto file reference requests and cancellation via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `FileRefLocalDataSource`:
+     - Encapsulates parent key extraction, error classification (`isFileRefError`), cached reference application, and headless in-memory cache fallback.
+  3. Implement `FileRefRepositoryImpl`:
+     - Implements `FileRefRepository`, managing request deduplication, cache expiration, metrics tracking, and reactive `observeStats()` via `StateFlow`.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to instantiate and provide `FileRefRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `FileRefController.getFileRefRepository(account)` and instance `getFileRefRepository()`.
+- **Consequences:** File reference renewals, request deduplication, and cache lifecycle are cleanly isolated behind testable domain contracts. Full backward compatibility is preserved for all legacy Java callers, with 100% unit tests passing and full APK assembly validated.
+
+### ADR 134: ProxyRotationController Strangling via Clean DataSources & ProxyRepositoryImpl
+- **Context:** In Telegram Android, proxy configuration, latency checks, and automatic background proxy rotation were managed by `ProxyRotationController.java` (~130 lines) in conjunction with `SharedConfig` and `ConnectionsManager`. `ProxyRotationController` directly coupled Android `SystemClock`, `SharedPreferences` writes (`MessagesController.getGlobalMainSettings()`), `NotificationCenter` broadcasts (`proxySettingsChanged`, `proxyCheckDone`, `proxyChangedByRotation`), and native proxy switching via `ConnectionsManager.setProxySettings`.
+- **Decision:** Apply the Strangler Fig pattern to `ProxyRotationController`:
+  1. Implement `ProxyRemoteDataSource`:
+     - Encapsulates proxy latency checks (`checkProxyPing`) via coroutine-wrapped `ConnectionsManager.checkProxy` and proxy connection settings application (`applyProxySettings`).
+  2. Implement `ProxyLocalDataSource`:
+     - Encapsulates proxy list persistence (`SharedConfig.proxyList`), active proxy state (`SharedConfig.currentProxy`), rotation timeouts, SharedPreferences configuration, and headless in-memory fallback.
+  3. Implement `ProxyRepositoryImpl`:
+     - Implements `ProxyRepository`, coordinating proxy CRUD operations, connection enabling/disabling, rotation toggles, latency checks, and reactive `observeProxySettings()` via `NotificationCenterFlowBridge`.
+  4. Update `NetworkContainer` and `AccountFeatureContainer` to instantiate and provide `ProxyRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `ProxyRotationController.getProxyRepository(account)` and instance `getProxyRepository()`.
+- **Consequences:** Proxy management, latency checking, rotation scheduling, and reactive settings observation are cleanly decoupled behind testable domain interfaces. Full backward compatibility is preserved for all legacy Java callers, with 100% unit tests passing and full APK assembly validated.
 
 ### ADR 133: TopicsController Strangling via Clean DataSources & TopicsRepositoryImpl
 - **Context:** In Telegram Android, forum topics management was centralized in `TopicsController.java` (~1400 lines). `TopicsController` directly handled MTProto RPCs (`TL_forum.TL_messages_getForumTopics`, `TL_forum.TL_messages_editForumTopic`, `TL_forum.TL_messages_updatePinnedForumTopic`, `TL_forum.TL_messages_deleteTopicHistory`, `TL_forum.TL_messages_reorderPinnedForumTopics`, `TLRPC.TL_messages_readReactions`), SQLite persistence (`MessagesStorage.loadTopics`, `saveTopics`, `removeTopic`, `removeTopics`, `updateTopicData`), in-memory topic collections (`LongSparseArray<ArrayList<TLRPC.TL_forumTopic>> topicsByChatId`), forum unread counters, and `NotificationCenter` broadcasts (`topicsDidLoaded`). UI activities like `TopicsFragment` directly invoked `MessagesController.getInstance(account).getTopicsController()`.

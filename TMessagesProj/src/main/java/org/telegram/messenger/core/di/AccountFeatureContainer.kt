@@ -1682,6 +1682,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = media.fileRefRepository
         set(value) { media.fileRefRepository = value }
 
+    fun createFileRefRepository(): FileRefRepository = media.createFileRefRepository()
+
     val observeFileRefStatsUseCase: ObserveFileRefStatsUseCase
         get() = media.observeFileRefStatsUseCase
 
@@ -3192,6 +3194,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
     var proxyRepository: ProxyRepository
         get() = network.proxyRepository
         set(value) { network.proxyRepository = value }
+
+    fun createProxyRepository(): ProxyRepository = network.createProxyRepository()
 
     val observeProxySettingsUseCase: ObserveProxySettingsUseCase
         get() = network.observeProxySettingsUseCase
