@@ -66,12 +66,20 @@ object NotificationCenterFlowBridge {
         }
 
         runOnMainThread {
-            NotificationCenter.getInstance(account).addObserver(observer, eventId)
+            try {
+                NotificationCenter.getInstance(account)?.addObserver(observer, eventId)
+            } catch (_: Throwable) {
+                // Ignored when running outside Android application runtime
+            }
         }
 
         awaitClose {
             runOnMainThread {
-                NotificationCenter.getInstance(account).removeObserver(observer, eventId)
+                try {
+                    NotificationCenter.getInstance(account)?.removeObserver(observer, eventId)
+                } catch (_: Throwable) {
+                    // Ignored when running outside Android application runtime
+                }
             }
         }
     }
@@ -86,17 +94,29 @@ object NotificationCenterFlowBridge {
         }
 
         runOnMainThread {
-            val nc = NotificationCenter.getInstance(account)
-            for (id in eventIds) {
-                nc.addObserver(observer, id)
+            try {
+                val nc = NotificationCenter.getInstance(account)
+                if (nc != null) {
+                    for (id in eventIds) {
+                        nc.addObserver(observer, id)
+                    }
+                }
+            } catch (_: Throwable) {
+                // Ignored when running outside Android application runtime
             }
         }
 
         awaitClose {
             runOnMainThread {
-                val nc = NotificationCenter.getInstance(account)
-                for (id in eventIds) {
-                    nc.removeObserver(observer, id)
+                try {
+                    val nc = NotificationCenter.getInstance(account)
+                    if (nc != null) {
+                        for (id in eventIds) {
+                            nc.removeObserver(observer, id)
+                        }
+                    }
+                } catch (_: Throwable) {
+                    // Ignored when running outside Android application runtime
                 }
             }
         }
@@ -112,12 +132,20 @@ object NotificationCenterFlowBridge {
         }
 
         runOnMainThread {
-            NotificationCenter.getGlobalInstance().addObserver(observer, eventId)
+            try {
+                NotificationCenter.getGlobalInstance()?.addObserver(observer, eventId)
+            } catch (_: Throwable) {
+                // Ignored when running outside Android application runtime
+            }
         }
 
         awaitClose {
             runOnMainThread {
-                NotificationCenter.getGlobalInstance().removeObserver(observer, eventId)
+                try {
+                    NotificationCenter.getGlobalInstance()?.removeObserver(observer, eventId)
+                } catch (_: Throwable) {
+                    // Ignored when running outside Android application runtime
+                }
             }
         }
     }

@@ -156,7 +156,10 @@ import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetMainTabs
 import org.telegram.messenger.feature.system.maintabs.domain.usecase.SetShowCallsTabUseCase
 import org.telegram.messenger.feature.system.maintabs.domain.usecase.UpdateChatsUnreadCountUseCase
 import org.telegram.messenger.feature.system.maintabs.presentation.MainTabsViewModel
+import org.telegram.messenger.feature.system.notifications.data.datasource.NotificationsLocalDataSource
+import org.telegram.messenger.feature.system.notifications.data.datasource.NotificationsRemoteDataSource
 import org.telegram.messenger.feature.system.notifications.data.repository.LegacyNotificationsRepository
+import org.telegram.messenger.feature.system.notifications.data.repository.NotificationsRepositoryImpl
 import org.telegram.messenger.feature.system.notifications.domain.repository.NotificationsRepository
 import org.telegram.messenger.feature.system.notifications.domain.usecase.GetBadgeSettingsUseCase
 import org.telegram.messenger.feature.system.notifications.domain.usecase.GetBadgeUseCase
@@ -328,13 +331,29 @@ class SystemContainer(val account: Int) {
         )
     }
 
+    val notificationsRemoteDataSource: NotificationsRemoteDataSource by lazy {
+        NotificationsRemoteDataSource(account)
+    }
+
+    val notificationsLocalDataSource: NotificationsLocalDataSource by lazy {
+        NotificationsLocalDataSource(account)
+    }
+
     private var customNotificationsRepository: NotificationsRepository? = null
 
     var notificationsRepository: NotificationsRepository
-        get() = customNotificationsRepository ?: LegacyNotificationsRepository(account)
+        get() = customNotificationsRepository ?: createNotificationsRepository()
         set(value) {
             customNotificationsRepository = value
         }
+
+    fun createNotificationsRepository(): NotificationsRepository {
+        return NotificationsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = notificationsLocalDataSource,
+            remoteDataSource = notificationsRemoteDataSource
+        )
+    }
 
     val observeNotificationSettingsUseCase: ObserveNotificationSettingsUseCase
         get() = ObserveNotificationSettingsUseCase(notificationsRepository)

@@ -3902,6 +3902,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = system.notificationsRepository
         set(value) { system.notificationsRepository = value }
 
+    fun createNotificationsRepository(): NotificationsRepository = system.createNotificationsRepository()
+
     val observeNotificationSettingsUseCase: ObserveNotificationSettingsUseCase
         get() = system.observeNotificationSettingsUseCase
 

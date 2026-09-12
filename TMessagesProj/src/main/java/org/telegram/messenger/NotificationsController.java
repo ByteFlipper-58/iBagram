@@ -6293,6 +6293,14 @@ public class NotificationsController extends BaseController implements Notificat
         return dialogsNotificationsFacade;
     }
 
+    /**
+     * Strangler facade hook providing access to the clean modular NotificationsRepository.
+     * Incrementally replaces direct usages of NotificationsController.
+     */
+    public org.telegram.messenger.feature.system.notifications.domain.repository.NotificationsRepository getNotificationsRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(currentAccount).getNotificationsRepository();
+    }
+
     public void loadTopicsNotificationsExceptions(long dialogId, Consumer<HashSet<Integer>> consumer) {
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             HashSet<Integer> topics = new HashSet<>();

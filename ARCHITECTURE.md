@@ -880,10 +880,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `ContactsRepositoryImpl.kt` (Local + remote coordination with safe NotificationCenter dispatch)
     - `SocialContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `ContactsController.java` strangler boundary with `getContactsRepository()` accessor.
+  - [x] Feature: `NotificationsController` Strangling (`feature.system.notifications`):
+    - `NotificationsRemoteDataSource.kt` (MTProto RPC requests: updateNotifySettings, setReactionsNotifySettings, setContactSignUpNotification, getNotifyExceptions, resetNotifySettings)
+    - `NotificationsLocalDataSource.kt` (SharedPreferences + MessagesStorage SQLite persistence & NotificationsController in-memory cache)
+    - `NotificationsRepositoryImpl.kt` (Local + remote coordination with safe NotificationCenter dispatch)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `NotificationsController.java` strangler boundary with `getNotificationsRepository()` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 123: NotificationsController Strangling via BaseDataSources & NotificationsRepositoryImpl
+- **Context:** In Telegram Android, `NotificationsController.java` is an enormous monolithic controller (>3,500 lines) handling push notifications, notification settings (mute timers, vibration, sound, LED color, priority), in-app notifications, badge counting, reaction alerts, and sync with MTProto via `account.updateNotifySettings`. Settings and mute states were split across `SharedPreferences`, `MessagesStorage` SQLite tables (`dialogs`, `updateMutedDialogsFiltersCounters`), and static in-memory hashes, tightly coupling UI, background services, and storage.
+- **Decision:** Apply the Strangler Fig pattern to `NotificationsController`:
+  1. Implement `NotificationsRemoteDataSource`:
+     - Encapsulates MTProto RPC requests: `updateNotifySettings(...)` (`TL_account_updateNotifySettings`), `setReactionsNotifySettings(...)` (`TL_account_setReactionsNotifySettings`), `setContactSignUpNotification(...)` (`TL_account_setContactSignUpNotification`), `getNotifyExceptions(...)` (`TL_account_getNotifyExceptions`), and `resetNotifySettings()` (`TL_account_resetNotifySettings`) with cancellation support.
+  2. Implement `NotificationsLocalDataSource`:
+     - Safely manages `SharedPreferences` reads/writes for global notifications, sound, vibration, and mute times.
+     - Dispatches SQLite database operations (`updateMutedDialogsFiltersCounters`, `setDialogFlags`) via `MessagesStorage` safely on `Dispatchers.IO`.
+     - Updates in-memory mute states, auto-delete, and badging in `NotificationsController` safely.
+  3. Implement `NotificationsRepositoryImpl`:
+     - Implements `NotificationsRepository`, self-contained with decoupled domain/data constants (`KEY_PRIVATE`, `KEY_GROUP`, `KEY_CHANNEL`, `TYPE_PRIVATE`, etc.) to prevent static initialization cycles in headless test environments.
+     - Emits reactive updates via `observeNotificationSettings()` and `observeGlobalSettings()` leveraging `NotificationCenterFlowBridge` with safe headless fallbacks.
+  4. Wire into `SystemContainer` and `AccountFeatureContainer` as the default `NotificationsRepository` implementation.
+  5. Add strangler hook `getNotificationsRepository()` in `NotificationsController.java` allowing callers to migrate incrementally.
+- **Consequences:** Notification mutations and settings are cleanly separated into testable remote and local layers, verified by comprehensive unit tests (`NotificationsRepositoryImplTest.kt`, 13 passed) and on-device testing (`RZCW41MQNVV`, Samsung Galaxy A54 5G) with 0 regressions.
 
 ### ADR 122: ContactsController Strangling via BaseDataSources & ContactsRepositoryImpl
 - **Context:** In Telegram Android, `ContactsController.java` is a massive ~3,130-line monolithic controller managing contacts synchronization, local SQLite storage, system phonebook sync, privacy rules, and contacts dictionary mappings (`contactsDict`, `contactsBookSPhones`). Methods throughout Telegram UI and background sync services directly invoked `ContactsController.getInstance(account).contacts` or made raw calls to `MessagesStorage.putContacts` and `ConnectionsManager.sendRequest`.
