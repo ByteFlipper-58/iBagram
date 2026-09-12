@@ -941,10 +941,29 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `TranslationRepositoryImpl.kt` (MTProto text translation, dialog translation state toggles, reactive observeTranslateSettings & observeDialogTranslationState)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `TranslateController.java` strangler boundary with `getTranslationRepository(account)` accessor.
+  - [x] Feature: `TopicsController` Strangling (`feature.messaging.topics` - ADR 133):
+    - `TopicsRemoteDataSource.kt` (MTProto RPC requests: messages.getForumTopics, messages.getSavedDialogs, messages.editForumTopic, messages.updatePinnedForumTopic, messages.deleteTopicHistory, messages.reorderPinnedForumTopics, messages.readReactions via BaseRemoteDataSource)
+    - `TopicsLocalDataSource.kt` (Local cache management, in-memory fallback cache, SQLite storage persistence via MessagesStorage)
+    - `TopicsRepositoryImpl.kt` (Clean repository coordinating local caches, remote RPCs, and reactive observeTopics & observeForumUnreadCount)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `TopicsController.java` strangler boundary with `getTopicsRepository(account)` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 133: TopicsController Strangling via Clean DataSources & TopicsRepositoryImpl
+- **Context:** In Telegram Android, forum topics management was centralized in `TopicsController.java` (~1400 lines). `TopicsController` directly handled MTProto RPCs (`TL_forum.TL_messages_getForumTopics`, `TL_forum.TL_messages_editForumTopic`, `TL_forum.TL_messages_updatePinnedForumTopic`, `TL_forum.TL_messages_deleteTopicHistory`, `TL_forum.TL_messages_reorderPinnedForumTopics`, `TLRPC.TL_messages_readReactions`), SQLite persistence (`MessagesStorage.loadTopics`, `saveTopics`, `removeTopic`, `removeTopics`, `updateTopicData`), in-memory topic collections (`LongSparseArray<ArrayList<TLRPC.TL_forumTopic>> topicsByChatId`), forum unread counters, and `NotificationCenter` broadcasts (`topicsDidLoaded`). UI activities like `TopicsFragment` directly invoked `MessagesController.getInstance(account).getTopicsController()`.
+- **Decision:** Apply the Strangler Fig pattern to `TopicsController`:
+  1. Implement `TopicsRemoteDataSource`:
+     - Encapsulates MTProto RPC execution: `getForumTopics`, `getSavedDialogsForForum`, `editForumTopic`, `updatePinnedForumTopic`, `deleteTopicHistory`, `reorderPinnedForumTopics`, and `readReactions` via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `TopicsLocalDataSource`:
+     - Encapsulates interaction with `TopicsController` in-memory structures, SQLite persistence via `MessagesStorage`, and fallback in-memory caching for headless JVM environments.
+  3. Implement `TopicsRepositoryImpl`:
+     - Implements `TopicsRepository`, coordinating topic listing, topic lookups, pagination/preloading, reloading, topic state toggles (close, pin, show), deletion, pinned reordering, reaction read marking, forum unread counters, and reactive `observeTopics(chatId)` & `observeForumUnreadCount(chatId)` via `NotificationCenterFlowBridge`.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to instantiate and provide `TopicsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `TopicsController.getTopicsRepository(account)` and instance `getTopicsRepository()`.
+- **Consequences:** Forum topics lifecycle, caching, mutations, and reactive flows are cleanly decoupled behind testable domain contracts and repository implementations. Full backward compatibility is preserved for all legacy Java callers, with 100% unit tests passing and full APK assembly validated.
 
 ### ADR 132: TranslateController Strangling via Clean DataSources & TranslationRepositoryImpl
 - **Context:** In Telegram Android, message and chat translation and language settings were managed across `TranslateController.java` (~2450 lines), `LocaleController.java`, and UI activities like `RestrictedLanguagesSelectActivity`. `TranslateController` directly handled MTProto RPCs (`TLRPC.TL_messages_translateText`), SharedPreferences settings (`translate_button`, `translate_chat_button`), dialog translation states in `LongSparseArray`, restricted language sets, and unread dialog message translation caches. Legacy UI components directly invoked `TranslateController.getInstance(account)`.

@@ -2267,6 +2267,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = messaging.topicsRepository
         set(value) { messaging.topicsRepository = value }
 
+    fun createTopicsRepository(): TopicsRepository = messaging.createTopicsRepository()
+
     val observeTopicsUseCase: ObserveTopicsUseCase
         get() = messaging.observeTopicsUseCase
 

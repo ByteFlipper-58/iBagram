@@ -344,6 +344,9 @@ import org.telegram.messenger.feature.messaging.topics.domain.usecase.ToggleClos
 import org.telegram.messenger.feature.messaging.topics.domain.usecase.TogglePinTopicUseCase
 import org.telegram.messenger.feature.messaging.topics.domain.usecase.ToggleShowTopicUseCase
 import org.telegram.messenger.feature.messaging.topics.presentation.TopicsViewModel
+import org.telegram.messenger.feature.messaging.topics.data.datasource.TopicsLocalDataSource
+import org.telegram.messenger.feature.messaging.topics.data.datasource.TopicsRemoteDataSource
+import org.telegram.messenger.feature.messaging.topics.data.repository.TopicsRepositoryImpl
 import org.telegram.messenger.feature.messaging.translate.data.datasource.TranslationLocalDataSource
 import org.telegram.messenger.feature.messaging.translate.data.datasource.TranslationRemoteDataSource
 import org.telegram.messenger.feature.messaging.translate.data.repository.LegacyTranslationRepository
@@ -694,10 +697,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val topicsRemoteDataSource: TopicsRemoteDataSource by lazy {
+        TopicsRemoteDataSource(account)
+    }
+
+    val topicsLocalDataSource: TopicsLocalDataSource by lazy {
+        TopicsLocalDataSource(account)
+    }
+
+    fun createTopicsRepository(): TopicsRepository {
+        return TopicsRepositoryImpl(
+            account = account,
+            localDataSource = topicsLocalDataSource,
+            remoteDataSource = topicsRemoteDataSource
+        )
+    }
+
     private var customTopicsRepository: TopicsRepository? = null
 
     var topicsRepository: TopicsRepository
-        get() = customTopicsRepository ?: LegacyTopicsRepository(account)
+        get() = customTopicsRepository ?: createTopicsRepository()
         set(value) {
             customTopicsRepository = value
         }

@@ -52,6 +52,14 @@ public class TopicsController extends BaseController {
     LongSparseIntArray currentOpenTopicsCounter = new LongSparseIntArray();
     LongSparseIntArray openedTopicsByChatId = new LongSparseIntArray();
 
+    public static org.telegram.messenger.feature.messaging.topics.domain.repository.TopicsRepository getTopicsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getTopicsRepository();
+    }
+
+    public org.telegram.messenger.feature.messaging.topics.domain.repository.TopicsRepository getTopicsRepository() {
+        return getTopicsRepository(currentAccount);
+    }
+
     public TopicsController(int num) {
         super(num);
     }
