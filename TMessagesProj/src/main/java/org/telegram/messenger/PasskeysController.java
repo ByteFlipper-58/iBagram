@@ -56,6 +56,13 @@ import kotlinx.coroutines.JobCancellationException;
 @RequiresApi(api = 28)
 public class PasskeysController {
 
+    /**
+     * Strangler Fig hook providing access to the clean domain [PasskeysRepository].
+     */
+    public static org.telegram.messenger.feature.security.passkeys.domain.repository.PasskeysRepository getPasskeysRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSecurity().getPasskeysRepository();
+    }
+
     public static void create(Context context, int currentAccount, Utilities.Callback2<TL_account.Passkey, String> done) {
         if (!BuildVars.SUPPORTS_PASSKEYS) return;
 

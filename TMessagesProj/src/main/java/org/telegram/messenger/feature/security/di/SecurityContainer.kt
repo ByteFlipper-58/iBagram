@@ -16,6 +16,8 @@ import org.telegram.messenger.feature.security.authtokens.domain.usecase.SaveLog
 import org.telegram.messenger.feature.security.authtokens.domain.usecase.SaveLogoutTokensUseCase
 import org.telegram.messenger.feature.security.authtokens.domain.usecase.ValidateAuthTokenFormatUseCase
 import org.telegram.messenger.feature.security.authtokens.presentation.AuthTokensViewModel
+import org.telegram.messenger.feature.security.biometrics.data.datasource.BiometricsLocalDataSource
+import org.telegram.messenger.feature.security.biometrics.data.repository.BiometricsRepositoryImpl
 import org.telegram.messenger.feature.security.biometrics.data.repository.LegacyBiometricsRepository
 import org.telegram.messenger.feature.security.biometrics.domain.repository.BiometricsRepository
 import org.telegram.messenger.feature.security.biometrics.domain.usecase.CheckBiometricKeyReadyUseCase
@@ -48,7 +50,10 @@ import org.telegram.messenger.feature.security.captcha.domain.usecase.ObserveAct
 import org.telegram.messenger.feature.security.captcha.domain.usecase.SubmitCaptchaResultUseCase
 import org.telegram.messenger.feature.security.captcha.domain.usecase.VerifyCaptchaUseCase
 import org.telegram.messenger.feature.security.captcha.presentation.CaptchaViewModel
+import org.telegram.messenger.feature.security.passkeys.data.datasource.PasskeysLocalDataSource
+import org.telegram.messenger.feature.security.passkeys.data.datasource.PasskeysRemoteDataSource
 import org.telegram.messenger.feature.security.passkeys.data.repository.LegacyPasskeysRepository
+import org.telegram.messenger.feature.security.passkeys.data.repository.PasskeysRepositoryImpl
 import org.telegram.messenger.feature.security.passkeys.domain.repository.PasskeysRepository
 import org.telegram.messenger.feature.security.passkeys.domain.usecase.CheckCanAddPasskeyUseCase
 import org.telegram.messenger.feature.security.passkeys.domain.usecase.DeletePasskeyUseCase
@@ -335,10 +340,25 @@ class SecurityContainer(val account: Int) {
         )
     }
 
+    val passkeysRemoteDataSource: PasskeysRemoteDataSource by lazy {
+        PasskeysRemoteDataSource(account)
+    }
+
+    val passkeysLocalDataSource: PasskeysLocalDataSource by lazy {
+        PasskeysLocalDataSource(account)
+    }
+
+    fun createPasskeysRepository(): PasskeysRepository {
+        return PasskeysRepositoryImpl(
+            localDataSource = passkeysLocalDataSource,
+            remoteDataSource = passkeysRemoteDataSource
+        )
+    }
+
     private var customPasskeysRepository: PasskeysRepository? = null
 
     var passkeysRepository: PasskeysRepository
-        get() = customPasskeysRepository ?: LegacyPasskeysRepository(account)
+        get() = customPasskeysRepository ?: createPasskeysRepository()
         set(value) {
             customPasskeysRepository = value
         }
@@ -478,10 +498,20 @@ class SecurityContainer(val account: Int) {
         )
     }
 
+    val biometricsLocalDataSource: BiometricsLocalDataSource by lazy {
+        BiometricsLocalDataSource()
+    }
+
+    fun createBiometricsRepository(): BiometricsRepository {
+        return BiometricsRepositoryImpl(
+            localDataSource = biometricsLocalDataSource
+        )
+    }
+
     private var customBiometricsRepository: BiometricsRepository? = null
 
     var biometricsRepository: BiometricsRepository
-        get() = customBiometricsRepository ?: LegacyBiometricsRepository()
+        get() = customBiometricsRepository ?: createBiometricsRepository()
         set(value) {
             customBiometricsRepository = value
         }

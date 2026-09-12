@@ -21,6 +21,14 @@ import javax.crypto.Cipher;
 
 @RequiresApi(api = Build.VERSION_CODES.M)
 public class FingerprintController {
+
+    /**
+     * Strangler Fig hook providing access to the clean domain [BiometricsRepository].
+     */
+    public static org.telegram.messenger.feature.security.biometrics.domain.repository.BiometricsRepository getBiometricsRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(UserConfig.selectedAccount).getSecurity().getBiometricsRepository();
+    }
+
     private final static String KEY_ALIAS = "tmessages_passcode";
 
     private static KeyStore keyStore;

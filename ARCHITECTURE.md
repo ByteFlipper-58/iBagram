@@ -902,12 +902,35 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `LocationRemoteDataSource.kt` (MTProto RPC requests: getRecentLocations, stopLiveLocation, editLiveLocation, markLiveLocationsAsRead)
     - `LocationLocalDataSource.kt` (SQLite persistence for sharing_locations on Dispatchers.IO, in-memory LocationController state & SendMessagesHelper dispatch)
     - `LocationRepositoryImpl.kt` (Local + remote coordination, reactive active sharings and peer coordinates, and safe NotificationCenter dispatch)
-    - `SocialContainer.kt` & `AccountFeatureContainer.kt` wiring
-    - `LocationController.java` strangler boundary with `getLocationRepository()` accessor.
+  - [x] Feature: `PasskeysController` & `FingerprintController` Strangling (`feature.security.passkeys` & `feature.security.biometrics`):
+    - `PasskeysRemoteDataSource.kt` (MTProto RPC requests: getPasskeys, deletePasskey, initPasskeyRegistration, registerPasskey)
+    - `PasskeysLocalDataSource.kt` (OS Passkey capabilities & MessagesController config limits)
+    - `PasskeysRepositoryImpl.kt` (Coordinating PasskeysLocalDataSource and PasskeysRemoteDataSource with StateFlow caching)
+    - `BiometricsLocalDataSource.kt` (Hardware detection, enrolled biometrics, Android KeyStore key readiness and invalidation)
+    - `BiometricsRepositoryImpl.kt` (Coordinating BiometricsLocalDataSource with NotificationCenter didGenerateFingerprintKeyPair event stream)
+    - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `PasskeysController.java` & `FingerprintController.java` strangler boundaries (`getPasskeysRepository()`, `getBiometricsRepository()`).
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 127: PasskeysController & FingerprintController Strangling via Clean DataSources & Repository Implementations
+- **Context:** In Telegram Android, passkeys and biometrics authentication were managed across `PasskeysController.java` (~331 lines) and `FingerprintController.java` (~145 lines). Passkeys registration challenges (`TL_account.initPasskeyRegistration`), passkey registration (`TL_account.registerPasskey`), passkey deletion (`TL_account.deletePasskey`), and listing (`TL_account.getPasskeys`) were entangled with CredentialManager Android API calls, JSON parsing, and UI alert dialogs. Biometrics and keystore RSA key pair generation (`AndroidKeyStore`, `KeyProperties`, `FingerprintManagerCompat`) communicated via global notifications (`NotificationCenter.didGenerateFingerprintKeyPair`) and static singletons.
+- **Decision:** Apply the Strangler Fig pattern to both security controllers:
+  1. Implement `PasskeysRemoteDataSource`:
+     - Encapsulates MTProto RPC requests: `getPasskeys()`, `deletePasskey(id)`, `initPasskeyRegistration()`, and `registerPasskey(credential)` with coroutine cancellation support.
+  2. Implement `PasskeysLocalDataSource`:
+     - Encapsulates OS version checks (`Build.VERSION.SDK_INT >= 28 && BuildVars.SUPPORTS_PASSKEYS`) and server-driven passkey quota limits (`passkeysAccountPasskeysMax`).
+  3. Implement `PasskeysRepositoryImpl`:
+     - Implements `PasskeysRepository`, managing reactive `observePasskeys()`, cache bypass with `force = true`, and state synchronization on passkey deletions.
+  4. Implement `BiometricsLocalDataSource`:
+     - Encapsulates hardware detection, biometric enrollment, Android KeyStore key readiness, permanent key invalidation detection, and key deletion.
+  5. Implement `BiometricsRepositoryImpl`:
+     - Implements `BiometricsRepository`, converting `NotificationCenter.didGenerateFingerprintKeyPair` events into reactive `observeKeyState()` flows on `Dispatchers.IO` with fallback mapping across all Android versions.
+  6. Wire into `SecurityContainer` and `AccountFeatureContainer` as the default implementations.
+  7. Add strangler hooks `PasskeysController.getPasskeysRepository(account)` and `FingerprintController.getBiometricsRepository()`.
+- **Consequences:** All passkeys and biometric authentication operations are decoupled into clean, testable layers with 100% test coverage (`PasskeysRepositoryImplTest.kt`, `BiometricsRepositoryImplTest.kt`) passing and verified with clean APK assembly (`assembleAfatDebug`).
 
 ### ADR 126: LocationController Strangling via BaseDataSources & LocationRepositoryImpl
 - **Context:** In Telegram Android, `LocationController.java` (~1,419 lines) manages GPS coordinates, active live location sharings, proximity alerts, peer location cache (`locationsCache`), and SQLite database persistence (`sharing_locations`). Direct calls to `LocationController.getInstance(account)` and raw MTProto requests (`TL_messages_getRecentLocations`, `TL_messages_editMessage`, `TL_messages_readMessageContents`) were scattered across UI fragments and background services.
