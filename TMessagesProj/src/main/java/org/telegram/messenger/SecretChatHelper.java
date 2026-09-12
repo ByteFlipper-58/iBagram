@@ -99,6 +99,16 @@ public class SecretChatHelper extends BaseController {
         super(instance);
     }
 
+    /**
+     * Strangler hook providing access to the clean domain SecretChatRepository.
+     */
+    public org.telegram.messenger.feature.security.secretchat.domain.repository.SecretChatRepository getSecretChatRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion
+                .get(currentAccount)
+                .getSecurity()
+                .getSecretChatRepository();
+    }
+
     public void cleanup() {
         sendingNotifyLayer.clear();
         acceptingChats.clear();

@@ -3322,6 +3322,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = security.secretChatRepository
         set(value) { security.secretChatRepository = value }
 
+    fun createSecretChatRepository(): SecretChatRepository = security.createSecretChatRepository()
+
     val observeSecretChatUseCase: ObserveSecretChatUseCase
         get() = security.observeSecretChatUseCase
 

@@ -73,7 +73,10 @@ import org.telegram.messenger.feature.security.privacy.domain.usecase.SetPasscod
 import org.telegram.messenger.feature.security.privacy.domain.usecase.SetPrivacyRuleUseCase
 import org.telegram.messenger.feature.security.privacy.domain.usecase.UnblockPrivacyPeerUseCase
 import org.telegram.messenger.feature.security.privacy.presentation.PrivacyViewModel
+import org.telegram.messenger.feature.security.secretchat.data.datasource.SecretChatLocalDataSource
+import org.telegram.messenger.feature.security.secretchat.data.datasource.SecretChatRemoteDataSource
 import org.telegram.messenger.feature.security.secretchat.data.repository.LegacySecretChatRepository
+import org.telegram.messenger.feature.security.secretchat.data.repository.SecretChatRepositoryImpl
 import org.telegram.messenger.feature.security.secretchat.domain.repository.SecretChatRepository
 import org.telegram.messenger.feature.security.secretchat.domain.usecase.AcceptSecretChatUseCase
 import org.telegram.messenger.feature.security.secretchat.domain.usecase.DeclineSecretChatUseCase
@@ -113,10 +116,26 @@ import org.telegram.messenger.feature.security.unconfirmedauth.presentation.Unco
 
 class SecurityContainer(val account: Int) {
 
+    val secretChatRemoteDataSource: SecretChatRemoteDataSource by lazy {
+        SecretChatRemoteDataSource(account)
+    }
+
+    val secretChatLocalDataSource: SecretChatLocalDataSource by lazy {
+        SecretChatLocalDataSource(account)
+    }
+
+    fun createSecretChatRepository(): SecretChatRepository {
+        return SecretChatRepositoryImpl(
+            currentAccount = account,
+            localDataSource = secretChatLocalDataSource,
+            remoteDataSource = secretChatRemoteDataSource
+        )
+    }
+
     private var customSecretChatRepository: SecretChatRepository? = null
 
     var secretChatRepository: SecretChatRepository
-        get() = customSecretChatRepository ?: LegacySecretChatRepository(account)
+        get() = customSecretChatRepository ?: createSecretChatRepository()
         set(value) {
             customSecretChatRepository = value
         }

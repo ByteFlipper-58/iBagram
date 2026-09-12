@@ -886,10 +886,31 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `NotificationsRepositoryImpl.kt` (Local + remote coordination with safe NotificationCenter dispatch)
     - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `NotificationsController.java` strangler boundary with `getNotificationsRepository()` accessor.
+  - [x] Feature: `SecretChatHelper` Strangling (`feature.security.secretchat`):
+    - `SecretChatRemoteDataSource.kt` (MTProto RPC requests: getDhConfig, requestEncryption, acceptEncryption, discardEncryption, sendEncryptedService)
+    - `SecretChatLocalDataSource.kt` (SQLite persistence on Dispatchers.IO, in-memory cache inspection, and SecretChatHelper crypto coordination)
+    - `SecretChatRepositoryImpl.kt` (Local + remote coordination, pure bitwise encrypted dialog ID calculations, and safe NotificationCenter dispatch)
+    - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `SecretChatHelper.java` strangler boundary with `getSecretChatRepository()` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 124: SecretChatHelper Strangling via BaseDataSources & SecretChatRepositoryImpl
+- **Context:** In Telegram Android, `SecretChatHelper.java` is a core cryptographic and message dispatch controller (~2,050 lines) managing Diffie-Hellman key exchange, encrypted layer negotiation, TTL timers, secret holes checking, and SQLite secret chat persistence (`MessagesStorage`). Direct calls to `SecretChatHelper.getInstance(account)` and raw MTProto requests (`TL_messages_requestEncryption`, `TL_messages_acceptEncryption`, `TL_messages_discardEncryption`) were scattered across the codebase.
+- **Decision:** Apply the Strangler Fig pattern to `SecretChatHelper`:
+  1. Implement `SecretChatRemoteDataSource`:
+     - Encapsulates MTProto RPC requests: `getDhConfig(version)` (`TL_messages_getDhConfig`), `requestEncryption(...)` (`TL_messages_requestEncryption`), `acceptEncryption(...)` (`TL_messages_acceptEncryption`), `discardEncryption(...)` (`TL_messages_discardEncryption`), and `sendEncryptedService(...)` with coroutine cancellation support.
+  2. Implement `SecretChatLocalDataSource`:
+     - Dispatches SQLite database mutations (`updateEncryptedChatTTL`, `updateEncryptedChat`, `putEncryptedChat`, `saveSecretParams`) safely to `MessagesStorage` via `Dispatchers.IO`.
+     - Provides thread-safe, non-throwing access to in-memory encrypted chat caches, user profiles, and crypto helpers.
+  3. Implement `SecretChatRepositoryImpl`:
+     - Implements `SecretChatRepository`, providing clean reactive flows `observeSecretChat()` and `observeSecretChats()` hooked into `encryptedChatUpdated`, `encryptedChatCreated`, and `dialogsNeedReload`.
+     - Provides bitwise pure calculations for encrypted dialog IDs (`isEncryptedDialog`, `makeEncryptedDialogId`, `getEncryptedChatId`).
+  4. Wire into `SecurityContainer` and `AccountFeatureContainer` as the default `SecretChatRepository` implementation.
+  5. Add strangler hook `getSecretChatRepository()` in `SecretChatHelper.java` allowing callers to migrate incrementally.
+- **Consequences:** Encrypted chat lifecycle, TTL management, and MTProto encryption RPCs are cleanly encapsulated into testable data sources and repository, with full unit test coverage (`SecretChatRepositoryImplTest.kt`) passing and verified on physical hardware (`RZCW41MQNVV`, Samsung Galaxy A54 5G).
 
 ### ADR 123: NotificationsController Strangling via BaseDataSources & NotificationsRepositoryImpl
 - **Context:** In Telegram Android, `NotificationsController.java` is an enormous monolithic controller (>3,500 lines) handling push notifications, notification settings (mute timers, vibration, sound, LED color, priority), in-app notifications, badge counting, reaction alerts, and sync with MTProto via `account.updateNotifySettings`. Settings and mute states were split across `SharedPreferences`, `MessagesStorage` SQLite tables (`dialogs`, `updateMutedDialogsFiltersCounters`), and static in-memory hashes, tightly coupling UI, background services, and storage.
