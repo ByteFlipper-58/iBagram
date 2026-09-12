@@ -1,7 +1,5 @@
 package org.telegram.ui.ActionBar.theme;
 
-import android.text.TextUtils;
-
 import androidx.annotation.Nullable;
 
 import org.telegram.tgnet.TLRPC;
@@ -28,12 +26,12 @@ public class ThemeKey {
     }
 
     public static TLRPC.InputChatTheme toInputTheme(ThemeKey key) {
-        if (key != null && !TextUtils.isEmpty(key.emoticon)) {
+        if (key != null && key.emoticon != null && !key.emoticon.isEmpty()) {
             TLRPC.Tl_inputChatTheme inputChatTheme = new TLRPC.Tl_inputChatTheme();
             inputChatTheme.emoticon = key.emoticon;
             return inputChatTheme;
         }
-        if (key != null && !TextUtils.isEmpty(key.giftSlug)) {
+        if (key != null && key.giftSlug != null && !key.giftSlug.isEmpty()) {
             TLRPC.Tl_inputChatThemeUniqueGift inputChatTheme = new TLRPC.Tl_inputChatThemeUniqueGift();
             inputChatTheme.slug = key.giftSlug;
             return inputChatTheme;
@@ -43,7 +41,7 @@ public class ThemeKey {
     }
 
     public boolean isEmpty() {
-        return TextUtils.isEmpty(emoticon) && TextUtils.isEmpty(giftSlug);
+        return (emoticon == null || emoticon.isEmpty()) && (giftSlug == null || giftSlug.isEmpty());
     }
 
     public String toSavedString() {
@@ -67,7 +65,7 @@ public class ThemeKey {
         if (string.startsWith("emoticon_")) {
             return new ThemeKey(string.substring(9), null);
         }
-        if (!TextUtils.isEmpty(string)) {
+        if (!string.isEmpty()) {
             return new ThemeKey(string, null);
         }
 
@@ -106,7 +104,7 @@ public class ThemeKey {
     public boolean equals(@Nullable Object obj) {
         if (obj instanceof ThemeKey) {
             ThemeKey key = (ThemeKey) obj;
-            return TextUtils.equals(this.emoticon, key.emoticon) && TextUtils.equals(this.giftSlug, key.giftSlug);
+            return java.util.Objects.equals(this.emoticon, key.emoticon) && java.util.Objects.equals(this.giftSlug, key.giftSlug);
         }
 
         return false;

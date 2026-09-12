@@ -2435,6 +2435,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = messaging.chatThemeRepository
         set(value) { messaging.chatThemeRepository = value }
 
+    fun createChatThemeRepository(): ChatThemeRepository = messaging.createChatThemeRepository()
+
     val observeDialogThemeUseCase: ObserveDialogThemeUseCase
         get() = messaging.observeDialogThemeUseCase
 

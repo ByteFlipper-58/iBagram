@@ -255,6 +255,10 @@ public class ChatThemeController extends BaseController {
         return local;
     }
 
+    public static org.telegram.messenger.feature.messaging.chattheme.domain.repository.ChatThemeRepository getChatThemeRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getChatThemeRepository();
+    }
+
 
     private final LongSparseArray<ThemeKey> dialogEmoticonsMap = new LongSparseArray<>();
 

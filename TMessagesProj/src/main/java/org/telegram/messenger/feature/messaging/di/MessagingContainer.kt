@@ -101,6 +101,9 @@ import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.LoadMess
 import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.LoadMessagesReactionsUseCase
 import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.ObserveChatMetadataStatsUseCase
 import org.telegram.messenger.feature.messaging.chatmeta.presentation.ChatMetadataViewModel
+import org.telegram.messenger.feature.messaging.chattheme.data.datasource.ChatThemeLocalDataSource
+import org.telegram.messenger.feature.messaging.chattheme.data.datasource.ChatThemeRemoteDataSource
+import org.telegram.messenger.feature.messaging.chattheme.data.repository.ChatThemeRepositoryImpl
 import org.telegram.messenger.feature.messaging.chattheme.data.repository.LegacyChatThemeRepository
 import org.telegram.messenger.feature.messaging.chattheme.domain.repository.ChatThemeRepository
 import org.telegram.messenger.feature.messaging.chattheme.domain.usecase.GetAvailableChatThemesUseCase
@@ -961,10 +964,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val chatThemeRemoteDataSource: ChatThemeRemoteDataSource by lazy {
+        ChatThemeRemoteDataSource(account)
+    }
+
+    val chatThemeLocalDataSource: ChatThemeLocalDataSource by lazy {
+        ChatThemeLocalDataSource(account)
+    }
+
+    fun createChatThemeRepository(): ChatThemeRepository {
+        return ChatThemeRepositoryImpl(
+            account = account,
+            localDataSource = chatThemeLocalDataSource,
+            remoteDataSource = chatThemeRemoteDataSource
+        )
+    }
+
     private var customChatThemeRepository: ChatThemeRepository? = null
 
     var chatThemeRepository: ChatThemeRepository
-        get() = customChatThemeRepository ?: LegacyChatThemeRepository(account)
+        get() = customChatThemeRepository ?: createChatThemeRepository()
         set(value) {
             customChatThemeRepository = value
         }

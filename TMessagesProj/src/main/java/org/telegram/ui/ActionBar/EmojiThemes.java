@@ -49,16 +49,22 @@ public class EmojiThemes {
     public ArrayList<ThemeItem> items = new ArrayList<>();
     private final int currentAccount;
 
-    private static final int[] previewColorKeys = new int[]{
-            Theme.key_chat_inBubble,
-            Theme.key_chat_outBubble,
-            Theme.key_featuredStickers_addButton,
-            Theme.key_chat_wallpaper,
-            Theme.key_chat_wallpaper_gradient_to1,
-            Theme.key_chat_wallpaper_gradient_to2,
-            Theme.key_chat_wallpaper_gradient_to3,
-            Theme.key_chat_wallpaper_gradient_rotation
-    };
+    private static int[] previewColorKeys;
+    private static int[] getPreviewColorKeys() {
+        if (previewColorKeys == null) {
+            previewColorKeys = new int[]{
+                    Theme.key_chat_inBubble,
+                    Theme.key_chat_outBubble,
+                    Theme.key_featuredStickers_addButton,
+                    Theme.key_chat_wallpaper,
+                    Theme.key_chat_wallpaper_gradient_to1,
+                    Theme.key_chat_wallpaper_gradient_to2,
+                    Theme.key_chat_wallpaper_gradient_to3,
+                    Theme.key_chat_wallpaper_gradient_rotation
+            };
+        }
+        return previewColorKeys;
+    }
 
     public EmojiThemes(int currentAccount) {
         this.currentAccount = currentAccount;
@@ -404,9 +410,10 @@ public class EmojiThemes {
         SparseIntArray fallbackKeys = Theme.getFallbackKeys();
         SparseIntArray array = new SparseIntArray();
         items.get(index).currentPreviewColors = array;
+        int[] keys = getPreviewColorKeys();
         try {
-            for (int i = 0; i < previewColorKeys.length; i++) {
-                int key = previewColorKeys[i];
+            for (int i = 0; i < keys.length; i++) {
+                int key = keys[i];
                 int colorIndex = currentColors.indexOfKey(key);
                 if (colorIndex >= 0) {
                     array.put(key, currentColors.valueAt(colorIndex));

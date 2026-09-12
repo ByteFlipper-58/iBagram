@@ -923,10 +923,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `JoinRequestsRepositoryImpl.kt` (Local + remote coordination, approve/dismiss mutations, and reactive observePendingRequests)
     - `SocialContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `MemberRequestsController.java` strangler boundary with `getJoinRequestsRepository()` accessor and `putCachedImporters()`.
+  - [x] Feature: `ChatThemeController` Strangling (`feature.messaging.chattheme` - ADR 130):
+    - `ChatThemeRemoteDataSource.kt` (MTProto RPC requests: account.getChatThemes, messages.setChatTheme via BaseRemoteDataSource)
+    - `ChatThemeLocalDataSource.kt` (SharedPreferences caching, in-memory emoji themes & wallpaper access, processUpdates)
+    - `ChatThemeRepositoryImpl.kt` (Coordinating remote reload with local cache fallback, dialog theme mutations, reactive observeDialogTheme)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ChatThemeController.java` strangler boundary with `getChatThemeRepository()` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 130: ChatThemeController Strangling via Clean DataSources & ChatThemeRepositoryImpl
+- **Context:** In Telegram Android, chat themes, emoji themes, and dialog wallpapers were managed across `ChatThemeController.java` (~430 lines) and `EmojiThemes.java`. `ChatThemeController` tightly coupled MTProto RPCs (`TL_account.getChatThemes`, `TL_messages.setChatTheme`), SharedPreferences serialization of themes and hash values (`chattheme_pref`), in-memory caches (`allChatThemes`, `dialogsThemesMap`), wallpaper saving (`saveChatWallpaper`), and `processUpdates()`. UI components (`ChatActivity`, `ChatAttachAlert`, `ThemePreviewActivity`) directly accessed `ChatThemeController.getInstance(account)`. Additionally, `ThemeKey.java` and `EmojiThemes.java` had static dependencies on unmocked Android framework classes (`android.text.TextUtils`, `Theme.java` drawable initialization) preventing clean JVM unit testing.
+- **Decision:** Apply the Strangler Fig pattern to `ChatThemeController`:
+  1. Implement `ChatThemeRemoteDataSource`:
+     - Encapsulates MTProto RPC execution: `getChatThemes(hash)` (`TL_account.getChatThemes`) and `setChatTheme(peer, inputTheme)` (`TL_messages.setChatTheme`) using `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `ChatThemeLocalDataSource`:
+     - Encapsulates SharedPreferences theme persistence (`chattheme_pref`), in-memory `ChatThemeController` theme lookups (`getEmojiThemes`, `getDialogTheme`, `getDialogWallpaper`), `InputPeer` resolution, wallpaper persistence, and updates dispatching (`processUpdates`).
+  3. Implement `ChatThemeRepositoryImpl`:
+     - Implements `ChatThemeRepository`, orchestrating cache-first theme retrieval with 2-hour reload throttling and resilient offline fallback, dialog theme setting with `ThemeKey` mapping, chat wallpaper persistence/clearing, and reactive `observeDialogTheme(dialogId)` via `NotificationCenterFlowBridge` listening to `chatThemeUpdated`.
+  4. Decouple `ThemeKey.java` and `EmojiThemes.java` from unmocked Android runtime dependencies:
+     - Replace `TextUtils.isEmpty` and `TextUtils.equals` with standard Java string checks and `java.util.Objects.equals`.
+     - Lazy-initialize `previewColorKeys` in `EmojiThemes.java` to avoid triggering Android `Theme` class loading and `Paint` allocation during JVM classloading.
+  5. Update `MessagingContainer` and `AccountFeatureContainer` to instantiate and provide `ChatThemeRepositoryImpl` alongside clean data sources.
+  6. Introduce strangler boundary: `ChatThemeController.getChatThemeRepository(account)`.
+- **Consequences:** Chat theme loading, theme application, wallpaper management, and dialog theme observation are cleanly decoupled behind testable domain contracts and reactive flows. Full backward compatibility is preserved for all legacy Java callers, with 100% unit tests passing and APK assembly validated.
 
 ### ADR 129: MemberRequestsController Strangling via Clean DataSources & JoinRequestsRepositoryImpl
 - **Context:** In Telegram Android, chat join requests and pending invite importers were managed by `MemberRequestsController.java` (~200 lines). `MemberRequestsController` coupled MTProto RPCs (`TLRPC.TL_messages_getChatInviteImporters`, `TLRPC.TL_messages_hideChatJoinRequest`, `TLRPC.TL_messages_hideAllChatJoinRequests`), in-memory cache of initial invite importers (`firstImportersCache` as `LongSparseArray<TLRPC.TL_messages_chatInviteImporters>`), updates processing via `MessagesController.processUpdates()`, and `ChatFull.requests_pending` synchronization. UI components (`MemberRequestsDelegate`, `ChatUsersActivity`) and legacy controllers directly accessed `MemberRequestsController.getInstance(account)`.
