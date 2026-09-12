@@ -3709,6 +3709,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = social.contactsRepository
         set(value) { social.contactsRepository = value }
 
+    fun createContactsRepository(): ContactsRepository = social.createContactsRepository()
+
     val observeContactsUseCase: ObserveContactsUseCase
         get() = social.observeContactsUseCase
 

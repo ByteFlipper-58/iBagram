@@ -3126,4 +3126,11 @@ public class ContactsController extends BaseController {
         }
         return null;
     }
+
+    /**
+     * Strangler Fig hook providing access to the clean domain ContactsRepository.
+     */
+    public org.telegram.messenger.feature.social.contacts.domain.repository.ContactsRepository getContactsRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(currentAccount).getSocial().getContactsRepository();
+    }
 }

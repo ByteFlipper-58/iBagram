@@ -874,10 +874,31 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `FoldersRepositoryImpl.kt` (Local + remote coordination)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `MessagesController.java` strangler boundary with `getFoldersRepository()` accessor.
+  - [x] Feature: `ContactsController` Strangling (`feature.social.contacts`):
+    - `ContactsRemoteDataSource.kt` (MTProto RPC requests: getContacts, addContact, deleteContacts, searchContacts, resetSavedContacts, getStatuses)
+    - `ContactsLocalDataSource.kt` (SQLite persistence on Dispatchers.IO & safe in-memory cache)
+    - `ContactsRepositoryImpl.kt` (Local + remote coordination with safe NotificationCenter dispatch)
+    - `SocialContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ContactsController.java` strangler boundary with `getContactsRepository()` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 122: ContactsController Strangling via BaseDataSources & ContactsRepositoryImpl
+- **Context:** In Telegram Android, `ContactsController.java` is a massive ~3,130-line monolithic controller managing contacts synchronization, local SQLite storage, system phonebook sync, privacy rules, and contacts dictionary mappings (`contactsDict`, `contactsBookSPhones`). Methods throughout Telegram UI and background sync services directly invoked `ContactsController.getInstance(account).contacts` or made raw calls to `MessagesStorage.putContacts` and `ConnectionsManager.sendRequest`.
+- **Decision:** Apply the Strangler Fig pattern to `ContactsController`:
+  1. Implement `ContactsRemoteDataSource`:
+     - Encapsulates MTProto RPC requests: `getContacts(hash)` (`TL_contacts_getContacts`), `addContact(...)` (`TL_contacts_addContact`), `deleteContacts(...)` (`TL_contacts_deleteContacts`), `searchContacts(...)` (`TL_contacts_search`), `resetSavedContacts()` (`TL_contacts_resetSaved`), and `getStatuses()` (`TL_contacts_getStatuses`).
+  2. Implement `ContactsLocalDataSource`:
+     - Dispatches database mutations (`putContacts`, `deleteContacts`, `putUsersAndChats`) to `MessagesStorage` safely on `Dispatchers.IO`.
+     - Provides safe, thread-guarded access to in-memory contacts and user records (`ContactsController.contacts`, `contactsDict`, `MessagesController.getUser`).
+  3. Implement `ContactsRepositoryImpl`:
+     - Implements `ContactsRepository`, coordinating MTProto RPC synchronization with SQLite persistence and legacy in-memory cache synchronization.
+     - Emits reactive updates via `observeContacts(): Flow<List<ContactModel>>` reacting to `NotificationCenter.contactsDidLoad` and `updateInterfaces` without failing under headless test environments lacking an Android Looper.
+  4. Wire into `SocialContainer` and `AccountFeatureContainer` as the default `ContactsRepository` implementation.
+  5. Add strangler hook `getContactsRepository()` in `ContactsController.java` allowing callers to migrate incrementally.
+- **Consequences:** Contacts data access and mutations are cleanly separated into testable remote and local layers, with comprehensive unit test coverage (`ContactsRepositoryImplTest.kt`) passing alongside existing domain tests, verified by real device deployment (`RZCW41MQNVV`) with 0 regressions.
 
 ### ADR 121: Folders & Dialog Filters Strangling via BaseDataSources
 - **Context:** Chat Folders (Dialog Filters) logic in Telegram Android was scattered across `MessagesController` (in-memory state machine, `dialogFilters` list, and vector requests) and multiple UI activities (`FiltersSetupActivity`, `FilterCreateActivity`, `DialogsActivity`, `FilterTabsView`, `ViewPagerFixed`). These UI classes directly constructed raw `TLRPC.TL_messages_updateDialogFilter` and `TLRPC.TL_messages_updateDialogFiltersOrder` requests and dispatched them through `ConnectionsManager.sendRequest`, creating strong coupling between presentation, MTProto RPC transport, and SQLite database storage.

@@ -48,7 +48,11 @@ object NotificationCenterFlowBridge {
         if (isMainThread) {
             action()
         } else {
-            AndroidUtilities.runOnUIThread(action)
+            try {
+                AndroidUtilities.runOnUIThread(action)
+            } catch (_: Throwable) {
+                action()
+            }
         }
     }
 

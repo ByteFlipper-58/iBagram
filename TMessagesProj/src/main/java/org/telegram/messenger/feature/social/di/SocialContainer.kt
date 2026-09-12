@@ -17,6 +17,9 @@ import org.telegram.messenger.feature.social.boosts.domain.usecase.CheckCanApply
 import org.telegram.messenger.feature.social.boosts.domain.usecase.GetBoostsStatusUseCase
 import org.telegram.messenger.feature.social.boosts.domain.usecase.GetMyBoostsUseCase
 import org.telegram.messenger.feature.social.boosts.presentation.BoostsViewModel
+import org.telegram.messenger.feature.social.contacts.data.datasource.ContactsLocalDataSource
+import org.telegram.messenger.feature.social.contacts.data.datasource.ContactsRemoteDataSource
+import org.telegram.messenger.feature.social.contacts.data.repository.ContactsRepositoryImpl
 import org.telegram.messenger.feature.social.contacts.data.repository.LegacyContactsRepository
 import org.telegram.messenger.feature.social.contacts.domain.repository.ContactsRepository
 import org.telegram.messenger.feature.social.contacts.domain.usecase.AddContactUseCase
@@ -105,13 +108,29 @@ class SocialContainer(val account: Int) {
         )
     }
 
+    val contactsRemoteDataSource: ContactsRemoteDataSource by lazy {
+        ContactsRemoteDataSource(account)
+    }
+
+    val contactsLocalDataSource: ContactsLocalDataSource by lazy {
+        ContactsLocalDataSource(account)
+    }
+
     private var customContactsRepository: ContactsRepository? = null
 
     var contactsRepository: ContactsRepository
-        get() = customContactsRepository ?: LegacyContactsRepository(account)
+        get() = customContactsRepository ?: createContactsRepository()
         set(value) {
             customContactsRepository = value
         }
+
+    fun createContactsRepository(): ContactsRepository {
+        return ContactsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = contactsLocalDataSource,
+            remoteDataSource = contactsRemoteDataSource
+        )
+    }
 
     val observeContactsUseCase: ObserveContactsUseCase
         get() = ObserveContactsUseCase(contactsRepository)
