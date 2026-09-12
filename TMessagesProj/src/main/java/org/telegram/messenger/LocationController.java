@@ -92,6 +92,16 @@ public class LocationController extends BaseController implements NotificationCe
         return localInstance;
     }
 
+    /**
+     * Strangler hook providing access to the clean domain LocationRepository.
+     */
+    public org.telegram.messenger.feature.social.location.domain.repository.LocationRepository getLocationRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion
+                .get(currentAccount)
+                .getSocial()
+                .getLocationRepository();
+    }
+
     public static class SharingLocationInfo {
         public long did;
         public int mid;

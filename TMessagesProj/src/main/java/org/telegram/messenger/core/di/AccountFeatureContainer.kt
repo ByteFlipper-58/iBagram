@@ -3743,6 +3743,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = social.locationRepository
         set(value) { social.locationRepository = value }
 
+    fun createLocationRepository(): LocationRepository = social.createLocationRepository()
+
     val observeActiveSharingsUseCase: ObserveActiveSharingsUseCase
         get() = social.observeActiveSharingsUseCase
 

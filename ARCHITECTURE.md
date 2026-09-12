@@ -898,10 +898,32 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `DownloadManagerRepositoryImpl.kt` (Local + remote coordination, reactive state observation, queue mutations, download speed calculation, and preset persistence)
     - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `DownloadController.java` strangler boundary with `getDownloadManagerRepository()` accessor.
+  - [x] Feature: `LocationController` Strangling (`feature.social.location`):
+    - `LocationRemoteDataSource.kt` (MTProto RPC requests: getRecentLocations, stopLiveLocation, editLiveLocation, markLiveLocationsAsRead)
+    - `LocationLocalDataSource.kt` (SQLite persistence for sharing_locations on Dispatchers.IO, in-memory LocationController state & SendMessagesHelper dispatch)
+    - `LocationRepositoryImpl.kt` (Local + remote coordination, reactive active sharings and peer coordinates, and safe NotificationCenter dispatch)
+    - `SocialContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `LocationController.java` strangler boundary with `getLocationRepository()` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 126: LocationController Strangling via BaseDataSources & LocationRepositoryImpl
+- **Context:** In Telegram Android, `LocationController.java` (~1,419 lines) manages GPS coordinates, active live location sharings, proximity alerts, peer location cache (`locationsCache`), and SQLite database persistence (`sharing_locations`). Direct calls to `LocationController.getInstance(account)` and raw MTProto requests (`TL_messages_getRecentLocations`, `TL_messages_editMessage`, `TL_messages_readMessageContents`) were scattered across UI fragments and background services.
+- **Decision:** Apply the Strangler Fig pattern to `LocationController`:
+  1. Implement `LocationRemoteDataSource`:
+     - Encapsulates MTProto RPC requests: `getRecentLocations(...)` (`TL_messages_getRecentLocations`), `stopLiveLocation(...)` (`TL_messages_editMessage` with stopped geo live), `editLiveLocation(...)` (`TL_messages_editMessage`), and `markLiveLocationsAsRead(...)` with coroutine cancellation support.
+  2. Implement `LocationLocalDataSource`:
+     - Dispatches SQLite database mutations (`saveProximity`, `removeSharing`, `clearAllSharings`, `putUsersAndChats`) safely to `MessagesStorage` via `Dispatchers.IO`.
+     - Handles in-memory `sharingLocationsUI`, `locationsCache`, and `lastKnownLocation` thread-safe access.
+     - Provides message sending dispatch via `SendMessagesHelper`.
+  3. Implement `LocationRepositoryImpl`:
+     - Implements `LocationRepository`, providing reactive flows `observeActiveSharings()`, `observePeerLocations()`, and `observeLastKnownLocation()`.
+     - Safely dispatches `NotificationCenter.liveLocationsChanged`, `liveLocationsCacheChanged`, and `newLocationAvailable` without failing in headless JVM test environments.
+  4. Wire into `SocialContainer` and `AccountFeatureContainer` as the default `LocationRepository` implementation.
+  5. Add strangler hook `getLocationRepository()` in `LocationController.java` allowing callers to migrate incrementally.
+- **Consequences:** Location sharing, GPS tracking, and peer coordinate synchronization are cleanly encapsulated into testable data sources and repository, with full unit test coverage (`LocationRepositoryImplTest.kt`) passing and verified with clean APK assembly (`assembleAfatDebug`).
 
 ### ADR 125: DownloadController Strangling via BaseDataSources & DownloadManagerRepositoryImpl
 - **Context:** In Telegram Android, `DownloadController.java` (~1,810 lines) manages global auto-download presets (Wi-Fi, cellular, roaming), in-memory download queues (`downloadingFiles`, `recentDownloadingFiles`, `unviewedDownloads`), speed metrics calculation, and auto-download configuration persistence in `SharedPreferences` and MTProto (`TL_account.getAutoDownloadSettings`, `TL_account.saveAutoDownloadSettings`). UI components and background loaders directly touched `DownloadController.getInstance(currentAccount)`, creating high coupling between media loading, network policy, and presentation.

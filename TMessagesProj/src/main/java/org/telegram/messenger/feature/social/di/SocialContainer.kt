@@ -40,7 +40,10 @@ import org.telegram.messenger.feature.social.joinrequests.domain.usecase.GetPend
 import org.telegram.messenger.feature.social.joinrequests.domain.usecase.LoadJoinRequestsUseCase
 import org.telegram.messenger.feature.social.joinrequests.domain.usecase.ObservePendingRequestsUseCase
 import org.telegram.messenger.feature.social.joinrequests.presentation.JoinRequestsViewModel
+import org.telegram.messenger.feature.social.location.data.datasource.LocationLocalDataSource
+import org.telegram.messenger.feature.social.location.data.datasource.LocationRemoteDataSource
 import org.telegram.messenger.feature.social.location.data.repository.LegacyLocationRepository
+import org.telegram.messenger.feature.social.location.data.repository.LocationRepositoryImpl
 import org.telegram.messenger.feature.social.location.domain.repository.LocationRepository
 import org.telegram.messenger.feature.social.location.domain.usecase.GetActiveSharingsUseCase
 import org.telegram.messenger.feature.social.location.domain.usecase.GetLastKnownLocationUseCase
@@ -173,10 +176,26 @@ class SocialContainer(val account: Int) {
         )
     }
 
+    val locationRemoteDataSource: LocationRemoteDataSource by lazy {
+        LocationRemoteDataSource(account)
+    }
+
+    val locationLocalDataSource: LocationLocalDataSource by lazy {
+        LocationLocalDataSource(account)
+    }
+
+    fun createLocationRepository(): LocationRepository {
+        return LocationRepositoryImpl(
+            currentAccount = account,
+            localDataSource = locationLocalDataSource,
+            remoteDataSource = locationRemoteDataSource
+        )
+    }
+
     private var customLocationRepository: LocationRepository? = null
 
     var locationRepository: LocationRepository
-        get() = customLocationRepository ?: LegacyLocationRepository(account)
+        get() = customLocationRepository ?: createLocationRepository()
         set(value) {
             customLocationRepository = value
         }
