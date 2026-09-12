@@ -1,6 +1,9 @@
 package org.telegram.messenger.feature.social.di
 
 import java.util.concurrent.ConcurrentHashMap
+import org.telegram.messenger.feature.social.birthdays.data.datasource.BirthdayLocalDataSource
+import org.telegram.messenger.feature.social.birthdays.data.datasource.BirthdayRemoteDataSource
+import org.telegram.messenger.feature.social.birthdays.data.repository.BirthdaysRepositoryImpl
 import org.telegram.messenger.feature.social.birthdays.data.repository.LegacyBirthdaysRepository
 import org.telegram.messenger.feature.social.birthdays.domain.repository.BirthdaysRepository
 import org.telegram.messenger.feature.social.birthdays.domain.usecase.CheckBirthdaysUseCase
@@ -10,6 +13,9 @@ import org.telegram.messenger.feature.social.birthdays.domain.usecase.HideTodayB
 import org.telegram.messenger.feature.social.birthdays.domain.usecase.IsBirthdayTodayUseCase
 import org.telegram.messenger.feature.social.birthdays.domain.usecase.ObserveBirthdaysUseCase
 import org.telegram.messenger.feature.social.birthdays.presentation.BirthdaysViewModel
+import org.telegram.messenger.feature.social.boosts.data.datasource.BoostsLocalDataSource
+import org.telegram.messenger.feature.social.boosts.data.datasource.BoostsRemoteDataSource
+import org.telegram.messenger.feature.social.boosts.data.repository.BoostsRepositoryImpl
 import org.telegram.messenger.feature.social.boosts.data.repository.LegacyBoostsRepository
 import org.telegram.messenger.feature.social.boosts.domain.repository.BoostsRepository
 import org.telegram.messenger.feature.social.boosts.domain.usecase.ApplyBoostUseCase
@@ -273,10 +279,26 @@ class SocialContainer(val account: Int) {
         )
     }
 
+    val boostsRemoteDataSource: BoostsRemoteDataSource by lazy {
+        BoostsRemoteDataSource(account)
+    }
+
+    val boostsLocalDataSource: BoostsLocalDataSource by lazy {
+        BoostsLocalDataSource(account)
+    }
+
+    fun createBoostsRepository(): BoostsRepository {
+        return BoostsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = boostsLocalDataSource,
+            remoteDataSource = boostsRemoteDataSource
+        )
+    }
+
     private var customBoostsRepository: BoostsRepository? = null
 
     var boostsRepository: BoostsRepository
-        get() = customBoostsRepository ?: LegacyBoostsRepository(account)
+        get() = customBoostsRepository ?: createBoostsRepository()
         set(value) {
             customBoostsRepository = value
         }
@@ -370,10 +392,26 @@ class SocialContainer(val account: Int) {
         )
     }
 
+    val birthdaysRemoteDataSource: BirthdayRemoteDataSource by lazy {
+        BirthdayRemoteDataSource(account)
+    }
+
+    val birthdayLocalDataSource: BirthdayLocalDataSource by lazy {
+        BirthdayLocalDataSource(account)
+    }
+
+    fun createBirthdaysRepository(): BirthdaysRepository {
+        return BirthdaysRepositoryImpl(
+            currentAccount = account,
+            localDataSource = birthdayLocalDataSource,
+            remoteDataSource = birthdaysRemoteDataSource
+        )
+    }
+
     private var customBirthdaysRepository: BirthdaysRepository? = null
 
     var birthdaysRepository: BirthdaysRepository
-        get() = customBirthdaysRepository ?: LegacyBirthdaysRepository(account)
+        get() = customBirthdaysRepository ?: createBirthdaysRepository()
         set(value) {
             customBirthdaysRepository = value
         }

@@ -34,6 +34,13 @@ public class ChannelBoostsController {
         connectionsManager = ConnectionsManager.getInstance(currentAccount);
     }
 
+    /**
+     * Strangler hook: returns the modern BoostsRepository instance for the given account.
+     */
+    public static org.telegram.messenger.feature.social.boosts.domain.repository.BoostsRepository getBoostsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSocial().getBoostsRepository();
+    }
+
     public void getBoostsStats(long dialogId, Consumer<TL_stories.TL_premium_boostsStatus> consumer) {
         TL_stories.TL_premium_getBoostsStatus req = new TL_stories.TL_premium_getBoostsStatus();
         req.peer = messagesController.getInputPeer(dialogId);

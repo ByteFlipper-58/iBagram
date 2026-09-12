@@ -107,27 +107,44 @@ public class BirthdayController {
         loading = true;
         ConnectionsManager.getInstance(currentAccount).sendRequest(new TL_account.getBirthdays(), (res, err) -> AndroidUtilities.runOnUIThread(() -> {
             if (res instanceof TL_account.contactBirthdays) {
-                lastCheckDate = System.currentTimeMillis();
-                TL_account.contactBirthdays response = (TL_account.contactBirthdays) res;
-                state = BirthdayState.from(response);
-
-                MessagesController.getInstance(currentAccount).putUsers(response.users, false);
-                MessagesStorage.getInstance(currentAccount).putUsersAndChats(response.users, null, true, true);
-
-                SharedPreferences.Editor edit = MessagesController.getInstance(currentAccount).getMainSettings().edit();
-                edit.putLong("bday_check", lastCheckDate);
-                TL_birthdays birthdays = new TL_birthdays();
-                birthdays.contacts = response.contacts;
-                SerializedData data = new SerializedData(birthdays.getObjectSize());
-                birthdays.serializeToStream(data);
-                edit.putString("bday_contacts", Utilities.bytesToHex(data.toByteArray()));
-                edit.apply();
-
-                NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.premiumPromoUpdated);
-
+                applyResponse((TL_account.contactBirthdays) res);
                 loading = false;
             }
         }));
+    }
+
+    public void applyResponse(TL_account.contactBirthdays response) {
+        lastCheckDate = System.currentTimeMillis();
+        state = BirthdayState.from(response);
+
+        MessagesController.getInstance(currentAccount).putUsers(response.users, false);
+        MessagesStorage.getInstance(currentAccount).putUsersAndChats(response.users, null, true, true);
+
+        SharedPreferences.Editor edit = MessagesController.getInstance(currentAccount).getMainSettings().edit();
+        edit.putLong("bday_check", lastCheckDate);
+        TL_birthdays birthdays = new TL_birthdays();
+        birthdays.contacts = response.contacts;
+        SerializedData data = new SerializedData(birthdays.getObjectSize());
+        birthdays.serializeToStream(data);
+        edit.putString("bday_contacts", Utilities.bytesToHex(data.toByteArray()));
+        edit.apply();
+
+        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.premiumPromoUpdated);
+    }
+
+    public long getLastCheckDate() {
+        return lastCheckDate;
+    }
+
+    public boolean isLoading() {
+        return loading;
+    }
+
+    /**
+     * Strangler hook: returns the modern BirthdaysRepository instance for the given account.
+     */
+    public static org.telegram.messenger.feature.social.birthdays.domain.repository.BirthdaysRepository getBirthdaysRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSocial().getBirthdaysRepository();
     }
 
     public boolean contains() {
@@ -247,7 +264,7 @@ public class BirthdayController {
         }
     }
 
-    private static class TL_birthdays extends TLObject {
+    public static class TL_birthdays extends TLObject {
         public static final int constructor = 0x114ff30d;
 
         public ArrayList<TL_account.TL_contactBirthday> contacts = new ArrayList<>();

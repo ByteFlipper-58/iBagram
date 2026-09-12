@@ -915,6 +915,25 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 
 ## 6. Architecture Decision Records (ADRs)
 
+### ADR 128: BirthdayController & ChannelBoostsController Strangling via Clean DataSources & Repository Implementations
+- **Context:** In Telegram Android, contact birthdays tracking and channel boosting operations were managed across `BirthdayController.java` (~310 lines) and `ChannelBoostsController.java` (~190 lines). `BirthdayController` coupled MTProto RPCs (`TL_account.getBirthdays`), raw binary serialization of `TL_birthdays` into hex strings stored in SharedPreferences (`bday_contacts`, `bday_check`, `bday_hidden`), SQLite database updates in `MessagesStorage`, in-memory users cache in `MessagesController`, and global event notifications on `NotificationCenter.premiumPromoUpdated`. `ChannelBoostsController` coupled MTProto RPCs (`TL_stories.TL_premium_getBoostsStatus`, `TL_stories.TL_premium_getMyBoosts`, `TL_stories.TL_premium_applyBoost`), UI alert dialogs (`AlertDialog.Builder`), global bulletins (`BulletinFactory`), and slot replacement arithmetic with negative dialog ID negations.
+- **Decision:** Apply the Strangler Fig pattern to both social controllers:
+  1. Implement `BirthdayRemoteDataSource`:
+     - Encapsulates MTProto RPC request `TL_account.getBirthdays()` via `BaseRemoteDataSource(currentAccount)` with coroutine cancellation support.
+  2. Implement `BirthdayLocalDataSource`:
+     - Encapsulates cached state access (`state`), cache invalidation timing checks (`shouldCheckBirthdays`), SharedPreferences persistence via `applyResponse(response)`, and today's birthday checks (`isToday(userId)`, `hasBirthdaysToday()`).
+  3. Implement `BirthdaysRepositoryImpl`:
+     - Implements `BirthdaysRepository`, managing reactive `observeBirthdays()` via `NotificationCenterFlowBridge` observing `premiumPromoUpdated`, cache invalidation logic, and domain mapping via `BirthdayMapper`.
+  4. Implement `BoostsRemoteDataSource`:
+     - Encapsulates MTProto RPC requests: `getBoostsStatus(peer)`, `getMyBoosts()`, and `applyBoost(peer, slots)` with MTProto flags `RequestFlagInvokeAfter` or `RequestFlagFailOnServerErrors`.
+  5. Implement `BoostsLocalDataSource`:
+     - Encapsulates `InputPeer` resolution for channel/chat dialog IDs, user and chat caching in `MessagesController`, and Main-thread boost slot eligibility evaluation.
+  6. Implement `BoostsRepositoryImpl`:
+     - Implements `BoostsRepository`, managing negative dialog ID normalization, MTProto RPC orchestration, local caching, and domain mapping via `BoostMapper`.
+  7. Update `SocialContainer` and `AccountFeatureContainer` to wire `BirthdaysRepositoryImpl` and `BoostsRepositoryImpl` as primary defaults while maintaining full compatibility with legacy overrides.
+  8. Introduce strangler hooks: `BirthdayController.getBirthdaysRepository(account)` and `ChannelBoostsController.getBoostsRepository(account)`.
+- **Consequences:** All contact birthdays and channel boost operations are cleanly decoupled behind testable domain contracts and clean data sources. 100% test coverage achieved with `BirthdaysRepositoryImplTest.kt` and `BoostsRepositoryImplTest.kt` passing, full backwards compatibility preserved, and verified with APK assembly (`assembleAfatDebug`).
+
 ### ADR 127: PasskeysController & FingerprintController Strangling via Clean DataSources & Repository Implementations
 - **Context:** In Telegram Android, passkeys and biometrics authentication were managed across `PasskeysController.java` (~331 lines) and `FingerprintController.java` (~145 lines). Passkeys registration challenges (`TL_account.initPasskeyRegistration`), passkey registration (`TL_account.registerPasskey`), passkey deletion (`TL_account.deletePasskey`), and listing (`TL_account.getPasskeys`) were entangled with CredentialManager Android API calls, JSON parsing, and UI alert dialogs. Biometrics and keystore RSA key pair generation (`AndroidKeyStore`, `KeyProperties`, `FingerprintManagerCompat`) communicated via global notifications (`NotificationCenter.didGenerateFingerprintKeyPair`) and static singletons.
 - **Decision:** Apply the Strangler Fig pattern to both security controllers:

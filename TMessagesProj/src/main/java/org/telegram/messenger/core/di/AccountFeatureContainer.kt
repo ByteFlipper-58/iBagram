@@ -3796,6 +3796,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = social.boostsRepository
         set(value) { social.boostsRepository = value }
 
+    fun createBoostsRepository(): BoostsRepository = social.createBoostsRepository()
+
     val getBoostsStatusUseCase: GetBoostsStatusUseCase
         get() = social.getBoostsStatusUseCase
 
@@ -3849,6 +3851,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
     var birthdaysRepository: BirthdaysRepository
         get() = social.birthdaysRepository
         set(value) { social.birthdaysRepository = value }
+
+    fun createBirthdaysRepository(): BirthdaysRepository = social.createBirthdaysRepository()
 
     val observeBirthdaysUseCase: ObserveBirthdaysUseCase
         get() = social.observeBirthdaysUseCase
