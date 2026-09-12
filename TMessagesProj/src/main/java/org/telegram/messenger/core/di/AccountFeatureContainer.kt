@@ -2164,6 +2164,8 @@ class AccountFeatureContainer private constructor(val account: Int) {
         get() = messaging.foldersRepository
         set(value) { messaging.foldersRepository = value }
 
+    fun createFoldersRepository(): FoldersRepository = messaging.createFoldersRepository()
+
     val observeFoldersUseCase: ObserveFoldersUseCase
         get() = messaging.observeFoldersUseCase
 

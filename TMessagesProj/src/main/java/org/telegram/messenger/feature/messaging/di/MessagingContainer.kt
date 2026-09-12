@@ -193,6 +193,9 @@ import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.GetFact
 import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.LoadFactCheckUseCase
 import org.telegram.messenger.feature.messaging.factcheck.domain.usecase.ObserveFactCheckLoadedUseCase
 import org.telegram.messenger.feature.messaging.factcheck.presentation.FactCheckViewModel
+import org.telegram.messenger.feature.messaging.folders.data.datasource.FoldersLocalDataSource
+import org.telegram.messenger.feature.messaging.folders.data.datasource.FoldersRemoteDataSource
+import org.telegram.messenger.feature.messaging.folders.data.repository.FoldersRepositoryImpl
 import org.telegram.messenger.feature.messaging.folders.data.repository.LegacyFoldersRepository
 import org.telegram.messenger.feature.messaging.folders.domain.repository.FoldersRepository
 import org.telegram.messenger.feature.messaging.folders.domain.usecase.CreateFolderUseCase
@@ -501,10 +504,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val foldersRemoteDataSource: FoldersRemoteDataSource by lazy {
+        FoldersRemoteDataSource(account)
+    }
+
+    val foldersLocalDataSource: FoldersLocalDataSource by lazy {
+        FoldersLocalDataSource(account)
+    }
+
+    fun createFoldersRepository(): FoldersRepository {
+        return FoldersRepositoryImpl(
+            currentAccount = account,
+            localDataSource = foldersLocalDataSource,
+            remoteDataSource = foldersRemoteDataSource
+        )
+    }
+
     private var customFoldersRepository: FoldersRepository? = null
 
     var foldersRepository: FoldersRepository
-        get() = customFoldersRepository ?: LegacyFoldersRepository(account)
+        get() = customFoldersRepository ?: createFoldersRepository()
         set(value) {
             customFoldersRepository = value
         }

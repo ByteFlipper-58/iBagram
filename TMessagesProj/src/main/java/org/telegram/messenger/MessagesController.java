@@ -23659,6 +23659,16 @@ public class MessagesController extends BaseController implements NotificationCe
         return savedMessagesController;
     }
 
+    // Strangler Fig: Clean Architecture v2 repository for Chat Folders
+    private org.telegram.messenger.feature.messaging.folders.domain.repository.FoldersRepository foldersRepository;
+
+    public org.telegram.messenger.feature.messaging.folders.domain.repository.FoldersRepository getFoldersRepository() {
+        if (foldersRepository == null) {
+            foldersRepository = org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(currentAccount).getFoldersRepository();
+        }
+        return foldersRepository;
+    }
+
     public UnconfirmedAuthController getUnconfirmedAuthController() {
         if (unconfirmedAuthController != null) {
             return unconfirmedAuthController;

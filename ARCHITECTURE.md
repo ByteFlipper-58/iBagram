@@ -868,10 +868,30 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `SavedMessagesRepositoryImpl.kt` (Local + remote coordination)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `SavedMessagesController.java` strangler boundary with `getRepository()` accessor.
+  - [x] Feature: `Folders & Dialog Filters` Strangling (`feature.messaging.folders`):
+    - `FoldersRemoteDataSource.kt` (MTProto RPC requests: get, update, delete, reorder, suggested)
+    - `FoldersLocalDataSource.kt` (SQLite persistence & memory cache)
+    - `FoldersRepositoryImpl.kt` (Local + remote coordination)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `MessagesController.java` strangler boundary with `getFoldersRepository()` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 121: Folders & Dialog Filters Strangling via BaseDataSources
+- **Context:** Chat Folders (Dialog Filters) logic in Telegram Android was scattered across `MessagesController` (in-memory state machine, `dialogFilters` list, and vector requests) and multiple UI activities (`FiltersSetupActivity`, `FilterCreateActivity`, `DialogsActivity`, `FilterTabsView`, `ViewPagerFixed`). These UI classes directly constructed raw `TLRPC.TL_messages_updateDialogFilter` and `TLRPC.TL_messages_updateDialogFiltersOrder` requests and dispatched them through `ConnectionsManager.sendRequest`, creating strong coupling between presentation, MTProto RPC transport, and SQLite database storage.
+- **Decision:**
+  1. Implement `FoldersRemoteDataSource`:
+     - Encapsulates MTProto RPC requests: `getDialogFilters()` (`TL_messages_getDialogFilters`), `updateDialogFilter()` (`TL_messages_updateDialogFilter` for create/update/delete), `updateDialogFiltersOrder()` (`TL_messages_updateDialogFiltersOrder`), and `getSuggestedDialogFilters()` (`TL_messages_getSuggestedDialogFilters`).
+  2. Implement `FoldersLocalDataSource`:
+     - Dispatches database transactions (`saveDialogFilter`, `deleteDialogFilter`, `saveDialogFiltersOrder`) to `MessagesStorage` via `Dispatchers.IO`.
+     - Provides safe, non-throwing in-memory cache inspection for dialog filters and suggested filters.
+  3. Implement `FoldersRepositoryImpl`:
+     - Coordinates remote MTProto synchronization and local SQLite persistence, while updating in-memory `MessagesController` caches and posting `NotificationCenter.dialogFiltersUpdated` safely without throwing under test environments.
+  4. Wire into `MessagingContainer` and `AccountFeatureContainer` as the default repository implementation.
+  5. Add strangler hook `getFoldersRepository()` in `MessagesController.java` to allow legacy callers to consume clean domain operations.
+- **Consequences:** Eliminates direct MTProto RPC construction from UI screens, cleanly encapsulates folder mutations, and preserves 100% backward compatibility for all existing UI adapters.
 
 ### ADR 120: Phase 3 Kickoff — Core Data Sources Infrastructure & SavedMessagesController Strangling
 - **Context:** Following the completion of Phase 1 (Domain/Data layer boundaries for all features) and Phase 2 (UI Wiring of ViewModels across all screens), Phase 3 begins the internal strangling of legacy Telegram controllers. Legacy controllers (such as `SavedMessagesController`) conflate MTProto RPC transport, SQLite database persistence (`MessagesStorage`), and in-memory caching in large monolithic classes.
