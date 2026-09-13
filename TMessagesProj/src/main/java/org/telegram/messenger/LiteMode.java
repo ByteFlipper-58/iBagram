@@ -20,6 +20,14 @@ import java.util.Iterator;
 
 public class LiteMode {
 
+    public static org.telegram.messenger.feature.system.litemode.domain.repository.LiteModeRepository getLiteModeRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getLiteModeRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.litemode.domain.repository.LiteModeRepository getLiteModeRepository() {
+        return getLiteModeRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
     public static final int FLAG_ANIMATED_STICKERS_KEYBOARD = 1;
     public static final int FLAG_ANIMATED_STICKERS_CHAT = 2;
     public static final int FLAGS_ANIMATED_STICKERS = FLAG_ANIMATED_STICKERS_KEYBOARD | FLAG_ANIMATED_STICKERS_CHAT;

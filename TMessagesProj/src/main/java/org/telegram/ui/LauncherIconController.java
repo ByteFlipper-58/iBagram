@@ -8,6 +8,15 @@ import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.R;
 
 public class LauncherIconController {
+
+    public static org.telegram.messenger.feature.system.launchericon.domain.repository.LauncherIconRepository getLauncherIconRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getLauncherIconRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.launchericon.domain.repository.LauncherIconRepository getLauncherIconRepository() {
+        return getLauncherIconRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
     public static void tryFixLauncherIconIfNeeded() {
         for (LauncherIcon icon : LauncherIcon.values()) {
             if (isEnabled(icon)) {

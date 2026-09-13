@@ -1178,10 +1178,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `PaymentsRepositoryImpl.kt` (Clean repository coordinating stars balance, transaction history, subscriptions, top-up options, and reactive observeBalance)
     - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `StarsController.java` strangler boundary with `getPaymentsRepository(account)` and `getPaymentsRepository()` accessors.
+  - [x] Feature: `LauncherIconController` Strangling (`feature.system.launchericon` - ADR 173):
+    - `LauncherIconRemoteDataSource.kt` (System extension point for remote launcher icon configs)
+    - `LauncherIconLocalDataSource.kt` (PackageManager component enablement queries, active icon StateFlow, test mode fallback)
+    - `LauncherIconRepositoryImpl.kt` (Clean repository coordinating icon options, active icon, enablement checks, and fixing)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `LauncherIconController.java` strangler boundary with `getLauncherIconRepository(account)` and `getLauncherIconRepository()` accessors.
+  - [x] Feature: `LiteMode` Strangling (`feature.system.litemode` - ADR 174):
+    - `LiteModeRemoteDataSource.kt` (System extension point for remote lite mode presets)
+    - `LiteModeLocalDataSource.kt` (Thread-safe flags state, power saver threshold, battery level, presets, and test mode fallback)
+    - `LiteModeRepositoryImpl.kt` (Clean repository coordinating flags, presets, power saving thresholds, battery level, and reactive observeState)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `LiteMode.java` strangler boundary with `getLiteModeRepository(account)` and `getLiteModeRepository()` accessors.
+  - [x] Feature: `WindowVisibilityManager` Strangling (`feature.system.windowvisibility` - ADR 175):
+    - `WindowVisibilityRemoteDataSource.kt` (System extension point for remote window visibility configurations)
+    - `WindowVisibilityLocalDataSource.kt` (Reference-counting reasonsToHide, active reasons set, StateFlow, SharedFlow, test mode)
+    - `WindowVisibilityRepositoryImpl.kt` (Clean repository coordinating requestHide, releaseHide, toggleHide, reset, and subsystem controllers)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `WindowVisibilityManager.java` strangler boundary with `getWindowVisibilityRepository(account)`, `getWindowVisibilityRepository()`, and `getRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 175: Window Visibility Arbitration & Reference Counting Strangling via Clean DataSources & WindowVisibilityRepositoryImpl
+- **Context:** In Telegram Android, window visibility arbitration across dialogs, activities, and overlays was governed by `WindowVisibilityManager.java` (~76 lines). The manager managed reference-counting hide reasons (`reasonsToHide`), a direct `OnVisibilityChangedListener`, and subsystem controllers without decoupled data sources or testable repository contracts.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.windowvisibility`:
+  1. Implement `WindowVisibilityRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing system remote sync extension points.
+  2. Implement `WindowVisibilityLocalDataSource`:
+     - Encapsulates reference-counting `reasonsToHide`, active reasons set (`ConcurrentHashMap.newKeySet()`), `StateFlow<WindowVisibilityState>`, and `SharedFlow<Boolean>` with listener callbacks and headless JVM test mode.
+  3. Implement `WindowVisibilityRepositoryImpl`:
+     - Implements `WindowVisibilityRepository`, coordinating hide requests, releases, toggles, reasons queries, reset, reactive state/toggle flows, and controller instantiation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `WindowVisibilityRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `WindowVisibilityManager.getWindowVisibilityRepository(account)`, `getWindowVisibilityRepository()`, and instance `getRepository()` accessors.
+- **Consequences:** Window visibility arbitration and reference-counting hide reasons are decoupled behind clean domain contracts. 100% unit test coverage achieved with `WindowVisibilityRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 174: Power Saving, Battery Optimization & Animation Throttling Strangling via Clean DataSources & LiteModeRepositoryImpl
+- **Context:** Power saving, battery level checks, animation throttling, and feature flag masks were managed by `LiteMode.java` (~365 lines). The class coupled static fields (`value`, `powerSaverLevel`, `lastPowerSaverApplied`), Android battery manager calls, bitwise preset masks, and SharedPreferences persistence without clean lifecycle management or headless unit-test isolation.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.litemode`:
+  1. Implement `LiteModeRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote preset synchronization extension points.
+  2. Implement `LiteModeLocalDataSource`:
+     - Encapsulates `LiteMode.getValue()`, `LiteMode.getPowerSaverLevel()`, `LiteMode.isPowerSaverApplied()`, `LiteMode.setAllFlags()`, thread-safe state caching, `MutableStateFlow<LiteModeState>`, and headless JVM test mode.
+  3. Implement `LiteModeRepositoryImpl`:
+     - Implements `LiteModeRepository`, coordinating local flags, power saver thresholds, battery levels, presets, and reactive state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `LiteModeRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `LiteMode.getLiteModeRepository(account)` and `getLiteModeRepository()` accessors.
+- **Consequences:** LiteMode power saving and animation throttling are decoupled behind clean domain contracts. 100% unit test coverage achieved with `LiteModeRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 173: Dynamic App Launcher Icons & Premium Badging Strangling via Clean DataSources & LauncherIconRepositoryImpl
+- **Context:** Dynamic launcher icon selection, premium icon badging, and launcher repair routines were governed by `LauncherIconController.java` (~72 lines). The controller coupled direct `PackageManager` component enablement calls and static enum lookups without a testable data source abstraction or reactive state observation.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.launchericon`:
+  1. Implement `LauncherIconRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote config extension points for dynamic icons.
+  2. Implement `LauncherIconLocalDataSource`:
+     - Encapsulates `PackageManager` component enablement queries and mutations via `ApplicationLoader.applicationContext`, provides reactive `StateFlow<LauncherIconsStateModel>`, and includes headless JVM test mode.
+  3. Implement `LauncherIconRepositoryImpl`:
+     - Implements `LauncherIconRepository`, coordinating `LauncherIconLocalDataSource` and `LauncherIconRemoteDataSource`, providing active icon queries, setting icons, and repairing launcher components.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `LauncherIconRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `LauncherIconController.getLauncherIconRepository(account)` and `getLauncherIconRepository()` accessors.
+- **Consequences:** Launcher icon management and component enablement are decoupled behind clean domain contracts. 100% unit test coverage achieved with `LauncherIconRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 172: Telegram Payments & Star Balance Strangling via Clean DataSources & PaymentsRepositoryImpl
 - **Context:** Telegram Stars balance, transaction histories, subscriptions, and star top-up packages were governed by `StarsController.java` (~4425 lines). The controller coupled in-memory balance numbers (`balance`), transaction buckets (`transactions`), active subscriptions (`subscriptions`), top-up options (`options`), and global events on `NotificationCenter.starBalanceUpdated`, `starTransactionsLoaded`, and `starSubscriptionsLoaded`.

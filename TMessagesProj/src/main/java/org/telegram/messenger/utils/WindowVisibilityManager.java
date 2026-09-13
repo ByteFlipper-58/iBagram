@@ -7,6 +7,18 @@ import java.lang.ref.WeakReference;
 
 public class WindowVisibilityManager {
 
+    public static org.telegram.messenger.feature.system.windowvisibility.domain.repository.WindowVisibilityRepository getWindowVisibilityRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getWindowVisibilityRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.windowvisibility.domain.repository.WindowVisibilityRepository getWindowVisibilityRepository() {
+        return getWindowVisibilityRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
+    public org.telegram.messenger.feature.system.windowvisibility.domain.repository.WindowVisibilityRepository getRepository() {
+        return getWindowVisibilityRepository();
+    }
+
     private int reasonsToHide;
     private boolean isHidden;
     private final OnVisibilityChangedListener listener;

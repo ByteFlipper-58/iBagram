@@ -116,6 +116,9 @@ import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.Reque
 import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.ResetInAppKeyboardHeightUseCase
 import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.UpdateSystemInsetsUseCase
 import org.telegram.messenger.feature.system.keyboardinsets.presentation.KeyboardInsetsViewModel
+import org.telegram.messenger.feature.system.launchericon.data.datasource.LauncherIconLocalDataSource
+import org.telegram.messenger.feature.system.launchericon.data.datasource.LauncherIconRemoteDataSource
+import org.telegram.messenger.feature.system.launchericon.data.repository.LauncherIconRepositoryImpl
 import org.telegram.messenger.feature.system.launchericon.data.repository.LegacyLauncherIconRepository
 import org.telegram.messenger.feature.system.launchericon.domain.repository.LauncherIconRepository
 import org.telegram.messenger.feature.system.launchericon.domain.usecase.FixLauncherIconIfNeededUseCase
@@ -125,7 +128,10 @@ import org.telegram.messenger.feature.system.launchericon.domain.usecase.IsLaunc
 import org.telegram.messenger.feature.system.launchericon.domain.usecase.ObserveLauncherIconsUseCase
 import org.telegram.messenger.feature.system.launchericon.domain.usecase.SetLauncherIconUseCase
 import org.telegram.messenger.feature.system.launchericon.presentation.LauncherIconViewModel
+import org.telegram.messenger.feature.system.litemode.data.datasource.LiteModeLocalDataSource
+import org.telegram.messenger.feature.system.litemode.data.datasource.LiteModeRemoteDataSource
 import org.telegram.messenger.feature.system.litemode.data.repository.LegacyLiteModeRepository
+import org.telegram.messenger.feature.system.litemode.data.repository.LiteModeRepositoryImpl
 import org.telegram.messenger.feature.system.litemode.domain.repository.LiteModeRepository
 import org.telegram.messenger.feature.system.litemode.domain.usecase.CalculateEffectiveFlagsUseCase
 import org.telegram.messenger.feature.system.litemode.domain.usecase.CheckLiteModeFlagUseCase
@@ -265,7 +271,10 @@ import org.telegram.messenger.feature.system.themes.domain.usecase.SetNightModeS
 import org.telegram.messenger.feature.system.themes.domain.usecase.SetNightModeTypeUseCase
 import org.telegram.messenger.feature.system.themes.domain.usecase.SetThemeAccentUseCase
 import org.telegram.messenger.feature.system.themes.presentation.ThemeViewModel
+import org.telegram.messenger.feature.system.windowvisibility.data.datasource.WindowVisibilityLocalDataSource
+import org.telegram.messenger.feature.system.windowvisibility.data.datasource.WindowVisibilityRemoteDataSource
 import org.telegram.messenger.feature.system.windowvisibility.data.repository.LegacyWindowVisibilityRepository
+import org.telegram.messenger.feature.system.windowvisibility.data.repository.WindowVisibilityRepositoryImpl
 import org.telegram.messenger.feature.system.windowvisibility.domain.repository.WindowVisibilityRepository
 import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.CheckIsWindowVisibleUseCase
 import org.telegram.messenger.feature.system.windowvisibility.domain.usecase.CreateVisibilityControllerUseCase
@@ -592,10 +601,25 @@ class SystemContainer(val account: Int) {
         )
     }
 
+    val launcherIconRemoteDataSource: LauncherIconRemoteDataSource by lazy {
+        LauncherIconRemoteDataSource(account)
+    }
+
+    val launcherIconLocalDataSource: LauncherIconLocalDataSource by lazy {
+        LauncherIconLocalDataSource(account)
+    }
+
+    fun createLauncherIconRepository(): LauncherIconRepository {
+        return LauncherIconRepositoryImpl(
+            localDataSource = launcherIconLocalDataSource,
+            remoteDataSource = launcherIconRemoteDataSource
+        )
+    }
+
     private var customLauncherIconRepository: LauncherIconRepository? = null
 
     var launcherIconRepository: LauncherIconRepository
-        get() = customLauncherIconRepository ?: LegacyLauncherIconRepository()
+        get() = customLauncherIconRepository ?: createLauncherIconRepository()
         set(value) {
             customLauncherIconRepository = value
         }
@@ -1384,9 +1408,28 @@ class SystemContainer(val account: Int) {
     }
 
     // --- Feature: LiteMode (Slice #87) ---
-    val liteModeRepository: LiteModeRepository by lazy {
-        LegacyLiteModeRepository(account)
+    val liteModeRemoteDataSource: LiteModeRemoteDataSource by lazy {
+        LiteModeRemoteDataSource(account)
     }
+
+    val liteModeLocalDataSource: LiteModeLocalDataSource by lazy {
+        LiteModeLocalDataSource(account)
+    }
+
+    fun createLiteModeRepository(): LiteModeRepository {
+        return LiteModeRepositoryImpl(
+            localDataSource = liteModeLocalDataSource,
+            remoteDataSource = liteModeRemoteDataSource
+        )
+    }
+
+    private var customLiteModeRepository: LiteModeRepository? = null
+
+    var liteModeRepository: LiteModeRepository
+        get() = customLiteModeRepository ?: createLiteModeRepository()
+        set(value) {
+            customLiteModeRepository = value
+        }
 
     val calculateEffectiveFlagsUseCase: CalculateEffectiveFlagsUseCase
         get() = CalculateEffectiveFlagsUseCase()
@@ -1492,10 +1535,25 @@ class SystemContainer(val account: Int) {
         )
     }
 
+    val windowVisibilityRemoteDataSource: WindowVisibilityRemoteDataSource by lazy {
+        WindowVisibilityRemoteDataSource(account)
+    }
+
+    val windowVisibilityLocalDataSource: WindowVisibilityLocalDataSource by lazy {
+        WindowVisibilityLocalDataSource(account)
+    }
+
+    fun createWindowVisibilityRepository(): WindowVisibilityRepository {
+        return WindowVisibilityRepositoryImpl(
+            localDataSource = windowVisibilityLocalDataSource,
+            remoteDataSource = windowVisibilityRemoteDataSource
+        )
+    }
+
     private var customWindowVisibilityRepository: WindowVisibilityRepository? = null
 
     var windowVisibilityRepository: WindowVisibilityRepository
-        get() = customWindowVisibilityRepository ?: LegacyWindowVisibilityRepository()
+        get() = customWindowVisibilityRepository ?: createWindowVisibilityRepository()
         set(value) {
             customWindowVisibilityRepository = value
         }
