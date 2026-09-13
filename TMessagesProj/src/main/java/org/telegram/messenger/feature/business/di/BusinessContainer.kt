@@ -374,10 +374,26 @@ class BusinessContainer(val account: Int) {
         )
     }
 
+    val businessLinksRemoteDataSource: org.telegram.messenger.feature.business.businesslinks.data.datasource.BusinessLinksRemoteDataSource by lazy {
+        org.telegram.messenger.feature.business.businesslinks.data.datasource.BusinessLinksRemoteDataSource(account)
+    }
+
+    val businessLinksLocalDataSource: org.telegram.messenger.feature.business.businesslinks.data.datasource.BusinessLinksLocalDataSource by lazy {
+        org.telegram.messenger.feature.business.businesslinks.data.datasource.BusinessLinksLocalDataSource(account)
+    }
+
+    fun createBusinessLinksRepository(): BusinessLinksRepository {
+        return org.telegram.messenger.feature.business.businesslinks.data.repository.BusinessLinksRepositoryImpl(
+            currentAccount = account,
+            localDataSource = businessLinksLocalDataSource,
+            remoteDataSource = businessLinksRemoteDataSource
+        )
+    }
+
     private var customBusinessLinksRepository: BusinessLinksRepository? = null
 
     var businessLinksRepository: BusinessLinksRepository
-        get() = customBusinessLinksRepository ?: LegacyBusinessLinksRepository(account)
+        get() = customBusinessLinksRepository ?: createBusinessLinksRepository()
         set(value) {
             customBusinessLinksRepository = value
         }
@@ -477,10 +493,26 @@ class BusinessContainer(val account: Int) {
     }
 
     // --- Timezones ---
+    val timezonesRemoteDataSource: org.telegram.messenger.feature.business.timezones.data.datasource.TimezonesRemoteDataSource by lazy {
+        org.telegram.messenger.feature.business.timezones.data.datasource.TimezonesRemoteDataSource(account)
+    }
+
+    val timezonesLocalDataSource: org.telegram.messenger.feature.business.timezones.data.datasource.TimezonesLocalDataSource by lazy {
+        org.telegram.messenger.feature.business.timezones.data.datasource.TimezonesLocalDataSource(account)
+    }
+
+    fun createTimezonesRepository(): TimezonesRepository {
+        return org.telegram.messenger.feature.business.timezones.data.repository.TimezonesRepositoryImpl(
+            currentAccount = account,
+            localDataSource = timezonesLocalDataSource,
+            remoteDataSource = timezonesRemoteDataSource
+        )
+    }
+
     private var customTimezonesRepository: TimezonesRepository? = null
 
     var timezonesRepository: TimezonesRepository
-        get() = customTimezonesRepository ?: LegacyTimezonesRepository(account)
+        get() = customTimezonesRepository ?: createTimezonesRepository()
         set(value) {
             customTimezonesRepository = value
         }

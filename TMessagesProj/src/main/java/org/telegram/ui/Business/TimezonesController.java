@@ -179,4 +179,18 @@ public class TimezonesController {
         }
         return timeZone.getId().replace("/", ", ").replace("_", " ") + (offset != null ? ", " + offset : "");
     }
+
+    /**
+     * Strangler Fig hook: returns domain TimezonesRepository for specified account.
+     */
+    public static org.telegram.messenger.feature.business.timezones.domain.repository.TimezonesRepository getTimezonesRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getBusiness().getTimezonesRepository();
+    }
+
+    /**
+     * Strangler Fig hook: returns domain TimezonesRepository for this controller's account.
+     */
+    public org.telegram.messenger.feature.business.timezones.domain.repository.TimezonesRepository getRepository() {
+        return getTimezonesRepository(currentAccount);
+    }
 }

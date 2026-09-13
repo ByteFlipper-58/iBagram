@@ -7114,4 +7114,12 @@ public class AndroidUtilities {
         }
         return null;
     }
+
+    public static org.telegram.messenger.feature.security.flagsecure.domain.repository.FlagSecureRepository getFlagSecureRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(UserConfig.selectedAccount).getSecurity().getFlagSecureRepository();
+    }
+
+    public static org.telegram.messenger.feature.security.flagsecure.domain.repository.FlagSecureRepository getFlagSecureRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getSecurity().getFlagSecureRepository();
+    }
 }

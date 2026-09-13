@@ -810,10 +810,20 @@ class SecurityContainer(val account: Int) {
         )
     }
 
+    val flagSecureLocalDataSource: org.telegram.messenger.feature.security.flagsecure.data.datasource.FlagSecureLocalDataSource by lazy {
+        org.telegram.messenger.feature.security.flagsecure.data.datasource.FlagSecureLocalDataSource()
+    }
+
+    fun createFlagSecureRepository(): org.telegram.messenger.feature.security.flagsecure.domain.repository.FlagSecureRepository {
+        return org.telegram.messenger.feature.security.flagsecure.data.repository.FlagSecureRepositoryImpl(
+            localDataSource = flagSecureLocalDataSource
+        )
+    }
+
     private var customFlagSecureRepository: org.telegram.messenger.feature.security.flagsecure.domain.repository.FlagSecureRepository? = null
 
     var flagSecureRepository: org.telegram.messenger.feature.security.flagsecure.domain.repository.FlagSecureRepository
-        get() = customFlagSecureRepository ?: org.telegram.messenger.feature.security.flagsecure.data.repository.LegacyFlagSecureRepository()
+        get() = customFlagSecureRepository ?: createFlagSecureRepository()
         set(value) {
             customFlagSecureRepository = value
         }

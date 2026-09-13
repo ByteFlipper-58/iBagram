@@ -316,4 +316,18 @@ public class BusinessLinksController {
 
         return null;
     }
+
+    /**
+     * Strangler Fig hook: returns domain BusinessLinksRepository for specified account.
+     */
+    public static org.telegram.messenger.feature.business.businesslinks.domain.repository.BusinessLinksRepository getBusinessLinksRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getBusiness().getBusinessLinksRepository();
+    }
+
+    /**
+     * Strangler Fig hook: returns domain BusinessLinksRepository for this controller's account.
+     */
+    public org.telegram.messenger.feature.business.businesslinks.domain.repository.BusinessLinksRepository getRepository() {
+        return getBusinessLinksRepository(currentAccount);
+    }
 }
