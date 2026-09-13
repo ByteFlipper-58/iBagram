@@ -255,4 +255,19 @@ public class SaveToGallerySettingsHelper {
             return builder;
         }
     }
+
+    // =========================================================================
+    // Clean Architecture / Strangler Fig Hook (ADR 149)
+    // =========================================================================
+
+    public static org.telegram.messenger.feature.media.gallerysave.domain.repository.GallerySaveRepository getGallerySaveRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion
+                .get(account)
+                .getMedia()
+                .getGallerySaveRepository();
+    }
+
+    public static org.telegram.messenger.feature.media.gallerysave.domain.repository.GallerySaveRepository getRepository() {
+        return getGallerySaveRepository(UserConfig.selectedAccount);
+    }
 }

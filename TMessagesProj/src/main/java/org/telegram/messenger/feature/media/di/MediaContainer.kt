@@ -121,6 +121,9 @@ import org.telegram.messenger.feature.media.fileref.domain.usecase.NotifyReferen
 import org.telegram.messenger.feature.media.fileref.domain.usecase.ObserveFileRefStatsUseCase
 import org.telegram.messenger.feature.media.fileref.domain.usecase.RequestReferenceRenewalUseCase
 import org.telegram.messenger.feature.media.fileref.presentation.FileRefViewModel
+import org.telegram.messenger.feature.media.gallerysave.data.datasource.GallerySaveLocalDataSource
+import org.telegram.messenger.feature.media.gallerysave.data.datasource.GallerySaveRemoteDataSource
+import org.telegram.messenger.feature.media.gallerysave.data.repository.GallerySaveRepositoryImpl
 import org.telegram.messenger.feature.media.gallerysave.data.repository.LegacyGallerySaveRepository
 import org.telegram.messenger.feature.media.gallerysave.domain.repository.GallerySaveRepository
 import org.telegram.messenger.feature.media.gallerysave.domain.usecase.GetGallerySaveConfigUseCase
@@ -537,10 +540,26 @@ class MediaContainer(val account: Int) {
         )
     }
 
+    val gallerySaveRemoteDataSource: GallerySaveRemoteDataSource by lazy {
+        GallerySaveRemoteDataSource(account)
+    }
+
+    val gallerySaveLocalDataSource: GallerySaveLocalDataSource by lazy {
+        GallerySaveLocalDataSource(account)
+    }
+
+    fun createGallerySaveRepository(): GallerySaveRepository {
+        return GallerySaveRepositoryImpl(
+            account = account,
+            remoteDataSource = gallerySaveRemoteDataSource,
+            localDataSource = gallerySaveLocalDataSource
+        )
+    }
+
     private var customGallerySaveRepository: GallerySaveRepository? = null
 
     var gallerySaveRepository: GallerySaveRepository
-        get() = customGallerySaveRepository ?: LegacyGallerySaveRepository(account)
+        get() = customGallerySaveRepository ?: createGallerySaveRepository()
         set(value) {
             customGallerySaveRepository = value
         }

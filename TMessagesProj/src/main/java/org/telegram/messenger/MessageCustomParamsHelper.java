@@ -219,4 +219,20 @@ public class MessageCustomParamsHelper {
         }
 
     }
+
+    // =========================================================================
+    // Clean Architecture / Strangler Fig Hook (ADR 151)
+    // =========================================================================
+
+    public static org.telegram.messenger.feature.messaging.messagecustomparams.domain.repository.MessageCustomParamsRepository getMessageCustomParamsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion
+                .get(account)
+                .getMessaging()
+                .getMessageCustomParamsRepository();
+    }
+
+    public static org.telegram.messenger.feature.messaging.messagecustomparams.domain.repository.MessageCustomParamsRepository getRepository() {
+        return getMessageCustomParamsRepository(UserConfig.selectedAccount);
+    }
 }
+

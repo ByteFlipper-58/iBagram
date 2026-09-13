@@ -125,4 +125,19 @@ public class AuthTokensHelper {
         ApplicationLoader.applicationContext.getSharedPreferences("saved_tokens_login", Context.MODE_PRIVATE).edit().clear().apply();
         ApplicationLoader.applicationContext.getSharedPreferences("saved_tokens", Context.MODE_PRIVATE).edit().clear().apply();
     }
+
+    // =========================================================================
+    // Clean Architecture / Strangler Fig Hook (ADR 150)
+    // =========================================================================
+
+    public static org.telegram.messenger.feature.security.authtokens.domain.repository.AuthTokensRepository getAuthTokensRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion
+                .get(account)
+                .getSecurity()
+                .getAuthTokensRepository();
+    }
+
+    public static org.telegram.messenger.feature.security.authtokens.domain.repository.AuthTokensRepository getRepository() {
+        return getAuthTokensRepository(UserConfig.selectedAccount);
+    }
 }

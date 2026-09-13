@@ -1037,10 +1037,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `BotForumRepositoryImpl.kt` (Clean repository coordinating draft streaming, replacement checks, stop actions, and reactive observeState)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `BotForumHelper.java` strangler boundary with `getBotForumRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `SaveToGallerySettingsHelper` Strangling (`feature.media.gallerysave` - ADR 149):
+    - `GallerySaveRemoteDataSource.kt` (MTProto sync for auto-save gallery configuration and server defaults via BaseRemoteDataSource)
+    - `GallerySaveLocalDataSource.kt` (SharedPreferences persistence for exceptions, LongSparseArray cache, peer flag masking, and video limit checks)
+    - `GallerySaveRepositoryImpl.kt` (Clean repository coordinating exceptions CRUD, peer settings observation, and reactive _configFlow)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `SaveToGallerySettingsHelper.java` strangler boundary with `getGallerySaveRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `AuthTokensHelper` Strangling (`feature.security.authtokens` - ADR 150):
+    - `AuthTokensRemoteDataSource.kt` (MTProto session drop and token invalidation RPCs via BaseRemoteDataSource)
+    - `AuthTokensLocalDataSource.kt` (SharedPreferences persistence, hex-encoded TL authorization/loggedOut serialization, and LRU cache)
+    - `AuthTokensRepositoryImpl.kt` (Clean repository coordinating token saves, LRU pruning max 20, removals, and reactive observeState)
+    - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `AuthTokensHelper.java` strangler boundary with `getAuthTokensRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `MessageCustomParamsHelper` Strangling (`feature.messaging.messagecustomparams` - ADR 151):
+    - `MessageCustomParamsRemoteDataSource.kt` (MTProto audio transcription and speech/translation RPCs via BaseRemoteDataSource)
+    - `MessageCustomParamsLocalDataSource.kt` (Params_v1 TL binary buffer serialization, ConcurrentHashMap cache per messageId)
+    - `MessageCustomParamsRepositoryImpl.kt` (Clean repository coordinating params read/write, deep copying between messages, and reactive observeState)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `MessageCustomParamsHelper.java` strangler boundary with `getMessageCustomParamsRepository(account)` and `getRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 151: MessageCustomParamsHelper Strangling via Clean DataSources & MessageCustomParamsRepositoryImpl
+- **Context:** In Telegram Android, custom per-message auxiliary parameters (transcriptions, speech recognition flags, translation data) were handled by `MessageCustomParamsHelper.java` (~230 lines). `MessageCustomParamsHelper` coupled direct binary serialization (`Params_v1`), in-memory sparse structures, MTProto audio transcription requests (`TL_messages_transcribeAudio`), and legacy database helper calls.
+- **Decision:** Apply the Strangler Fig pattern to `MessageCustomParamsHelper`:
+  1. Implement `MessageCustomParamsRemoteDataSource`:
+     - Encapsulates MTProto transcription requests (`TL_messages_transcribeAudio`) and speech/translation data fetches via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `MessageCustomParamsLocalDataSource`:
+     - Manages binary buffer read/write with `Params_v1` TL serialization, thread-safe memory caching per message ID (`ConcurrentHashMap<Long, MessageCustomParamsModel>`), and legacy byte buffer conversions.
+  3. Implement `MessageCustomParamsRepositoryImpl`:
+     - Implements `MessageCustomParamsRepository`, coordinating message param reads/writes, deep copying between forwarded/edited messages, params removal, and reactive `observeState()`.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to instantiate and wire `MessageCustomParamsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `MessageCustomParamsHelper.getMessageCustomParamsRepository(account)` and instance `getRepository()`.
+- **Consequences:** Custom message params and transcription state are decoupled behind clean domain contracts. 100% test coverage achieved with `MessageCustomParamsRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 150: AuthTokensHelper Strangling via Clean DataSources & AuthTokensRepositoryImpl
+- **Context:** In Telegram Android, session authorization tokens, auto-login tokens, and logged-out token history were managed by `AuthTokensHelper.java` (~215 lines). `AuthTokensHelper` coupled SharedPreferences persistence (`saved_tokens`, `saved_tokens_login`), hex encoding of serialized TL authorization objects, and session drop MTProto requests.
+- **Decision:** Apply the Strangler Fig pattern to `AuthTokensHelper`:
+  1. Implement `AuthTokensRemoteDataSource`:
+     - Encapsulates MTProto session drop and token invalidation RPCs via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `AuthTokensLocalDataSource`:
+     - Manages hex-encoded serialization and deserialization of `TL_auth_authorization` and `TL_auth_loggedOut`, thread-safe SharedPreferences persistence, and headless memory caching with a 20-token LRU ceiling.
+  3. Implement `AuthTokensRepositoryImpl`:
+     - Implements `AuthTokensRepository`, coordinating token saves, LRU pruning (maximum 20 tokens), removal by hex token or authorization ID, and reactive `observeState()`.
+  4. Update `SecurityContainer` and `AccountFeatureContainer` to instantiate and wire `AuthTokensRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `AuthTokensHelper.getAuthTokensRepository(account)` and instance `getRepository()`.
+- **Consequences:** Session token lifecycle, auto-login persistence, and logged-out token caching are decoupled behind clean domain contracts. 100% test coverage achieved with `AuthTokensRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 149: SaveToGallerySettingsHelper Strangling via Clean DataSources & GallerySaveRepositoryImpl
+- **Context:** In Telegram Android, auto-save media to gallery preferences, peer-specific exceptions (users, channels, groups), and video file size limits were managed by `SaveToGallerySettingsHelper.java` (~340 lines). `SaveToGallerySettingsHelper` coupled SharedPreferences persistence, bitwise peer flag masking, and MTProto auto-save settings sync.
+- **Decision:** Apply the Strangler Fig pattern to `SaveToGallerySettingsHelper`:
+  1. Implement `GallerySaveRemoteDataSource`:
+     - Encapsulates MTProto remote sync for auto-save gallery configuration and server defaults via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `GallerySaveLocalDataSource`:
+     - Manages SharedPreferences persistence for exceptions (`users_save_gallery_exceptions`, `channels_save_gallery_exceptions`, `groups_save_gallery_exceptions`), in-memory `LongSparseArray` caching with headless test fallback, video limit checks (up to 4 GB), and peer flag bitmask validation.
+  3. Implement `GallerySaveRepositoryImpl`:
+     - Implements `GallerySaveRepository`, coordinating exceptions CRUD (`getExceptions`, `setException`, `removeException`, `removeAllExceptions`), peer settings observation, video limit clamping, and reactive `_configFlow`.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to instantiate and wire `GallerySaveRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `SaveToGallerySettingsHelper.getGallerySaveRepository(account)` and instance `getRepository()`.
+- **Consequences:** Gallery auto-save rules and peer exceptions are decoupled behind clean domain contracts. 100% test coverage achieved with `GallerySaveRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 148: BotForumHelper Strangling via Clean DataSources & BotForumRepositoryImpl
 - **Context:** In Telegram Android, Bot Forum topics and AI draft message streaming were managed by `BotForumHelper.java` (~785 lines). `BotForumHelper` coupled MTProto draft actions (`TL_sendMessageTextDraftAction`, `TL_sendMessageRichMessageDraftAction`, `TL_sendMessageStopDraftAction`), custom sparse array structures (`DialogTopicIdKeyMap`), SharedPreferences persistence (`bot_drafts`), typing animators (`MultiLayoutTypingAnimator`), and global `NotificationCenter` broadcasts.

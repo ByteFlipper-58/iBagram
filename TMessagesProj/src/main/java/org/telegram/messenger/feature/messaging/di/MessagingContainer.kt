@@ -258,7 +258,10 @@ import org.telegram.messenger.feature.messaging.mentions.domain.usecase.SetMenti
 import org.telegram.messenger.feature.messaging.mentions.domain.usecase.UpdateMentionQueryUseCase
 import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ValidateUsernameUseCase
 import org.telegram.messenger.feature.messaging.mentions.presentation.MentionsViewModel
+import org.telegram.messenger.feature.messaging.messagecustomparams.data.datasource.MessageCustomParamsLocalDataSource
+import org.telegram.messenger.feature.messaging.messagecustomparams.data.datasource.MessageCustomParamsRemoteDataSource
 import org.telegram.messenger.feature.messaging.messagecustomparams.data.repository.LegacyMessageCustomParamsRepository
+import org.telegram.messenger.feature.messaging.messagecustomparams.data.repository.MessageCustomParamsRepositoryImpl
 import org.telegram.messenger.feature.messaging.messagecustomparams.domain.repository.MessageCustomParamsRepository
 import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.CheckMessageCustomParamsEmptyUseCase
 import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.ClearAllMessageCustomParamsUseCase
@@ -1965,9 +1968,29 @@ class MessagingContainer(val account: Int) {
         )
     }
 
-    val messageCustomParamsRepository: MessageCustomParamsRepository by lazy {
-        LegacyMessageCustomParamsRepository(account)
+    val messageCustomParamsRemoteDataSource: MessageCustomParamsRemoteDataSource by lazy {
+        MessageCustomParamsRemoteDataSource(account)
     }
+
+    val messageCustomParamsLocalDataSource: MessageCustomParamsLocalDataSource by lazy {
+        MessageCustomParamsLocalDataSource(account)
+    }
+
+    fun createMessageCustomParamsRepository(): MessageCustomParamsRepository {
+        return MessageCustomParamsRepositoryImpl(
+            currentAccount = account,
+            remoteDataSource = messageCustomParamsRemoteDataSource,
+            localDataSource = messageCustomParamsLocalDataSource
+        )
+    }
+
+    private var customMessageCustomParamsRepository: MessageCustomParamsRepository? = null
+
+    var messageCustomParamsRepository: MessageCustomParamsRepository
+        get() = customMessageCustomParamsRepository ?: createMessageCustomParamsRepository()
+        set(value) {
+            customMessageCustomParamsRepository = value
+        }
 
     val checkMessageCustomParamsEmptyUseCase: CheckMessageCustomParamsEmptyUseCase
         get() = CheckMessageCustomParamsEmptyUseCase()

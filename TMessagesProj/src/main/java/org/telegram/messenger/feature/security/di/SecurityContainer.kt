@@ -1,6 +1,9 @@
 package org.telegram.messenger.feature.security.di
 
 import java.util.concurrent.ConcurrentHashMap
+import org.telegram.messenger.feature.security.authtokens.data.datasource.AuthTokensLocalDataSource
+import org.telegram.messenger.feature.security.authtokens.data.datasource.AuthTokensRemoteDataSource
+import org.telegram.messenger.feature.security.authtokens.data.repository.AuthTokensRepositoryImpl
 import org.telegram.messenger.feature.security.authtokens.data.repository.LegacyAuthTokensRepository
 import org.telegram.messenger.feature.security.authtokens.domain.repository.AuthTokensRepository
 import org.telegram.messenger.feature.security.authtokens.domain.usecase.AddLogoutTokenUseCase
@@ -594,9 +597,29 @@ class SecurityContainer(val account: Int) {
         )
     }
 
-    val authTokensRepository: AuthTokensRepository by lazy {
-        LegacyAuthTokensRepository(account)
+    val authTokensRemoteDataSource: AuthTokensRemoteDataSource by lazy {
+        AuthTokensRemoteDataSource(account)
     }
+
+    val authTokensLocalDataSource: AuthTokensLocalDataSource by lazy {
+        AuthTokensLocalDataSource(account)
+    }
+
+    fun createAuthTokensRepository(): AuthTokensRepository {
+        return AuthTokensRepositoryImpl(
+            currentAccount = account,
+            remoteDataSource = authTokensRemoteDataSource,
+            localDataSource = authTokensLocalDataSource
+        )
+    }
+
+    private var customAuthTokensRepository: AuthTokensRepository? = null
+
+    var authTokensRepository: AuthTokensRepository
+        get() = customAuthTokensRepository ?: createAuthTokensRepository()
+        set(value) {
+            customAuthTokensRepository = value
+        }
 
     val pruneTokensListUseCase: PruneTokensListUseCase
         get() = PruneTokensListUseCase()
