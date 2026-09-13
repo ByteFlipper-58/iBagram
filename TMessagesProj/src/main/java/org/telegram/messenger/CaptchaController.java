@@ -49,6 +49,17 @@ public class CaptchaController {
 
     public static HashMap<Integer, Request> currentRequests;
 
+    /**
+     * Strangler boundary accessor for clean CaptchaRepository.
+     */
+    public static org.telegram.messenger.feature.security.captcha.domain.repository.CaptchaRepository getCaptchaRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(org.telegram.messenger.UserConfig.selectedAccount).getSecurity().getCaptchaRepository();
+    }
+
+    public static org.telegram.messenger.feature.security.captcha.domain.repository.CaptchaRepository getCaptchaRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getSecurity().getCaptchaRepository();
+    }
+
     public static void request(int currentAccount, int requestToken, String action, String key_id) {
         if (currentRequests == null) {
             currentRequests = new HashMap<>();

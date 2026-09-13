@@ -27,6 +27,17 @@ public class UnconfirmedAuthController {
         readCache();
     }
 
+    /**
+     * Strangler boundary accessor for clean UnconfirmedAuthRepository.
+     */
+    public static org.telegram.messenger.feature.security.unconfirmedauth.domain.repository.UnconfirmedAuthRepository getUnconfirmedAuthRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getSecurity().getUnconfirmedAuthRepository();
+    }
+
+    public org.telegram.messenger.feature.security.unconfirmedauth.domain.repository.UnconfirmedAuthRepository getUnconfirmedAuthRepository() {
+        return getUnconfirmedAuthRepository(currentAccount);
+    }
+
     public final ArrayList<UnconfirmedAuth> auths = new ArrayList<>();
 
     private boolean fetchedCache, fetchingCache;

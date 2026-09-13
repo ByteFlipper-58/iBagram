@@ -42,7 +42,10 @@ import org.telegram.messenger.feature.security.botguard.domain.usecase.ObserveGu
 import org.telegram.messenger.feature.security.botguard.domain.usecase.RegisterGuardBotSessionUseCase
 import org.telegram.messenger.feature.security.botguard.domain.usecase.SetGuardBotConfirmationShownUseCase
 import org.telegram.messenger.feature.security.botguard.presentation.BotGuardViewModel
+import org.telegram.messenger.feature.security.captcha.data.datasource.CaptchaLocalDataSource
+import org.telegram.messenger.feature.security.captcha.data.datasource.CaptchaRemoteDataSource
 import org.telegram.messenger.feature.security.captcha.data.repository.LegacyCaptchaRepository
+import org.telegram.messenger.feature.security.captcha.data.repository.CaptchaRepositoryImpl
 import org.telegram.messenger.feature.security.captcha.domain.repository.CaptchaRepository
 import org.telegram.messenger.feature.security.captcha.domain.usecase.CancelCaptchaUseCase
 import org.telegram.messenger.feature.security.captcha.domain.usecase.GetActiveCaptchaRequestsUseCase
@@ -108,7 +111,10 @@ import org.telegram.messenger.feature.security.sessions.domain.usecase.Terminate
 import org.telegram.messenger.feature.security.sessions.domain.usecase.TerminateWebSessionUseCase
 import org.telegram.messenger.feature.security.sessions.domain.usecase.UpdateSessionSettingsUseCase
 import org.telegram.messenger.feature.security.sessions.presentation.SessionsViewModel
+import org.telegram.messenger.feature.security.unconfirmedauth.data.datasource.UnconfirmedAuthLocalDataSource
+import org.telegram.messenger.feature.security.unconfirmedauth.data.datasource.UnconfirmedAuthRemoteDataSource
 import org.telegram.messenger.feature.security.unconfirmedauth.data.repository.LegacyUnconfirmedAuthRepository
+import org.telegram.messenger.feature.security.unconfirmedauth.data.repository.UnconfirmedAuthRepositoryImpl
 import org.telegram.messenger.feature.security.unconfirmedauth.domain.repository.UnconfirmedAuthRepository
 import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ClearUnconfirmedAuthsUseCase
 import org.telegram.messenger.feature.security.unconfirmedauth.domain.usecase.ConfirmAllAuthsUseCase
@@ -400,10 +406,26 @@ class SecurityContainer(val account: Int) {
         )
     }
 
+    val unconfirmedAuthRemoteDataSource: UnconfirmedAuthRemoteDataSource by lazy {
+        UnconfirmedAuthRemoteDataSource(account)
+    }
+
+    val unconfirmedAuthLocalDataSource: UnconfirmedAuthLocalDataSource by lazy {
+        UnconfirmedAuthLocalDataSource(account)
+    }
+
+    fun createUnconfirmedAuthRepository(): UnconfirmedAuthRepository {
+        return UnconfirmedAuthRepositoryImpl(
+            currentAccount = account,
+            remoteDataSource = unconfirmedAuthRemoteDataSource,
+            localDataSource = unconfirmedAuthLocalDataSource
+        )
+    }
+
     private var customUnconfirmedAuthRepository: UnconfirmedAuthRepository? = null
 
     var unconfirmedAuthRepository: UnconfirmedAuthRepository
-        get() = customUnconfirmedAuthRepository ?: LegacyUnconfirmedAuthRepository(account)
+        get() = customUnconfirmedAuthRepository ?: createUnconfirmedAuthRepository()
         set(value) {
             customUnconfirmedAuthRepository = value
         }
@@ -453,10 +475,25 @@ class SecurityContainer(val account: Int) {
         )
     }
 
+    val captchaRemoteDataSource: CaptchaRemoteDataSource by lazy {
+        CaptchaRemoteDataSource()
+    }
+
+    val captchaLocalDataSource: CaptchaLocalDataSource by lazy {
+        CaptchaLocalDataSource()
+    }
+
+    fun createCaptchaRepository(): CaptchaRepository {
+        return CaptchaRepositoryImpl(
+            remoteDataSource = captchaRemoteDataSource,
+            localDataSource = captchaLocalDataSource
+        )
+    }
+
     private var customCaptchaRepository: CaptchaRepository? = null
 
     var captchaRepository: CaptchaRepository
-        get() = customCaptchaRepository ?: LegacyCaptchaRepository(account)
+        get() = customCaptchaRepository ?: createCaptchaRepository()
         set(value) {
             customCaptchaRepository = value
         }

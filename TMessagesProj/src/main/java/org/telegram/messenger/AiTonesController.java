@@ -23,6 +23,17 @@ public final class AiTonesController {
         this.currentAccount = currentAccount;
     }
 
+    /**
+     * Strangler boundary accessor for clean AiTonesRepository.
+     */
+    public static org.telegram.messenger.feature.messaging.aitones.domain.repository.AiTonesRepository getAiTonesRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getMessaging().getAiTonesRepository();
+    }
+
+    public org.telegram.messenger.feature.messaging.aitones.domain.repository.AiTonesRepository getAiTonesRepository() {
+        return getAiTonesRepository(currentAccount);
+    }
+
     public void invalidate() {
         requestedTime = 0;
         if (open) {

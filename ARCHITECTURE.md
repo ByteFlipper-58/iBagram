@@ -965,10 +965,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `CacheByChatsRepositoryImpl.kt` (Clean repository coordinating retention periods, exceptions, and reactive observeConfig)
     - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `CacheByChatsController.java` strangler boundary with `getCacheByChatsRepository(account)` accessor.
+  - [x] Feature: `UnconfirmedAuthController` Strangling (`feature.security.unconfirmedauth` - ADR 137):
+    - `UnconfirmedAuthRemoteDataSource.kt` (MTProto unconfirmed authorization confirmations/denials via BaseRemoteDataSource)
+    - `UnconfirmedAuthLocalDataSource.kt` (Unconfirmed auth cache, SQLite integration, and in-memory fallback)
+    - `UnconfirmedAuthRepositoryImpl.kt` (Clean repository coordinating confirm/deny, state queries, and observePendingAuths)
+    - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `UnconfirmedAuthController.java` strangler boundary with `getUnconfirmedAuthRepository(account)` accessor.
+  - [x] Feature: `CaptchaController` Strangling (`feature.security.captcha` - ADR 138):
+    - `CaptchaRemoteDataSource.kt` (reCAPTCHA Enterprise task execution & MTProto token verification via BaseRemoteDataSource)
+    - `CaptchaLocalDataSource.kt` (Active requests deduplication and verification state tracking)
+    - `CaptchaRepositoryImpl.kt` (Clean repository coordinating requests, verification status, and error handling)
+    - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `CaptchaController.java` strangler boundary with `getCaptchaRepository(account)` accessor.
+  - [x] Feature: `AiTonesController` Strangling (`feature.messaging.aitones` - ADR 139):
+    - `AiTonesRemoteDataSource.kt` (MTProto AI Compose styles/tones RPCs and unsave requests via BaseRemoteDataSource)
+    - `AiTonesLocalDataSource.kt` (Base64 serialization in SharedPreferences and safe in-memory list caching)
+    - `AiTonesRepositoryImpl.kt` (Clean repository coordinating tones loading, add/remove/edit, and reactive observeTones)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `AiTonesController.java` strangler boundary with `getAiTonesRepository(account)` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 139: AiTonesController Strangling via Clean DataSources & AiTonesRepositoryImpl
+- **Context:** In Telegram Android, AI Compose tone styling presets (e.g. formal, friendly, creative) and custom user prompts were managed by `AiTonesController.java` (~160 lines). `AiTonesController` coupled MTProto RPCs (`TL_aicompose.getTones`, `unsaveTone`), Base64 TL serialization stored in SharedPreferences (`ai_styles`), in-memory caches of `AiComposeTone` structures, and broadcasts to `NotificationCenter.loadedAiComposeTones`. Legacy UI components accessed `AiTonesController.getInstance(account)`.
+- **Decision:** Apply the Strangler Fig pattern to `AiTonesController`:
+  1. Implement `AiTonesRemoteDataSource`:
+     - Encapsulates MTProto RPCs for fetching tones (`TL_aicompose.getTones`) and unsaving tones (`unsaveTone`) using `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `AiTonesLocalDataSource`:
+     - Encapsulates Base64 TL serialization to SharedPreferences (`ai_styles`), self-clearing safe in-memory caching, tone deduplication, and tone mutation (`addTone`, `removeTone`, `editTone`).
+  3. Implement `AiTonesRepositoryImpl`:
+     - Implements `AiTonesRepository`, coordinating remote fetching with hash checks, local persistence, safe notifications dispatch, and reactive `observeTones()` via `NotificationCenterFlowBridge`.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to instantiate and provide `AiTonesRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `AiTonesController.getAiTonesRepository(account)` and instance `getAiTonesRepository()`.
+- **Consequences:** AI tones loading, editing, local caching, and reactive observation are cleanly decoupled behind testable domain contracts and data sources. 100% test coverage achieved with `AiTonesRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 138: CaptchaController Strangling via Clean DataSources & CaptchaRepositoryImpl
+- **Context:** In Telegram Android, bot verification and human challenge prompts using Google reCAPTCHA Enterprise were coordinated by `CaptchaController.java` (~175 lines). `CaptchaController` coupled Google Play Services / Cloud reCAPTCHA Client APIs, MTProto token dispatch, request tracking and deduplication (`requestTasks`), and callbacks into Telegram dialogs.
+- **Decision:** Apply the Strangler Fig pattern to `CaptchaController`:
+  1. Implement `CaptchaRemoteDataSource`:
+     - Encapsulates reCAPTCHA Enterprise token execution and MTProto token verification via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `CaptchaLocalDataSource`:
+     - Manages active request deduplication, in-flight challenge tokens, and state flow tracking.
+  3. Implement `CaptchaRepositoryImpl`:
+     - Implements `CaptchaRepository`, coordinating reCAPTCHA task execution, verification responses, and error handling.
+  4. Update `SecurityContainer` and `AccountFeatureContainer` to instantiate and provide `CaptchaRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `CaptchaController.getCaptchaRepository(account)` and instance `getCaptchaRepository()`.
+- **Consequences:** reCAPTCHA challenge execution and token verification are cleanly decoupled behind testable domain contracts and data sources. 100% test coverage achieved with `CaptchaRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 137: UnconfirmedAuthController Strangling via Clean DataSources & UnconfirmedAuthRepositoryImpl
+- **Context:** In Telegram Android, pending unconfirmed login authorizations from new devices and session verification alerts were managed by `UnconfirmedAuthController.java` (~135 lines). `UnconfirmedAuthController` coupled MTProto RPCs (`TL_auth.confirmUnconfirmedAuth`, `TL_auth.denyUnconfirmedAuth`), SQLite database storage (`MessagesStorage`), in-memory pending authorizations caches (`ArrayList<TL_auth_unconfirmedAuth>`), and `NotificationCenter` broadcasts (`unconfirmedAuthUpdate`).
+- **Decision:** Apply the Strangler Fig pattern to `UnconfirmedAuthController`:
+  1. Implement `UnconfirmedAuthRemoteDataSource`:
+     - Encapsulates MTProto RPC execution: confirming and denying unconfirmed authorizations via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `UnconfirmedAuthLocalDataSource`:
+     - Encapsulates SQLite persistence via `MessagesStorage`, thread-safe in-memory cache inspection, and headless fallback.
+  3. Implement `UnconfirmedAuthRepositoryImpl`:
+     - Implements `UnconfirmedAuthRepository`, coordinating confirm/deny actions, state queries, safe notification posting, and reactive `observePendingAuths()` via `NotificationCenterFlowBridge`.
+  4. Update `SecurityContainer` and `AccountFeatureContainer` to instantiate and provide `UnconfirmedAuthRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `UnconfirmedAuthController.getUnconfirmedAuthRepository(account)` and instance `getUnconfirmedAuthRepository()`.
+- **Consequences:** Unconfirmed session verification and authorization state are cleanly decoupled behind testable domain contracts and data sources. 100% test coverage achieved with `UnconfirmedAuthRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 136: CacheByChatsController Strangling via Clean DataSources & CacheByChatsRepositoryImpl
 - **Context:** In Telegram Android, automatic media cache retention policies, cleanup rules by chat categories (User, Group, Channel, Stories), and per-dialog retention exceptions were managed by `CacheByChatsController.java` (~215 lines) in `org.telegram.messenger`. `CacheByChatsController` coupled `SharedConfig` global preferences (`keep_media_type_*`), `UserConfig` account preferences storing binary hex-encoded `ByteBuffer` arrays of exceptions (`keep_media_exceptions_*`), and SQLite dialog lookups via `FileDatabase`. UI activities like `CacheControlActivity` directly instantiated `new CacheByChatsController(currentAccount)`.

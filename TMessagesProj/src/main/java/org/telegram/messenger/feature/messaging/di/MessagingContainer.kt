@@ -1,6 +1,9 @@
 package org.telegram.messenger.feature.messaging.di
 
 import java.util.concurrent.ConcurrentHashMap
+import org.telegram.messenger.feature.messaging.aitones.data.datasource.AiTonesLocalDataSource
+import org.telegram.messenger.feature.messaging.aitones.data.datasource.AiTonesRemoteDataSource
+import org.telegram.messenger.feature.messaging.aitones.data.repository.AiTonesRepositoryImpl
 import org.telegram.messenger.feature.messaging.aitones.data.repository.LegacyAiTonesRepository
 import org.telegram.messenger.feature.messaging.aitones.domain.repository.AiTonesRepository
 import org.telegram.messenger.feature.messaging.aitones.domain.usecase.AddAiToneUseCase
@@ -1135,10 +1138,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val aiTonesRemoteDataSource: AiTonesRemoteDataSource by lazy {
+        AiTonesRemoteDataSource(account)
+    }
+
+    val aiTonesLocalDataSource: AiTonesLocalDataSource by lazy {
+        AiTonesLocalDataSource(account)
+    }
+
+    fun createAiTonesRepository(): AiTonesRepository {
+        return AiTonesRepositoryImpl(
+            currentAccount = account,
+            remoteDataSource = aiTonesRemoteDataSource,
+            localDataSource = aiTonesLocalDataSource
+        )
+    }
+
     private var customAiTonesRepository: AiTonesRepository? = null
 
     var aiTonesRepository: AiTonesRepository
-        get() = customAiTonesRepository ?: LegacyAiTonesRepository(account)
+        get() = customAiTonesRepository ?: createAiTonesRepository()
         set(value) {
             customAiTonesRepository = value
         }
