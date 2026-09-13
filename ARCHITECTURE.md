@@ -1160,10 +1160,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `BusinessRecipientsRepositoryImpl.kt` (Clean repository coordinating recipient flags, user sets arbitration, and reactive observeState)
     - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `BusinessRecipientsHelper.java` strangler boundary with `getBusinessRecipientsRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `Bot Stars` Strangling (`feature.business.botstars` - ADR 170):
+    - `BotStarsRemoteDataSource.kt` (MTProto bot stars revenue stats, TON revenue stats, transactions, connected referral bots, suggested programs, admined bots/channels via BaseRemoteDataSource)
+    - `BotStarsLocalDataSource.kt` (Thread-safe in-memory cache, BotStarsController integration, and NotificationCenter observation)
+    - `BotStarsRepositoryImpl.kt` (Clean repository coordinating revenue stats, transaction filtering, connected referral bots, suggested programs, and reactive observeBotStarsStats)
+    - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `BotStarsController.java` strangler boundary with `getBotStarsRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `Star Gifts` Strangling (`feature.business.stargifts` - ADR 171):
+    - `StarGiftsRemoteDataSource.kt` (MTProto star gifts catalog, gift lookup, saved profile gifts loading, and gift pin/hide toggling via BaseRemoteDataSource)
+    - `StarGiftsLocalDataSource.kt` (Thread-safe in-memory catalog, gifts cache, profile gifts, and NotificationCenter observation)
+    - `StarGiftsRepositoryImpl.kt` (Clean repository coordinating star gifts catalog, individual gifts, profile gifts pagination, and reactive observeCatalog)
+    - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `StarsController.java` strangler boundary with `getStarGiftsRepository(account)` and `getStarGiftsRepository()` accessors.
+  - [x] Feature: `Payments` Strangling (`feature.business.payments` - ADR 172):
+    - `PaymentsRemoteDataSource.kt` (MTProto stars balance, transactions, subscriptions, and top-up options via BaseRemoteDataSource)
+    - `PaymentsLocalDataSource.kt` (Thread-safe balance state, transaction history, subscriptions, top-up options, and NotificationCenter observation)
+    - `PaymentsRepositoryImpl.kt` (Clean repository coordinating stars balance, transaction history, subscriptions, top-up options, and reactive observeBalance)
+    - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `StarsController.java` strangler boundary with `getPaymentsRepository(account)` and `getPaymentsRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 172: Telegram Payments & Star Balance Strangling via Clean DataSources & PaymentsRepositoryImpl
+- **Context:** Telegram Stars balance, transaction histories, subscriptions, and star top-up packages were governed by `StarsController.java` (~4425 lines). The controller coupled in-memory balance numbers (`balance`), transaction buckets (`transactions`), active subscriptions (`subscriptions`), top-up options (`options`), and global events on `NotificationCenter.starBalanceUpdated`, `starTransactionsLoaded`, and `starSubscriptionsLoaded`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.business.payments`:
+  1. Implement `PaymentsRemoteDataSource`:
+     - Encapsulates MTProto fetching and cache invalidation for balance, transactions, subscriptions, and top-up options via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `PaymentsLocalDataSource`:
+     - Encapsulates thread-safe balance caching, transaction buckets, subscription lists, top-up options, and `NotificationCenter` event observation with in-memory test fallbacks.
+  3. Implement `PaymentsRepositoryImpl`:
+     - Implements `PaymentsRepository`, providing clean methods to get/observe balance, transaction history, subscriptions, top-up options, and refresh mechanisms.
+  4. Update `BusinessContainer` and `AccountFeatureContainer` to wire `PaymentsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `StarsController.getPaymentsRepository(account)` and `getPaymentsRepository()` accessors.
+- **Consequences:** Stars balance tracking, transactions, and subscriptions are decoupled behind clean domain contracts. 100% unit test coverage achieved with `PaymentsRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 171: Star Gifts Catalog & Profile Gifts Strangling via Clean DataSources & StarGiftsRepositoryImpl
+- **Context:** Telegram Star Gifts catalog, individual gift lookup, profile saved gifts pagination, and gift pin/hide states were managed inside `StarsController.java` (~4425 lines). Components coupled raw MTProto calls (`TL_stars.getSavedStarGifts`, `saveStarGift`), in-memory gift lists (`sortedGifts`, `gifts`), and global events on `NotificationCenter.starGiftsLoaded` and `starUserGiftsLoaded`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.business.stargifts`:
+  1. Implement `StarGiftsRemoteDataSource`:
+     - Encapsulates MTProto star gifts catalog retrieval, individual gift lookup, profile saved gifts loading with filters, and gift pin/hide mutations via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `StarGiftsLocalDataSource`:
+     - Encapsulates catalog cache, gift lookups, profile gifts lists by dialog, and `NotificationCenter` event observation with thread-safe test fallbacks.
+  3. Implement `StarGiftsRepositoryImpl`:
+     - Implements `StarGiftsRepository`, coordinating catalog retrieval, gift lookup, paginated profile gifts, pin/hide toggling, and reactive catalog observation.
+  4. Update `BusinessContainer` and `AccountFeatureContainer` to wire `StarGiftsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `StarsController.getStarGiftsRepository(account)` and `getStarGiftsRepository()` accessors.
+- **Consequences:** Star gifts catalog and user profile gift collections are decoupled behind clean domain contracts. 100% unit test coverage achieved with `StarGiftsRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 170: Bot Stars Balance & Referral Revenue Strangling via Clean DataSources & BotStarsRepositoryImpl
+- **Context:** In Telegram Android, Bot Stars revenue statistics, TON balances, transaction histories, connected referral bots, suggested affiliate bots, and admined bots/channels were managed by `BotStarsController.java` (~652 lines). The controller managed in-memory caches (`botStarsStats`, `tonStats`, `transactions`, `connectedBots`), MTProto RPCs, and untyped global notifications without isolated data sources or testable repository contracts.
+- **Decision:** Apply the Strangler Fig pattern to `feature.business.botstars`:
+  1. Implement `BotStarsRemoteDataSource`:
+     - Encapsulates MTProto revenue stats, transactions, referral bots, suggested programs, and admined bots/channels loading via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `BotStarsLocalDataSource`:
+     - Encapsulates cached bot stats, TON stats, transaction lists, referral bots, suggested programs, and `NotificationCenter` event observation (`botStarsUpdated`, `botStarsTransactionsLoaded`, `channelConnectedBotsUpdate`) with in-memory test fallbacks.
+  3. Implement `BotStarsRepositoryImpl`:
+     - Implements `BotStarsRepository`, coordinating revenue stats, transaction filtering, connected referral bots, suggested programs, and reactive observeBotStarsStats/observeTonStats.
+  4. Update `BusinessContainer` and `AccountFeatureContainer` to wire `BotStarsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `BotStarsController.getBotStarsRepository(account)` and `getRepository()` accessors.
+- **Consequences:** Bot Stars revenue, TON balances, transactions, and referral affiliate programs are decoupled behind clean domain contracts. 100% unit test coverage achieved with `BotStarsRepositoryImplTest.kt` passing and full backward compatibility preserved. Completes `business` domain to 100% (10/10 features) and crosses 50% global milestone (55/105 features, 52.4%).
 
 ### ADR 169: Business Recipients & Exclusion Rules Arbitration Strangling via Clean DataSources & BusinessRecipientsRepositoryImpl
 - **Context:** In Telegram Business, recipient filtering for away messages, greeting messages, and connected chatbots is managed by `BusinessRecipientsHelper.java` (~265 lines). The helper handled bitwise flag manipulation (`FLAG_EXISTING_CHATS`, `FLAG_NEW_CHATS`, `FLAG_CONTACTS`, `FLAG_NON_CONTACTS`, `FLAG_EXCLUDE_SELECTED`), synchronization between selected user ID lists and excluded user ID lists, and UI validation without an isolated data source or pure domain repository contract.

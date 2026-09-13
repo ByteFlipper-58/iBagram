@@ -134,6 +134,22 @@ public class StarsController {
     public final int currentAccount;
     public final boolean ton;
 
+    public static org.telegram.messenger.feature.business.stargifts.domain.repository.StarGiftsRepository getStarGiftsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getBusiness().getStarGiftsRepository();
+    }
+
+    public org.telegram.messenger.feature.business.stargifts.domain.repository.StarGiftsRepository getStarGiftsRepository() {
+        return getStarGiftsRepository(currentAccount);
+    }
+
+    public static org.telegram.messenger.feature.business.payments.domain.repository.PaymentsRepository getPaymentsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getBusiness().getPaymentsRepository();
+    }
+
+    public org.telegram.messenger.feature.business.payments.domain.repository.PaymentsRepository getPaymentsRepository() {
+        return getPaymentsRepository(currentAccount);
+    }
+
     private StarsController(int account, boolean ton) {
         this.currentAccount = account;
         this.ton = ton;

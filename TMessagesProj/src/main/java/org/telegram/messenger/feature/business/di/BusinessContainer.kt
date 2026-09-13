@@ -14,6 +14,9 @@ import org.telegram.messenger.feature.business.billing.domain.usecase.ObserveBil
 import org.telegram.messenger.feature.business.billing.domain.usecase.QueryBillingPurchasesUseCase
 import org.telegram.messenger.feature.business.billing.domain.usecase.StartBillingConnectionUseCase
 import org.telegram.messenger.feature.business.billing.presentation.BillingViewModel
+import org.telegram.messenger.feature.business.botstars.data.datasource.BotStarsLocalDataSource
+import org.telegram.messenger.feature.business.botstars.data.datasource.BotStarsRemoteDataSource
+import org.telegram.messenger.feature.business.botstars.data.repository.BotStarsRepositoryImpl
 import org.telegram.messenger.feature.business.botstars.data.repository.LegacyBotStarsRepository
 import org.telegram.messenger.feature.business.botstars.domain.repository.BotStarsRepository
 import org.telegram.messenger.feature.business.botstars.domain.usecase.GetAdminedBotsAndChannelsUseCase
@@ -81,7 +84,10 @@ import org.telegram.messenger.feature.business.giftauctions.domain.usecase.Obser
 import org.telegram.messenger.feature.business.giftauctions.domain.usecase.RefreshActiveAuctionsUseCase
 import org.telegram.messenger.feature.business.giftauctions.domain.usecase.SendAuctionBidUseCase
 import org.telegram.messenger.feature.business.giftauctions.presentation.GiftAuctionsViewModel
+import org.telegram.messenger.feature.business.payments.data.datasource.PaymentsLocalDataSource
+import org.telegram.messenger.feature.business.payments.data.datasource.PaymentsRemoteDataSource
 import org.telegram.messenger.feature.business.payments.data.repository.LegacyPaymentsRepository
+import org.telegram.messenger.feature.business.payments.data.repository.PaymentsRepositoryImpl
 import org.telegram.messenger.feature.business.payments.domain.repository.PaymentsRepository
 import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarSubscriptionsUseCase
 import org.telegram.messenger.feature.business.payments.domain.usecase.GetStarTopupOptionsUseCase
@@ -110,7 +116,10 @@ import org.telegram.messenger.feature.business.quickreplies.domain.usecase.Renam
 import org.telegram.messenger.feature.business.quickreplies.domain.usecase.ReorderQuickRepliesUseCase
 import org.telegram.messenger.feature.business.quickreplies.domain.usecase.SendQuickReplyUseCase
 import org.telegram.messenger.feature.business.quickreplies.presentation.QuickRepliesViewModel
+import org.telegram.messenger.feature.business.stargifts.data.datasource.StarGiftsLocalDataSource
+import org.telegram.messenger.feature.business.stargifts.data.datasource.StarGiftsRemoteDataSource
 import org.telegram.messenger.feature.business.stargifts.data.repository.LegacyStarGiftsRepository
+import org.telegram.messenger.feature.business.stargifts.data.repository.StarGiftsRepositoryImpl
 import org.telegram.messenger.feature.business.stargifts.domain.repository.StarGiftsRepository
 import org.telegram.messenger.feature.business.stargifts.domain.usecase.GetStarGiftByIdUseCase
 import org.telegram.messenger.feature.business.stargifts.domain.usecase.GetStarGiftsCatalogUseCase
@@ -132,10 +141,26 @@ import org.telegram.messenger.feature.business.timezones.presentation.TimezonesV
 
 class BusinessContainer(val account: Int) {
 
+    val paymentsRemoteDataSource: PaymentsRemoteDataSource by lazy {
+        PaymentsRemoteDataSource(account)
+    }
+
+    val paymentsLocalDataSource: PaymentsLocalDataSource by lazy {
+        PaymentsLocalDataSource(account)
+    }
+
+    fun createPaymentsRepository(): PaymentsRepository {
+        return PaymentsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = paymentsLocalDataSource,
+            remoteDataSource = paymentsRemoteDataSource
+        )
+    }
+
     private var customPaymentsRepository: PaymentsRepository? = null
 
     var paymentsRepository: PaymentsRepository
-        get() = customPaymentsRepository ?: LegacyPaymentsRepository(account)
+        get() = customPaymentsRepository ?: createPaymentsRepository()
         set(value) {
             customPaymentsRepository = value
         }
@@ -272,10 +297,26 @@ class BusinessContainer(val account: Int) {
         )
     }
 
+    val starGiftsRemoteDataSource: StarGiftsRemoteDataSource by lazy {
+        StarGiftsRemoteDataSource(account)
+    }
+
+    val starGiftsLocalDataSource: StarGiftsLocalDataSource by lazy {
+        StarGiftsLocalDataSource(account)
+    }
+
+    fun createStarGiftsRepository(): StarGiftsRepository {
+        return StarGiftsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = starGiftsLocalDataSource,
+            remoteDataSource = starGiftsRemoteDataSource
+        )
+    }
+
     private var customStarGiftsRepository: StarGiftsRepository? = null
 
     var starGiftsRepository: StarGiftsRepository
-        get() = customStarGiftsRepository ?: LegacyStarGiftsRepository(account)
+        get() = customStarGiftsRepository ?: createStarGiftsRepository()
         set(value) {
             customStarGiftsRepository = value
         }
@@ -599,10 +640,26 @@ class BusinessContainer(val account: Int) {
     }
 
     // --- Bot Stars ---
+    val botStarsRemoteDataSource: BotStarsRemoteDataSource by lazy {
+        BotStarsRemoteDataSource(account)
+    }
+
+    val botStarsLocalDataSource: BotStarsLocalDataSource by lazy {
+        BotStarsLocalDataSource(account)
+    }
+
+    fun createBotStarsRepository(): BotStarsRepository {
+        return BotStarsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = botStarsLocalDataSource,
+            remoteDataSource = botStarsRemoteDataSource
+        )
+    }
+
     private var customBotStarsRepository: BotStarsRepository? = null
 
     var botStarsRepository: BotStarsRepository
-        get() = customBotStarsRepository ?: LegacyBotStarsRepository(account)
+        get() = customBotStarsRepository ?: createBotStarsRepository()
         set(value) {
             customBotStarsRepository = value
         }

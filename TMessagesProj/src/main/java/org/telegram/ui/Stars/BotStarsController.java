@@ -53,6 +53,14 @@ public class BotStarsController {
 
     public final int currentAccount;
 
+    public static org.telegram.messenger.feature.business.botstars.domain.repository.BotStarsRepository getBotStarsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getBusiness().getBotStarsRepository();
+    }
+
+    public org.telegram.messenger.feature.business.botstars.domain.repository.BotStarsRepository getRepository() {
+        return getBotStarsRepository(currentAccount);
+    }
+
     private BotStarsController(int account) {
         currentAccount = account;
     }
