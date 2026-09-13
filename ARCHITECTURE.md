@@ -1072,10 +1072,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `SessionsLocalDataSource.kt` (Thread-safe memory caches for authorizations and web authorizations, URL-safe Base64 QR token parsing, and post-reset push refresh)
     - `SessionsRepositoryImpl.kt` (Clean repository coordinating session terminations, settings updates, TTL configuration, and reactive observeSessions)
     - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring
+  - [x] Feature: `PushListenerController` Strangling (`feature.network.pushlistener` - ADR 155):
+    - `PushListenerRemoteDataSource.kt` (MTProto token registration and decrypt error logging via BaseRemoteDataSource)
+    - `PushListenerLocalDataSource.kt` (StateFlow listening state, registered tokens map, and push payload json parser)
+    - `PushListenerRepositoryImpl.kt` (Clean repository coordinating remote registration, local caching, push processing, and reactive observeState)
+    - `NetworkContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `PushListenerController.java` strangler boundary with `getPushListenerRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `RefreshRateController` Strangling (`feature.system.refreshrate` - ADR 156):
+    - `RefreshRateRemoteDataSource.kt` (Remote config / feature enablement checks)
+    - `RefreshRateLocalDataSource.kt` (Display modes, ring buffer frame metrics storage, FPS calculations, and stable duration hysteresis timers)
+    - `RefreshRateRepositoryImpl.kt` (Clean repository coordinating local frame metrics, display modes, and reactive observeState)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `RefreshRateController.java` strangler boundary with `getRefreshRateRepository()` and `getRepository()` accessors.
+  - [x] Feature: `GroupCallMessagesController` Strangling (`feature.messaging.groupcallmsg` - ADR 157):
+    - `GroupCallMessagesRemoteDataSource.kt` (MTProto in-call message RPC sending via BaseRemoteDataSource)
+    - `GroupCallMessagesLocalDataSource.kt` (Thread-safe in-memory messages per callId, listener registration, and pop on TTL expiry)
+    - `GroupCallMessagesRepositoryImpl.kt` (Clean repository coordinating in-call messaging, popping, and reactive observeCallMessages)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `GroupCallMessagesController.java` strangler boundary with `getGroupCallMessagesRepository(account)` and `getRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 157: GroupCallMessagesController Strangling via Clean DataSources & GroupCallMessagesRepositoryImpl
+- **Context:** In Telegram Android, ephemeral in-call messages during group calls and conferences were managed by `GroupCallMessagesController.java` (~310 lines) inside `org.telegram.messenger.voip`. It coupled in-memory `MessagesList` collections, native encryption/decryption (`groupCallMessageEncryptImpl` / `groupCallMessageDecryptImpl`), direct `VoIPService` inspection, and MTProto `TL_phone.sendGroupCallMessage` / `sendGroupCallEncryptedMessage` calls.
+- **Decision:** Apply the Strangler Fig pattern to `GroupCallMessagesController`:
+  1. Implement `GroupCallMessagesRemoteDataSource`:
+     - Encapsulates MTProto RPC execution: `sendCallMessage` via `GroupCallMessagesController` or `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `GroupCallMessagesLocalDataSource`:
+     - Manages in-memory messages per `callId`, `CallMessageListener` callbacks, and TTL-based message popping with headless JVM fallback.
+  3. Implement `GroupCallMessagesRepositoryImpl`:
+     - Implements `GroupCallMessagesRepository`, coordinating remote RPC execution, local cache mutations, and reactive `observeCallMessages(callId)`.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `GroupCallMessagesRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `GroupCallMessagesController.getGroupCallMessagesRepository(account)` and instance `getGroupCallMessagesRepository()`.
+- **Consequences:** Ephemeral in-call group call messages and auto-destruct timers are decoupled behind clean domain contracts. 100% test coverage achieved with `GroupCallMessagesRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 156: RefreshRateController Strangling via Clean DataSources & RefreshRateRepositoryImpl
+- **Context:** In Telegram Android, adaptive display refresh rate switching between 60Hz and high refresh rates (90Hz / 120Hz) based on real-time rendering performance was handled by `RefreshRateController.java` (~300 lines) in `org.telegram.messenger.utils`. The controller coupled Android `Window.OnFrameMetricsAvailableListener`, direct window attributes mutation (`window.getAttributes().preferredDisplayModeId`), and raw ring buffer math.
+- **Decision:** Apply the Strangler Fig pattern to `RefreshRateController`:
+  1. Implement `RefreshRateRemoteDataSource`:
+     - Encapsulates remote feature enablement and configuration checks.
+  2. Implement `RefreshRateLocalDataSource`:
+     - Manages display modes, 240-element ring buffer for frame duration nanoseconds, average FPS calculation, and hysteresis threshold timers (down at <= 55 FPS, up at >= 58.5 FPS) with headless test fallback.
+  3. Implement `RefreshRateRepositoryImpl`:
+     - Implements `RefreshRateRepository`, coordinating frame metrics tracking, adaptive state updates, and reactive `observeState()`.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `RefreshRateRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `RefreshRateController.getRefreshRateRepository()` and static `getRepository()`.
+- **Consequences:** Display refresh rate arbitration and performance metrics tracking are decoupled behind clean domain contracts. 100% test coverage achieved with `RefreshRateRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 155: PushListenerController Strangling via Clean DataSources & PushListenerRepositoryImpl
+- **Context:** In Telegram Android, background push payload receiving, FCM and Huawei Push Kit registration, and push decryption diagnostics were managed by `PushListenerController.java` (~1735 lines). `PushListenerController` coupled direct `ConnectionsManager.setRegId`, static `CountDownLatch`, multi-account `UserConfig` iteration, raw JSON parsing, and MTProto `TL_help_saveAppLog` calls.
+- **Decision:** Apply the Strangler Fig pattern to `PushListenerController`:
+  1. Implement `PushListenerRemoteDataSource`:
+     - Encapsulates token registration with MTProto / Push servers and error logging via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `PushListenerLocalDataSource`:
+     - Manages listening toggle state, registered tokens map, decrypt error counts, and payload parsing with headless test fallback.
+  3. Implement `PushListenerRepositoryImpl`:
+     - Implements `PushListenerRepository`, coordinating token registration, push processing, error reporting, and reactive `observeState()` / `observeIncomingPushes()`.
+  4. Update `NetworkContainer` and `AccountFeatureContainer` to wire `PushListenerRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `PushListenerController.getPushListenerRepository(account)` and static `getRepository()`.
+- **Consequences:** Inbound push handling, token registration, and decryption diagnostics are decoupled behind clean domain contracts. 100% test coverage achieved with `PushListenerRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 154: Sessions Strangling via Clean DataSources & SessionsRepositoryImpl
 - **Context:** In Telegram Android, user device authorizations, active web authorizations, QR code login, and session self-destruct TTL settings were managed across `SessionsActivity.java` (~1280 lines), `ConnectionsManager`, and `MessagesController`. Legacy code coupled MTProto RPCs (`TL_account.getAuthorizations`, `TL_account.resetAuthorization`, `TL_auth.resetAuthorizations`, `TL_account.getWebAuthorizations`, `TL_auth.acceptLoginToken`), direct base64 parsing, manual push token re-registration across multiple accounts, and raw `NotificationCenter.newSessionReceived` events.

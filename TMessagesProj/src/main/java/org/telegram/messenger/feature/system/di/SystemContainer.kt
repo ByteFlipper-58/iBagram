@@ -207,7 +207,10 @@ import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.Reset
 import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.StartRecyclerScrollUseCase
 import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.UpdateRecyclerScrollProgressUseCase
 import org.telegram.messenger.feature.system.recyclerscroll.presentation.RecyclerScrollViewModel
+import org.telegram.messenger.feature.system.refreshrate.data.datasource.RefreshRateLocalDataSource
+import org.telegram.messenger.feature.system.refreshrate.data.datasource.RefreshRateRemoteDataSource
 import org.telegram.messenger.feature.system.refreshrate.data.repository.LegacyRefreshRateRepository
+import org.telegram.messenger.feature.system.refreshrate.data.repository.RefreshRateRepositoryImpl
 import org.telegram.messenger.feature.system.refreshrate.domain.repository.RefreshRateRepository
 import org.telegram.messenger.feature.system.refreshrate.domain.usecase.GetDisplayRefreshModesUseCase
 import org.telegram.messenger.feature.system.refreshrate.domain.usecase.GetRefreshRateStateUseCase
@@ -690,10 +693,25 @@ class SystemContainer(val account: Int) {
         )
     }
 
+    val refreshRateRemoteDataSource: RefreshRateRemoteDataSource by lazy {
+        RefreshRateRemoteDataSource()
+    }
+
+    val refreshRateLocalDataSource: RefreshRateLocalDataSource by lazy {
+        RefreshRateLocalDataSource()
+    }
+
+    fun createRefreshRateRepository(): RefreshRateRepository {
+        return RefreshRateRepositoryImpl(
+            localDataSource = refreshRateLocalDataSource,
+            remoteDataSource = refreshRateRemoteDataSource
+        )
+    }
+
     private var customRefreshRateRepository: RefreshRateRepository? = null
 
     var refreshRateRepository: RefreshRateRepository
-        get() = customRefreshRateRepository ?: LegacyRefreshRateRepository()
+        get() = customRefreshRateRepository ?: createRefreshRateRepository()
         set(value) {
             customRefreshRateRepository = value
         }

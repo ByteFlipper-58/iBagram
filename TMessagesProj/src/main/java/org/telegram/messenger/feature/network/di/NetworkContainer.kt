@@ -41,7 +41,10 @@ import org.telegram.messenger.feature.network.push.domain.usecase.RegisterPushTo
 import org.telegram.messenger.feature.network.push.domain.usecase.RequestPushTokenUseCase
 import org.telegram.messenger.feature.network.push.domain.usecase.ResetPushTokenUseCase
 import org.telegram.messenger.feature.network.push.presentation.PushViewModel
+import org.telegram.messenger.feature.network.pushlistener.data.datasource.PushListenerLocalDataSource
+import org.telegram.messenger.feature.network.pushlistener.data.datasource.PushListenerRemoteDataSource
 import org.telegram.messenger.feature.network.pushlistener.data.repository.LegacyPushListenerRepository
+import org.telegram.messenger.feature.network.pushlistener.data.repository.PushListenerRepositoryImpl
 import org.telegram.messenger.feature.network.pushlistener.domain.repository.PushListenerRepository
 import org.telegram.messenger.feature.network.pushlistener.domain.usecase.DeterminePushActionTypeUseCase
 import org.telegram.messenger.feature.network.pushlistener.domain.usecase.GetPushListenerStateUseCase
@@ -263,10 +266,26 @@ class NetworkContainer(val account: Int) {
         )
     }
 
+    val pushListenerRemoteDataSource: PushListenerRemoteDataSource by lazy {
+        PushListenerRemoteDataSource(account)
+    }
+
+    val pushListenerLocalDataSource: PushListenerLocalDataSource by lazy {
+        PushListenerLocalDataSource(account)
+    }
+
+    fun createPushListenerRepository(): PushListenerRepository {
+        return PushListenerRepositoryImpl(
+            account = account,
+            localDataSource = pushListenerLocalDataSource,
+            remoteDataSource = pushListenerRemoteDataSource
+        )
+    }
+
     private var customPushListenerRepository: PushListenerRepository? = null
 
     var pushListenerRepository: PushListenerRepository
-        get() = customPushListenerRepository ?: LegacyPushListenerRepository(account)
+        get() = customPushListenerRepository ?: createPushListenerRepository()
         set(value) {
             customPushListenerRepository = value
         }

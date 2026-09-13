@@ -40,6 +40,14 @@ import java.util.Locale;
 @RequiresApi(api = Build.VERSION_CODES.N)
 public final class RefreshRateController {
 
+    public org.telegram.messenger.feature.system.refreshrate.domain.repository.RefreshRateRepository getRefreshRateRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(org.telegram.messenger.UserConfig.selectedAccount).getRefreshRateRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.refreshrate.domain.repository.RefreshRateRepository getRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(org.telegram.messenger.UserConfig.selectedAccount).getRefreshRateRepository();
+    }
+
     private static final String TAG = "RefreshRateController";
 
     // --- Tuning parameters ---

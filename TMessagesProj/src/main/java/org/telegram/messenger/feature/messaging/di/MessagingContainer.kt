@@ -225,6 +225,9 @@ import org.telegram.messenger.feature.messaging.folders.domain.usecase.ObserveFo
 import org.telegram.messenger.feature.messaging.folders.domain.usecase.ReorderFoldersUseCase
 import org.telegram.messenger.feature.messaging.folders.domain.usecase.UpdateFolderUseCase
 import org.telegram.messenger.feature.messaging.folders.presentation.FoldersViewModel
+import org.telegram.messenger.feature.messaging.groupcallmsg.data.datasource.GroupCallMessagesLocalDataSource
+import org.telegram.messenger.feature.messaging.groupcallmsg.data.datasource.GroupCallMessagesRemoteDataSource
+import org.telegram.messenger.feature.messaging.groupcallmsg.data.repository.GroupCallMessagesRepositoryImpl
 import org.telegram.messenger.feature.messaging.groupcallmsg.data.repository.LegacyGroupCallMessagesRepository
 import org.telegram.messenger.feature.messaging.groupcallmsg.domain.repository.GroupCallMessagesRepository
 import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.ClearGroupCallMessagesUseCase
@@ -1299,10 +1302,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val groupCallMessagesRemoteDataSource: GroupCallMessagesRemoteDataSource by lazy {
+        GroupCallMessagesRemoteDataSource(account)
+    }
+
+    val groupCallMessagesLocalDataSource: GroupCallMessagesLocalDataSource by lazy {
+        GroupCallMessagesLocalDataSource(account)
+    }
+
+    fun createGroupCallMessagesRepository(): GroupCallMessagesRepository {
+        return GroupCallMessagesRepositoryImpl(
+            account = account,
+            localDataSource = groupCallMessagesLocalDataSource,
+            remoteDataSource = groupCallMessagesRemoteDataSource
+        )
+    }
+
     private var customGroupCallMessagesRepository: GroupCallMessagesRepository? = null
 
     var groupCallMessagesRepository: GroupCallMessagesRepository
-        get() = customGroupCallMessagesRepository ?: LegacyGroupCallMessagesRepository(account)
+        get() = customGroupCallMessagesRepository ?: createGroupCallMessagesRepository()
         set(value) {
             customGroupCallMessagesRepository = value
         }

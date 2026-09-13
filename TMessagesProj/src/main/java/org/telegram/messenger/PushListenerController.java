@@ -46,6 +46,14 @@ public class PushListenerController {
     public static final int NOTIFICATION_ID = 1;
     private static CountDownLatch countDownLatch = new CountDownLatch(1);
 
+    public static org.telegram.messenger.feature.network.pushlistener.domain.repository.PushListenerRepository getPushListenerRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getPushListenerRepository();
+    }
+
+    public static org.telegram.messenger.feature.network.pushlistener.domain.repository.PushListenerRepository getRepository() {
+        return getPushListenerRepository(UserConfig.selectedAccount);
+    }
+
     public static void sendRegistrationToServer(@PushType int pushType, String token) {
         Utilities.stageQueue.postRunnable(() -> {
             ConnectionsManager.setRegId(token, pushType, SharedConfig.pushStringStatus);

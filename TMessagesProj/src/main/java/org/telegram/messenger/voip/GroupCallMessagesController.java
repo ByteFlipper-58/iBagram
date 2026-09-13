@@ -309,4 +309,16 @@ public class GroupCallMessagesController extends BaseController {
     private GroupCallMessagesController(int accountId) {
         super(accountId);
     }
+
+    public org.telegram.messenger.feature.messaging.groupcallmsg.domain.repository.GroupCallMessagesRepository getGroupCallMessagesRepository() {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(currentAccount).getGroupCallMessagesRepository();
+    }
+
+    public static org.telegram.messenger.feature.messaging.groupcallmsg.domain.repository.GroupCallMessagesRepository getGroupCallMessagesRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getGroupCallMessagesRepository();
+    }
+
+    public static org.telegram.messenger.feature.messaging.groupcallmsg.domain.repository.GroupCallMessagesRepository getRepository() {
+        return getGroupCallMessagesRepository(UserConfig.selectedAccount);
+    }
 }
