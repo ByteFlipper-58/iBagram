@@ -213,7 +213,10 @@ import org.telegram.messenger.feature.media.stories.domain.usecase.RefreshStorie
 import org.telegram.messenger.feature.media.stories.domain.usecase.ToggleStoryHiddenUseCase
 import org.telegram.messenger.feature.media.stories.domain.usecase.ToggleStoryPinUseCase
 import org.telegram.messenger.feature.media.stories.presentation.StoriesViewModel
+import org.telegram.messenger.feature.media.storycustomparams.data.datasource.StoryCustomParamsLocalDataSource
+import org.telegram.messenger.feature.media.storycustomparams.data.datasource.StoryCustomParamsRemoteDataSource
 import org.telegram.messenger.feature.media.storycustomparams.data.repository.LegacyStoryCustomParamsRepository
+import org.telegram.messenger.feature.media.storycustomparams.data.repository.StoryCustomParamsRepositoryImpl
 import org.telegram.messenger.feature.media.storycustomparams.domain.repository.StoryCustomParamsRepository
 import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.CheckStoryCustomParamsEmptyUseCase
 import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.ClearAllStoryCustomParamsUseCase
@@ -1364,10 +1367,26 @@ class MediaContainer(val account: Int) {
         )
     }
 
+    val storyCustomParamsRemoteDataSource: StoryCustomParamsRemoteDataSource by lazy {
+        StoryCustomParamsRemoteDataSource(account)
+    }
+
+    val storyCustomParamsLocalDataSource: StoryCustomParamsLocalDataSource by lazy {
+        StoryCustomParamsLocalDataSource(account)
+    }
+
+    fun createStoryCustomParamsRepository(): StoryCustomParamsRepository {
+        return StoryCustomParamsRepositoryImpl(
+            account = account,
+            localDataSource = storyCustomParamsLocalDataSource,
+            remoteDataSource = storyCustomParamsRemoteDataSource
+        )
+    }
+
     private var customStoryCustomParamsRepository: StoryCustomParamsRepository? = null
 
     var storyCustomParamsRepository: StoryCustomParamsRepository
-        get() = customStoryCustomParamsRepository ?: LegacyStoryCustomParamsRepository(account)
+        get() = customStoryCustomParamsRepository ?: createStoryCustomParamsRepository()
         set(value) {
             customStoryCustomParamsRepository = value
         }

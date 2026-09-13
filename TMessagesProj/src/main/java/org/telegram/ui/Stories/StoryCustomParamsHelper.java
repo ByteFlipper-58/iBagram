@@ -10,6 +10,14 @@ import org.telegram.tgnet.tl.TL_stories;
 
 public class StoryCustomParamsHelper {
 
+    public static org.telegram.messenger.feature.media.storycustomparams.domain.repository.StoryCustomParamsRepository getStoryCustomParamsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getStoryCustomParamsRepository();
+    }
+
+    public static org.telegram.messenger.feature.media.storycustomparams.domain.repository.StoryCustomParamsRepository getRepository() {
+        return getStoryCustomParamsRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
     public static boolean isEmpty(TL_stories.StoryItem storyItem) {
         return storyItem.detectedLng == null && storyItem.translatedLng == null && !storyItem.translated && storyItem.translatedText == null;
     }

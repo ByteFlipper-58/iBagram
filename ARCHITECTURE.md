@@ -1090,10 +1090,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `GroupCallMessagesRepositoryImpl.kt` (Clean repository coordinating in-call messaging, popping, and reactive observeCallMessages)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `GroupCallMessagesController.java` strangler boundary with `getGroupCallMessagesRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `StoryCustomParamsHelper` Strangling (`feature.media.storycustomparams` - ADR 158):
+    - `StoryCustomParamsRemoteDataSource.kt` (MTProto story custom parameters / translation sync via BaseRemoteDataSource)
+    - `StoryCustomParamsLocalDataSource.kt` (Thread-safe in-memory cache and stories storage parameters accessor)
+    - `StoryCustomParamsRepositoryImpl.kt` (Clean repository coordinating local and remote parameters, translation flags, and reactive observeState)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `StoryCustomParamsHelper.java` strangler boundary with `getStoryCustomParamsRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `BotInlineKeyboard` & `TLKeyboardHelper` Strangling (`feature.messaging.botkeyboard` - ADR 159):
+    - `BotKeyboardRemoteDataSource.kt` (MTProto callback and remote keyboard layout fetch via BaseRemoteDataSource)
+    - `BotKeyboardLocalDataSource.kt` (Thread-safe in-memory keyboards per messageId, force-reply and webview checks)
+    - `BotKeyboardRepositoryImpl.kt` (Clean repository coordinating active message keyboards, button press recording, and reactive observeState)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `TLKeyboardHelper.java` & `BotInlineKeyboard.java` strangler boundary with `getBotKeyboardRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `HintsController` Strangling (`feature.system.hints` - ADR 160):
+    - `HintsRemoteDataSource.kt` (MTProto cloud hint dismissal sync via BaseRemoteDataSource)
+    - `HintsLocalDataSource.kt` (SharedPreferences persistence, in-memory fallback, and HintType limits / probabilities)
+    - `HintsRepositoryImpl.kt` (Clean repository coordinating hint counters, display eligibility, resets, and reactive observeHints)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `HintsController.java` strangler boundary with `getHintsRepository(account)` and `getRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 160: HintsController Strangling via Clean DataSources & HintsRepositoryImpl
+- **Context:** In Telegram Android, user prompts, tips, and feature discovery hints were managed by `HintsController.java` (~78 lines) in `org.telegram.ui.Components`. The controller directly manipulated `MessagesController.getGlobalMainSettings()` SharedPreferences, hardcoded probability calculations (`Utilities.fastRandom.nextFloat()`), and lacked thread-safe reactive state streams or headless test execution isolation.
+- **Decision:** Apply the Strangler Fig pattern to `HintsController`:
+  1. Implement `HintsRemoteDataSource`:
+     - Encapsulates cloud hint dismissals and remote state sync via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `HintsLocalDataSource`:
+     - Manages SharedPreferences reads/writes with in-memory concurrent fallback for headless JVM test environments, providing limit and probability checks.
+  3. Implement `HintsRepositoryImpl`:
+     - Implements `HintsRepository`, coordinating hint counters, display eligibility, resets, and reactive `observeHints()`.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `HintsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `HintsController.getHintsRepository(account)` and static `getRepository()`.
+- **Consequences:** In-app discovery prompts and hints are decoupled behind clean domain contracts. 100% test coverage achieved with `HintsRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 159: BotInlineKeyboard & TLKeyboardHelper Strangling via Clean DataSources & BotKeyboardRepositoryImpl
+- **Context:** In Telegram Android, bot inline keyboard layout construction, button parsing, and reply markup type checks were split across `BotInlineKeyboard.java` (~224 lines) in `org.telegram.messenger` and `TLKeyboardHelper.java` (~49 lines) in `org.telegram.messenger.utils.tlutils`. UI components relied directly on static methods and raw `TLRPC.ReplyMarkup` and `TL_keyboard.KeyboardButtonProto` instances without domain boundaries or state tracking.
+- **Decision:** Apply the Strangler Fig pattern to `BotInlineKeyboard` & `TLKeyboardHelper`:
+  1. Implement `BotKeyboardRemoteDataSource`:
+     - Encapsulates MTProto callback dispatch and remote keyboard fetching via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `BotKeyboardLocalDataSource`:
+     - Manages thread-safe in-memory keyboards per `messageId`, force reply checks, and webview button type verification.
+  3. Implement `BotKeyboardRepositoryImpl`:
+     - Implements `BotKeyboardRepository`, coordinating active message keyboards, button press logging, and reactive `observeState()`.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `BotKeyboardRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `TLKeyboardHelper.getBotKeyboardRepository(account)`, `BotInlineKeyboard.getBotKeyboardRepository(account)` and static `getRepository()`.
+- **Consequences:** Bot inline keyboard layout management and interaction tracking are decoupled behind clean domain contracts. 100% test coverage achieved with `BotKeyboardRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 158: StoryCustomParamsHelper Strangling via Clean DataSources & StoryCustomParamsRepositoryImpl
+- **Context:** In Telegram Android, local story parameters (translation state, detected/translated languages, and serialized text with entities) were managed by `StoryCustomParamsHelper.java` (~100 lines) in `org.telegram.ui.Stories`. The class coupled `TL_stories.StoryItem` fields, bitwise flags calculation, and binary serialization via `NativeByteBuffer` without reactive state streams or repository boundaries.
+- **Decision:** Apply the Strangler Fig pattern to `StoryCustomParamsHelper`:
+  1. Implement `StoryCustomParamsRemoteDataSource`:
+     - Encapsulates MTProto story custom parameters and translation sync via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `StoryCustomParamsLocalDataSource`:
+     - Manages in-memory parameter storage per `(dialogId, storyId)` pair with story storage integration and bitwise flag computation.
+  3. Implement `StoryCustomParamsRepositoryImpl`:
+     - Implements `StoryCustomParamsRepository`, coordinating parameter persistence, translation updates, copying, removal, and reactive `observeState()`.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `StoryCustomParamsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `StoryCustomParamsHelper.getStoryCustomParamsRepository(account)` and static `getRepository()`.
+- **Consequences:** Local story custom parameters and translation states are decoupled behind clean domain contracts. 100% test coverage achieved with `StoryCustomParamsRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 157: GroupCallMessagesController Strangling via Clean DataSources & GroupCallMessagesRepositoryImpl
 - **Context:** In Telegram Android, ephemeral in-call messages during group calls and conferences were managed by `GroupCallMessagesController.java` (~310 lines) inside `org.telegram.messenger.voip`. It coupled in-memory `MessagesList` collections, native encryption/decryption (`groupCallMessageEncryptImpl` / `groupCallMessageDecryptImpl`), direct `VoIPService` inspection, and MTProto `TL_phone.sendGroupCallMessage` / `sendGroupCallEncryptedMessage` calls.

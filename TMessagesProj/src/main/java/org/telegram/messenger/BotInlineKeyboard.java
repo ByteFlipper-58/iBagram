@@ -10,6 +10,15 @@ import org.telegram.tgnet.tl.TL_keyboard;
 import java.util.ArrayList;
 
 public class BotInlineKeyboard {
+
+    public static org.telegram.messenger.feature.messaging.botkeyboard.domain.repository.BotKeyboardRepository getBotKeyboardRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getBotKeyboardRepository();
+    }
+
+    public static org.telegram.messenger.feature.messaging.botkeyboard.domain.repository.BotKeyboardRepository getRepository() {
+        return getBotKeyboardRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
     public enum BackgroundColor {
         NONE,
         PRIMARY,

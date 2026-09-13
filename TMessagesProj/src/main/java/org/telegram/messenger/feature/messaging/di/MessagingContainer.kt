@@ -42,7 +42,10 @@ import org.telegram.messenger.feature.messaging.botforum.domain.usecase.SaveIsSt
 import org.telegram.messenger.feature.messaging.botforum.domain.usecase.StopStreamingDraftUseCase
 import org.telegram.messenger.feature.messaging.botforum.domain.usecase.UpdateBotForumDraftUseCase
 import org.telegram.messenger.feature.messaging.botforum.presentation.BotForumViewModel
+import org.telegram.messenger.feature.messaging.botkeyboard.data.datasource.BotKeyboardLocalDataSource
+import org.telegram.messenger.feature.messaging.botkeyboard.data.datasource.BotKeyboardRemoteDataSource
 import org.telegram.messenger.feature.messaging.botkeyboard.data.repository.LegacyBotKeyboardRepository
+import org.telegram.messenger.feature.messaging.botkeyboard.data.repository.BotKeyboardRepositoryImpl
 import org.telegram.messenger.feature.messaging.botkeyboard.domain.repository.BotKeyboardRepository
 import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.BuildBotKeyboardLayoutUseCase
 import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.CheckIsButtonWebViewUseCase
@@ -2266,10 +2269,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val botKeyboardRemoteDataSource: BotKeyboardRemoteDataSource by lazy {
+        BotKeyboardRemoteDataSource(account)
+    }
+
+    val botKeyboardLocalDataSource: BotKeyboardLocalDataSource by lazy {
+        BotKeyboardLocalDataSource(account)
+    }
+
+    fun createBotKeyboardRepository(): BotKeyboardRepository {
+        return BotKeyboardRepositoryImpl(
+            account = account,
+            localDataSource = botKeyboardLocalDataSource,
+            remoteDataSource = botKeyboardRemoteDataSource
+        )
+    }
+
     private var customBotKeyboardRepository: BotKeyboardRepository? = null
 
     var botKeyboardRepository: BotKeyboardRepository
-        get() = customBotKeyboardRepository ?: LegacyBotKeyboardRepository(account)
+        get() = customBotKeyboardRepository ?: createBotKeyboardRepository()
         set(value) {
             customBotKeyboardRepository = value
         }

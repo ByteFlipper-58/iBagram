@@ -80,7 +80,10 @@ import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.Regist
 import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.SetFloatingDebugActiveUseCase
 import org.telegram.messenger.feature.system.floatingdebug.domain.usecase.ToggleFloatingDebugActiveUseCase
 import org.telegram.messenger.feature.system.floatingdebug.presentation.FloatingDebugViewModel
+import org.telegram.messenger.feature.system.hints.data.datasource.HintsLocalDataSource
+import org.telegram.messenger.feature.system.hints.data.datasource.HintsRemoteDataSource
 import org.telegram.messenger.feature.system.hints.data.repository.LegacyHintsRepository
+import org.telegram.messenger.feature.system.hints.data.repository.HintsRepositoryImpl
 import org.telegram.messenger.feature.system.hints.domain.repository.HintsRepository
 import org.telegram.messenger.feature.system.hints.domain.usecase.DoNotShowAgainHintUseCase
 import org.telegram.messenger.feature.system.hints.domain.usecase.GetHintUseCase
@@ -637,10 +640,26 @@ class SystemContainer(val account: Int) {
         )
     }
 
+    val hintsRemoteDataSource: HintsRemoteDataSource by lazy {
+        HintsRemoteDataSource(account)
+    }
+
+    val hintsLocalDataSource: HintsLocalDataSource by lazy {
+        HintsLocalDataSource(account)
+    }
+
+    fun createHintsRepository(): HintsRepository {
+        return HintsRepositoryImpl(
+            account = account,
+            localDataSource = hintsLocalDataSource,
+            remoteDataSource = hintsRemoteDataSource
+        )
+    }
+
     private var customHintsRepository: HintsRepository? = null
 
     var hintsRepository: HintsRepository
-        get() = customHintsRepository ?: LegacyHintsRepository()
+        get() = customHintsRepository ?: createHintsRepository()
         set(value) {
             customHintsRepository = value
         }

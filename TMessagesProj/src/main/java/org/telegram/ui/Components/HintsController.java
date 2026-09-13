@@ -10,6 +10,14 @@ public class HintsController {
 
     }
 
+    public static org.telegram.messenger.feature.system.hints.domain.repository.HintsRepository getHintsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getHintsRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.hints.domain.repository.HintsRepository getRepository() {
+        return getHintsRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
     public enum Hint {
         RoundHint2("needShowRoundHint2", 3, 0.2f),
         RoundHintChannel2("needShowRoundHintChannel2", 3, 0.2f),

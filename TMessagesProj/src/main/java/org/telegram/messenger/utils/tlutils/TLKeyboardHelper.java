@@ -8,6 +8,14 @@ public class TLKeyboardHelper {
 
     }
 
+    public static org.telegram.messenger.feature.messaging.botkeyboard.domain.repository.BotKeyboardRepository getBotKeyboardRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getBotKeyboardRepository();
+    }
+
+    public static org.telegram.messenger.feature.messaging.botkeyboard.domain.repository.BotKeyboardRepository getRepository() {
+        return getBotKeyboardRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
     public static boolean isButtonWebView(TL_keyboard.KeyboardButtonProto button) {
         return TLKeyboardHelper.isType(button, TL_keyboard.TL_inlineButtonTypeWebView.class)
             || TLKeyboardHelper.isType(button, TL_keyboard.TL_buttonTypeSimpleWebView.class);
