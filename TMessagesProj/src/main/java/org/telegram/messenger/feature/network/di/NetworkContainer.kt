@@ -1,6 +1,9 @@
 package org.telegram.messenger.feature.network.di
 
+import org.telegram.messenger.feature.network.networkstats.data.datasource.NetworkStatsLocalDataSource
+import org.telegram.messenger.feature.network.networkstats.data.datasource.NetworkStatsRemoteDataSource
 import org.telegram.messenger.feature.network.networkstats.data.repository.LegacyNetworkStatsRepository
+import org.telegram.messenger.feature.network.networkstats.data.repository.NetworkStatsRepositoryImpl
 import org.telegram.messenger.feature.network.networkstats.domain.repository.NetworkStatsRepository
 import org.telegram.messenger.feature.network.networkstats.domain.usecase.CalculateMessagesTrafficUseCase
 import org.telegram.messenger.feature.network.networkstats.domain.usecase.FormatCallsDurationUseCase
@@ -174,10 +177,26 @@ class NetworkContainer(val account: Int) {
         )
     }
 
+    val networkStatsRemoteDataSource: NetworkStatsRemoteDataSource by lazy {
+        NetworkStatsRemoteDataSource(account)
+    }
+
+    val networkStatsLocalDataSource: NetworkStatsLocalDataSource by lazy {
+        NetworkStatsLocalDataSource(account)
+    }
+
+    fun createNetworkStatsRepository(): NetworkStatsRepository {
+        return NetworkStatsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = networkStatsLocalDataSource,
+            remoteDataSource = networkStatsRemoteDataSource
+        )
+    }
+
     private var customNetworkStatsRepository: NetworkStatsRepository? = null
 
     var networkStatsRepository: NetworkStatsRepository
-        get() = customNetworkStatsRepository ?: LegacyNetworkStatsRepository(account)
+        get() = customNetworkStatsRepository ?: createNetworkStatsRepository()
         set(value) {
             customNetworkStatsRepository = value
         }

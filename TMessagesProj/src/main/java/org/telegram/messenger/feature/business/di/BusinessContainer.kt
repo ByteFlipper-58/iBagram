@@ -1,5 +1,8 @@
 package org.telegram.messenger.feature.business.di
 
+import org.telegram.messenger.feature.business.billing.data.datasource.BillingLocalDataSource
+import org.telegram.messenger.feature.business.billing.data.datasource.BillingRemoteDataSource
+import org.telegram.messenger.feature.business.billing.data.repository.BillingRepositoryImpl
 import org.telegram.messenger.feature.business.billing.data.repository.LegacyBillingRepository
 import org.telegram.messenger.feature.business.billing.domain.repository.BillingRepository
 import org.telegram.messenger.feature.business.billing.domain.usecase.FormatCurrencyUseCase
@@ -59,6 +62,9 @@ import org.telegram.messenger.feature.business.businessrecipients.domain.usecase
 import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ToggleRecipientFilterUseCase
 import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.ValidateBusinessRecipientsUseCase
 import org.telegram.messenger.feature.business.businessrecipients.presentation.BusinessRecipientsViewModel
+import org.telegram.messenger.feature.business.giftauctions.data.datasource.GiftAuctionsLocalDataSource
+import org.telegram.messenger.feature.business.giftauctions.data.datasource.GiftAuctionsRemoteDataSource
+import org.telegram.messenger.feature.business.giftauctions.data.repository.GiftAuctionsRepositoryImpl
 import org.telegram.messenger.feature.business.giftauctions.data.repository.LegacyGiftAuctionsRepository
 import org.telegram.messenger.feature.business.giftauctions.domain.repository.GiftAuctionsRepository
 import org.telegram.messenger.feature.business.giftauctions.domain.usecase.GetActiveAuctionsUseCase
@@ -295,10 +301,26 @@ class BusinessContainer(val account: Int) {
         )
     }
 
+    val giftAuctionsRemoteDataSource: GiftAuctionsRemoteDataSource by lazy {
+        GiftAuctionsRemoteDataSource(account)
+    }
+
+    val giftAuctionsLocalDataSource: GiftAuctionsLocalDataSource by lazy {
+        GiftAuctionsLocalDataSource(account)
+    }
+
+    fun createGiftAuctionsRepository(): GiftAuctionsRepository {
+        return GiftAuctionsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = giftAuctionsLocalDataSource,
+            remoteDataSource = giftAuctionsRemoteDataSource
+        )
+    }
+
     private var customGiftAuctionsRepository: GiftAuctionsRepository? = null
 
     var giftAuctionsRepository: GiftAuctionsRepository
-        get() = customGiftAuctionsRepository ?: LegacyGiftAuctionsRepository(account)
+        get() = customGiftAuctionsRepository ?: createGiftAuctionsRepository()
         set(value) {
             customGiftAuctionsRepository = value
         }
@@ -570,10 +592,26 @@ class BusinessContainer(val account: Int) {
         )
     }
 
+    val billingRemoteDataSource: BillingRemoteDataSource by lazy {
+        BillingRemoteDataSource(account)
+    }
+
+    val billingLocalDataSource: BillingLocalDataSource by lazy {
+        BillingLocalDataSource(account)
+    }
+
+    fun createBillingRepository(): BillingRepository {
+        return BillingRepositoryImpl(
+            currentAccount = account,
+            localDataSource = billingLocalDataSource,
+            remoteDataSource = billingRemoteDataSource
+        )
+    }
+
     private var customBillingRepository: BillingRepository? = null
 
     var billingRepository: BillingRepository
-        get() = customBillingRepository ?: LegacyBillingRepository()
+        get() = customBillingRepository ?: createBillingRepository()
         set(value) {
             customBillingRepository = value
         }

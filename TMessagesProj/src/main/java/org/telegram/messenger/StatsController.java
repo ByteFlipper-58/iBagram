@@ -10,7 +10,10 @@ package org.telegram.messenger;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import androidx.annotation.Nullable;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.network.networkstats.domain.repository.NetworkStatsRepository;
 import org.telegram.messenger.utils.ImmutableByteArrayOutputStream;
 
 import java.io.File;
@@ -131,6 +134,20 @@ public class StatsController extends BaseController {
             }
         }
         return localInstance;
+    }
+
+    @Nullable
+    public static NetworkStatsRepository getNetworkStatsRepository(int account) {
+        try {
+            return AccountFeatureContainer.get(account).getNetwork().getNetworkStatsRepository();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public NetworkStatsRepository getNetworkStatsRepository() {
+        return getNetworkStatsRepository(currentAccount);
     }
 
     private StatsController(int account) {

@@ -26,6 +26,8 @@ import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.QueryProductDetailsParams;
 import com.android.billingclient.api.QueryPurchasesParams;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.business.billing.domain.repository.BillingRepository;
 import org.telegram.messenger.utils.BillingUtilities;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
@@ -75,6 +77,25 @@ public class BillingController implements PurchasesUpdatedListener, BillingClien
             instance = new BillingController(ApplicationLoader.applicationContext);
         }
         return instance;
+    }
+
+    @Nullable
+    public static BillingRepository getBillingRepository(int account) {
+        try {
+            return AccountFeatureContainer.get(account).getBusiness().getBillingRepository();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public static BillingRepository getBillingRepository() {
+        return getBillingRepository(UserConfig.selectedAccount);
+    }
+
+    @Nullable
+    public BillingRepository getRepository() {
+        return getBillingRepository();
     }
 
     private BillingController(Context ctx) {

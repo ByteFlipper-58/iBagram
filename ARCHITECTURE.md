@@ -983,10 +983,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `AiTonesRepositoryImpl.kt` (Clean repository coordinating tones loading, add/remove/edit, and reactive observeTones)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `AiTonesController.java` strangler boundary with `getAiTonesRepository(account)` accessor.
+  - [x] Feature: `StatsController` Strangling (`feature.network.networkstats` - ADR 140):
+    - `NetworkStatsRemoteDataSource.kt` (MTProto network stats sync extension points via BaseRemoteDataSource)
+    - `NetworkStatsLocalDataSource.kt` (stats.dat file parsing, byte counters matrix, reset timestamps, in-memory fallback)
+    - `NetworkStatsRepositoryImpl.kt` (Clean repository coordinating byte updates, reset, and reactive observeNetworkStats)
+    - `NetworkContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `StatsController.java` strangler boundary with `getNetworkStatsRepository(account)` accessor.
+  - [x] Feature: `BillingController` Strangling (`feature.business.billing` - ADR 141):
+    - `BillingRemoteDataSource.kt` (MTProto in-app transaction assignment RPCs via BaseRemoteDataSource)
+    - `BillingLocalDataSource.kt` (Google Play BillingClient lifecycle, product queries, purchase handling, and state flow)
+    - `BillingRepositoryImpl.kt` (Clean repository coordinating purchase launch, receipt verification, and reactive observeBillingState)
+    - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `BillingController.java` strangler boundary with `getBillingRepository(account)` accessor.
+  - [x] Feature: `GiftAuctionController` Strangling (`feature.business.giftauctions` - ADR 142):
+    - `GiftAuctionsRemoteDataSource.kt` (MTProto Star Gift auction RPCs via BaseRemoteDataSource)
+    - `GiftAuctionsLocalDataSource.kt` (Active auctions cache, bid submission via GiftAuctionController, and notification observation)
+    - `GiftAuctionsRepositoryImpl.kt` (Clean repository coordinating auction lookups, bidding, acquired gifts, and reactive observeActiveAuctions)
+    - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `GiftAuctionController.java` strangler boundary with `getGiftAuctionsRepository(account)` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 142: GiftAuctionController Strangling via Clean DataSources & GiftAuctionsRepositoryImpl
+- **Context:** In Telegram Android, Star Gift auctions (bidding, price increments, acquired gifts history, user active auctions) were coordinated by `GiftAuctionController.java` (~800 lines). `GiftAuctionController` coupled MTProto RPCs (`TL_payments.getStarGiftAuctionState`, `sendStarGiftAuctionBid`, `getStarGiftAuctionAcquiredGifts`), in-memory auction states (`auctions`, `userAuctions`), and `NotificationCenter` broadcasts (`giftAuctionsUpdated`).
+- **Decision:** Apply the Strangler Fig pattern to `GiftAuctionController`:
+  1. Implement `GiftAuctionsRemoteDataSource`:
+     - Encapsulates MTProto auction queries by ID or slug and acquired gifts loading via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `GiftAuctionsLocalDataSource`:
+     - Encapsulates active auctions cache, bid submission delegation via `GiftAuctionController`, and notification observation.
+  3. Implement `GiftAuctionsRepositoryImpl`:
+     - Implements `GiftAuctionsRepository`, coordinating auction state lookups, bidding operations, acquired gift lists, and reactive `observeActiveAuctions()`.
+  4. Update `BusinessContainer` and `AccountFeatureContainer` to instantiate and provide `GiftAuctionsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `GiftAuctionController.getGiftAuctionsRepository(account)` and instance `getRepository()`.
+- **Consequences:** Star Gift auctions and bidding logic are cleanly decoupled behind testable domain contracts and data sources. 100% test coverage achieved with `GiftAuctionsRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 141: BillingController Strangling via Clean DataSources & BillingRepositoryImpl
+- **Context:** In Telegram Android, Google Play in-app purchases and Telegram Premium subscription billing were coordinated by `BillingController.java` (~595 lines). `BillingController` coupled Google Play Billing Library (`BillingClient`), purchase tokens verification RPCs (`payments.assignAppStoreTransaction`), in-memory SKU/product details caching (`productDetailsMap`, `purchases`), and callback listeners.
+- **Decision:** Apply the Strangler Fig pattern to `BillingController`:
+  1. Implement `BillingRemoteDataSource`:
+     - Encapsulates MTProto transactions assignment RPCs (`payments.assignAppStoreTransaction`) via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `BillingLocalDataSource`:
+     - Encapsulates Google Play `BillingClient` connection, product details queries, in-flight purchases, and state flows.
+  3. Implement `BillingRepositoryImpl`:
+     - Implements `BillingRepository`, coordinating billing client connection, product queries, purchase launch, receipt verification, and reactive `observeBillingState()`.
+  4. Update `BusinessContainer` and `AccountFeatureContainer` to instantiate and provide `BillingRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `BillingController.getBillingRepository(account)` and instance `getRepository()`.
+- **Consequences:** In-app purchase flows, SKU details, and subscription state are decoupled behind clean domain interfaces. 100% test coverage achieved with `BillingRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 140: StatsController Strangling via Clean DataSources & NetworkStatsRepositoryImpl
+- **Context:** In Telegram Android, network traffic byte counters (mobile, wifi, roaming, calls, audio, video, messages, files, photos, total) were tracked and persisted by `StatsController.java` (~290 lines). `StatsController` directly managed low-level file I/O on `stats.dat`, 8x3 2D long arrays (`sentItems`, `receivedItems`, `sentBytes`, `receivedBytes`), and reset timestamps.
+- **Decision:** Apply the Strangler Fig pattern to `StatsController`:
+  1. Implement `NetworkStatsRemoteDataSource`:
+     - Extends `BaseRemoteDataSource(currentAccount)` and provides extension points for remote network stats synchronization.
+  2. Implement `NetworkStatsLocalDataSource`:
+     - Encapsulates reading/writing byte counts across network types and data types, reset timestamps, in-memory matrices, and fallback for unit tests.
+  3. Implement `NetworkStatsRepositoryImpl`:
+     - Implements `NetworkStatsRepository`, managing stats retrieval, byte count updates, reset operations, and reactive `observeNetworkStats()` StateFlow.
+  4. Update `NetworkContainer` and `AccountFeatureContainer` to instantiate and provide `NetworkStatsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `StatsController.getNetworkStatsRepository(account)` and instance `getRepository()`.
+- **Consequences:** Network traffic counters and statistics are decoupled behind clean domain interfaces. 100% test coverage achieved with `NetworkStatsRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 139: AiTonesController Strangling via Clean DataSources & AiTonesRepositoryImpl
 - **Context:** In Telegram Android, AI Compose tone styling presets (e.g. formal, friendly, creative) and custom user prompts were managed by `AiTonesController.java` (~160 lines). `AiTonesController` coupled MTProto RPCs (`TL_aicompose.getTones`, `unsaveTone`), Base64 TL serialization stored in SharedPreferences (`ai_styles`), in-memory caches of `AiComposeTone` structures, and broadcasts to `NotificationCenter.loadedAiComposeTones`. Legacy UI components accessed `AiTonesController.getInstance(account)`.

@@ -9,6 +9,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.business.giftauctions.domain.repository.GiftAuctionsRepository;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_payments;
@@ -775,5 +777,24 @@ public class GiftAuctionController extends BaseController {
             }
         }
         return localInstance;
+    }
+
+    @Nullable
+    public static GiftAuctionsRepository getGiftAuctionsRepository(int account) {
+        try {
+            return AccountFeatureContainer.get(account).getBusiness().getGiftAuctionsRepository();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public static GiftAuctionsRepository getGiftAuctionsRepository() {
+        return getGiftAuctionsRepository(UserConfig.selectedAccount);
+    }
+
+    @Nullable
+    public GiftAuctionsRepository getRepository() {
+        return getGiftAuctionsRepository(currentAccount);
     }
 }
