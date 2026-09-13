@@ -30,6 +30,9 @@ import org.telegram.messenger.feature.security.biometrics.domain.usecase.HasDevi
 import org.telegram.messenger.feature.security.biometrics.domain.usecase.IsBiometricKeyReadyUseCase
 import org.telegram.messenger.feature.security.biometrics.domain.usecase.ObserveBiometricKeyStateUseCase
 import org.telegram.messenger.feature.security.biometrics.presentation.BiometricsViewModel
+import org.telegram.messenger.feature.security.botguard.data.datasource.BotGuardLocalDataSource
+import org.telegram.messenger.feature.security.botguard.data.datasource.BotGuardRemoteDataSource
+import org.telegram.messenger.feature.security.botguard.data.repository.BotGuardRepositoryImpl
 import org.telegram.messenger.feature.security.botguard.data.repository.LegacyBotGuardRepository
 import org.telegram.messenger.feature.security.botguard.domain.repository.BotGuardRepository
 import org.telegram.messenger.feature.security.botguard.domain.usecase.ClearAllGuardBotSessionsUseCase
@@ -98,7 +101,10 @@ import org.telegram.messenger.feature.security.secretchat.domain.usecase.SendScr
 import org.telegram.messenger.feature.security.secretchat.domain.usecase.SetSecretChatTtlUseCase
 import org.telegram.messenger.feature.security.secretchat.domain.usecase.StartSecretChatUseCase
 import org.telegram.messenger.feature.security.secretchat.presentation.SecretChatViewModel
+import org.telegram.messenger.feature.security.sessions.data.datasource.SessionsLocalDataSource
+import org.telegram.messenger.feature.security.sessions.data.datasource.SessionsRemoteDataSource
 import org.telegram.messenger.feature.security.sessions.data.repository.LegacySessionsRepository
+import org.telegram.messenger.feature.security.sessions.data.repository.SessionsRepositoryImpl
 import org.telegram.messenger.feature.security.sessions.domain.repository.SessionsRepository
 import org.telegram.messenger.feature.security.sessions.domain.usecase.AcceptQrLoginUseCase
 import org.telegram.messenger.feature.security.sessions.domain.usecase.GetSessionsUseCase
@@ -274,10 +280,26 @@ class SecurityContainer(val account: Int) {
         )
     }
 
+    val sessionsRemoteDataSource: SessionsRemoteDataSource by lazy {
+        SessionsRemoteDataSource(account)
+    }
+
+    val sessionsLocalDataSource: SessionsLocalDataSource by lazy {
+        SessionsLocalDataSource(account)
+    }
+
+    fun createSessionsRepository(): SessionsRepository {
+        return SessionsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = sessionsLocalDataSource,
+            remoteDataSource = sessionsRemoteDataSource
+        )
+    }
+
     private var customSessionsRepository: SessionsRepository? = null
 
     var sessionsRepository: SessionsRepository
-        get() = customSessionsRepository ?: LegacySessionsRepository(account)
+        get() = customSessionsRepository ?: createSessionsRepository()
         set(value) {
             customSessionsRepository = value
         }
@@ -681,10 +703,26 @@ class SecurityContainer(val account: Int) {
         )
     }
 
+    val botGuardRemoteDataSource: BotGuardRemoteDataSource by lazy {
+        BotGuardRemoteDataSource(account)
+    }
+
+    val botGuardLocalDataSource: BotGuardLocalDataSource by lazy {
+        BotGuardLocalDataSource(account)
+    }
+
+    fun createBotGuardRepository(): BotGuardRepository {
+        return BotGuardRepositoryImpl(
+            currentAccount = account,
+            localDataSource = botGuardLocalDataSource,
+            remoteDataSource = botGuardRemoteDataSource
+        )
+    }
+
     private var customBotGuardRepository: BotGuardRepository? = null
 
     var botGuardRepository: BotGuardRepository
-        get() = customBotGuardRepository ?: LegacyBotGuardRepository(account)
+        get() = customBotGuardRepository ?: createBotGuardRepository()
         set(value) {
             customBotGuardRepository = value
         }

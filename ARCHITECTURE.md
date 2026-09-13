@@ -1055,10 +1055,65 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `MessageCustomParamsRepositoryImpl.kt` (Clean repository coordinating params read/write, deep copying between messages, and reactive observeState)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `MessageCustomParamsHelper.java` strangler boundary with `getMessageCustomParamsRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `BotGuardHelper` Strangling (`feature.security.botguard` - ADR 152):
+    - `BotGuardRemoteDataSource.kt` (MTProto web and bot validation RPC encapsulation via BaseRemoteDataSource)
+    - `BotGuardLocalDataSource.kt` (SharedPreferences confirmation flags, MessagesController bot whitelist checks, and in-memory session tracking)
+    - `BotGuardRepositoryImpl.kt` (Clean repository coordinating session CRUD, confirmation toggling, decision events, and reactive observeState)
+    - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `BotGuardHelper.java` strangler boundary with `getBotGuardRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `ChatMessagesMetadataController` Strangling (`feature.messaging.chatmeta` - ADR 153):
+    - `ChatMetadataRemoteDataSource.kt` (MTProto RPC requests for reactions, extended media previews, and linked stories via BaseRemoteDataSource)
+    - `ChatMetadataLocalDataSource.kt` (Message metadata check intervals, queue bounds max 5 reactions / max 10 extended media, and request cancellations)
+    - `ChatMetadataRepositoryImpl.kt` (Clean repository coordinating metadata batch inspection, reactions/media loading, and reactive observeStats)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ChatMessagesMetadataController.java` strangler boundary with `getChatMessagesMetadataRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `Sessions` Strangling (`feature.security.sessions` - ADR 154):
+    - `SessionsRemoteDataSource.kt` (MTProto authorizations, web authorizations, TTL settings, and QR login RPCs via BaseRemoteDataSource)
+    - `SessionsLocalDataSource.kt` (Thread-safe memory caches for authorizations and web authorizations, URL-safe Base64 QR token parsing, and post-reset push refresh)
+    - `SessionsRepositoryImpl.kt` (Clean repository coordinating session terminations, settings updates, TTL configuration, and reactive observeSessions)
+    - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 154: Sessions Strangling via Clean DataSources & SessionsRepositoryImpl
+- **Context:** In Telegram Android, user device authorizations, active web authorizations, QR code login, and session self-destruct TTL settings were managed across `SessionsActivity.java` (~1280 lines), `ConnectionsManager`, and `MessagesController`. Legacy code coupled MTProto RPCs (`TL_account.getAuthorizations`, `TL_account.resetAuthorization`, `TL_auth.resetAuthorizations`, `TL_account.getWebAuthorizations`, `TL_auth.acceptLoginToken`), direct base64 parsing, manual push token re-registration across multiple accounts, and raw `NotificationCenter.newSessionReceived` events.
+- **Decision:** Apply the Strangler Fig pattern to `Sessions`:
+  1. Implement `SessionsRemoteDataSource`:
+     - Encapsulates MTProto RPC requests: `getAuthorizations`, `resetAuthorization`, `resetAllAuthorizations`, `getWebAuthorizations`, `resetWebAuthorization`, `resetAllWebAuthorizations`, `changeAuthorizationSettings`, `setAuthorizationTTL`, and `acceptLoginToken` via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `SessionsLocalDataSource`:
+     - Manages thread-safe in-memory cache for `SessionsListModel` and `List<WebSessionModel>`, URL-safe Base64 QR login token parsing, and multi-account push token refresh post-termination.
+  3. Implement `SessionsRepositoryImpl`:
+     - Implements `SessionsRepository`, coordinating remote RPC execution, reactive observation via `NotificationCenter.newSessionReceived`, session terminations, settings updates, TTL configuration, and QR login confirmation.
+  4. Update `SecurityContainer` and `AccountFeatureContainer` to instantiate and wire `SessionsRepositoryImpl` alongside clean data sources.
+- **Consequences:** Active device sessions, web sessions, QR login flow, and TTL management are decoupled behind clean domain contracts. 100% test coverage achieved with `SessionsRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 153: ChatMessagesMetadataController Strangling via Clean DataSources & ChatMetadataRepositoryImpl
+- **Context:** In Telegram Android, visible chat message reactions polling, extended/paid media preview updates, and story item synchronizations were orchestrated by `ChatMessagesMetadataController.java` (~180 lines) attached to `ChatActivity`. The controller coupled direct MTProto request dispatching (`TL_messages_getMessagesReactions`, `TL_messages_getExtendedMedia`, `TL_stories_getStoriesByID`), manual request list throttling, and direct updates processing via `MessagesController.processUpdates()`.
+- **Decision:** Apply the Strangler Fig pattern to `ChatMessagesMetadataController`:
+  1. Implement `ChatMetadataRemoteDataSource`:
+     - Encapsulates MTProto RPC execution: `loadReactions`, `loadExtendedMedia`, and `loadStories` via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `ChatMetadataLocalDataSource`:
+     - Manages timing interval validation (reactions 15s, extended media 30s, stories 5m), request queue throttling (max 5 reactions, max 10 extended media), and stats accumulation.
+  3. Implement `ChatMetadataRepositoryImpl`:
+     - Implements `ChatMessagesMetadataRepository`, coordinating viewport message inspection (`checkMessages`), batch loading, request queue throttling, cancellation, and reactive `observeStats()`.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to instantiate and wire `ChatMetadataRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `ChatMessagesMetadataController.getChatMessagesMetadataRepository(account)` and instance `getRepository()`.
+- **Consequences:** Viewport message metadata inspection, reactions synchronization, and extended media polling are decoupled behind clean domain contracts. 100% test coverage achieved with `ChatMetadataRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 152: BotGuardHelper Strangling via Clean DataSources & BotGuardRepositoryImpl
+- **Context:** In Telegram Android, bot verification web app launching, dialog launch confirmation alerts, and guard decision callbacks were coordinated by `BotGuardHelper.java` (~120 lines). `BotGuardHelper` coupled in-memory sparse long arrays (`queryIdToBotId`), SharedPreferences persistence (`SharedPrefsHelper.isWebViewConfirmShown`), `MessagesController.whitelistedBots`, and global `NotificationCenter.guardBotDecisionResult` broadcasts.
+- **Decision:** Apply the Strangler Fig pattern to `BotGuardHelper`:
+  1. Implement `BotGuardRemoteDataSource`:
+     - Encapsulates MTProto remote operations for Bot Guard verification and web app queries via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `BotGuardLocalDataSource`:
+     - Manages SharedPreferences bot webview confirmation flags, bot whitelist checks, and thread-safe session tracking (`activeSessions`, `queryIdToBotId`) with headless test fallback.
+  3. Implement `BotGuardRepositoryImpl`:
+     - Implements `BotGuardRepository`, coordinating session registration, confirmation checks, decision posting, and reactive `observeState()` / `observeDecisions()`.
+  4. Update `SecurityContainer` and `AccountFeatureContainer` to instantiate and wire `BotGuardRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `BotGuardHelper.getBotGuardRepository(account)` and instance `getRepository()`.
+- **Consequences:** Bot Guard verification sessions and confirmation state management are decoupled behind clean domain contracts. 100% test coverage achieved with `BotGuardRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 151: MessageCustomParamsHelper Strangling via Clean DataSources & MessageCustomParamsRepositoryImpl
 - **Context:** In Telegram Android, custom per-message auxiliary parameters (transcriptions, speech recognition flags, translation data) were handled by `MessageCustomParamsHelper.java` (~230 lines). `MessageCustomParamsHelper` coupled direct binary serialization (`Params_v1`), in-memory sparse structures, MTProto audio transcription requests (`TL_messages_transcribeAudio`), and legacy database helper calls.

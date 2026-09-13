@@ -15,6 +15,13 @@ public class BotGuardHelper extends BaseController {
     private BotGuardHelper(int num) {
         super(num);
     }
+    public static org.telegram.messenger.feature.security.botguard.domain.repository.BotGuardRepository getBotGuardRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getBotGuardRepository();
+    }
+
+    public org.telegram.messenger.feature.security.botguard.domain.repository.BotGuardRepository getRepository() {
+        return getBotGuardRepository(currentAccount);
+    }
 
     private final LongSparseLongArray queryIdToBotId = new LongSparseLongArray();
 

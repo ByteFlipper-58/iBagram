@@ -98,6 +98,9 @@ import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChat
 import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.SetChatInputTextUseCase
 import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.ValidateVoiceRecordActionUseCase
 import org.telegram.messenger.feature.messaging.chatinput.presentation.ChatInputViewModel
+import org.telegram.messenger.feature.messaging.chatmeta.data.datasource.ChatMetadataLocalDataSource
+import org.telegram.messenger.feature.messaging.chatmeta.data.datasource.ChatMetadataRemoteDataSource
+import org.telegram.messenger.feature.messaging.chatmeta.data.repository.ChatMetadataRepositoryImpl
 import org.telegram.messenger.feature.messaging.chatmeta.data.repository.LegacyChatMessagesMetadataRepository
 import org.telegram.messenger.feature.messaging.chatmeta.domain.repository.ChatMessagesMetadataRepository
 import org.telegram.messenger.feature.messaging.chatmeta.domain.usecase.CancelPendingMetadataRequestsUseCase
@@ -1336,10 +1339,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val chatMetadataRemoteDataSource: ChatMetadataRemoteDataSource by lazy {
+        ChatMetadataRemoteDataSource(account)
+    }
+
+    val chatMetadataLocalDataSource: ChatMetadataLocalDataSource by lazy {
+        ChatMetadataLocalDataSource(account)
+    }
+
+    fun createChatMetadataRepository(): ChatMessagesMetadataRepository {
+        return ChatMetadataRepositoryImpl(
+            account = account,
+            localDataSource = chatMetadataLocalDataSource,
+            remoteDataSource = chatMetadataRemoteDataSource
+        )
+    }
+
     private var customChatMessagesMetadataRepository: ChatMessagesMetadataRepository? = null
 
     var chatMessagesMetadataRepository: ChatMessagesMetadataRepository
-        get() = customChatMessagesMetadataRepository ?: LegacyChatMessagesMetadataRepository(account)
+        get() = customChatMessagesMetadataRepository ?: createChatMetadataRepository()
         set(value) {
             customChatMessagesMetadataRepository = value
         }

@@ -23,6 +23,14 @@ public class ChatMessagesMetadataController {
         this.chatActivity = chatActivity;
     }
 
+    public static org.telegram.messenger.feature.messaging.chatmeta.domain.repository.ChatMessagesMetadataRepository getChatMessagesMetadataRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getChatMessagesMetadataRepository();
+    }
+
+    public org.telegram.messenger.feature.messaging.chatmeta.domain.repository.ChatMessagesMetadataRepository getRepository() {
+        return getChatMessagesMetadataRepository(chatActivity != null ? chatActivity.getCurrentAccount() : UserConfig.selectedAccount);
+    }
+
     public void checkMessages(ChatActivity.ChatActivityAdapter chatAdapter, int maxAdapterPosition, int minAdapterPosition, long currentTime) {
         ArrayList<MessageObject> messages = chatAdapter.getMessages();
         if (!chatActivity.isInScheduleMode() && maxAdapterPosition >= 0 && minAdapterPosition >= 0) {
