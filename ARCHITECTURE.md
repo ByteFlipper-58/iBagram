@@ -1126,6 +1126,23 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `PrivacyRepositoryImpl.kt` (Clean repository coordinating 17 privacy operations: rule types, blocked peers, passcode, auto-lock, and 2FA password verification)
     - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring (Security Domain now 90% complete: 9/10 features strangled)
     - `ContactsController.java` strangler boundary with `getPrivacyRepository(account)` and `getPrivacyRepository()` accessors.
+  - [x] Feature: `FlagSecure` Strangling (`feature.security.flagsecure` - ADR 164):
+    - `FlagSecureLocalDataSource.kt` (Reference-counting engine for window security reasons with thread-safe ConcurrentHashMap)
+    - `FlagSecureRepositoryImpl.kt` (Clean repository coordinating security reasons, dynamic rules evaluation, and reactive observeWindowState)
+    - `SecurityContainer.kt` & `AccountFeatureContainer.kt` wiring (Security Domain now 100% complete: 10/10 features strangled)
+    - `AndroidUtilities.java` strangler boundary with `getFlagSecureRepository(account)` and `getFlagSecureRepository()` accessors.
+  - [x] Feature: `Timezones` Strangling (`feature.business.timezones` - ADR 165):
+    - `TimezonesRemoteDataSource.kt` (MTProto help.getTimezonesList via BaseRemoteDataSource)
+    - `TimezonesLocalDataSource.kt` (Thread-safe memory cache, TimezonesController integration, and NotificationCenter observation)
+    - `TimezonesRepositoryImpl.kt` (Clean repository coordinating timezones list, system timezone detection, offset formatting, and reactive observeTimezones)
+    - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `TimezonesController.java` strangler boundary with `getTimezonesRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `Business Links` Strangling (`feature.business.businesslinks` - ADR 166):
+    - `BusinessLinksRemoteDataSource.kt` (MTProto create/edit/delete business links via BaseRemoteDataSource)
+    - `BusinessLinksLocalDataSource.kt` (Thread-safe memory cache, BusinessLinksController integration, and NotificationCenter observation)
+    - `BusinessLinksRepositoryImpl.kt` (Clean repository coordinating business chat links CRUD, limits, and reactive observeBusinessLinks)
+    - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `BusinessLinksController.java` strangler boundary with `getBusinessLinksRepository(account)` and `getRepository()` accessors.
 
 ---
 
