@@ -23,6 +23,9 @@ import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetCha
 import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetChatsAutoDeleteBatchUseCase
 import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.SetGlobalAutoDeleteUseCase
 import org.telegram.messenger.feature.messaging.autodelete.presentation.AutoDeleteViewModel
+import org.telegram.messenger.feature.messaging.botforum.data.datasource.BotForumLocalDataSource
+import org.telegram.messenger.feature.messaging.botforum.data.datasource.BotForumRemoteDataSource
+import org.telegram.messenger.feature.messaging.botforum.data.repository.BotForumRepositoryImpl
 import org.telegram.messenger.feature.messaging.botforum.data.repository.LegacyBotForumRepository
 import org.telegram.messenger.feature.messaging.botforum.domain.repository.BotForumRepository
 import org.telegram.messenger.feature.messaging.botforum.domain.usecase.CheckHasBotForumDraftsUseCase
@@ -175,6 +178,9 @@ import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.Selec
 import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ToggleStickerFavoriteUseCase
 import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.UpdatePickerSearchQueryUseCase
 import org.telegram.messenger.feature.messaging.emojipicker.presentation.EmojiPickerViewModel
+import org.telegram.messenger.feature.messaging.ephemeralmessages.data.datasource.EphemeralMessagesLocalDataSource
+import org.telegram.messenger.feature.messaging.ephemeralmessages.data.datasource.EphemeralMessagesRemoteDataSource
+import org.telegram.messenger.feature.messaging.ephemeralmessages.data.repository.EphemeralMessagesRepositoryImpl
 import org.telegram.messenger.feature.messaging.ephemeralmessages.data.repository.LegacyEphemeralMessagesRepository
 import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.repository.EphemeralMessagesRepository
 import org.telegram.messenger.feature.messaging.ephemeralmessages.domain.usecase.ClearAllWelcomeAnchorBindingsUseCase
@@ -224,6 +230,9 @@ import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.Obse
 import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.PopGroupCallMessageUseCase
 import org.telegram.messenger.feature.messaging.groupcallmsg.domain.usecase.SendGroupCallMessageUseCase
 import org.telegram.messenger.feature.messaging.groupcallmsg.presentation.GroupCallMessagesViewModel
+import org.telegram.messenger.feature.messaging.hashtagsearch.data.datasource.HashtagSearchLocalDataSource
+import org.telegram.messenger.feature.messaging.hashtagsearch.data.datasource.HashtagSearchRemoteDataSource
+import org.telegram.messenger.feature.messaging.hashtagsearch.data.repository.HashtagSearchRepositoryImpl
 import org.telegram.messenger.feature.messaging.hashtagsearch.data.repository.LegacyHashtagSearchRepository
 import org.telegram.messenger.feature.messaging.hashtagsearch.domain.repository.HashtagSearchRepository
 import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.AddHashtagToHistoryUseCase
@@ -1207,10 +1216,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val hashtagSearchRemoteDataSource: HashtagSearchRemoteDataSource by lazy {
+        HashtagSearchRemoteDataSource(account)
+    }
+
+    val hashtagSearchLocalDataSource: HashtagSearchLocalDataSource by lazy {
+        HashtagSearchLocalDataSource(account)
+    }
+
+    fun createHashtagSearchRepository(): HashtagSearchRepository {
+        return HashtagSearchRepositoryImpl(
+            currentAccount = account,
+            remoteDataSource = hashtagSearchRemoteDataSource,
+            localDataSource = hashtagSearchLocalDataSource
+        )
+    }
+
     private var customHashtagSearchRepository: HashtagSearchRepository? = null
 
     var hashtagSearchRepository: HashtagSearchRepository
-        get() = customHashtagSearchRepository ?: LegacyHashtagSearchRepository(account)
+        get() = customHashtagSearchRepository ?: createHashtagSearchRepository()
         set(value) {
             customHashtagSearchRepository = value
         }
@@ -2007,10 +2032,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val botForumRemoteDataSource: BotForumRemoteDataSource by lazy {
+        BotForumRemoteDataSource(account)
+    }
+
+    val botForumLocalDataSource: BotForumLocalDataSource by lazy {
+        BotForumLocalDataSource(account)
+    }
+
+    fun createBotForumRepository(): BotForumRepository {
+        return BotForumRepositoryImpl(
+            currentAccount = account,
+            localDataSource = botForumLocalDataSource,
+            remoteDataSource = botForumRemoteDataSource
+        )
+    }
+
     private var customBotForumRepository: BotForumRepository? = null
 
     var botForumRepository: BotForumRepository
-        get() = customBotForumRepository ?: LegacyBotForumRepository(account)
+        get() = customBotForumRepository ?: createBotForumRepository()
         set(value) {
             customBotForumRepository = value
         }
@@ -2080,10 +2121,26 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val ephemeralMessagesRemoteDataSource: EphemeralMessagesRemoteDataSource by lazy {
+        EphemeralMessagesRemoteDataSource(account)
+    }
+
+    val ephemeralMessagesLocalDataSource: EphemeralMessagesLocalDataSource by lazy {
+        EphemeralMessagesLocalDataSource(account)
+    }
+
+    fun createEphemeralMessagesRepository(): EphemeralMessagesRepository {
+        return EphemeralMessagesRepositoryImpl(
+            currentAccount = account,
+            localDataSource = ephemeralMessagesLocalDataSource,
+            remoteDataSource = ephemeralMessagesRemoteDataSource
+        )
+    }
+
     private var customEphemeralMessagesRepository: EphemeralMessagesRepository? = null
 
     var ephemeralMessagesRepository: EphemeralMessagesRepository
-        get() = customEphemeralMessagesRepository ?: LegacyEphemeralMessagesRepository(account)
+        get() = customEphemeralMessagesRepository ?: createEphemeralMessagesRepository()
         set(value) {
             customEphemeralMessagesRepository = value
         }

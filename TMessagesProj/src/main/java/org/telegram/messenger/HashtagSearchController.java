@@ -6,6 +6,8 @@ import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.messaging.hashtagsearch.domain.repository.HashtagSearchRepository;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
@@ -16,6 +18,14 @@ import java.util.HashMap;
 import java.util.Objects;
 
 public class HashtagSearchController {
+    public static HashtagSearchRepository getHashtagSearchRepository(int account) {
+        return AccountFeatureContainer.Companion.get(account).getMessaging().getHashtagSearchRepository();
+    }
+
+    public HashtagSearchRepository getRepository() {
+        return getHashtagSearchRepository(currentAccount);
+    }
+
     private static volatile HashtagSearchController[] Instance = new HashtagSearchController[UserConfig.MAX_ACCOUNT_COUNT];
     private static final Object[] lockObjects = new Object[UserConfig.MAX_ACCOUNT_COUNT];
 

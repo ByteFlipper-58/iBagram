@@ -1019,10 +1019,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `CameraRepositoryImpl.kt` (Clean repository coordinating camera init, selection, switching, flash mode, mirroring, and recording lifecycle with reactive observeCameraState)
     - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `CameraController.java` strangler boundary with `getCameraRepository()` accessor.
+  - [x] Feature: `HashtagSearchController` Strangling (`feature.messaging.hashtagsearch` - ADR 146):
+    - `HashtagSearchRemoteDataSource.kt` (MTProto RPC searchGlobal, searchChat, searchPosts, and username resolution via BaseRemoteDataSource)
+    - `HashtagSearchLocalDataSource.kt` (Thread-safe history preferences with # and $ normalization, in-memory cache per search type)
+    - `HashtagSearchRepositoryImpl.kt` (Clean repository coordinating global/chat/post searches, history CRUD, and reactive observeHistory / observeSearchResult)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `HashtagSearchController.java` strangler boundary with `getHashtagSearchRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `EphemeralMessagesHelper` Strangling (`feature.messaging.ephemeralmessages` - ADR 147):
+    - `EphemeralMessagesRemoteDataSource.kt` (MTProto sendEphemeralMessage and chat full loading via BaseRemoteDataSource)
+    - `EphemeralMessagesLocalDataSource.kt` (Welcome anchor bindings tracking, bot command parsing and ephemeral detection, state flow)
+    - `EphemeralMessagesRepositoryImpl.kt` (Clean repository coordinating anchor bindings, command checks, and reactive observeState)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `EphemeralMessagesHelper.java` strangler boundary with `getEphemeralMessagesRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `BotForumHelper` Strangling (`feature.messaging.botforum` - ADR 148):
+    - `BotForumRemoteDataSource.kt` (MTProto stop draft action and forum topic creation via BaseRemoteDataSource)
+    - `BotForumLocalDataSource.kt` (Draft updates mapping, blocklists, streaming topics persistence, and StreamingSendButtonState resolution)
+    - `BotForumRepositoryImpl.kt` (Clean repository coordinating draft streaming, replacement checks, stop actions, and reactive observeState)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `BotForumHelper.java` strangler boundary with `getBotForumRepository(account)` and `getRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 148: BotForumHelper Strangling via Clean DataSources & BotForumRepositoryImpl
+- **Context:** In Telegram Android, Bot Forum topics and AI draft message streaming were managed by `BotForumHelper.java` (~785 lines). `BotForumHelper` coupled MTProto draft actions (`TL_sendMessageTextDraftAction`, `TL_sendMessageRichMessageDraftAction`, `TL_sendMessageStopDraftAction`), custom sparse array structures (`DialogTopicIdKeyMap`), SharedPreferences persistence (`bot_drafts`), typing animators (`MultiLayoutTypingAnimator`), and global `NotificationCenter` broadcasts.
+- **Decision:** Apply the Strangler Fig pattern to `BotForumHelper`:
+  1. Implement `BotForumRemoteDataSource`:
+     - Encapsulates sending stop draft typing actions (`TL_messages_setTyping`) and creating forum topics (`TL_messages_createForumTopic`) via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `BotForumLocalDataSource`:
+     - Manages thread-safe active drafts mapping, random ID blocklists, topic streaming flags persistence with test fallback, and streaming send button state resolution (`NO_STREAMING`, `BLOCKING`, `STOP`).
+  3. Implement `BotForumRepositoryImpl`:
+     - Implements `BotForumRepository`, coordinating draft streaming updates, draft timeout removals, message replacement checks, stop streaming actions, and reactive `observeState()`.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to instantiate and wire `BotForumRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `BotForumHelper.getBotForumRepository(account)` and instance `getRepository()`.
+- **Consequences:** Bot Forum draft streaming, typing animation arbitration, and topic persistence are cleanly decoupled behind domain contracts. 100% test coverage achieved with `BotForumRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 147: EphemeralMessagesHelper Strangling via Clean DataSources & EphemeralMessagesRepositoryImpl
+- **Context:** In Telegram Android, ephemeral (self-destructing/temporary) messages, welcome message anchors, and bot command interception were managed by `EphemeralMessagesHelper.java` (~489 lines). `EphemeralMessagesHelper` tightly coupled MTProto RPC requests (`TL_ephemeral.TL_sendMessage`), outgoing message request transformations (`TL_messages_sendMessage`, `TL_messages_sendMedia`), anchor bindings (`WelcomeAnchorsState`), and bot info lookups.
+- **Decision:** Apply the Strangler Fig pattern to `EphemeralMessagesHelper`:
+  1. Implement `EphemeralMessagesRemoteDataSource`:
+     - Encapsulates MTProto ephemeral message dispatch (`TL_ephemeral.TL_sendMessage`) and chat full loading via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `EphemeralMessagesLocalDataSource`:
+     - Manages thread-safe welcome anchor bindings per dialog, bot command parsing and ephemeral classification, and `EphemeralMessagesState` StateFlow.
+  3. Implement `EphemeralMessagesRepositoryImpl`:
+     - Implements `EphemeralMessagesRepository`, coordinating anchor bindings CRUD, command detection, and reactive `observeState()` StateFlow.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to instantiate and wire `EphemeralMessagesRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `EphemeralMessagesHelper.getEphemeralMessagesRepository(account)` and instance `getRepository()`.
+- **Consequences:** Ephemeral message lifecycle, anchor tracking, and bot command interception are cleanly decoupled behind testable domain contracts. 100% test coverage achieved with `EphemeralMessagesRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 146: HashtagSearchController Strangling via Clean DataSources & HashtagSearchRepositoryImpl
+- **Context:** In Telegram Android, hashtag search queries across personal messages, public channel posts, and chat history, as well as hashtag search history preferences, were managed by `HashtagSearchController.java` (~1380 lines). `HashtagSearchController` coupled MTProto RPCs (`TL_messages_searchGlobal`, `TL_channels_searchPosts`, `TL_messages_search`), username resolution (`userNameResolver`), SharedPreferences persistence (`hashtag_search_history`), and UI selection states.
+- **Decision:** Apply the Strangler Fig pattern to `HashtagSearchController`:
+  1. Implement `HashtagSearchRemoteDataSource`:
+     - Encapsulates MTProto search RPCs (`searchGlobal`, `searchPosts`, `searchChat`) and asynchronous username resolution via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `HashtagSearchLocalDataSource`:
+     - Manages hashtag history persistence with `#` and `$` prefix normalization, in-memory cache for search results per type (`MY_MESSAGES`, `PUBLIC_POSTS`, `CHANNEL_POSTS`), and notification posting with headless test fallbacks.
+  3. Implement `HashtagSearchRepositoryImpl`:
+     - Implements `HashtagSearchRepository`, coordinating multi-type hashtag searches, pagination offsets, history CRUD, message jump indexing, and reactive flows (`observeHistory()`, `observeSearchResult()`).
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to instantiate and wire `HashtagSearchRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `HashtagSearchController.getHashtagSearchRepository(account)` and instance `getRepository()`.
+- **Consequences:** Hashtag search execution, history persistence, and search result states are decoupled into clean, testable data sources and repository. 100% test coverage achieved with `HashtagSearchRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 145: CameraController Strangling via Clean DataSources & CameraRepositoryImpl
 - **Context:** In Telegram Android, hardware camera initialization, resolution selection heuristics, front/back camera toggling, flash mode control, and video recording lifecycle were managed by `CameraController.java` (~975 lines). `CameraController` coupled low-level Camera APIs (`android.hardware.Camera`), background ThreadPoolExecutor thread pools, MediaRecorder configuration, and UI callbacks.

@@ -646,6 +646,21 @@ public class BotForumHelper extends BaseController {
         return localInstance;
     }
 
+    // =========================================================================
+    // Clean Architecture / Strangler Fig Hook (ADR 148)
+    // =========================================================================
+
+    public static org.telegram.messenger.feature.messaging.botforum.domain.repository.BotForumRepository getBotForumRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion
+                .get(account)
+                .getMessaging()
+                .getBotForumRepository();
+    }
+
+    public org.telegram.messenger.feature.messaging.botforum.domain.repository.BotForumRepository getRepository() {
+        return getBotForumRepository(currentAccount);
+    }
+
 
 
     public static class BotDraftAnimationsPool {

@@ -485,4 +485,19 @@ public class EphemeralMessagesHelper extends BaseController {
         }
         return localInstance;
     }
+
+    // =========================================================================
+    // Clean Architecture / Strangler Fig Hook (ADR 147)
+    // =========================================================================
+
+    public static org.telegram.messenger.feature.messaging.ephemeralmessages.domain.repository.EphemeralMessagesRepository getEphemeralMessagesRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion
+                .get(account)
+                .getMessaging()
+                .getEphemeralMessagesRepository();
+    }
+
+    public org.telegram.messenger.feature.messaging.ephemeralmessages.domain.repository.EphemeralMessagesRepository getRepository() {
+        return getEphemeralMessagesRepository(currentAccount);
+    }
 }
