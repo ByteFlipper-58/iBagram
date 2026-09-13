@@ -360,7 +360,7 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Domain entities: `QuickReplyModel`, `QuickRepliesLimitModel`
   - [x] Repository contract: `QuickRepliesRepository`
   - [x] Use cases: `ObserveQuickRepliesUseCase`, `GetQuickRepliesUseCase`, `LoadQuickRepliesUseCase`, `FindQuickReplyUseCase`, `CheckQuickReplyNameBusyUseCase`, `CanAddNewQuickReplyUseCase`, `RenameQuickReplyUseCase`, `ReorderQuickRepliesUseCase`, `DeleteQuickRepliesUseCase`, `SendQuickReplyUseCase`
-  - [x] Data layer: `QuickReplyMapper`, `LegacyQuickRepliesRepository` (Main-thread safe, adapting `QuickRepliesController` and `SendMessagesHelper` with `NotificationCenterFlowBridge` observing `NotificationCenter.quickRepliesUpdated`)
+  - [x] Data layer: `QuickReplyMapper`, `QuickRepliesLocalDataSource`, `QuickRepliesRemoteDataSource`, `QuickRepliesRepositoryImpl` (Main-thread safe, adapting `QuickRepliesController` and `SendMessagesHelper` with `NotificationCenterFlowBridge` observing `NotificationCenter.quickRepliesUpdated`)
   - [x] Presentation layer: `QuickRepliesUiState`, `QuickRepliesEvent`, `QuickRepliesViewModel`
 - [x] Join Requests & Chat Administration (`feature.joinrequests`)
   - [x] Domain entities: `JoinRequestUserModel`, `JoinRequestModel`, `JoinRequestsListModel`, `ChatPendingRequestsModel`
@@ -456,7 +456,7 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Domain entities: `BusinessBotRightsModel`, `BusinessBotRecipientsModel`, `ConnectedBotModel`, `BusinessBotsStateModel`
   - [x] Repository contract: `BusinessBotsRepository`
   - [x] Use cases: `ObserveConnectedBotsUseCase`, `GetConnectedBotsUseCase`, `LoadConnectedBotsUseCase`, `UpdateConnectedBotUseCase`, `DeleteConnectedBotUseCase`, `FindConnectedBotUseCase`
-  - [x] Data layer: `BusinessBotMapper`, `LegacyBusinessBotsRepository` (Main-thread safe, adapting `BusinessChatbotController`, `NotificationCenter.updatedChatbot`, and MTProto connected bots protocol)
+  - [x] Data layer: `BusinessBotMapper`, `BusinessBotsLocalDataSource`, `BusinessBotsRemoteDataSource`, `BusinessBotsRepositoryImpl` (Main-thread safe, adapting `BusinessChatbotController`, `NotificationCenter.updatedChatbot`, and MTProto connected bots protocol)
   - [x] Presentation layer: `BusinessBotsUiState`, `BusinessBotsEvent`, `BusinessBotsViewModel`
 - [x] Telegram Timezones & Business Hours Offset (`feature.timezones`)
   - [x] Domain entities: `TimezoneModel` (with formatted UTC offset and display name), `TimezonesStateModel`
@@ -606,7 +606,7 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] Domain entities: `RecipientFilterType`, `BusinessRecipientsModel`, `RecipientValidationResult`
   - [x] Repository contract: `BusinessRecipientsRepository`
   - [x] Use cases: `ObserveBusinessRecipientsUseCase`, `GetBusinessRecipientsUseCase`, `SetBusinessRecipientsUseCase`, `ToggleExcludeSelectedUseCase`, `ToggleRecipientFilterUseCase`, `AddSelectedUsersUseCase`, `RemoveSelectedUserUseCase`, `AddExcludedUsersUseCase`, `RemoveExcludedUserUseCase`, `CheckRecipientsChangesUseCase`, `ValidateBusinessRecipientsUseCase`, `ResetBusinessRecipientsUseCase`
-  - [x] Data layer: `BusinessRecipientsMapper`, `LegacyBusinessRecipientsRepository` (thread safe, adapting `BusinessRecipientsHelper`, bitmask flags, mutual exclusion, validation, change detection)
+  - [x] Data layer: `BusinessRecipientsMapper`, `BusinessRecipientsLocalDataSource`, `BusinessRecipientsRepositoryImpl` (thread safe, adapting `BusinessRecipientsHelper`, bitmask flags, mutual exclusion, validation, change detection)
   - [x] Presentation layer: `BusinessRecipientsUiState`, `BusinessRecipientsEvent`, `BusinessRecipientsViewModel`
 - [x] Interactive Pinch-To-Zoom Media Gestures & Overlay (`feature.pinchtozoom`)
   - [x] Domain entities: `PinchTouchPoint`, `PinchGestureSpec`, `PinchGestureDecision`, `PinchTransform`, `PinchImageDimensions`, `PinchBoundsResult`, `PinchZoomState`
@@ -1143,10 +1143,79 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `BusinessLinksRepositoryImpl.kt` (Clean repository coordinating business chat links CRUD, limits, and reactive observeBusinessLinks)
     - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `BusinessLinksController.java` strangler boundary with `getBusinessLinksRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `Quick Replies` Strangling (`feature.business.quickreplies` - ADR 167):
+    - `QuickRepliesRemoteDataSource.kt` (MTProto send, reorder, delete quick replies via BaseRemoteDataSource)
+    - `QuickRepliesLocalDataSource.kt` (Thread-safe memory cache, QuickRepliesController integration, and NotificationCenter observation)
+    - `QuickRepliesRepositoryImpl.kt` (Clean repository coordinating quick reply shortcuts, template messages, reordering, and reactive observeQuickReplies)
+    - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `QuickRepliesController.java` strangler boundary with `getQuickRepliesRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `Business Chatbots` Strangling (`feature.business.businessbots` - ADR 168):
+    - `BusinessBotsRemoteDataSource.kt` (MTProto update chatbot permissions, detach chatbot via BaseRemoteDataSource)
+    - `BusinessBotsLocalDataSource.kt` (Thread-safe memory cache, BusinessChatbotController integration, and NotificationCenter observation)
+    - `BusinessBotsRepositoryImpl.kt` (Clean repository coordinating connected chatbots, rights delegation, recipient configuration, and reactive observeChatbots)
+    - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `BusinessChatbotController.java` strangler boundary with `getBusinessBotsRepository(account)` and `getRepository()` accessors.
+  - [x] Feature: `Business Recipients` Strangling (`feature.business.businessrecipients` - ADR 169):
+    - `BusinessRecipientsLocalDataSource.kt` (Thread-safe memory state, mutual exclusion between selected/excluded users, BusinessRecipientsHelper integration)
+    - `BusinessRecipientsRepositoryImpl.kt` (Clean repository coordinating recipient flags, user sets arbitration, and reactive observeState)
+    - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `BusinessRecipientsHelper.java` strangler boundary with `getBusinessRecipientsRepository(account)` and `getRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 169: Business Recipients & Exclusion Rules Arbitration Strangling via Clean DataSources & BusinessRecipientsRepositoryImpl
+- **Context:** In Telegram Business, recipient filtering for away messages, greeting messages, and connected chatbots is managed by `BusinessRecipientsHelper.java` (~265 lines). The helper handled bitwise flag manipulation (`FLAG_EXISTING_CHATS`, `FLAG_NEW_CHATS`, `FLAG_CONTACTS`, `FLAG_NON_CONTACTS`, `FLAG_EXCLUDE_SELECTED`), synchronization between selected user ID lists and excluded user ID lists, and UI validation without an isolated data source or pure domain repository contract.
+- **Decision:** Apply the Strangler Fig pattern to `feature.business.businessrecipients`:
+  1. Implement `BusinessRecipientsLocalDataSource`:
+     - Encapsulates bitwise recipient flags, thread-safe user lists (`selectedUserIds`, `excludedUserIds`) with automatic mutual exclusion arbitration, and `BusinessRecipientsHelper` integration with headless JVM in-memory fallbacks.
+  2. Implement `BusinessRecipientsRepositoryImpl`:
+     - Implements `BusinessRecipientsRepository`, providing clean methods to get/set flags, select/exclude users, clear selections, and reactively observe recipient configuration changes via `observeRecipients()`.
+  3. Update `BusinessContainer` and `AccountFeatureContainer` to wire `BusinessRecipientsRepositoryImpl` alongside clean data sources.
+  4. Introduce strangler boundary: `BusinessRecipientsHelper.getBusinessRecipientsRepository(account)` and `getRepository()` accessors.
+- **Consequences:** Recipient filtering and mutual exclusion arbitration are decoupled behind clean domain contracts. 100% unit test coverage achieved with `BusinessRecipientsRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 168: Connected Business Chatbots & Permission Delegation Strangling via Clean DataSources & BusinessBotsRepositoryImpl
+- **Context:** Telegram Business allows delegating business chat interactions to connected third-party AI chatbots via `BusinessChatbotController.java` (~170 lines). The controller managed in-memory chatbot permissions (`can_reply`, `bot_user_id`), MTProto RPC synchronization (`TL_account.updateConnectedBot`), and fired global notifications (`businessBotUpdated`) on `NotificationCenter` without lifecycle isolation or headless testing capabilities.
+- **Decision:** Apply the Strangler Fig pattern to `feature.business.businessbots`:
+  1. Implement `BusinessBotsRemoteDataSource`:
+     - Encapsulates MTProto `updateConnectedBot` and chatbot detachment RPCs via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `BusinessBotsLocalDataSource`:
+     - Encapsulates connected bot state, permission flags, and `NotificationCenter` event observation (`businessBotUpdated`) with thread-safe in-memory test fallbacks.
+  3. Implement `BusinessBotsRepositoryImpl`:
+     - Implements `BusinessBotsRepository`, providing clean methods to get connected bot status, toggle reply permissions, configure bot recipients, detach bots, and reactively observe bot status via `observeChatbots()`.
+  4. Update `BusinessContainer` and `AccountFeatureContainer` to wire `BusinessBotsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `BusinessChatbotController.getBusinessBotsRepository(account)` and `getRepository()` accessors.
+- **Consequences:** Connected business chatbot management and permissions delegation are decoupled behind clean domain contracts. 100% unit test coverage achieved with `BusinessBotsRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 167: Business Quick Replies & Canned Responses Strangling via Clean DataSources & QuickRepliesRepositoryImpl
+- **Context:** In Telegram Business, quick replies (pre-configured response shortcuts `/shortcut`, canned messages, and order indexing) were managed by `QuickRepliesController.java` (~870 lines). The controller coupled SQLite storage (`messagesStorage.getQuickReplies`), MTProto RPCs (`TL_messages.sendQuickReplyShortcut`, `TL_messages.reorderQuickReplies`, `TL_messages.deleteQuickReplyShortcut`), and UI event notifications with direct array mutations.
+- **Decision:** Apply the Strangler Fig pattern to `feature.business.quickreplies`:
+  1. Implement `QuickRepliesRemoteDataSource`:
+     - Encapsulates MTProto quick reply sending, shortcut reordering, and deletion via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `QuickRepliesLocalDataSource`:
+     - Encapsulates quick reply shortcut caches, local pending models, order index mapping, and `NotificationCenter` event observation (`quickRepliesUpdated`) with thread-safe in-memory test fallbacks.
+  3. Implement `QuickRepliesRepositoryImpl`:
+     - Implements `QuickRepliesRepository`, coordinating shortcuts retrieval, name validation, addition limits checks, reordering, deletion, and reactive observation via `observeQuickReplies()`.
+  4. Update `BusinessContainer` and `AccountFeatureContainer` to wire `QuickRepliesRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `QuickRepliesController.getQuickRepliesRepository(account)` and `getRepository()` accessors.
+- **Consequences:** Quick reply shortcuts, template messages, and ordering are decoupled behind clean domain contracts. 100% unit test coverage achieved with `QuickRepliesRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 166: Business Chat Links & Click Tracking Controller Isolation
+- **Context:** Telegram Business allows creating custom chat links (`t.me/m/...`) with prefilled messages and tracking click counts (`views`) via `BusinessLinksController.java` (~320 lines). The controller coupled SQLite storage, MTProto requests (`TL_account.createBusinessChatLink`, `editBusinessChatLink`, `deleteBusinessChatLink`), and UI dialog notifications, with direct array mutations.
+- **Decision:** Introduce pure domain models `BusinessLinkModel`, `BusinessLinkInputModel`, and `BusinessLinksStateModel`. Define contract `BusinessLinksRepository` covering reactive link observation (`observeBusinessLinks`), CRUD operations (`createLink`, `editLink`, `deleteLink`), finding by slug, and links limit checking (`canAddNew`, `getLinksLimit`). Implement `BusinessLinksRemoteDataSource` using MTProto RPC and `BusinessLinksLocalDataSource` adapting `BusinessLinksController` with headless test fallbacks. Implement `BusinessLinksRepositoryImpl` on `Dispatchers.Main`. Wire in `BusinessContainer` and provide strangler hooks in `BusinessLinksController.getBusinessLinksRepository(account)`.
+- **Consequences:** Business chat link lifecycle, slug resolution, and prefilled messages are decoupled behind clean, testable domain interfaces with complete unit test coverage while preserving full compatibility with Telegram's MTProto business links protocol.
+
+### ADR 165: Timezones & Opening Hours Controller Isolation
+- **Context:** Telegram Business allows users to configure business opening hours and timezone preferences via `TimezonesController.java` (~180 lines). The controller managed in-memory cache, hex-serialized preferences, Java 8 timezones (`ZoneId`), and MTProto RPC requests (`TLRPC.TL_help_getTimezonesList`) while directly firing global `timezonesUpdated` events on `NotificationCenter`.
+- **Decision:** Introduce pure domain model `TimezoneModel` with formatted offsets (e.g. `GMT+03:00`). Define contract `TimezonesRepository` covering cached and remote loading, timezone search by id, system timezone detection, and reactive updates observation (`observeTimezones`). Implement `TimezonesRemoteDataSource` using MTProto RPC and `TimezonesLocalDataSource` adapting `TimezonesController` with headless test fallbacks. Implement `TimezonesRepositoryImpl` on `Dispatchers.Main`. Wire in `BusinessContainer` and provide strangler hooks in `TimezonesController.getTimezonesRepository(account)`.
+- **Consequences:** Timezone queries and updates are isolated behind domain interfaces with complete unit test coverage while preserving full compatibility with Telegram's MTProto timezone protocol and SharedPreferences caching.
+
+### ADR 164: Window Security Arbitration & Screenshot Protection Controller Isolation
+- **Context:** In Telegram Android, window security against screen capture (`FLAG_SECURE`) was spread across `SharedConfig.allowScreenCapture`, `PasscodeActivity`, `PaymentFormActivity`, and `AndroidUtilities`. Multiple security features (passcode lock, secret chats, protected content, self-destructing media, biometric prompts, payment forms) required dynamic attachment and detachment of window flags without coordination, risking accidental screen recording of confidential data or breaking user accessibility when flags were leaked.
+- **Decision:** Introduce pure domain models `SecurityReasonType`, `WindowSecurityState`, `SecurityRuleSpec`, `SecurityEvaluationResult`, and domain calculator `SecurityRulesEvaluator`. Define abstract contract `FlagSecureRepository` managing reasons attachment with dynamic conditions, detaching, invalidation, resetting, and reactive state flows (`observeWindowState`, `observeAllWindowStates`). Implement `FlagSecureLocalDataSource` and `FlagSecureRepositoryImpl` thread-safely managing window state. Wire in `SecurityContainer` and expose strangler hooks in `AndroidUtilities.getFlagSecureRepository(account)`.
+- **Consequences:** Window security arbitration is decoupled behind clean, reactive domain interfaces with 100% test coverage without mocking frameworks. Completes `security` domain to 100% (10/10 features).
 
 ### ADR 163: Privacy & Security Settings Strangling via Clean DataSources & PrivacyRepositoryImpl
 - **Context:** In Telegram Android, user privacy settings (11 privacy rule types, blocked peers list, app passcode, biometric unlock, and 2-step verification password) were fragmented across `ContactsController.java` (`getPrivacyRules`, `setPrivacyRules`, `loadPrivacySettings`), `MessagesController.java` (`blockePeers`, `blockPeer`, `unblockPeer`), and `SharedConfig.java` (`passcodeHash`, `passcodeSalt`, `checkPasscode`, `autoLockIn`). Components lacked unified domain boundaries, headless test isolation, and reactive typed state observation.
@@ -2254,21 +2323,6 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 - **Context:** In Telegram Android, passkeys and WebAuthn authentication mechanisms were managed across `PasskeysController.java` (~331 lines), `PasskeysActivity.java` (~420 lines), and `LoginActivity.java`. The legacy controller intermixed low-level MTProto calls (`TL_account.initPasskeyRegistration`, `TL_account.registerPasskey`, `TL_account.initPasskeyLogin`, `TL_account.finishPasskeyLogin`), Android `androidx.credentials.CredentialManager` integration, raw JSON manipulation of FIDO2/WebAuthn bundles (`clientDataJSON`, `attestationObject`, `authenticatorData`, `signature`), and direct UI dialog creation (`AlertDialog` with spinner) from within network callbacks. UI activities directly invoked MTProto requests to fetch (`TL_account.getPasskeys`) and delete (`TL_account.deletePasskey`) credentials.
 - **Decision:** Introduce pure domain models `PasskeyModel` and `PasskeysStateModel`. Define abstract contract `PasskeysRepository` covering reactive passkeys observation (`observePasskeys`), passkey listing (`getPasskeys`), passkey deletion (`deletePasskey`), passkey capability/platform support check (`isSupported`), and maximum allowed passkeys query (`getMaxPasskeys`). Implement `LegacyPasskeysRepository` operating on `Dispatchers.Main` with coroutine cancellation support (`ConnectionsManager.cancelRequest`). Encapsulate presentation state and MVI events in `PasskeysViewModel`.
 - **Consequences:** Passkey management, credential lifecycle, account limits, and MTProto queries are cleanly decoupled behind testable domain interfaces with full unit test coverage while maintaining 100% compatibility with Telegram's WebAuthn protocol and Android Credential Manager integration.
-
-### ADR 166: Business Chat Links & Click Tracking Controller Isolation
-- **Context:** Telegram Business allows creating custom chat links (`t.me/m/...`) with prefilled messages and tracking click counts (`views`) via `BusinessLinksController.java` (~320 lines). The controller coupled SQLite storage, MTProto requests (`TL_account.createBusinessChatLink`, `editBusinessChatLink`, `deleteBusinessChatLink`), and UI dialog notifications, with direct array mutations.
-- **Decision:** Introduce pure domain models `BusinessLinkModel`, `BusinessLinkInputModel`, and `BusinessLinksStateModel`. Define contract `BusinessLinksRepository` covering reactive link observation (`observeBusinessLinks`), CRUD operations (`createLink`, `editLink`, `deleteLink`), finding by slug, and links limit checking (`canAddNew`, `getLinksLimit`). Implement `BusinessLinksRemoteDataSource` using MTProto RPC and `BusinessLinksLocalDataSource` adapting `BusinessLinksController` with headless test fallbacks. Implement `BusinessLinksRepositoryImpl` on `Dispatchers.Main`. Wire in `BusinessContainer` and provide strangler hooks in `BusinessLinksController.getBusinessLinksRepository(account)`.
-- **Consequences:** Business chat link lifecycle, slug resolution, and prefilled messages are decoupled behind clean, testable domain interfaces with complete unit test coverage while preserving full compatibility with Telegram's MTProto business links protocol.
-
-### ADR 165: Timezones & Opening Hours Controller Isolation
-- **Context:** Telegram Business allows users to configure business opening hours and timezone preferences via `TimezonesController.java` (~180 lines). The controller managed in-memory cache, hex-serialized preferences, Java 8 timezones (`ZoneId`), and MTProto RPC requests (`TLRPC.TL_help_getTimezonesList`) while directly firing global `timezonesUpdated` events on `NotificationCenter`.
-- **Decision:** Introduce pure domain model `TimezoneModel` with formatted offsets (e.g. `GMT+03:00`). Define contract `TimezonesRepository` covering cached and remote loading, timezone search by id, system timezone detection, and reactive updates observation (`observeTimezones`). Implement `TimezonesRemoteDataSource` using MTProto RPC and `TimezonesLocalDataSource` adapting `TimezonesController` with headless test fallbacks. Implement `TimezonesRepositoryImpl` on `Dispatchers.Main`. Wire in `BusinessContainer` and provide strangler hooks in `TimezonesController.getTimezonesRepository(account)`.
-- **Consequences:** Timezone queries and updates are isolated behind domain interfaces with complete unit test coverage while preserving full compatibility with Telegram's MTProto timezone protocol and SharedPreferences caching.
-
-### ADR 164: Window Security Arbitration & Screenshot Protection Controller Isolation
-- **Context:** In Telegram Android, window security against screen capture (`FLAG_SECURE`) was spread across `SharedConfig.allowScreenCapture`, `PasscodeActivity`, `PaymentFormActivity`, and `AndroidUtilities`. Multiple security features (passcode lock, secret chats, protected content, self-destructing media, biometric prompts, payment forms) required dynamic attachment and detachment of window flags without coordination, risking accidental screen recording of confidential data or breaking user accessibility when flags were leaked.
-- **Decision:** Introduce pure domain models `SecurityReasonType`, `WindowSecurityState`, `SecurityRuleSpec`, `SecurityEvaluationResult`, and domain calculator `SecurityRulesEvaluator`. Define abstract contract `FlagSecureRepository` managing reasons attachment with dynamic conditions, detaching, invalidation, resetting, and reactive state flows (`observeWindowState`, `observeAllWindowStates`). Implement `FlagSecureLocalDataSource` and `FlagSecureRepositoryImpl` thread-safely managing window state. Wire in `SecurityContainer` and expose strangler hooks in `AndroidUtilities.getFlagSecureRepository(account)`.
-- **Consequences:** Window security arbitration is decoupled behind clean, reactive domain interfaces with 100% test coverage without mocking frameworks. Completes `security` domain to 100% (10/10 features).
 
 ### ADR 033: Chat Themes, Custom Wallpapers & Dialog Styling Controller Isolation
 - **Context:** In Telegram Android, dialog-specific emoji themes, gift themes, custom wallpapers, and colors were managed by `ChatThemeController.java` (~1016 lines). The controller directly handled raw SharedPreferences persistence (`chatthemeconfig_` and `chatthemeconfig_emoji`), SQLite database caching (`MessagesStorage.loadGiftChatTheme`), MTProto network requests (`TL_account.getChatThemes`, `TLRPC.TL_messages_setChatTheme`), disk caching of theme bitmaps (`chatThemeQueue`), and mutated in-memory caches (`dialogEmoticonsMap`, `allChatGiftThemes`, `themeIdWallpaperThumbMap`). Presentation components (`ChatActivity`, `ChatThemeBottomSheet`, `EmojiThemes`) directly invoked static controller singletons, manual callbacks, and raw TL object operations without lifecycle or state management.

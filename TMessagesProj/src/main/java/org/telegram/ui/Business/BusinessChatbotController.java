@@ -84,4 +84,18 @@ public class BusinessChatbotController {
             load(null);
         }
     }
+
+    /**
+     * Strangler Fig hook: returns domain BusinessBotsRepository for specified account.
+     */
+    public static org.telegram.messenger.feature.business.businessbots.domain.repository.BusinessBotsRepository getBusinessBotsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getBusiness().getBusinessBotsRepository();
+    }
+
+    /**
+     * Strangler Fig hook: returns domain BusinessBotsRepository for this controller's account.
+     */
+    public org.telegram.messenger.feature.business.businessbots.domain.repository.BusinessBotsRepository getRepository() {
+        return getBusinessBotsRepository(currentAccount);
+    }
 }

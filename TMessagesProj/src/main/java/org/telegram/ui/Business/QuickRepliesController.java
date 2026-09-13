@@ -823,4 +823,17 @@ public class QuickRepliesController {
         });
     }
 
+    /**
+     * Strangler Fig hook: returns domain QuickRepliesRepository for specified account.
+     */
+    public static org.telegram.messenger.feature.business.quickreplies.domain.repository.QuickRepliesRepository getQuickRepliesRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getBusiness().getQuickRepliesRepository();
+    }
+
+    /**
+     * Strangler Fig hook: returns domain QuickRepliesRepository for this controller's account.
+     */
+    public org.telegram.messenger.feature.business.quickreplies.domain.repository.QuickRepliesRepository getRepository() {
+        return getQuickRepliesRepository(currentAccount);
+    }
 }

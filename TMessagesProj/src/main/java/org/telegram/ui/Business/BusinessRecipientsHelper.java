@@ -490,4 +490,17 @@ public class BusinessRecipientsHelper {
         }
     }
 
+    /**
+     * Strangler Fig hook: returns domain BusinessRecipientsRepository for specified account.
+     */
+    public static org.telegram.messenger.feature.business.businessrecipients.domain.repository.BusinessRecipientsRepository getBusinessRecipientsRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getBusiness().getBusinessRecipientsRepository();
+    }
+
+    /**
+     * Strangler Fig hook: returns domain BusinessRecipientsRepository for this helper's account.
+     */
+    public org.telegram.messenger.feature.business.businessrecipients.domain.repository.BusinessRecipientsRepository getRepository() {
+        return getBusinessRecipientsRepository(currentAccount);
+    }
 }

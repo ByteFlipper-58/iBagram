@@ -27,6 +27,9 @@ import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveBo
 import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveConnectedStarBotsUseCase
 import org.telegram.messenger.feature.business.botstars.domain.usecase.ObserveTonStatsUseCase
 import org.telegram.messenger.feature.business.botstars.presentation.BotStarsViewModel
+import org.telegram.messenger.feature.business.businessbots.data.datasource.BusinessBotsLocalDataSource
+import org.telegram.messenger.feature.business.businessbots.data.datasource.BusinessBotsRemoteDataSource
+import org.telegram.messenger.feature.business.businessbots.data.repository.BusinessBotsRepositoryImpl
 import org.telegram.messenger.feature.business.businessbots.data.repository.LegacyBusinessBotsRepository
 import org.telegram.messenger.feature.business.businessbots.domain.repository.BusinessBotsRepository
 import org.telegram.messenger.feature.business.businessbots.domain.usecase.DeleteConnectedBotUseCase
@@ -47,6 +50,8 @@ import org.telegram.messenger.feature.business.businesslinks.domain.usecase.GetB
 import org.telegram.messenger.feature.business.businesslinks.domain.usecase.LoadBusinessLinksUseCase
 import org.telegram.messenger.feature.business.businesslinks.domain.usecase.ObserveBusinessLinksUseCase
 import org.telegram.messenger.feature.business.businesslinks.presentation.BusinessLinksViewModel
+import org.telegram.messenger.feature.business.businessrecipients.data.datasource.BusinessRecipientsLocalDataSource
+import org.telegram.messenger.feature.business.businessrecipients.data.repository.BusinessRecipientsRepositoryImpl
 import org.telegram.messenger.feature.business.businessrecipients.data.repository.LegacyBusinessRecipientsRepository
 import org.telegram.messenger.feature.business.businessrecipients.domain.repository.BusinessRecipientsRepository
 import org.telegram.messenger.feature.business.businessrecipients.domain.usecase.AddExcludedUsersUseCase
@@ -89,7 +94,10 @@ import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshSt
 import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarTransactionsUseCase
 import org.telegram.messenger.feature.business.payments.domain.usecase.RefreshStarsBalanceUseCase
 import org.telegram.messenger.feature.business.payments.presentation.PaymentsViewModel
+import org.telegram.messenger.feature.business.quickreplies.data.datasource.QuickRepliesLocalDataSource
+import org.telegram.messenger.feature.business.quickreplies.data.datasource.QuickRepliesRemoteDataSource
 import org.telegram.messenger.feature.business.quickreplies.data.repository.LegacyQuickRepliesRepository
+import org.telegram.messenger.feature.business.quickreplies.data.repository.QuickRepliesRepositoryImpl
 import org.telegram.messenger.feature.business.quickreplies.domain.repository.QuickRepliesRepository
 import org.telegram.messenger.feature.business.quickreplies.domain.usecase.CanAddNewQuickReplyUseCase
 import org.telegram.messenger.feature.business.quickreplies.domain.usecase.CheckQuickReplyNameBusyUseCase
@@ -186,10 +194,26 @@ class BusinessContainer(val account: Int) {
         )
     }
 
+    val quickRepliesRemoteDataSource: QuickRepliesRemoteDataSource by lazy {
+        QuickRepliesRemoteDataSource(account)
+    }
+
+    val quickRepliesLocalDataSource: QuickRepliesLocalDataSource by lazy {
+        QuickRepliesLocalDataSource(account)
+    }
+
+    fun createQuickRepliesRepository(): QuickRepliesRepository {
+        return QuickRepliesRepositoryImpl(
+            currentAccount = account,
+            localDataSource = quickRepliesLocalDataSource,
+            remoteDataSource = quickRepliesRemoteDataSource
+        )
+    }
+
     private var customQuickRepliesRepository: QuickRepliesRepository? = null
 
     var quickRepliesRepository: QuickRepliesRepository
-        get() = customQuickRepliesRepository ?: LegacyQuickRepliesRepository(account)
+        get() = customQuickRepliesRepository ?: createQuickRepliesRepository()
         set(value) {
             customQuickRepliesRepository = value
         }
@@ -445,10 +469,26 @@ class BusinessContainer(val account: Int) {
         )
     }
 
+    val businessBotsRemoteDataSource: BusinessBotsRemoteDataSource by lazy {
+        BusinessBotsRemoteDataSource(account)
+    }
+
+    val businessBotsLocalDataSource: BusinessBotsLocalDataSource by lazy {
+        BusinessBotsLocalDataSource(account)
+    }
+
+    fun createBusinessBotsRepository(): BusinessBotsRepository {
+        return BusinessBotsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = businessBotsLocalDataSource,
+            remoteDataSource = businessBotsRemoteDataSource
+        )
+    }
+
     private var customBusinessBotsRepository: BusinessBotsRepository? = null
 
     var businessBotsRepository: BusinessBotsRepository
-        get() = customBusinessBotsRepository ?: LegacyBusinessBotsRepository(account)
+        get() = customBusinessBotsRepository ?: createBusinessBotsRepository()
         set(value) {
             customBusinessBotsRepository = value
         }
@@ -694,13 +734,21 @@ class BusinessContainer(val account: Int) {
         )
     }
 
-    fun createBusinessRecipientsRepository(): BusinessRecipientsRepository {
-        return LegacyBusinessRecipientsRepository()
+    val businessRecipientsLocalDataSource: BusinessRecipientsLocalDataSource by lazy {
+        BusinessRecipientsLocalDataSource()
     }
 
-    val businessRecipientsRepository: BusinessRecipientsRepository by lazy {
-        LegacyBusinessRecipientsRepository()
+    fun createBusinessRecipientsRepository(): BusinessRecipientsRepository {
+        return BusinessRecipientsRepositoryImpl(businessRecipientsLocalDataSource)
     }
+
+    private var customBusinessRecipientsRepository: BusinessRecipientsRepository? = null
+
+    var businessRecipientsRepository: BusinessRecipientsRepository
+        get() = customBusinessRecipientsRepository ?: createBusinessRecipientsRepository()
+        set(value) {
+            customBusinessRecipientsRepository = value
+        }
 
     val observeBusinessRecipientsUseCase: ObserveBusinessRecipientsUseCase
         get() = ObserveBusinessRecipientsUseCase(businessRecipientsRepository)
