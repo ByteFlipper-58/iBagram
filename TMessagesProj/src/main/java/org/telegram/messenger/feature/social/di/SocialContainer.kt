@@ -69,7 +69,10 @@ import org.telegram.messenger.feature.social.location.domain.usecase.SetProximit
 import org.telegram.messenger.feature.social.location.domain.usecase.StopAllLocationSharingsUseCase
 import org.telegram.messenger.feature.social.location.domain.usecase.StopLocationSharingUseCase
 import org.telegram.messenger.feature.social.location.presentation.LocationViewModel
+import org.telegram.messenger.feature.social.profile.data.datasource.ProfileLocalDataSource
+import org.telegram.messenger.feature.social.profile.data.datasource.ProfileRemoteDataSource
 import org.telegram.messenger.feature.social.profile.data.repository.LegacyProfileRepository
+import org.telegram.messenger.feature.social.profile.data.repository.ProfileRepositoryImpl
 import org.telegram.messenger.feature.social.profile.domain.repository.ProfileRepository
 import org.telegram.messenger.feature.social.profile.domain.usecase.BlockPeerUseCase
 import org.telegram.messenger.feature.social.profile.domain.usecase.GetProfileUseCase
@@ -80,10 +83,26 @@ import org.telegram.messenger.feature.social.profile.presentation.ProfileViewMod
 
 class SocialContainer(val account: Int) {
 
+    val profileRemoteDataSource: ProfileRemoteDataSource by lazy {
+        ProfileRemoteDataSource(account)
+    }
+
+    val profileLocalDataSource: ProfileLocalDataSource by lazy {
+        ProfileLocalDataSource(account)
+    }
+
+    fun createProfileRepository(): ProfileRepository {
+        return ProfileRepositoryImpl(
+            currentAccount = account,
+            localDataSource = profileLocalDataSource,
+            remoteDataSource = profileRemoteDataSource
+        )
+    }
+
     private var customProfileRepository: ProfileRepository? = null
 
     var profileRepository: ProfileRepository
-        get() = customProfileRepository ?: LegacyProfileRepository(account)
+        get() = customProfileRepository ?: createProfileRepository()
         set(value) {
             customProfileRepository = value
         }

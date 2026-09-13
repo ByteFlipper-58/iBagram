@@ -261,6 +261,14 @@ public class ContactsController extends BaseController {
         return localInstance;
     }
 
+    public static org.telegram.messenger.feature.security.privacy.domain.repository.PrivacyRepository getPrivacyRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getPrivacyRepository();
+    }
+
+    public org.telegram.messenger.feature.security.privacy.domain.repository.PrivacyRepository getPrivacyRepository() {
+        return getPrivacyRepository(currentAccount);
+    }
+
     public ContactsController(int instance) {
         super(instance);
         SharedPreferences preferences = MessagesController.getMainSettings(currentAccount);

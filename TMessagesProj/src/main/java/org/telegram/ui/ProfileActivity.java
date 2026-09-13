@@ -366,6 +366,20 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private PrivacyViewModel privacyViewModel;
     private SharedMediaViewModel sharedMediaViewModel;
 
+    /**
+     * Strangler Fig hook: returns domain ProfileRepository for specified account.
+     */
+    public static org.telegram.messenger.feature.social.profile.domain.repository.ProfileRepository getProfileRepository(int account) {
+        return AccountFeatureContainer.get(account).getSocial().getProfileRepository();
+    }
+
+    /**
+     * Strangler Fig hook: returns domain ProfileRepository for this fragment's account.
+     */
+    public org.telegram.messenger.feature.social.profile.domain.repository.ProfileRepository getProfileRepository() {
+        return getProfileRepository(currentAccount);
+    }
+
     private RecyclerListView listView;
     private RecyclerListView searchListView;
     private LinearLayoutManager layoutManager;

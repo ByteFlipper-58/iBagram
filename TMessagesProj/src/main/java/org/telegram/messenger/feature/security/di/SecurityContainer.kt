@@ -70,7 +70,10 @@ import org.telegram.messenger.feature.security.passkeys.domain.usecase.GetPasske
 import org.telegram.messenger.feature.security.passkeys.domain.usecase.IsPasskeysSupportedUseCase
 import org.telegram.messenger.feature.security.passkeys.domain.usecase.ObservePasskeysUseCase
 import org.telegram.messenger.feature.security.passkeys.presentation.PasskeysViewModel
+import org.telegram.messenger.feature.security.privacy.data.datasource.PrivacyLocalDataSource
+import org.telegram.messenger.feature.security.privacy.data.datasource.PrivacyRemoteDataSource
 import org.telegram.messenger.feature.security.privacy.data.repository.LegacyPrivacyRepository
+import org.telegram.messenger.feature.security.privacy.data.repository.PrivacyRepositoryImpl
 import org.telegram.messenger.feature.security.privacy.domain.repository.PrivacyRepository
 import org.telegram.messenger.feature.security.privacy.domain.usecase.BlockPrivacyPeerUseCase
 import org.telegram.messenger.feature.security.privacy.domain.usecase.CheckPasscodeUseCase
@@ -202,9 +205,29 @@ class SecurityContainer(val account: Int) {
         )
     }
 
-    val privacyRepository: PrivacyRepository by lazy {
-        LegacyPrivacyRepository(account)
+    val privacyRemoteDataSource: PrivacyRemoteDataSource by lazy {
+        PrivacyRemoteDataSource(account)
     }
+
+    val privacyLocalDataSource: PrivacyLocalDataSource by lazy {
+        PrivacyLocalDataSource(account)
+    }
+
+    fun createPrivacyRepository(): PrivacyRepository {
+        return PrivacyRepositoryImpl(
+            currentAccount = account,
+            localDataSource = privacyLocalDataSource,
+            remoteDataSource = privacyRemoteDataSource
+        )
+    }
+
+    private var customPrivacyRepository: PrivacyRepository? = null
+
+    var privacyRepository: PrivacyRepository
+        get() = customPrivacyRepository ?: createPrivacyRepository()
+        set(value) {
+            customPrivacyRepository = value
+        }
 
     val observePrivacyRulesUseCase: ObservePrivacyRulesUseCase
         get() = ObservePrivacyRulesUseCase(privacyRepository)

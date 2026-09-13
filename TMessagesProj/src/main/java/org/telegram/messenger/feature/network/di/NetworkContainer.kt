@@ -32,7 +32,10 @@ import org.telegram.messenger.feature.network.proxy.domain.usecase.GetProxySetti
 import org.telegram.messenger.feature.network.proxy.domain.usecase.ObserveProxySettingsUseCase
 import org.telegram.messenger.feature.network.proxy.domain.usecase.ToggleProxyRotationUseCase
 import org.telegram.messenger.feature.network.proxy.presentation.ProxyViewModel
+import org.telegram.messenger.feature.network.push.data.datasource.PushLocalDataSource
+import org.telegram.messenger.feature.network.push.data.datasource.PushRemoteDataSource
 import org.telegram.messenger.feature.network.push.data.repository.LegacyPushRepository
+import org.telegram.messenger.feature.network.push.data.repository.PushRepositoryImpl
 import org.telegram.messenger.feature.network.push.domain.repository.PushRepository
 import org.telegram.messenger.feature.network.push.domain.usecase.GetPushStatusUseCase
 import org.telegram.messenger.feature.network.push.domain.usecase.IsPushAvailableUseCase
@@ -131,10 +134,26 @@ class NetworkContainer(val account: Int) {
         )
     }
 
+    val pushRemoteDataSource: PushRemoteDataSource by lazy {
+        PushRemoteDataSource(account)
+    }
+
+    val pushLocalDataSource: PushLocalDataSource by lazy {
+        PushLocalDataSource(account)
+    }
+
+    fun createPushRepository(): PushRepository {
+        return PushRepositoryImpl(
+            currentAccount = account,
+            localDataSource = pushLocalDataSource,
+            remoteDataSource = pushRemoteDataSource
+        )
+    }
+
     private var customPushRepository: PushRepository? = null
 
     var pushRepository: PushRepository
-        get() = customPushRepository ?: LegacyPushRepository(account)
+        get() = customPushRepository ?: createPushRepository()
         set(value) {
             customPushRepository = value
         }

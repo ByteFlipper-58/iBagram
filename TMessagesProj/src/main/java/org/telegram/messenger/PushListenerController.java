@@ -54,6 +54,14 @@ public class PushListenerController {
         return getPushListenerRepository(UserConfig.selectedAccount);
     }
 
+    public static org.telegram.messenger.feature.network.push.domain.repository.PushRepository getPushRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getPushRepository();
+    }
+
+    public static org.telegram.messenger.feature.network.push.domain.repository.PushRepository getPushRepository() {
+        return getPushRepository(UserConfig.selectedAccount);
+    }
+
     public static void sendRegistrationToServer(@PushType int pushType, String token) {
         Utilities.stageQueue.postRunnable(() -> {
             ConnectionsManager.setRegId(token, pushType, SharedConfig.pushStringStatus);
