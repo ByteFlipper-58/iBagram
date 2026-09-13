@@ -133,6 +133,20 @@ public class ChromecastController implements SessionManagerListener<CastSession>
         return localInstance;
     }
 
+    @androidx.annotation.Nullable
+    public static org.telegram.messenger.feature.media.chromecast.domain.repository.ChromecastRepository getChromecastRepository() {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(org.telegram.messenger.UserConfig.selectedAccount).getMedia().getChromecastRepository();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    @androidx.annotation.Nullable
+    public org.telegram.messenger.feature.media.chromecast.domain.repository.ChromecastRepository getRepository() {
+        return getChromecastRepository();
+    }
+
 
 
     /* * */

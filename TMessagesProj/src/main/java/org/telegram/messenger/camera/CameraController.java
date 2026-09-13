@@ -93,6 +93,20 @@ public class CameraController implements MediaRecorder.OnInfoListener {
         return localInstance;
     }
 
+    @androidx.annotation.Nullable
+    public static org.telegram.messenger.feature.media.camera.domain.repository.CameraRepository getCameraRepository() {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(org.telegram.messenger.UserConfig.selectedAccount).getMedia().getCameraRepository();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    @androidx.annotation.Nullable
+    public org.telegram.messenger.feature.media.camera.domain.repository.CameraRepository getRepository() {
+        return getCameraRepository();
+    }
+
     public CameraController() {
         threadPool = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, KEEP_ALIVE_SECONDS, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
     }

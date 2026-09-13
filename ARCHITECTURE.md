@@ -1001,10 +1001,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `GiftAuctionsRepositoryImpl.kt` (Clean repository coordinating auction lookups, bidding, acquired gifts, and reactive observeActiveAuctions)
     - `BusinessContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `GiftAuctionController.java` strangler boundary with `getGiftAuctionsRepository(account)` accessor.
+  - [x] Feature: `PipActivityController` Strangling (`feature.media.pip` - ADR 143):
+    - `PipRemoteDataSource.kt` (System PiP parameters and media session action dispatch via BaseRemoteDataSource)
+    - `PipLocalDataSource.kt` (Thread-safe source map, priority arbitration, aspect ratio tracking, and PipSessionInfo StateFlow)
+    - `PipRepositoryImpl.kt` (Clean repository coordinating local session state, priority evaluation, remote actions, and reactive observeSessionInfo)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `PipActivityController.java` strangler boundary with `getPipRepository()` accessor.
+  - [x] Feature: `ChromecastController` Strangling (`feature.media.chromecast` - ADR 144):
+    - `ChromecastRemoteDataSource.kt` (Cast session detection, remote media playback commands, and cover file resolution via BaseRemoteDataSource)
+    - `ChromecastLocalDataSource.kt` (Cast playback state, active media model, cover path cache, and ChromecastStateModel StateFlow)
+    - `ChromecastRepositoryImpl.kt` (Clean repository coordinating cast playback requests, cover uploads, and reactive observeChromecastState)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ChromecastController.java` strangler boundary with `getChromecastRepository()` accessor.
+  - [x] Feature: `CameraController` Strangling (`feature.media.camera` - ADR 145):
+    - `CameraRemoteDataSource.kt` (Hardware camera initialization and ThreadPoolExecutor execution via BaseRemoteDataSource)
+    - `CameraLocalDataSource.kt` (Camera state, available devices list, headless fallback, flash mode, front mirror, resolution heuristics, and recording status)
+    - `CameraRepositoryImpl.kt` (Clean repository coordinating camera init, selection, switching, flash mode, mirroring, and recording lifecycle with reactive observeCameraState)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `CameraController.java` strangler boundary with `getCameraRepository()` accessor.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 145: CameraController Strangling via Clean DataSources & CameraRepositoryImpl
+- **Context:** In Telegram Android, hardware camera initialization, resolution selection heuristics, front/back camera toggling, flash mode control, and video recording lifecycle were managed by `CameraController.java` (~975 lines). `CameraController` coupled low-level Camera APIs (`android.hardware.Camera`), background ThreadPoolExecutor thread pools, MediaRecorder configuration, and UI callbacks.
+- **Decision:** Apply the Strangler Fig pattern to `CameraController`:
+  1. Implement `CameraRemoteDataSource`:
+     - Encapsulates hardware camera initialization and ThreadPoolExecutor execution via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `CameraLocalDataSource`:
+     - Manages thread-safe camera state, available devices list, headless fallback for unit test environments, flash mode, front camera mirroring, optimal resolution calculations, and recording status.
+  3. Implement `CameraRepositoryImpl`:
+     - Implements `CameraRepository`, coordinating camera initialization, selection, switching, flash mode, mirroring, resolution heuristics, and recording lifecycle with reactive `observeCameraState()`.
+  4. Update `MediaContainer` to instantiate and provide `CameraRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `CameraController.getCameraRepository()` and instance `getRepository()`.
+- **Consequences:** Camera hardware operations, resolution optimization heuristics, and recording state are decoupled behind clean domain interfaces. 100% test coverage achieved with `CameraRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 144: ChromecastController Strangling via Clean DataSources & ChromecastRepositoryImpl
+- **Context:** In Telegram Android, Google Cast session management, remote media casting, playback controls, and album cover synchronization were coordinated by `ChromecastController.java` (~315 lines). `ChromecastController` coupled Google Play Services Cast SDK (`CastContext`, `CastSession`, `SessionManagerListener`, `RemoteMediaClient`), file servers (`ChromecastFileServer`), and photo viewer alerts.
+- **Decision:** Apply the Strangler Fig pattern to `ChromecastController`:
+  1. Implement `ChromecastRemoteDataSource`:
+     - Encapsulates Cast session detection, remote media playback commands, and cover file resolution via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `ChromecastLocalDataSource`:
+     - Manages thread-safe cast playback state, active media model, cover path cache, and `ChromecastStateModel` StateFlow.
+  3. Implement `ChromecastRepositoryImpl`:
+     - Implements `ChromecastRepository`, coordinating cast playback requests, cover uploads, and reactive `observeChromecastState()` StateFlow.
+  4. Update `MediaContainer` to instantiate and provide `ChromecastRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `ChromecastController.getChromecastRepository()` and instance `getRepository()`.
+- **Consequences:** Google Cast connection state, remote playback, and cover art are cleanly decoupled behind testable domain contracts. 100% test coverage achieved with `ChromecastRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 143: PipActivityController Strangling via Clean DataSources & PipRepositoryImpl
+- **Context:** In Telegram Android, Picture-in-Picture window management, video player aspect ratio calculation, source priority arbitration, and floating video states were orchestrated by `PipActivityController.java` (~260 lines). `PipActivityController` coupled Activity lifecycle callbacks, `PipActivityHandler`, `MediaSessionConnector`, floating overlay views (`PipActivityContentLayout`), and custom source listeners.
+- **Decision:** Apply the Strangler Fig pattern to `PipActivityController`:
+  1. Implement `PipRemoteDataSource`:
+     - Encapsulates system PiP window parameters application and media session action dispatch via `BaseRemoteDataSource(currentAccount)`.
+  2. Implement `PipLocalDataSource`:
+     - Manages thread-safe active PiP sources map, source priority arbitration, aspect ratio tracking, and `PipSessionInfo` StateFlow.
+  3. Implement `PipRepositoryImpl`:
+     - Implements `PipRepository`, coordinating local session state, priority evaluation, remote actions, and reactive `observeSessionInfo()` StateFlow.
+  4. Update `MediaContainer` to instantiate and provide `PipRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `PipActivityController.getPipRepository()` and instance `getRepository()`.
+- **Consequences:** PiP source registration, priority arbitration, and session state are cleanly decoupled behind testable domain contracts. 100% test coverage achieved with `PipRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 142: GiftAuctionController Strangling via Clean DataSources & GiftAuctionsRepositoryImpl
 - **Context:** In Telegram Android, Star Gift auctions (bidding, price increments, acquired gifts history, user active auctions) were coordinated by `GiftAuctionController.java` (~800 lines). `GiftAuctionController` coupled MTProto RPCs (`TL_payments.getStarGiftAuctionState`, `sendStarGiftAuctionBid`, `getStarGiftAuctionAcquiredGifts`), in-memory auction states (`auctions`, `userAuctions`), and `NotificationCenter` broadcasts (`giftAuctionsUpdated`).

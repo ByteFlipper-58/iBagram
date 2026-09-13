@@ -257,4 +257,18 @@ public class PipActivityController {
     public void removeActionListener(String sourceId, IPipActivityActionListener listener) {
         handler.removeActionListener(sourceId, listener);
     }
+
+    @Nullable
+    public static org.telegram.messenger.feature.media.pip.domain.repository.PipRepository getPipRepository() {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(org.telegram.messenger.UserConfig.selectedAccount).getMedia().getPipRepository();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public org.telegram.messenger.feature.media.pip.domain.repository.PipRepository getRepository() {
+        return getPipRepository();
+    }
 }

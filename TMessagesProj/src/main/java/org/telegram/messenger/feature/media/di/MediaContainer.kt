@@ -37,6 +37,9 @@ import org.telegram.messenger.feature.media.cachebychats.domain.usecase.RemoveKe
 import org.telegram.messenger.feature.media.cachebychats.domain.usecase.SetKeepMediaDurationUseCase
 import org.telegram.messenger.feature.media.cachebychats.domain.usecase.SetKeepMediaExceptionUseCase
 import org.telegram.messenger.feature.media.cachebychats.presentation.CacheByChatsViewModel
+import org.telegram.messenger.feature.media.camera.data.datasource.CameraLocalDataSource
+import org.telegram.messenger.feature.media.camera.data.datasource.CameraRemoteDataSource
+import org.telegram.messenger.feature.media.camera.data.repository.CameraRepositoryImpl
 import org.telegram.messenger.feature.media.camera.data.repository.LegacyCameraRepository
 import org.telegram.messenger.feature.media.camera.domain.repository.CameraRepository
 import org.telegram.messenger.feature.media.camera.domain.usecase.ChooseOptimalResolutionUseCase
@@ -49,6 +52,9 @@ import org.telegram.messenger.feature.media.camera.domain.usecase.SetCameraFlash
 import org.telegram.messenger.feature.media.camera.domain.usecase.SwitchCameraUseCase
 import org.telegram.messenger.feature.media.camera.domain.usecase.ToggleMirrorFrontCameraUseCase
 import org.telegram.messenger.feature.media.camera.presentation.CameraViewModel
+import org.telegram.messenger.feature.media.chromecast.data.datasource.ChromecastLocalDataSource
+import org.telegram.messenger.feature.media.chromecast.data.datasource.ChromecastRemoteDataSource
+import org.telegram.messenger.feature.media.chromecast.data.repository.ChromecastRepositoryImpl
 import org.telegram.messenger.feature.media.chromecast.data.repository.LegacyChromecastRepository
 import org.telegram.messenger.feature.media.chromecast.domain.repository.ChromecastRepository
 import org.telegram.messenger.feature.media.chromecast.domain.usecase.CastMediaUseCase
@@ -162,6 +168,9 @@ import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ResolveMe
 import org.telegram.messenger.feature.media.photoviewer.domain.usecase.UpdatePlaybackStateUseCase
 import org.telegram.messenger.feature.media.photoviewer.domain.usecase.ValidateViewerActionsUseCase
 import org.telegram.messenger.feature.media.photoviewer.presentation.PhotoViewerViewModel
+import org.telegram.messenger.feature.media.pip.data.datasource.PipLocalDataSource
+import org.telegram.messenger.feature.media.pip.data.datasource.PipRemoteDataSource
+import org.telegram.messenger.feature.media.pip.data.repository.PipRepositoryImpl
 import org.telegram.messenger.feature.media.pip.data.repository.LegacyPipRepository
 import org.telegram.messenger.feature.media.pip.domain.repository.PipRepository
 import org.telegram.messenger.feature.media.pip.domain.usecase.DispatchPipStateUseCase
@@ -459,10 +468,26 @@ class MediaContainer(val account: Int) {
         )
     }
 
+    val chromecastRemoteDataSource: ChromecastRemoteDataSource by lazy {
+        ChromecastRemoteDataSource(account)
+    }
+
+    val chromecastLocalDataSource: ChromecastLocalDataSource by lazy {
+        ChromecastLocalDataSource(account)
+    }
+
+    fun createChromecastRepository(): ChromecastRepository {
+        return ChromecastRepositoryImpl(
+            currentAccount = account,
+            localDataSource = chromecastLocalDataSource,
+            remoteDataSource = chromecastRemoteDataSource
+        )
+    }
+
     private var customChromecastRepository: ChromecastRepository? = null
 
     var chromecastRepository: ChromecastRepository
-        get() = customChromecastRepository ?: LegacyChromecastRepository()
+        get() = customChromecastRepository ?: createChromecastRepository()
         set(value) {
             customChromecastRepository = value
         }
@@ -576,10 +601,26 @@ class MediaContainer(val account: Int) {
         )
     }
 
+    val pipRemoteDataSource: PipRemoteDataSource by lazy {
+        PipRemoteDataSource(account)
+    }
+
+    val pipLocalDataSource: PipLocalDataSource by lazy {
+        PipLocalDataSource(account)
+    }
+
+    fun createPipRepository(): PipRepository {
+        return PipRepositoryImpl(
+            currentAccount = account,
+            localDataSource = pipLocalDataSource,
+            remoteDataSource = pipRemoteDataSource
+        )
+    }
+
     private var customPipRepository: PipRepository? = null
 
     var pipRepository: PipRepository
-        get() = customPipRepository ?: LegacyPipRepository()
+        get() = customPipRepository ?: createPipRepository()
         set(value) {
             customPipRepository = value
         }
@@ -700,10 +741,26 @@ class MediaContainer(val account: Int) {
     // Feature: Camera (Hardware Camera & Video Recording)
     // ==========================================
 
+    val cameraRemoteDataSource: CameraRemoteDataSource by lazy {
+        CameraRemoteDataSource(account)
+    }
+
+    val cameraLocalDataSource: CameraLocalDataSource by lazy {
+        CameraLocalDataSource(account)
+    }
+
+    fun createCameraRepository(): CameraRepository {
+        return CameraRepositoryImpl(
+            currentAccount = account,
+            localDataSource = cameraLocalDataSource,
+            remoteDataSource = cameraRemoteDataSource
+        )
+    }
+
     private var customCameraRepository: CameraRepository? = null
 
     var cameraRepository: CameraRepository
-        get() = customCameraRepository ?: LegacyCameraRepository()
+        get() = customCameraRepository ?: createCameraRepository()
         set(value) { customCameraRepository = value }
 
     val observeCameraStateUseCase: ObserveCameraStateUseCase
