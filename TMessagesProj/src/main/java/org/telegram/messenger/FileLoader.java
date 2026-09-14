@@ -243,6 +243,14 @@ public class FileLoader extends BaseController {
         return localInstance;
     }
 
+    public static org.telegram.messenger.feature.media.fileloader.domain.repository.FileLoaderRepository getFileLoaderRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getMedia().getFileLoaderRepository();
+    }
+
+    public static org.telegram.messenger.feature.media.fileloader.domain.repository.FileLoaderRepository getFileLoaderRepository() {
+        return getFileLoaderRepository(UserConfig.selectedAccount);
+    }
+
     public FileLoader(int instance) {
         super(instance);
         filePathDatabase = new FilePathDatabase(instance);

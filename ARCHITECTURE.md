@@ -1330,10 +1330,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `ContentPreviewRepositoryImpl.kt` (Clean repository coordinating preview opening, drag progress, contextual menus, and dismissal)
     - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `ContentPreviewViewer.java` strangler boundary with `getContentPreviewRepository(account)` and `getContentPreviewRepository()` accessors.
+  - [x] Feature: `FileLoader` Strangling (`feature.media.fileloader` - ADR 199):
+    - `FileLoaderRemoteDataSource.kt` (MTProto file upload and download RPC operations)
+    - `FileLoaderLocalDataSource.kt` (Thread-safe file transfers state flow, active/recent downloads, and local path queries)
+    - `FileLoaderRepositoryImpl.kt` (Clean repository coordinating upload/download operations and transfer status observation)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `FileLoader.java` strangler boundary with `getFileLoaderRepository(account)` and `getFileLoaderRepository()` accessors.
+  - [x] Feature: `ImageLoader` Strangling (`feature.media.imageloader` - ADR 200):
+    - `ImageLoaderRemoteDataSource.kt` (Remote HTTP image tasks and cloud CDN fetches)
+    - `ImageLoaderLocalDataSource.kt` (Tiered in-memory and disk cache, request queues, and memory pressure trimming)
+    - `ImageLoaderRepositoryImpl.kt` (Clean repository coordinating image request lifecycle, cache tier queries, and cache hits/misses)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ImageLoader.java` strangler boundary with `getImageLoaderRepository(account)` and `getImageLoaderRepository()` accessors.
+  - [x] Feature: `MediaData` Strangling (`feature.media.mediadata` - ADR 201):
+    - `MediaDataRemoteDataSource.kt` (Remote media sync, cloud media metadata, and sticker/GIF sets)
+    - `MediaDataLocalDataSource.kt` (Device media albums, photos/videos mapping, and reactive albums state flow)
+    - `MediaDataRepositoryImpl.kt` (Clean repository coordinating album queries and media item retrieval)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `MediaDataController.java` strangler boundary with `getMediaDataRepository(account)` and `getMediaDataRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 201: Media Data Controller, Album Indexing & Gallery Retrieval Strangling via Clean DataSources & MediaDataRepositoryImpl
+- **Context:** Media albums, photos, videos, and system gallery indexing were governed by `MediaDataController.java` and `MediaController.java` using raw `AlbumEntry` and `PhotoEntry` objects. Directly querying these collections from UI fragments coupled views with low-level storage routines.
+- **Decision:** Apply the Strangler Fig pattern to `feature.media.mediadata`:
+  1. Implement `MediaDataRemoteDataSource`:
+     - Provides remote media synchronization and cloud media metadata queries.
+  2. Implement `MediaDataLocalDataSource`:
+     - Maintains thread-safe album caches, maps system gallery entries to pure Kotlin domain models (`MediaAlbumModel`, `MediaItemModel`), and provides reactive state flows.
+  3. Implement `MediaDataRepositoryImpl`:
+     - Implements `MediaRepository`, coordinating album retrieval, album media querying, and overall gallery access.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `MediaDataRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `MediaDataController.getMediaDataRepository(account)` and `getMediaDataRepository()` accessors.
+- **Consequences:** Gallery querying and album management are isolated behind clean domain contracts and use cases. 100% unit test coverage achieved with `MediaDataRepositoryImplTest.kt`.
+
+### ADR 200: Image Loader Cache Tiers, Memory Trimming & Request Pipeline Strangling via Clean DataSources & ImageLoaderRepositoryImpl
+- **Context:** In-memory and disk image caching, downscaling, and request decoding were orchestrated inside `ImageLoader.java` (~4650 lines) with complex multi-tier LruCache instances (`memCache`, `smallImagesMemCache`, `wallpaperMemCache`, `lottieMemCache`). Direct singleton access coupled UI components to internal cache implementation details.
+- **Decision:** Apply the Strangler Fig pattern to `feature.media.imageloader`:
+  1. Implement `ImageLoaderRemoteDataSource`:
+     - Provides remote image fetching and CDN request delegation.
+  2. Implement `ImageLoaderLocalDataSource`:
+     - Manages multi-tier cache simulation (`DEFAULT`, `SMALL`, `WALLPAPER`, `LOTTIE`), cache hit/miss statistics, memory pressure trimming, and reactive `ImageLoaderState` flow.
+  3. Implement `ImageLoaderRepositoryImpl`:
+     - Implements `ImageLoaderRepository`, coordinating request enqueueing, cancellation, cache queries, and statistics tracking.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `ImageLoaderRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `ImageLoader.getImageLoaderRepository(account)` and `getImageLoaderRepository()` accessors.
+- **Consequences:** Image caching, request state, and cache diagnostics are fully decoupled behind clean domain contracts. 100% unit test coverage achieved with `ImageLoaderRepositoryImplTest.kt`.
+
+### ADR 199: File Loader Transfers, Upload/Download Queuing & Path Resolution Strangling via Clean DataSources & FileLoaderRepositoryImpl
+- **Context:** File downloads, uploads, and path resolution were historically coupled to `FileLoader.java` (~1967 lines) and `DownloadController.java` with static arrays and raw NotificationCenter calls. Direct UI access risked race conditions and prevented unit testing.
+- **Decision:** Apply the Strangler Fig pattern to `feature.media.fileloader`:
+  1. Implement `FileLoaderRemoteDataSource`:
+     - Provides MTProto RPC file upload, download, and cancellation operations.
+  2. Implement `FileLoaderLocalDataSource`:
+     - Manages thread-safe `FileTransferModel` map, reactive transfers flow, active/recent download queries, and local file path resolution.
+  3. Implement `FileLoaderRepositoryImpl`:
+     - Implements `FileLoaderRepository`, coordinating file transfer lifecycle, upload/download requests, and path queries.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `FileLoaderRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `FileLoader.getFileLoaderRepository(account)` and `getFileLoaderRepository()` accessors.
+- **Consequences:** File transfer operations, download queues, and local path resolutions are cleanly separated behind domain use cases. 100% unit test coverage achieved with `FileLoaderRepositoryImplTest.kt`.
 
 ### ADR 198: Content Preview Overlay, Gesture Drag Progress & Contextual Action Menus Strangling via Clean DataSources & ContentPreviewRepositoryImpl
 - **Context:** Sticker, emoji, and GIF preview popups with interactive drag-to-menu gestures and contextual actions were historically coordinated in `ContentPreviewViewer.java` (~2423 lines). State, view animations, and action triggers were tangled with static singleton access.

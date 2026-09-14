@@ -155,6 +155,14 @@ public class MediaDataController extends BaseController {
         return localInstance;
     }
 
+    public static org.telegram.messenger.feature.media.mediadata.domain.repository.MediaRepository getMediaDataRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getMedia().getMediaRepository();
+    }
+
+    public static org.telegram.messenger.feature.media.mediadata.domain.repository.MediaRepository getMediaDataRepository() {
+        return getMediaDataRepository(UserConfig.selectedAccount);
+    }
+
     public MediaDataController(int num) {
         super(num);
 

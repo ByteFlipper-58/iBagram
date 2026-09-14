@@ -2045,6 +2045,14 @@ public class ImageLoader {
         return localInstance;
     }
 
+    public static org.telegram.messenger.feature.media.imageloader.domain.repository.ImageLoaderRepository getImageLoaderRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getMedia().getImageLoaderRepository();
+    }
+
+    public static org.telegram.messenger.feature.media.imageloader.domain.repository.ImageLoaderRepository getImageLoaderRepository() {
+        return getImageLoaderRepository(UserConfig.selectedAccount);
+    }
+
     public ImageLoader() {
         thumbGeneratingQueue.setPriority(Thread.MIN_PRIORITY);
 

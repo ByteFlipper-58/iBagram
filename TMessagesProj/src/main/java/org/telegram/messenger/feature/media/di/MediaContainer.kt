@@ -106,6 +106,9 @@ import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.SetDo
 import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.UpdateDownloadPresetUseCase
 import org.telegram.messenger.feature.media.downloadmanager.domain.usecase.UpdateDownloadProgressUseCase
 import org.telegram.messenger.feature.media.downloadmanager.presentation.DownloadManagerViewModel
+import org.telegram.messenger.feature.media.fileloader.data.datasource.FileLoaderLocalDataSource
+import org.telegram.messenger.feature.media.fileloader.data.datasource.FileLoaderRemoteDataSource
+import org.telegram.messenger.feature.media.fileloader.data.repository.FileLoaderRepositoryImpl
 import org.telegram.messenger.feature.media.fileloader.data.repository.LegacyFileLoaderRepository
 import org.telegram.messenger.feature.media.fileloader.domain.repository.FileLoaderRepository
 import org.telegram.messenger.feature.media.fileloader.domain.usecase.CancelAllDownloadsUseCase
@@ -146,6 +149,9 @@ import org.telegram.messenger.feature.media.gallerysave.domain.usecase.SetGaller
 import org.telegram.messenger.feature.media.gallerysave.domain.usecase.ToggleGallerySavePeerTypeUseCase
 import org.telegram.messenger.feature.media.gallerysave.domain.usecase.UpdateGallerySaveSettingsUseCase
 import org.telegram.messenger.feature.media.gallerysave.presentation.GallerySaveViewModel
+import org.telegram.messenger.feature.media.imageloader.data.datasource.ImageLoaderLocalDataSource
+import org.telegram.messenger.feature.media.imageloader.data.datasource.ImageLoaderRemoteDataSource
+import org.telegram.messenger.feature.media.imageloader.data.repository.ImageLoaderRepositoryImpl
 import org.telegram.messenger.feature.media.imageloader.data.repository.LegacyImageLoaderRepository
 import org.telegram.messenger.feature.media.imageloader.domain.repository.ImageLoaderRepository
 import org.telegram.messenger.feature.media.imageloader.domain.usecase.BuildImageCacheKeyUseCase
@@ -160,7 +166,10 @@ import org.telegram.messenger.feature.media.imageloader.domain.usecase.ObserveIm
 import org.telegram.messenger.feature.media.imageloader.domain.usecase.ParseImageFilterUseCase
 import org.telegram.messenger.feature.media.imageloader.domain.usecase.TrimImageMemoryUseCase
 import org.telegram.messenger.feature.media.imageloader.presentation.ImageLoaderViewModel
+import org.telegram.messenger.feature.media.mediadata.data.datasource.MediaDataLocalDataSource
+import org.telegram.messenger.feature.media.mediadata.data.datasource.MediaDataRemoteDataSource
 import org.telegram.messenger.feature.media.mediadata.data.repository.LegacyMediaRepository
+import org.telegram.messenger.feature.media.mediadata.data.repository.MediaDataRepositoryImpl
 import org.telegram.messenger.feature.media.mediadata.domain.repository.MediaRepository
 import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetAlbumMediaUseCase
 import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetAllMediaUseCase
@@ -252,10 +261,26 @@ import org.telegram.messenger.feature.media.voip.presentation.CallViewModel
 
 class MediaContainer(val account: Int) {
 
+    val mediaDataRemoteDataSource: MediaDataRemoteDataSource by lazy {
+        MediaDataRemoteDataSource(account)
+    }
+
+    val mediaDataLocalDataSource: MediaDataLocalDataSource by lazy {
+        MediaDataLocalDataSource(account)
+    }
+
+    fun createMediaRepository(): MediaRepository {
+        return MediaDataRepositoryImpl(
+            currentAccount = account,
+            localDataSource = mediaDataLocalDataSource,
+            remoteDataSource = mediaDataRemoteDataSource
+        )
+    }
+
     private var customMediaRepository: MediaRepository? = null
 
     var mediaRepository: MediaRepository
-        get() = customMediaRepository ?: LegacyMediaRepository()
+        get() = customMediaRepository ?: createMediaRepository()
         set(value) {
             customMediaRepository = value
         }
@@ -350,10 +375,26 @@ class MediaContainer(val account: Int) {
         )
     }
 
+    val fileLoaderRemoteDataSource: FileLoaderRemoteDataSource by lazy {
+        FileLoaderRemoteDataSource(account)
+    }
+
+    val fileLoaderLocalDataSource: FileLoaderLocalDataSource by lazy {
+        FileLoaderLocalDataSource(account)
+    }
+
+    fun createFileLoaderRepository(): FileLoaderRepository {
+        return FileLoaderRepositoryImpl(
+            currentAccount = account,
+            localDataSource = fileLoaderLocalDataSource,
+            remoteDataSource = fileLoaderRemoteDataSource
+        )
+    }
+
     private var customFileLoaderRepository: FileLoaderRepository? = null
 
     var fileLoaderRepository: FileLoaderRepository
-        get() = customFileLoaderRepository ?: LegacyFileLoaderRepository(account)
+        get() = customFileLoaderRepository ?: createFileLoaderRepository()
         set(value) {
             customFileLoaderRepository = value
         }
@@ -1207,9 +1248,29 @@ class MediaContainer(val account: Int) {
         )
     }
 
-    val imageLoaderRepository: ImageLoaderRepository by lazy {
-        LegacyImageLoaderRepository(account)
+    val imageLoaderRemoteDataSource: ImageLoaderRemoteDataSource by lazy {
+        ImageLoaderRemoteDataSource(account)
     }
+
+    val imageLoaderLocalDataSource: ImageLoaderLocalDataSource by lazy {
+        ImageLoaderLocalDataSource(account)
+    }
+
+    fun createImageLoaderRepository(): ImageLoaderRepository {
+        return ImageLoaderRepositoryImpl(
+            currentAccount = account,
+            localDataSource = imageLoaderLocalDataSource,
+            remoteDataSource = imageLoaderRemoteDataSource
+        )
+    }
+
+    private var customImageLoaderRepository: ImageLoaderRepository? = null
+
+    var imageLoaderRepository: ImageLoaderRepository
+        get() = customImageLoaderRepository ?: createImageLoaderRepository()
+        set(value) {
+            customImageLoaderRepository = value
+        }
 
     val parseImageFilterUseCase: ParseImageFilterUseCase
         get() = ParseImageFilterUseCase()
