@@ -149,6 +149,18 @@ import java.util.concurrent.CountDownLatch;
 
 public class Theme {
 
+    public static org.telegram.messenger.feature.system.themes.domain.repository.ThemeRepository getThemeRepository(int account) {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getSystem().getThemeRepository();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    public static org.telegram.messenger.feature.system.themes.domain.repository.ThemeRepository getThemeRepository() {
+        return getThemeRepository(UserConfig.selectedAccount);
+    }
+
     public static final String DEFAULT_BACKGROUND_SLUG = "d";
     public static final String THEME_BACKGROUND_SLUG = "t";
     public static final String COLOR_BACKGROUND_SLUG = "c";

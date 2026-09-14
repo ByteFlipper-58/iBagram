@@ -1267,10 +1267,156 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `SettingsRepositoryImpl.kt` (Clean repository coordinating client preferences, UI appearance updates, and reactive observation)
     - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `SharedConfig.java` strangler boundary with `getSettingsRepository(account)` and `getSettingsRepository()` accessors.
+  - [x] Feature: `Themes` Strangling (`feature.system.themes` - ADR 188):
+    - `ThemesRemoteDataSource.kt` (Remote MTProto theme synchronization and wallpaper fetching)
+    - `ThemesLocalDataSource.kt` (Theme settings, night mode type, accents, bubble radius, wallpaper, headless test mode)
+    - `ThemeRepositoryImpl.kt` (Clean repository coordinating theme application, accents, night mode, and appearance settings)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `Theme.java` strangler boundary with `getThemeRepository(account)` and `getThemeRepository()` accessors.
+  - [x] Feature: `Localization` Strangling (`feature.system.localization` - ADR 189):
+    - `LocalizationRemoteDataSource.kt` (Remote language pack and locale catalog synchronization)
+    - `LocalizationLocalDataSource.kt` (Current locale, available locales, custom string overrides, 24-hour format, name display order, RTL detection)
+    - `LocalizationRepositoryImpl.kt` (Clean repository coordinating locales, strings, time formatting, name ordering, and reactive state observation)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `LocaleController.java` strangler boundary with `getLocalizationRepository(account)` and `getLocalizationRepository()` accessors.
+  - [x] Feature: `MainTabs` Strangling (`feature.system.maintabs` - ADR 190):
+    - `MainTabsRemoteDataSource.kt` (System extension point for remote navigation and tabs configuration)
+    - `MainTabsLocalDataSource.kt` (Tab visibility, selection, calls tab toggle, chats unread count, contacts permission warning, headless test mode)
+    - `MainTabsRepositoryImpl.kt` (Clean repository coordinating tab visibility, position selection, call tab toggling, and unread counters)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `MainTabsActivityController.java` & `MainTabsActivity.java` strangler boundary with `getMainTabsRepository(account)` and `getMainTabsRepository()` accessors.
+  - [x] Feature: `AdjustPan` Strangling (`feature.system.adjustpan` - ADR 191):
+    - `AdjustPanRemoteDataSource.kt` (System extension point for adjust pan layout configuration)
+    - `AdjustPanLocalDataSource.kt` (Pan calculation spec, transition plan arbitration, translation interpolation, keyboard visibility tracking)
+    - `AdjustPanRepositoryImpl.kt` (Clean repository coordinating pan transition planning, progress computation, and lifecycle transitions)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+  - [x] Feature: `KeyboardHide` Strangling (`feature.system.keyboardhide` - ADR 192):
+    - `KeyboardHideRemoteDataSource.kt` (System extension point for gesture dismiss telemetry and thresholds)
+    - `KeyboardHideLocalDataSource.kt` (Interactive pull-down drag geometry, dismiss decision evaluation, settling animations, headless test mode)
+    - `KeyboardHideRepositoryImpl.kt` (Clean repository coordinating gesture progress calculation, dismiss arbitration, and lifecycle states)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `KeyboardHideHelper.java` strangler boundary with `getKeyboardHideRepository(account)` and `getKeyboardHideRepository()` accessors.
+  - [x] Feature: `KeyboardInsets` Strangling (`feature.system.keyboardinsets` - ADR 193):
+    - `KeyboardInsetsRemoteDataSource.kt` (System extension point for window insets telemetry and policy synchronization)
+    - `KeyboardInsetsLocalDataSource.kt` (In-app keyboard height arbitration, navigation bar offsets, window IME bottom insets, visibility animation states)
+    - `KeyboardInsetsRepositoryImpl.kt` (Clean repository coordinating in-app keyboard heights, navbar inclusions, system insets updates, and reactive flow)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `WindowInsetsInAppController.java` strangler boundary with `getKeyboardInsetsRepository(account)` and `getKeyboardInsetsRepository()` accessors.
+  - [x] Feature: `PinchToZoom` Strangling (`feature.system.pinchtozoom` - ADR 194):
+    - `PinchToZoomRemoteDataSource.kt` (System extension point for zoom calibration and gesture telemetry)
+    - `PinchToZoomLocalDataSource.kt` (Scale calculations, center-point translation geometry, transform matrix calculation, image bounds arbitration, gesture decisions)
+    - `PinchToZoomRepositoryImpl.kt` (Clean repository coordinating pinch zoom start, update, finish, and geometric math)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+  - [x] Feature: `RecyclerScroll` Strangling (`feature.system.recyclerscroll` - ADR 195):
+    - `RecyclerScrollRemoteDataSource.kt` (System extension point for scroll physics telemetry and animation calibration)
+    - `RecyclerScrollLocalDataSource.kt` (Scroll animation eligibility arbitration, plan calculation, scroll length geometry, translation offsets, progress interpolation)
+    - `RecyclerScrollRepositoryImpl.kt` (Clean repository coordinating list scroll animations, eligibility evaluation, and view translation calculations)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 195: Recycler List Scroll Animations, Translation Geometry & View Arbitration Strangling via Clean DataSources & RecyclerScrollRepositoryImpl
+- **Context:** Smooth scrolling and transition animations for chat and dialog lists involved complex calculations of visible view ranges, scroll diffs, container heights, and directional view translations. In the legacy architecture, these calculations were embedded directly in UI controllers and helper classes without isolated testability or clean domain separation.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.recyclerscroll`:
+  1. Implement `RecyclerScrollRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing scroll physics calibration extension points.
+  2. Implement `RecyclerScrollLocalDataSource`:
+     - Encapsulates eligibility evaluation (fast scroll, item animator running, child counts), plan calculation, scroll length determination, and view translation math via `RecyclerScrollMapper`.
+  3. Implement `RecyclerScrollRepositoryImpl`:
+     - Implements `RecyclerScrollRepository`, coordinating scroll start, progress interpolation, cancellation, and geometric view translations.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `RecyclerScrollRepositoryImpl` alongside clean data sources.
+- **Consequences:** Recycler list scroll mathematics and state machine are isolated behind clean domain contracts. 100% unit test coverage achieved with `RecyclerScrollRepositoryImplTest.kt`.
+
+### ADR 194: Interactive Pinch-To-Zoom, Multi-Touch Geometry & View Transformation Strangling via Clean DataSources & PinchToZoomRepositoryImpl
+- **Context:** Pinch-to-zoom gestures across media viewers, message media, and avatars required multi-touch distance calculations, focal point translations, image bounds scaling, and overlay transitions. These calculations were tightly coupled with custom view implementations and touch listeners.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.pinchtozoom`:
+  1. Implement `PinchToZoomRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing gesture telemetry and zoom calibration extension points.
+  2. Implement `PinchToZoomLocalDataSource`:
+     - Encapsulates scale computation, translation offsets, transform calculations, image boundary constraints, and gesture decision evaluation via `PinchToZoomMapper`.
+  3. Implement `PinchToZoomRepositoryImpl`:
+     - Implements `PinchToZoomRepository`, coordinating zoom lifecycle (`startZoom`, `updateZoom`, `finishZoom`, `reset`) and transformation calculations.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `PinchToZoomRepositoryImpl` alongside clean data sources.
+- **Consequences:** Pinch-to-zoom mathematics and gesture arbitration are isolated behind clean domain contracts. 100% unit test coverage achieved with `PinchToZoomRepositoryImplTest.kt`.
+
+### ADR 193: Window Insets, In-App Keyboard Heights & IME Arbitration Strangling via Clean DataSources & KeyboardInsetsRepositoryImpl
+- **Context:** Modern Android edge-to-edge rendering requires coordinating system bar insets, navigation bar offsets, IME bottom insets, and custom in-app keyboard heights (stickers, emojis, bots). In Telegram Android, this coordination was managed by `WindowInsetsInAppController` without clean repository separation or isolated JVM tests.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.keyboardinsets`:
+  1. Implement `KeyboardInsetsRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing window insets policy synchronization extension points.
+  2. Implement `KeyboardInsetsLocalDataSource`:
+     - Encapsulates in-app keyboard height tracking, navigation bar height inclusion, IME visibility state transitions, and `KeyboardInsetsModel` emission via `KeyboardInsetsMapper`.
+  3. Implement `KeyboardInsetsRepositoryImpl`:
+     - Implements `KeyboardInsetsRepository`, coordinating height requests, reset actions, navbar inclusion, system insets updates, and reactive flow observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `KeyboardInsetsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `WindowInsetsInAppController.getKeyboardInsetsRepository(account)` and `getKeyboardInsetsRepository()` accessors.
+- **Consequences:** Window insets and in-app keyboard heights are decoupled behind clean domain contracts. 100% unit test coverage achieved with `KeyboardInsetsRepositoryImplTest.kt` and full upstream compatibility preserved.
+
+### ADR 192: Interactive Keyboard Pull-Down Dismissal & Scroll Arbitration Strangling via Clean DataSources & KeyboardHideRepositoryImpl
+- **Context:** Telegram features an interactive drag gesture allowing users to pull down the chat list to dismiss the soft keyboard fluidly. This gesture tracking, touch velocity measurement, and dismiss-or-settle arbitration was implemented inside `KeyboardHideHelper.java` (~193 lines) with direct static state `KeyboardHideHelper.ENABLED`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.keyboardhide`:
+  1. Implement `KeyboardHideRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing gesture telemetry extension points.
+  2. Implement `KeyboardHideLocalDataSource`:
+     - Encapsulates drag touch coordinate geometry, progress interpolation, velocity-sensitive dismiss decisions, and headless test mode.
+  3. Implement `KeyboardHideRepositoryImpl`:
+     - Implements `KeyboardHideRepository`, coordinating drag lifecycle (`startMoving`, `updateMoving`, `endMoving`, `finishDismiss`, `reset`) and state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `KeyboardHideRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `KeyboardHideHelper.getKeyboardHideRepository(account)` and `getKeyboardHideRepository()` accessors.
+- **Consequences:** Interactive keyboard dismissal logic is isolated behind clean domain contracts. 100% unit test coverage achieved with `KeyboardHideRepositoryImplTest.kt` and full backward compatibility preserved.
+
+### ADR 191: Window Adjust-Pan Layout Arbitration & Keyboard Transition Strangling via Clean DataSources & AdjustPanRepositoryImpl
+- **Context:** Android window mode `adjustPan` versus `adjustResize` transitions cause complex layout height resizes and translation animations during keyboard appearance/dismissal. In Telegram Android, `AdjustPanLayoutHelper` computed these transitions, but layout math and state tracking were mixed with view hierarchies.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.adjustpan`:
+  1. Implement `AdjustPanRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing layout configuration extension points.
+  2. Implement `AdjustPanLocalDataSource`:
+     - Encapsulates transition plan calculation (`PanCalculationSpec`), progress interpolation, height adjustment animations, and headless test mode via `AdjustPanMapper`.
+  3. Implement `AdjustPanRepositoryImpl`:
+     - Implements `AdjustPanRepository`, coordinating plan calculation, transition lifecycle (`startTransition`, `updateTransition`, `stopTransition`, `reset`), and state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `AdjustPanRepositoryImpl` alongside clean data sources.
+- **Consequences:** AdjustPan geometry calculation and transition state tracking are isolated behind clean domain contracts. 100% unit test coverage achieved with `AdjustPanRepositoryImplTest.kt`.
+
+### ADR 190: Navigation Tabs Configuration, Call Tab Toggle & Unread Counters Strangling via Clean DataSources & MainTabsRepositoryImpl
+- **Context:** In Telegram Android, main screen navigation tabs (Chats, Contacts, Calls/Settings, Profile) and their visibility, unread count badges, and conditional Calls tab presentation were coordinated between `MainTabsActivity.java`, `MainTabsActivityController.java`, and `UserConfig.showCallsTab`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.maintabs`:
+  1. Implement `MainTabsRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote tabs configuration extension points.
+  2. Implement `MainTabsLocalDataSource`:
+     - Encapsulates tab visibility, tab selection (`MainTabType`), `UserConfig.showCallsTab` toggling, chats unread count tracking, contacts permission warnings, and headless test mode.
+  3. Implement `MainTabsRepositoryImpl`:
+     - Implements `MainTabsRepository`, coordinating tab visibility, position selection, call tab toggling, and unread counters.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `MainTabsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `MainTabsActivityController.getMainTabsRepository(account)` and `MainTabsActivity.getMainTabsRepository(account)` accessors.
+- **Consequences:** Main screen navigation tab configuration is decoupled behind clean domain contracts. 100% unit test coverage achieved with `MainTabsRepositoryImplTest.kt` and full backward compatibility preserved.
+
+### ADR 189: Application Localization, Dynamic Language Packs & String Resources Strangling via Clean DataSources & LocalizationRepositoryImpl
+- **Context:** Telegram Android localization, plural rules, custom language pack overrides, RTL language detection, name display ordering, and 24-hour time formatting were centered around `LocaleController.java` (~4517 lines). UI components invoked static methods on `LocaleController`, preventing clean inversion of control and headless JVM testing.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.localization`:
+  1. Implement `LocalizationRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote language pack downloading and remote locale list retrieval.
+  2. Implement `LocalizationLocalDataSource`:
+     - Encapsulates current locale, available locales, custom string overrides, 24-hour format flag, and name display order.
+  3. Implement `LocalizationRepositoryImpl`:
+     - Implements `LocalizationRepository`, coordinating locale selection, string resource resolution with fallbacks, time format preferences, and reactive state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `LocalizationRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `LocaleController.getLocalizationRepository(account)` and `getLocalizationRepository()` accessors.
+- **Consequences:** Localization, string resolution, and locale configuration are decoupled behind clean domain contracts. 100% unit test coverage achieved with `LocalizationRepositoryImplTest.kt` and full backward compatibility preserved.
+
+### ADR 188: Application Theming, Night Mode & Color Accents Strangling via Clean DataSources & ThemeRepositoryImpl
+- **Context:** Telegram Android UI theming was deeply entrenched in `Theme.java` (~8000 lines), managing current themes, night mode switching (system, scheduled, adaptive), custom theme accents, bubble radius, wallpapers, and colors. Direct calls to `Theme.java` from everywhere coupled the entire presentation layer with legacy theming statics.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.themes`:
+  1. Implement `ThemesRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote theme synchronization and cloud wallpaper fetching.
+  2. Implement `ThemesLocalDataSource`:
+     - Encapsulates theme selection, night mode configuration (`NightModeType`), theme accents, bubble radius, wallpaper models, and headless JVM test mode.
+  3. Implement `ThemeRepositoryImpl`:
+     - Implements `ThemeRepository`, coordinating appearance settings, available themes, theme application, night mode settings, and reactive state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `ThemeRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `Theme.getThemeRepository(account)` and `getThemeRepository()` accessors.
+- **Consequences:** Theming, night mode scheduling, and appearance preferences are decoupled behind clean domain contracts. 100% unit test coverage achieved with `ThemeRepositoryImplTest.kt` and full backward compatibility preserved.
 
 ### ADR 187: Client Settings, Appearance Preferences & Account Configuration Strangling via Clean DataSources & SettingsRepositoryImpl
 - **Context:** In Telegram Android, client settings and configuration were distributed across mutable static singletons: `SharedConfig` (global app-wide preferences like font size, bubble radius, stream media, in-app camera) and `UserConfig` (account-scoped preferences like contact syncing, call tab visibility). Direct access from UI components scattered configuration logic and caused potential race conditions during persistence without isolated JVM testability.

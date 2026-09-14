@@ -1,5 +1,8 @@
 package org.telegram.messenger.feature.system.di
 
+import org.telegram.messenger.feature.system.adjustpan.data.datasource.AdjustPanLocalDataSource
+import org.telegram.messenger.feature.system.adjustpan.data.datasource.AdjustPanRemoteDataSource
+import org.telegram.messenger.feature.system.adjustpan.data.repository.AdjustPanRepositoryImpl
 import org.telegram.messenger.feature.system.adjustpan.data.repository.LegacyAdjustPanRepository
 import org.telegram.messenger.feature.system.adjustpan.domain.repository.AdjustPanRepository
 import org.telegram.messenger.feature.system.adjustpan.domain.usecase.CalculatePanTransitionPlanUseCase
@@ -112,6 +115,9 @@ import org.telegram.messenger.feature.system.hints.domain.usecase.ResetAllHintsU
 import org.telegram.messenger.feature.system.hints.domain.usecase.ResetHintUseCase
 import org.telegram.messenger.feature.system.hints.domain.usecase.ShouldShowHintUseCase
 import org.telegram.messenger.feature.system.hints.presentation.HintsViewModel
+import org.telegram.messenger.feature.system.keyboardhide.data.datasource.KeyboardHideLocalDataSource
+import org.telegram.messenger.feature.system.keyboardhide.data.datasource.KeyboardHideRemoteDataSource
+import org.telegram.messenger.feature.system.keyboardhide.data.repository.KeyboardHideRepositoryImpl
 import org.telegram.messenger.feature.system.keyboardhide.data.repository.LegacyKeyboardHideRepository
 import org.telegram.messenger.feature.system.keyboardhide.domain.repository.KeyboardHideRepository
 import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.CalculateKeyboardHideProgressUseCase
@@ -125,6 +131,9 @@ import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.SetKeyb
 import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.StartKeyboardHideMovingUseCase
 import org.telegram.messenger.feature.system.keyboardhide.domain.usecase.UpdateKeyboardHideMovingUseCase
 import org.telegram.messenger.feature.system.keyboardhide.presentation.KeyboardHideViewModel
+import org.telegram.messenger.feature.system.keyboardinsets.data.datasource.KeyboardInsetsLocalDataSource
+import org.telegram.messenger.feature.system.keyboardinsets.data.datasource.KeyboardInsetsRemoteDataSource
+import org.telegram.messenger.feature.system.keyboardinsets.data.repository.KeyboardInsetsRepositoryImpl
 import org.telegram.messenger.feature.system.keyboardinsets.data.repository.LegacyKeyboardInsetsRepository
 import org.telegram.messenger.feature.system.keyboardinsets.domain.repository.KeyboardInsetsRepository
 import org.telegram.messenger.feature.system.keyboardinsets.domain.usecase.GetKeyboardInsetsUseCase
@@ -160,7 +169,10 @@ import org.telegram.messenger.feature.system.litemode.domain.usecase.SetLiteMode
 import org.telegram.messenger.feature.system.litemode.domain.usecase.ToggleLiteModeFlagUseCase
 import org.telegram.messenger.feature.system.litemode.domain.usecase.UpdatePowerSaverThresholdUseCase
 import org.telegram.messenger.feature.system.litemode.presentation.LiteModeViewModel
+import org.telegram.messenger.feature.system.localization.data.datasource.LocalizationLocalDataSource
+import org.telegram.messenger.feature.system.localization.data.datasource.LocalizationRemoteDataSource
 import org.telegram.messenger.feature.system.localization.data.repository.LegacyLocalizationRepository
+import org.telegram.messenger.feature.system.localization.data.repository.LocalizationRepositoryImpl
 import org.telegram.messenger.feature.system.localization.domain.repository.LocalizationRepository
 import org.telegram.messenger.feature.system.localization.domain.usecase.ApplyLocaleUseCase
 import org.telegram.messenger.feature.system.localization.domain.usecase.DetectRtlLanguageUseCase
@@ -173,7 +185,10 @@ import org.telegram.messenger.feature.system.localization.domain.usecase.Resolve
 import org.telegram.messenger.feature.system.localization.domain.usecase.SetNameDisplayOrderUseCase
 import org.telegram.messenger.feature.system.localization.domain.usecase.Toggle24HourFormatUseCase
 import org.telegram.messenger.feature.system.localization.presentation.LocalizationViewModel
+import org.telegram.messenger.feature.system.maintabs.data.datasource.MainTabsLocalDataSource
+import org.telegram.messenger.feature.system.maintabs.data.datasource.MainTabsRemoteDataSource
 import org.telegram.messenger.feature.system.maintabs.data.repository.LegacyMainTabsRepository
+import org.telegram.messenger.feature.system.maintabs.data.repository.MainTabsRepositoryImpl
 import org.telegram.messenger.feature.system.maintabs.domain.repository.MainTabsRepository
 import org.telegram.messenger.feature.system.maintabs.domain.usecase.GetMainTabsConfigUseCase
 import org.telegram.messenger.feature.system.maintabs.domain.usecase.ObserveMainTabsConfigUseCase
@@ -206,7 +221,10 @@ import org.telegram.messenger.feature.system.notifications.domain.usecase.Toggle
 import org.telegram.messenger.feature.system.notifications.domain.usecase.TogglePinnedMessagesNotificationsUseCase
 import org.telegram.messenger.feature.system.notifications.domain.usecase.UpdateBadgeSettingsUseCase
 import org.telegram.messenger.feature.system.notifications.presentation.NotificationsViewModel
+import org.telegram.messenger.feature.system.pinchtozoom.data.datasource.PinchToZoomLocalDataSource
+import org.telegram.messenger.feature.system.pinchtozoom.data.datasource.PinchToZoomRemoteDataSource
 import org.telegram.messenger.feature.system.pinchtozoom.data.repository.LegacyPinchToZoomRepository
+import org.telegram.messenger.feature.system.pinchtozoom.data.repository.PinchToZoomRepositoryImpl
 import org.telegram.messenger.feature.system.pinchtozoom.domain.repository.PinchToZoomRepository
 import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.CalculatePinchImageBoundsUseCase
 import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.CalculatePinchScaleUseCase
@@ -220,7 +238,10 @@ import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.ResetPin
 import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.StartPinchZoomUseCase
 import org.telegram.messenger.feature.system.pinchtozoom.domain.usecase.UpdatePinchZoomUseCase
 import org.telegram.messenger.feature.system.pinchtozoom.presentation.PinchToZoomViewModel
+import org.telegram.messenger.feature.system.recyclerscroll.data.datasource.RecyclerScrollLocalDataSource
+import org.telegram.messenger.feature.system.recyclerscroll.data.datasource.RecyclerScrollRemoteDataSource
 import org.telegram.messenger.feature.system.recyclerscroll.data.repository.LegacyRecyclerScrollRepository
+import org.telegram.messenger.feature.system.recyclerscroll.data.repository.RecyclerScrollRepositoryImpl
 import org.telegram.messenger.feature.system.recyclerscroll.domain.repository.RecyclerScrollRepository
 import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.CalculateScrollAnimationPlanUseCase
 import org.telegram.messenger.feature.system.recyclerscroll.domain.usecase.CalculateScrollLengthUseCase
@@ -265,7 +286,10 @@ import org.telegram.messenger.feature.system.ringtones.domain.usecase.SelectRing
 import org.telegram.messenger.feature.system.ringtones.domain.usecase.UploadRingtoneUseCase
 import org.telegram.messenger.feature.system.ringtones.domain.usecase.ValidateRingtoneEligibilityUseCase
 import org.telegram.messenger.feature.system.ringtones.presentation.RingtoneViewModel
+import org.telegram.messenger.feature.system.themes.data.datasource.ThemesLocalDataSource
+import org.telegram.messenger.feature.system.themes.data.datasource.ThemesRemoteDataSource
 import org.telegram.messenger.feature.system.themes.data.repository.LegacyThemeRepository
+import org.telegram.messenger.feature.system.themes.data.repository.ThemeRepositoryImpl
 import org.telegram.messenger.feature.system.themes.domain.repository.ThemeRepository
 import org.telegram.messenger.feature.system.themes.domain.usecase.ApplyThemeUseCase
 import org.telegram.messenger.feature.system.themes.domain.usecase.GetAppearanceSettingsUseCase
@@ -477,9 +501,28 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    val themeRepository: ThemeRepository by lazy {
-        LegacyThemeRepository(account)
+    val themesRemoteDataSource: ThemesRemoteDataSource by lazy {
+        ThemesRemoteDataSource(account)
     }
+
+    val themesLocalDataSource: ThemesLocalDataSource by lazy {
+        ThemesLocalDataSource(account)
+    }
+
+    fun createThemeRepository(): ThemeRepository {
+        return ThemeRepositoryImpl(
+            localDataSource = themesLocalDataSource,
+            remoteDataSource = themesRemoteDataSource
+        )
+    }
+
+    private var customThemeRepository: ThemeRepository? = null
+
+    var themeRepository: ThemeRepository
+        get() = customThemeRepository ?: createThemeRepository()
+        set(value) {
+            customThemeRepository = value
+        }
 
     val observeAppearanceSettingsUseCase: ObserveAppearanceSettingsUseCase
         get() = ObserveAppearanceSettingsUseCase(themeRepository)
@@ -923,13 +966,29 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    fun createKeyboardInsetsRepository(inAppController: WindowInsetsInAppController? = null): KeyboardInsetsRepository {
-        return LegacyKeyboardInsetsRepository(inAppController)
+    val keyboardInsetsRemoteDataSource: KeyboardInsetsRemoteDataSource by lazy {
+        KeyboardInsetsRemoteDataSource(account)
     }
 
-    val keyboardInsetsRepository: KeyboardInsetsRepository by lazy {
-        LegacyKeyboardInsetsRepository()
+    val keyboardInsetsLocalDataSource: KeyboardInsetsLocalDataSource by lazy {
+        KeyboardInsetsLocalDataSource()
     }
+
+    fun createKeyboardInsetsRepository(inAppController: WindowInsetsInAppController? = null): KeyboardInsetsRepository {
+        val local = if (inAppController != null) KeyboardInsetsLocalDataSource(inAppController) else keyboardInsetsLocalDataSource
+        return KeyboardInsetsRepositoryImpl(
+            localDataSource = local,
+            remoteDataSource = keyboardInsetsRemoteDataSource
+        )
+    }
+
+    private var customKeyboardInsetsRepository: KeyboardInsetsRepository? = null
+
+    var keyboardInsetsRepository: KeyboardInsetsRepository
+        get() = customKeyboardInsetsRepository ?: createKeyboardInsetsRepository()
+        set(value) {
+            customKeyboardInsetsRepository = value
+        }
 
     val requestInAppKeyboardHeightUseCase: RequestInAppKeyboardHeightUseCase
         get() = RequestInAppKeyboardHeightUseCase(keyboardInsetsRepository)
@@ -973,13 +1032,29 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    fun createMainTabsRepository(controller: MainTabsActivityController? = null): MainTabsRepository {
-        return LegacyMainTabsRepository(account, controller)
+    val mainTabsRemoteDataSource: MainTabsRemoteDataSource by lazy {
+        MainTabsRemoteDataSource(account)
     }
 
-    val mainTabsRepository: MainTabsRepository by lazy {
-        LegacyMainTabsRepository(account)
+    val mainTabsLocalDataSource: MainTabsLocalDataSource by lazy {
+        MainTabsLocalDataSource(account)
     }
+
+    fun createMainTabsRepository(controller: MainTabsActivityController? = null): MainTabsRepository {
+        val local = if (controller != null) MainTabsLocalDataSource(account, initialController = controller) else mainTabsLocalDataSource
+        return MainTabsRepositoryImpl(
+            localDataSource = local,
+            remoteDataSource = mainTabsRemoteDataSource
+        )
+    }
+
+    private var customMainTabsRepository: MainTabsRepository? = null
+
+    var mainTabsRepository: MainTabsRepository
+        get() = customMainTabsRepository ?: createMainTabsRepository()
+        set(value) {
+            customMainTabsRepository = value
+        }
 
     val observeMainTabsConfigUseCase: ObserveMainTabsConfigUseCase
         get() = ObserveMainTabsConfigUseCase(mainTabsRepository)
@@ -1027,13 +1102,28 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    fun createAdjustPanRepository(): AdjustPanRepository {
-        return LegacyAdjustPanRepository()
+    val adjustPanRemoteDataSource: AdjustPanRemoteDataSource by lazy {
+        AdjustPanRemoteDataSource(account)
     }
 
-    val adjustPanRepository: AdjustPanRepository by lazy {
-        LegacyAdjustPanRepository()
+    val adjustPanLocalDataSource: AdjustPanLocalDataSource by lazy {
+        AdjustPanLocalDataSource()
     }
+
+    fun createAdjustPanRepository(): AdjustPanRepository {
+        return AdjustPanRepositoryImpl(
+            localDataSource = adjustPanLocalDataSource,
+            remoteDataSource = adjustPanRemoteDataSource
+        )
+    }
+
+    private var customAdjustPanRepository: AdjustPanRepository? = null
+
+    var adjustPanRepository: AdjustPanRepository
+        get() = customAdjustPanRepository ?: createAdjustPanRepository()
+        set(value) {
+            customAdjustPanRepository = value
+        }
 
     val calculatePanTransitionPlanUseCase: CalculatePanTransitionPlanUseCase
         get() = CalculatePanTransitionPlanUseCase(adjustPanRepository)
@@ -1087,13 +1177,28 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    fun createKeyboardHideRepository(): KeyboardHideRepository {
-        return LegacyKeyboardHideRepository()
+    val keyboardHideRemoteDataSource: KeyboardHideRemoteDataSource by lazy {
+        KeyboardHideRemoteDataSource(account)
     }
 
-    val keyboardHideRepository: KeyboardHideRepository by lazy {
-        LegacyKeyboardHideRepository()
+    val keyboardHideLocalDataSource: KeyboardHideLocalDataSource by lazy {
+        KeyboardHideLocalDataSource()
     }
+
+    fun createKeyboardHideRepository(): KeyboardHideRepository {
+        return KeyboardHideRepositoryImpl(
+            localDataSource = keyboardHideLocalDataSource,
+            remoteDataSource = keyboardHideRemoteDataSource
+        )
+    }
+
+    private var customKeyboardHideRepository: KeyboardHideRepository? = null
+
+    var keyboardHideRepository: KeyboardHideRepository
+        get() = customKeyboardHideRepository ?: createKeyboardHideRepository()
+        set(value) {
+            customKeyboardHideRepository = value
+        }
 
     val calculateKeyboardHideProgressUseCase: CalculateKeyboardHideProgressUseCase
         get() = CalculateKeyboardHideProgressUseCase(keyboardHideRepository)
@@ -1152,13 +1257,28 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    fun createPinchToZoomRepository(): PinchToZoomRepository {
-        return LegacyPinchToZoomRepository()
+    val pinchToZoomRemoteDataSource: PinchToZoomRemoteDataSource by lazy {
+        PinchToZoomRemoteDataSource(account)
     }
 
-    val pinchToZoomRepository: PinchToZoomRepository by lazy {
-        LegacyPinchToZoomRepository()
+    val pinchToZoomLocalDataSource: PinchToZoomLocalDataSource by lazy {
+        PinchToZoomLocalDataSource()
     }
+
+    fun createPinchToZoomRepository(): PinchToZoomRepository {
+        return PinchToZoomRepositoryImpl(
+            localDataSource = pinchToZoomLocalDataSource,
+            remoteDataSource = pinchToZoomRemoteDataSource
+        )
+    }
+
+    private var customPinchToZoomRepository: PinchToZoomRepository? = null
+
+    var pinchToZoomRepository: PinchToZoomRepository
+        get() = customPinchToZoomRepository ?: createPinchToZoomRepository()
+        set(value) {
+            customPinchToZoomRepository = value
+        }
 
     val observePinchZoomStateUseCase: ObservePinchZoomStateUseCase
         get() = ObservePinchZoomStateUseCase(pinchToZoomRepository)
@@ -1221,13 +1341,28 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    fun createRecyclerScrollRepository(): RecyclerScrollRepository {
-        return LegacyRecyclerScrollRepository()
+    val recyclerScrollRemoteDataSource: RecyclerScrollRemoteDataSource by lazy {
+        RecyclerScrollRemoteDataSource(account)
     }
 
-    val recyclerScrollRepository: RecyclerScrollRepository by lazy {
-        LegacyRecyclerScrollRepository()
+    val recyclerScrollLocalDataSource: RecyclerScrollLocalDataSource by lazy {
+        RecyclerScrollLocalDataSource()
     }
+
+    fun createRecyclerScrollRepository(): RecyclerScrollRepository {
+        return RecyclerScrollRepositoryImpl(
+            localDataSource = recyclerScrollLocalDataSource,
+            remoteDataSource = recyclerScrollRemoteDataSource
+        )
+    }
+
+    private var customRecyclerScrollRepository: RecyclerScrollRepository? = null
+
+    var recyclerScrollRepository: RecyclerScrollRepository
+        get() = customRecyclerScrollRepository ?: createRecyclerScrollRepository()
+        set(value) {
+            customRecyclerScrollRepository = value
+        }
 
     val observeRecyclerScrollStateUseCase: ObserveRecyclerScrollStateUseCase
         get() = ObserveRecyclerScrollStateUseCase(recyclerScrollRepository)
@@ -1290,9 +1425,28 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    val localizationRepository: LocalizationRepository by lazy {
-        LegacyLocalizationRepository(account)
+    val localizationRemoteDataSource: LocalizationRemoteDataSource by lazy {
+        LocalizationRemoteDataSource(account)
     }
+
+    val localizationLocalDataSource: LocalizationLocalDataSource by lazy {
+        LocalizationLocalDataSource(account)
+    }
+
+    fun createLocalizationRepository(): LocalizationRepository {
+        return LocalizationRepositoryImpl(
+            localDataSource = localizationLocalDataSource,
+            remoteDataSource = localizationRemoteDataSource
+        )
+    }
+
+    private var customLocalizationRepository: LocalizationRepository? = null
+
+    var localizationRepository: LocalizationRepository
+        get() = customLocalizationRepository ?: createLocalizationRepository()
+        set(value) {
+            customLocalizationRepository = value
+        }
 
     val resolvePluralQuantityUseCase: ResolvePluralQuantityUseCase
         get() = ResolvePluralQuantityUseCase()

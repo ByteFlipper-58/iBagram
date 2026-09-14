@@ -89,6 +89,18 @@ import me.vkryl.android.animator.FactorAnimator;
 
 public class MainTabsActivity extends ViewPagerActivity implements NotificationCenter.NotificationCenterDelegate, FactorAnimator.Target {
 
+    public static org.telegram.messenger.feature.system.maintabs.domain.repository.MainTabsRepository getMainTabsRepository(int account) {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getSystem().getMainTabsRepository();
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    public static org.telegram.messenger.feature.system.maintabs.domain.repository.MainTabsRepository getMainTabsRepository() {
+        return getMainTabsRepository(UserConfig.selectedAccount);
+    }
+
     public static final int TABS_COUNT = 4;
     private static final int POSITION_CHATS = 0;
     private static final int POSITION_CONTACTS = 1;

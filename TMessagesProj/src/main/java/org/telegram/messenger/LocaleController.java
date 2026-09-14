@@ -60,6 +60,18 @@ import java.util.TimeZone;
 
 public class LocaleController {
 
+    public static org.telegram.messenger.feature.system.localization.domain.repository.LocalizationRepository getLocalizationRepository(int account) {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getSystem().getLocalizationRepository();
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    public static org.telegram.messenger.feature.system.localization.domain.repository.LocalizationRepository getLocalizationRepository() {
+        return getLocalizationRepository(UserConfig.selectedAccount);
+    }
+
     static final int QUANTITY_OTHER = 0x0000;
     static final int QUANTITY_ZERO = 0x0001;
     static final int QUANTITY_ONE = 0x0002;

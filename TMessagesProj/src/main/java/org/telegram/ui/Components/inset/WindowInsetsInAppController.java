@@ -14,4 +14,16 @@ public interface WindowInsetsInAppController {
 
     void requestInAppKeyboardHeight(int inAppKeyboardHeight);
     void resetInAppKeyboardHeight(boolean waitKeyboardOpen);
+
+    static org.telegram.messenger.feature.system.keyboardinsets.domain.repository.KeyboardInsetsRepository getKeyboardInsetsRepository(int account) {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getSystem().getKeyboardInsetsRepository();
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    static org.telegram.messenger.feature.system.keyboardinsets.domain.repository.KeyboardInsetsRepository getKeyboardInsetsRepository() {
+        return getKeyboardInsetsRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
 }

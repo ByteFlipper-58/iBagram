@@ -29,6 +29,18 @@ import org.telegram.ui.Components.RecyclerListView;
 
 public class KeyboardHideHelper {
 
+    public static org.telegram.messenger.feature.system.keyboardhide.domain.repository.KeyboardHideRepository getKeyboardHideRepository(int account) {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getSystem().getKeyboardHideRepository();
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    public static org.telegram.messenger.feature.system.keyboardhide.domain.repository.KeyboardHideRepository getKeyboardHideRepository() {
+        return getKeyboardHideRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
     public static boolean ENABLED = false;
 
     public KeyboardHideHelper() {
