@@ -212,4 +212,17 @@ public final class LeakDetector {
         }
         return count;
     }
+
+    // Strangler hooks for architecture migration
+    public static org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository getLeakDetectorRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getLeakDetectorRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository getLeakDetectorRepository() {
+        return getLeakDetectorRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
+    public org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository getRepository() {
+        return getLeakDetectorRepository();
+    }
 }

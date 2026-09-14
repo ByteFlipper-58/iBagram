@@ -85,4 +85,13 @@ public class FloatingDebugController {
         HEADER,
         SEEKBAR
     }
+
+    // Strangler hooks for architecture migration
+    public static org.telegram.messenger.feature.system.floatingdebug.domain.repository.FloatingDebugRepository getFloatingDebugRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getFloatingDebugRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.floatingdebug.domain.repository.FloatingDebugRepository getFloatingDebugRepository() {
+        return getFloatingDebugRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
 }

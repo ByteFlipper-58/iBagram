@@ -811,12 +811,30 @@ class SystemContainer(val account: Int) {
         )
     }
 
+    val floatingDebugRemoteDataSource: org.telegram.messenger.feature.system.floatingdebug.data.datasource.FloatingDebugRemoteDataSource by lazy {
+        org.telegram.messenger.feature.system.floatingdebug.data.datasource.FloatingDebugRemoteDataSource(account)
+    }
+
+    fun createFloatingDebugLocalDataSource(activityProvider: (() -> LaunchActivity?)? = null): org.telegram.messenger.feature.system.floatingdebug.data.datasource.FloatingDebugLocalDataSource {
+        return org.telegram.messenger.feature.system.floatingdebug.data.datasource.FloatingDebugLocalDataSource(activityProvider)
+    }
+
+    val floatingDebugLocalDataSource: org.telegram.messenger.feature.system.floatingdebug.data.datasource.FloatingDebugLocalDataSource by lazy {
+        createFloatingDebugLocalDataSource()
+    }
+
     fun createFloatingDebugRepository(activityProvider: (() -> LaunchActivity?)? = null): FloatingDebugRepository {
-        return LegacyFloatingDebugRepository(activityProvider)
+        return org.telegram.messenger.feature.system.floatingdebug.data.repository.FloatingDebugRepositoryImpl(
+            localDataSource = createFloatingDebugLocalDataSource(activityProvider),
+            remoteDataSource = floatingDebugRemoteDataSource
+        )
     }
 
     val floatingDebugRepository: FloatingDebugRepository by lazy {
-        LegacyFloatingDebugRepository()
+        org.telegram.messenger.feature.system.floatingdebug.data.repository.FloatingDebugRepositoryImpl(
+            localDataSource = floatingDebugLocalDataSource,
+            remoteDataSource = floatingDebugRemoteDataSource
+        )
     }
 
     val isFloatingDebugActiveUseCase: IsFloatingDebugActiveUseCase
@@ -1684,10 +1702,25 @@ class SystemContainer(val account: Int) {
         )
     }
 
+    val leakDetectorRemoteDataSource: org.telegram.messenger.feature.system.leakdetector.data.datasource.LeakDetectorRemoteDataSource by lazy {
+        org.telegram.messenger.feature.system.leakdetector.data.datasource.LeakDetectorRemoteDataSource(account)
+    }
+
+    val leakDetectorLocalDataSource: org.telegram.messenger.feature.system.leakdetector.data.datasource.LeakDetectorLocalDataSource by lazy {
+        org.telegram.messenger.feature.system.leakdetector.data.datasource.LeakDetectorLocalDataSource()
+    }
+
+    fun createLeakDetectorRepository(): org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository {
+        return org.telegram.messenger.feature.system.leakdetector.data.repository.LeakDetectorRepositoryImpl(
+            localDataSource = leakDetectorLocalDataSource,
+            remoteDataSource = leakDetectorRemoteDataSource
+        )
+    }
+
     private var customLeakDetectorRepository: org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository? = null
 
     var leakDetectorRepository: org.telegram.messenger.feature.system.leakdetector.domain.repository.LeakDetectorRepository
-        get() = customLeakDetectorRepository ?: org.telegram.messenger.feature.system.leakdetector.data.repository.LegacyLeakDetectorRepository()
+        get() = customLeakDetectorRepository ?: createLeakDetectorRepository()
         set(value) {
             customLeakDetectorRepository = value
         }
@@ -1749,10 +1782,25 @@ class SystemContainer(val account: Int) {
     }
 
     // --- 60 FPS Frame Rate & V-Sync Content Arbitration (feature.fpscontent) ---
+    val fpsContentRemoteDataSource: org.telegram.messenger.feature.system.fpscontent.data.datasource.FpsContentRemoteDataSource by lazy {
+        org.telegram.messenger.feature.system.fpscontent.data.datasource.FpsContentRemoteDataSource(account)
+    }
+
+    val fpsContentLocalDataSource: org.telegram.messenger.feature.system.fpscontent.data.datasource.FpsContentLocalDataSource by lazy {
+        org.telegram.messenger.feature.system.fpscontent.data.datasource.FpsContentLocalDataSource()
+    }
+
+    fun createFpsContentRepository(): org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository {
+        return org.telegram.messenger.feature.system.fpscontent.data.repository.FpsContentRepositoryImpl(
+            localDataSource = fpsContentLocalDataSource,
+            remoteDataSource = fpsContentRemoteDataSource
+        )
+    }
+
     private var customFpsContentRepository: org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository? = null
 
     var fpsContentRepository: org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository
-        get() = customFpsContentRepository ?: org.telegram.messenger.feature.system.fpscontent.data.repository.LegacyFpsContentRepository()
+        get() = customFpsContentRepository ?: createFpsContentRepository()
         set(value) {
             customFpsContentRepository = value
         }

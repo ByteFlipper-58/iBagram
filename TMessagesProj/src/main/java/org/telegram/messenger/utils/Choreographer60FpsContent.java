@@ -357,4 +357,17 @@ public final class Choreographer60FpsContent implements Choreographer.FrameCallb
             }
         }
     }
+
+    // Strangler hooks for architecture migration
+    public static org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository getFpsContentRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getFpsContentRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository getFpsContentRepository() {
+        return getFpsContentRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
+    public org.telegram.messenger.feature.system.fpscontent.domain.repository.FpsContentRepository getRepository() {
+        return getFpsContentRepository();
+    }
 }

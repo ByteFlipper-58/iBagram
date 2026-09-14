@@ -1214,10 +1214,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `EmuDetectorRepositoryImpl.kt` (Clean repository coordinating environment detection, caching, force refresh, custom packages, config, and reactive observation)
     - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `EmuDetector.java` strangler boundary with `getEmuDetectorRepository(account)` and `getEmuDetectorRepository()` accessors.
+  - [x] Feature: `LeakDetector` Strangling (`feature.system.leakdetector` - ADR 179):
+    - `LeakDetectorRemoteDataSource.kt` (System extension point for remote leak telemetry and incident reporting)
+    - `LeakDetectorLocalDataSource.kt` (WeakReference tracking, ConcurrentHashMap registry, two-phase GC confirmation, live object count, flows)
+    - `LeakDetectorRepositoryImpl.kt` (Clean repository coordinating tracking, rechecks, leak confirmation, stats, and reactive state)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `LeakDetector.java` strangler boundary with `getLeakDetectorRepository(account)`, `getLeakDetectorRepository()`, and `getRepository()` accessors.
+  - [x] Feature: `Choreographer60FpsContent` Strangling (`feature.system.fpscontent` - ADR 180):
+    - `FpsContentRemoteDataSource.kt` (System extension point for remote frame rate policy configuration)
+    - `FpsContentLocalDataSource.kt` (Frame rate arbitration, stride groups, accumulator groups, view/drawable invalidation scheduling, stats)
+    - `FpsContentRepositoryImpl.kt` (Clean repository coordinating frame callbacks, runnable callbacks, invalidations, vsync ticks, and stats)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `Choreographer60FpsContent.java` strangler boundary with `getFpsContentRepository(account)`, `getFpsContentRepository()`, and `getRepository()` accessors.
+  - [x] Feature: `FloatingDebugController` Strangling (`feature.system.floatingdebug` - ADR 181):
+    - `FloatingDebugRemoteDataSource.kt` (System extension point for remote debug overlay configuration and policies)
+    - `FloatingDebugLocalDataSource.kt` (Debug overlay active state, notification center listener, launch activity provider, flows, headless test mode)
+    - `FloatingDebugRepositoryImpl.kt` (Clean repository coordinating active state, dismissal, showing, fab visibility, and reactive observation)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `FloatingDebugController.java` strangler boundary with `getFloatingDebugRepository(account)`, `getFloatingDebugRepository()`, and `getRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 181: Floating Debug Overlay & Diagnostics Controller Strangling via Clean DataSources & FloatingDebugRepositoryImpl
+- **Context:** In Telegram Android, the floating debug overlay controller was governed by `FloatingDebugController.java` (~120 lines). The controller directly managed a floating action button view, notification center event listeners (`floatingDebugActiveStateChanged`), launch activity context bindings, and in-memory boolean active state without a testable data source abstraction or isolated JVM testing.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.floatingdebug`:
+  1. Implement `FloatingDebugRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote debug configuration and overlay policies.
+  2. Implement `FloatingDebugLocalDataSource`:
+     - Encapsulates debug overlay active state, `StateFlow<Boolean>`, `SharedFlow<FloatingDebugEvent>`, notification center event dispatching, `LaunchActivity` provider, and headless JVM test mode.
+  3. Implement `FloatingDebugRepositoryImpl`:
+     - Implements `FloatingDebugRepository`, coordinating overlay state query, show, dismiss, fab visibility, and reactive observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `FloatingDebugRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `FloatingDebugController.getFloatingDebugRepository(account)`, `getFloatingDebugRepository()`, and `getRepository()` accessors.
+- **Consequences:** Floating debug overlay controller and diagnostics state are decoupled behind clean domain contracts. 100% unit test coverage achieved with `FloatingDebugRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 180: Choreographer 60 FPS Frame Rate & V-Sync Content Arbitration Strangling via Clean DataSources & FpsContentRepositoryImpl
+- **Context:** V-Sync synchronization and 60 FPS frame callback dispatching was governed by `Choreographer60FpsContent.java` (~156 lines). The controller managed Android `Choreographer.FrameCallback`, reflection access to private choreographer fields, frame stride calculations, runnable queues, and direct view/drawable invalidations without decoupled data sources or testable mathematical abstractions.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.fpscontent`:
+  1. Implement `FpsContentRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote frame rate policies and target FPS configuration.
+  2. Implement `FpsContentLocalDataSource`:
+     - Encapsulates pure mathematical frame rate arbitration, stride groups, accumulator groups, view and drawable invalidation queues, subscription registry, `StateFlow<FpsContentStats>`, and `SharedFlow<FrameTick>`.
+  3. Implement `FpsContentRepositoryImpl`:
+     - Implements `FpsContentRepository`, coordinating frame callback registration, runnable callbacks, invalidation requests, vsync ticks dispatching, stats, and subscriptions.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `FpsContentRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `Choreographer60FpsContent.getFpsContentRepository(account)`, `getFpsContentRepository()`, and `getRepository()` accessors.
+- **Consequences:** Frame rate arbitration and vsync dispatching are decoupled behind clean domain contracts. 100% unit test coverage achieved with `FpsContentRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 179: Memory Leak Detection, Reference Tracking & Two-Phase GC Recheck Strangling via Clean DataSources & LeakDetectorRepositoryImpl
+- **Context:** Detecting memory leaks across activities, fragments, dialogs, and large resources was governed by `LeakDetector.java` (~120 lines). The detector used static weak references, arbitrary GC triggering, sleep loops, and direct logging without a decoupled data source abstraction or isolated headless testability.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.leakdetector`:
+  1. Implement `LeakDetectorRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote leak incident telemetry and crash diagnostics.
+  2. Implement `LeakDetectorLocalDataSource`:
+     - Encapsulates `ConcurrentHashMap` weak reference registries, two-phase GC confirmation heuristics, live instance counting, `StateFlow<LeakDetectorState>`, and `SharedFlow<LeakReport>`.
+  3. Implement `LeakDetectorRepositoryImpl`:
+     - Implements `LeakDetectorRepository`, coordinating monitoring start/stop, instance tracking, manual rechecks, leak confirmation, class stats, and reactive state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `LeakDetectorRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `LeakDetector.getLeakDetectorRepository(account)`, `getLeakDetectorRepository()`, and `getRepository()` accessors.
+- **Consequences:** Memory leak tracking and diagnostics are decoupled behind clean domain contracts. 100% unit test coverage achieved with `LeakDetectorRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 178: Hardware Fingerprinting, Emulator Detection & Environment Diagnostics Strangling via Clean DataSources & EmuDetectorRepositoryImpl
 - **Context:** Detection of virtualized execution environments, Android emulators, and instrumentation frameworks was governed by `EmuDetector.java` (~434 lines) and `EmuInputDevicesDetector.java`. The detector relied directly on Android system properties reflection, telephony manager, filesystem checks for qemu drivers, and package manager lookups without a decoupled data source abstraction or isolated JVM testing.
