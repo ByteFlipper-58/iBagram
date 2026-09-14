@@ -1196,10 +1196,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `WindowVisibilityRepositoryImpl.kt` (Clean repository coordinating requestHide, releaseHide, toggleHide, reset, and subsystem controllers)
     - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `WindowVisibilityManager.java` strangler boundary with `getWindowVisibilityRepository(account)`, `getWindowVisibilityRepository()`, and `getRepository()` accessors.
+  - [x] Feature: `AnimationNotificationsLocker` Strangling (`feature.system.animationlocker` - ADR 176):
+    - `AnimationLockerRemoteDataSource.kt` (System extension point for remote animation locker configs)
+    - `AnimationLockerLocalDataSource.kt` (ConcurrentHashMap lock records, NotificationCenter suppression, reactive flows, headless test mode)
+    - `AnimationLockerRepositoryImpl.kt` (Clean repository coordinating locks, releases, scopes, filtering, and reactive state)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `AnimationNotificationsLocker.java` strangler boundary with `getAnimationLockerRepository(account)`, `getAnimationLockerRepository()`, and `getRepository()` accessors.
+  - [x] Feature: `ANRDetector` Strangling (`feature.system.anrwatchdog` - ADR 177):
+    - `AnrWatchdogRemoteDataSource.kt` (System extension point for remote ANR telemetry and incident reporting)
+    - `AnrWatchdogLocalDataSource.kt` (Thread-safe heartbeat ping dispatch, acknowledgement, freeze detection calculation, incident history, flows)
+    - `AnrWatchdogRepositoryImpl.kt` (Clean repository coordinating start/stop, lifecycle transitions, pings, freeze detection, incidents, and reactive observation)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ANRDetector.java` strangler boundary with `getAnrWatchdogRepository(account)`, `getAnrWatchdogRepository()`, and `getRepository()` accessors.
+  - [x] Feature: `EmuDetector` Strangling (`feature.system.emudetector` - ADR 178):
+    - `EmuDetectorRemoteDataSource.kt` (System extension point for remote emulator detection rules and blacklists)
+    - `EmuDetectorLocalDataSource.kt` (Hardware heuristics, build properties, companion packages, diagnostics caching, reactive flows, headless test mode)
+    - `EmuDetectorRepositoryImpl.kt` (Clean repository coordinating environment detection, caching, force refresh, custom packages, config, and reactive observation)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `EmuDetector.java` strangler boundary with `getEmuDetectorRepository(account)` and `getEmuDetectorRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 178: Hardware Fingerprinting, Emulator Detection & Environment Diagnostics Strangling via Clean DataSources & EmuDetectorRepositoryImpl
+- **Context:** Detection of virtualized execution environments, Android emulators, and instrumentation frameworks was governed by `EmuDetector.java` (~434 lines) and `EmuInputDevicesDetector.java`. The detector relied directly on Android system properties reflection, telephony manager, filesystem checks for qemu drivers, and package manager lookups without a decoupled data source abstraction or isolated JVM testing.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.emudetector`:
+  1. Implement `EmuDetectorRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote heuristic rules and package blacklist updates.
+  2. Implement `EmuDetectorLocalDataSource`:
+     - Encapsulates hardware heuristics, build property checks, companion packages, diagnostics caching, `StateFlow<EmulatorDiagnostics?>`, `StateFlow<Boolean>`, and headless JVM test mode.
+  3. Implement `EmuDetectorRepositoryImpl`:
+     - Implements `EmuDetectorRepository`, coordinating environment detection, caching, force refresh, custom packages, configuration updates, and reactive state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `EmuDetectorRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `EmuDetector.getEmuDetectorRepository(account)` and `getEmuDetectorRepository()` accessors.
+- **Consequences:** Emulator detection and virtualized environment diagnostics are decoupled behind clean domain contracts. 100% unit test coverage achieved with `EmuDetectorRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 177: Main Thread Heartbeat Monitoring, UI Freeze & ANR Detection Strangling via Clean DataSources & AnrWatchdogRepositoryImpl
+- **Context:** Main UI thread responsiveness monitoring and application freezing (ANR) detection was governed by `ANRDetector.java` (~224 lines). The detector coupled a dedicated watchdog thread, Android `Handler(Looper.getMainLooper())` ping messages, generation counters, and foreground/background listener callbacks without testable repository contracts.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.anrwatchdog`:
+  1. Implement `AnrWatchdogRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote ANR telemetry and incident reporting extension points.
+  2. Implement `AnrWatchdogLocalDataSource`:
+     - Encapsulates thread-safe heartbeat ping dispatch, acknowledgement, freeze detection calculation, incident history, `StateFlow<AnrWatchdogState>`, and `SharedFlow<AnrIncident>`.
+  3. Implement `AnrWatchdogRepositoryImpl`:
+     - Implements `AnrWatchdogRepository`, coordinating monitoring lifecycle, foreground status, ping dispatch, acknowledgement, freeze checks, incident resolution, and incident history.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `AnrWatchdogRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `ANRDetector.getAnrWatchdogRepository(account)`, `getAnrWatchdogRepository()`, and instance `getRepository()` accessors.
+- **Consequences:** ANR watchdog diagnostics and freeze detection are decoupled behind clean domain contracts. 100% unit test coverage achieved with `AnrWatchdogRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 176: UI Animation Lock Arbitration & Notification Suppression Strangling via Clean DataSources & AnimationLockerRepositoryImpl
+- **Context:** Suspending NotificationCenter notifications during screen transitions and animated UI interactions was governed by `AnimationNotificationsLocker.java` (~48 lines). The locker directly manipulated `NotificationCenter.getInstance(account).setAnimationInProgress(...)` and `NotificationCenter.getGlobalInstance().setAnimationInProgress(...)` without a testable data source or reactive state tracking.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.animationlocker`:
+  1. Implement `AnimationLockerRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote config extension points.
+  2. Implement `AnimationLockerLocalDataSource`:
+     - Encapsulates `ConcurrentHashMap<String, AnimationLockRecord>`, NotificationCenter suppression, allowed notification ID filtering, lock scopes (`ACCOUNT`, `GLOBAL`, `ALL`), `StateFlow<AnimationLockerState>`, and `StateFlow<Boolean> isLocked`.
+  3. Implement `AnimationLockerRepositoryImpl`:
+     - Implements `AnimationLockerRepository`, coordinating acquire lock, release lock, release all, disable locker, allowed notification ID filtering, and reactive state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `AnimationLockerRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `AnimationNotificationsLocker.getAnimationLockerRepository(account)`, `getAnimationLockerRepository()`, and instance `getRepository()` accessors.
+- **Consequences:** Animation lock arbitration and notification suppression are decoupled behind clean domain contracts. 100% unit test coverage achieved with `AnimationLockerRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 175: Window Visibility Arbitration & Reference Counting Strangling via Clean DataSources & WindowVisibilityRepositoryImpl
 - **Context:** In Telegram Android, window visibility arbitration across dialogs, activities, and overlays was governed by `WindowVisibilityManager.java` (~76 lines). The manager managed reference-counting hide reasons (`reasonsToHide`), a direct `OnVisibilityChangedListener`, and subsystem controllers without decoupled data sources or testable repository contracts.

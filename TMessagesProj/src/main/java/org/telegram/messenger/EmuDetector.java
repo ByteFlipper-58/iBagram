@@ -430,4 +430,13 @@ public class EmuDetector {
         PackageManager packageManager = mContext.getPackageManager();
         return packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY);
     }
+
+    // Strangler hooks for architecture migration
+    public static org.telegram.messenger.feature.system.emudetector.domain.repository.EmuDetectorRepository getEmuDetectorRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getEmuDetectorRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.emudetector.domain.repository.EmuDetectorRepository getEmuDetectorRepository() {
+        return getEmuDetectorRepository(UserConfig.selectedAccount);
+    }
 }

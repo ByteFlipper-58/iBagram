@@ -44,4 +44,16 @@ public class AnimationNotificationsLocker {
         disabled = true;
     }
 
+    // Strangler hooks for architecture migration
+    public static org.telegram.messenger.feature.system.animationlocker.domain.repository.AnimationLockerRepository getAnimationLockerRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getAnimationLockerRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.animationlocker.domain.repository.AnimationLockerRepository getAnimationLockerRepository() {
+        return getAnimationLockerRepository(UserConfig.selectedAccount);
+    }
+
+    public org.telegram.messenger.feature.system.animationlocker.domain.repository.AnimationLockerRepository getRepository() {
+        return getAnimationLockerRepository(currentAccount);
+    }
 }

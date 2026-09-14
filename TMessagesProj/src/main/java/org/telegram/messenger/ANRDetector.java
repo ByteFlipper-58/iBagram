@@ -221,4 +221,17 @@ public class ANRDetector implements ForegroundDetector.Listener {
 
         detectorThread.interrupt();
     }
+
+    // Strangler hooks for architecture migration
+    public static org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository getAnrWatchdogRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getAnrWatchdogRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository getAnrWatchdogRepository() {
+        return getAnrWatchdogRepository(UserConfig.selectedAccount);
+    }
+
+    public org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository getRepository() {
+        return getAnrWatchdogRepository();
+    }
 }

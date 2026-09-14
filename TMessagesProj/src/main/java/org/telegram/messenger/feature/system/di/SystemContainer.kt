@@ -1822,10 +1822,25 @@ class SystemContainer(val account: Int) {
     }
 
     // --- Main Thread ANR Watchdog & UI Freeze Diagnostics (feature.anrwatchdog) ---
+    val anrWatchdogRemoteDataSource: org.telegram.messenger.feature.system.anrwatchdog.data.datasource.AnrWatchdogRemoteDataSource by lazy {
+        org.telegram.messenger.feature.system.anrwatchdog.data.datasource.AnrWatchdogRemoteDataSource(account)
+    }
+
+    val anrWatchdogLocalDataSource: org.telegram.messenger.feature.system.anrwatchdog.data.datasource.AnrWatchdogLocalDataSource by lazy {
+        org.telegram.messenger.feature.system.anrwatchdog.data.datasource.AnrWatchdogLocalDataSource()
+    }
+
+    fun createAnrWatchdogRepository(): org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository {
+        return org.telegram.messenger.feature.system.anrwatchdog.data.repository.AnrWatchdogRepositoryImpl(
+            localDataSource = anrWatchdogLocalDataSource,
+            remoteDataSource = anrWatchdogRemoteDataSource
+        )
+    }
+
     private var customAnrWatchdogRepository: org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository? = null
 
     var anrWatchdogRepository: org.telegram.messenger.feature.system.anrwatchdog.domain.repository.AnrWatchdogRepository
-        get() = customAnrWatchdogRepository ?: org.telegram.messenger.feature.system.anrwatchdog.data.repository.LegacyAnrWatchdogRepository()
+        get() = customAnrWatchdogRepository ?: createAnrWatchdogRepository()
         set(value) {
             customAnrWatchdogRepository = value
         }
@@ -1896,10 +1911,25 @@ class SystemContainer(val account: Int) {
     }
 
     // --- EmuDetector ---
+    val emuDetectorRemoteDataSource: org.telegram.messenger.feature.system.emudetector.data.datasource.EmuDetectorRemoteDataSource by lazy {
+        org.telegram.messenger.feature.system.emudetector.data.datasource.EmuDetectorRemoteDataSource(account)
+    }
+
+    val emuDetectorLocalDataSource: org.telegram.messenger.feature.system.emudetector.data.datasource.EmuDetectorLocalDataSource by lazy {
+        org.telegram.messenger.feature.system.emudetector.data.datasource.EmuDetectorLocalDataSource()
+    }
+
+    fun createEmuDetectorRepository(): org.telegram.messenger.feature.system.emudetector.domain.repository.EmuDetectorRepository {
+        return org.telegram.messenger.feature.system.emudetector.data.repository.EmuDetectorRepositoryImpl(
+            localDataSource = emuDetectorLocalDataSource,
+            remoteDataSource = emuDetectorRemoteDataSource
+        )
+    }
+
     private var customEmuDetectorRepository: org.telegram.messenger.feature.system.emudetector.domain.repository.EmuDetectorRepository? = null
 
     var emuDetectorRepository: org.telegram.messenger.feature.system.emudetector.domain.repository.EmuDetectorRepository
-        get() = customEmuDetectorRepository ?: org.telegram.messenger.feature.system.emudetector.data.repository.LegacyEmuDetectorRepository()
+        get() = customEmuDetectorRepository ?: createEmuDetectorRepository()
         set(value) {
             customEmuDetectorRepository = value
         }
@@ -1954,11 +1984,26 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    // --- FlagSecure ---
+    // --- AnimationLocker ---
+    val animationLockerRemoteDataSource: org.telegram.messenger.feature.system.animationlocker.data.datasource.AnimationLockerRemoteDataSource by lazy {
+        org.telegram.messenger.feature.system.animationlocker.data.datasource.AnimationLockerRemoteDataSource(account)
+    }
+
+    val animationLockerLocalDataSource: org.telegram.messenger.feature.system.animationlocker.data.datasource.AnimationLockerLocalDataSource by lazy {
+        org.telegram.messenger.feature.system.animationlocker.data.datasource.AnimationLockerLocalDataSource(account = account)
+    }
+
+    fun createAnimationLockerRepository(): org.telegram.messenger.feature.system.animationlocker.domain.repository.AnimationLockerRepository {
+        return org.telegram.messenger.feature.system.animationlocker.data.repository.AnimationLockerRepositoryImpl(
+            localDataSource = animationLockerLocalDataSource,
+            remoteDataSource = animationLockerRemoteDataSource
+        )
+    }
+
     private var customAnimationLockerRepository: org.telegram.messenger.feature.system.animationlocker.domain.repository.AnimationLockerRepository? = null
 
     var animationLockerRepository: org.telegram.messenger.feature.system.animationlocker.domain.repository.AnimationLockerRepository
-        get() = customAnimationLockerRepository ?: org.telegram.messenger.feature.system.animationlocker.data.repository.LegacyAnimationLockerRepository(account)
+        get() = customAnimationLockerRepository ?: createAnimationLockerRepository()
         set(value) {
             customAnimationLockerRepository = value
         }
