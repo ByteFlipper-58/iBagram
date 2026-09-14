@@ -1399,6 +1399,18 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
         return localInstance;
     }
 
+    public static org.telegram.messenger.feature.media.audioplayer.domain.repository.AudioPlayerRepository getAudioPlayerRepository(int account) {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getMedia().getAudioPlayerRepository();
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    public static org.telegram.messenger.feature.media.audioplayer.domain.repository.AudioPlayerRepository getAudioPlayerRepository() {
+        return getAudioPlayerRepository(UserConfig.selectedAccount);
+    }
+
     public MediaController() {
         recordQueue = new DispatchQueue("recordQueue");
         recordQueue.setPriority(Thread.MAX_PRIORITY);

@@ -1,7 +1,16 @@
 package org.telegram.messenger.feature.media.di
 
+import org.telegram.messenger.feature.media.audioplayer.data.datasource.AudioPlayerLocalDataSource
+import org.telegram.messenger.feature.media.audioplayer.data.datasource.AudioPlayerRemoteDataSource
+import org.telegram.messenger.feature.media.audioplayer.data.repository.AudioPlayerRepositoryImpl
 import org.telegram.messenger.feature.media.audioplayer.data.repository.LegacyAudioPlayerRepository
 import org.telegram.messenger.feature.media.audioplayer.domain.repository.AudioPlayerRepository
+import org.telegram.messenger.feature.media.autodeletemedia.data.datasource.AutoDeleteMediaLocalDataSource
+import org.telegram.messenger.feature.media.autodeletemedia.data.datasource.AutoDeleteMediaRemoteDataSource
+import org.telegram.messenger.feature.media.autodeletemedia.data.repository.AutoDeleteMediaRepositoryImpl
+import org.telegram.messenger.feature.media.contentpreview.data.datasource.ContentPreviewLocalDataSource
+import org.telegram.messenger.feature.media.contentpreview.data.datasource.ContentPreviewRemoteDataSource
+import org.telegram.messenger.feature.media.contentpreview.data.repository.ContentPreviewRepositoryImpl
 import org.telegram.messenger.feature.media.audioplayer.domain.usecase.ConfigureEqualizerUseCase
 import org.telegram.messenger.feature.media.audioplayer.domain.usecase.CyclePlaybackSpeedUseCase
 import org.telegram.messenger.feature.media.audioplayer.domain.usecase.CycleRepeatModeUseCase
@@ -974,13 +983,28 @@ class MediaContainer(val account: Int) {
         )
     }
 
-    fun createContentPreviewRepository(): ContentPreviewRepository {
-        return LegacyContentPreviewRepository()
+    val contentPreviewRemoteDataSource: ContentPreviewRemoteDataSource by lazy {
+        ContentPreviewRemoteDataSource(account)
     }
 
-    val contentPreviewRepository: ContentPreviewRepository by lazy {
-        LegacyContentPreviewRepository()
+    val contentPreviewLocalDataSource: ContentPreviewLocalDataSource by lazy {
+        ContentPreviewLocalDataSource()
     }
+
+    fun createContentPreviewRepository(): ContentPreviewRepository {
+        return ContentPreviewRepositoryImpl(
+            localDataSource = contentPreviewLocalDataSource,
+            remoteDataSource = contentPreviewRemoteDataSource
+        )
+    }
+
+    private var customContentPreviewRepository: ContentPreviewRepository? = null
+
+    var contentPreviewRepository: ContentPreviewRepository
+        get() = customContentPreviewRepository ?: createContentPreviewRepository()
+        set(value) {
+            customContentPreviewRepository = value
+        }
 
     val evaluatePreviewEligibilityUseCase: EvaluatePreviewEligibilityUseCase
         get() = EvaluatePreviewEligibilityUseCase()
@@ -1099,9 +1123,28 @@ class MediaContainer(val account: Int) {
         )
     }
 
-    val audioPlayerRepository: AudioPlayerRepository by lazy {
-        LegacyAudioPlayerRepository(account)
+    val audioPlayerRemoteDataSource: AudioPlayerRemoteDataSource by lazy {
+        AudioPlayerRemoteDataSource(account)
     }
+
+    val audioPlayerLocalDataSource: AudioPlayerLocalDataSource by lazy {
+        AudioPlayerLocalDataSource(account)
+    }
+
+    fun createAudioPlayerRepository(): AudioPlayerRepository {
+        return AudioPlayerRepositoryImpl(
+            localDataSource = audioPlayerLocalDataSource,
+            remoteDataSource = audioPlayerRemoteDataSource
+        )
+    }
+
+    private var customAudioPlayerRepository: AudioPlayerRepository? = null
+
+    var audioPlayerRepository: AudioPlayerRepository
+        get() = customAudioPlayerRepository ?: createAudioPlayerRepository()
+        set(value) {
+            customAudioPlayerRepository = value
+        }
 
     val observeAudioPlaybackStateUseCase: ObservePlaybackStateUseCase
         get() = ObservePlaybackStateUseCase(audioPlayerRepository)
@@ -1317,9 +1360,28 @@ class MediaContainer(val account: Int) {
         )
     }
 
-    val autoDeleteMediaRepository: AutoDeleteMediaRepository by lazy {
-        LegacyAutoDeleteMediaRepository(account)
+    val autoDeleteMediaRemoteDataSource: AutoDeleteMediaRemoteDataSource by lazy {
+        AutoDeleteMediaRemoteDataSource(account)
     }
+
+    val autoDeleteMediaLocalDataSource: AutoDeleteMediaLocalDataSource by lazy {
+        AutoDeleteMediaLocalDataSource(account)
+    }
+
+    fun createAutoDeleteMediaRepository(): AutoDeleteMediaRepository {
+        return AutoDeleteMediaRepositoryImpl(
+            localDataSource = autoDeleteMediaLocalDataSource,
+            remoteDataSource = autoDeleteMediaRemoteDataSource
+        )
+    }
+
+    private var customAutoDeleteMediaRepository: AutoDeleteMediaRepository? = null
+
+    var autoDeleteMediaRepository: AutoDeleteMediaRepository
+        get() = customAutoDeleteMediaRepository ?: createAutoDeleteMediaRepository()
+        set(value) {
+            customAutoDeleteMediaRepository = value
+        }
 
     val checkShouldRunCleanupUseCase: CheckShouldRunCleanupUseCase
         get() = CheckShouldRunCleanupUseCase()

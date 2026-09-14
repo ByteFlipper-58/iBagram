@@ -1282,6 +1282,18 @@ public class ContentPreviewViewer {
         return localInstance;
     }
 
+    public static org.telegram.messenger.feature.media.contentpreview.domain.repository.ContentPreviewRepository getContentPreviewRepository(int account) {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getMedia().getContentPreviewRepository();
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    public static org.telegram.messenger.feature.media.contentpreview.domain.repository.ContentPreviewRepository getContentPreviewRepository() {
+        return getContentPreviewRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
+
     public static boolean hasInstance() {
         return Instance != null;
     }

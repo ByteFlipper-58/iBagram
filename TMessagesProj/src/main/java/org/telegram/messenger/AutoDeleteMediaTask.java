@@ -16,6 +16,18 @@ public class AutoDeleteMediaTask {
 
     public static Set<String> usingFilePaths = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
+    public static org.telegram.messenger.feature.media.autodeletemedia.domain.repository.AutoDeleteMediaRepository getAutoDeleteMediaRepository(int account) {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getMedia().getAutoDeleteMediaRepository();
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    public static org.telegram.messenger.feature.media.autodeletemedia.domain.repository.AutoDeleteMediaRepository getAutoDeleteMediaRepository() {
+        return getAutoDeleteMediaRepository(UserConfig.selectedAccount);
+    }
+
     public static void run() {
         int time = (int) (System.currentTimeMillis() / 1000);
         if (Math.abs(time - SharedConfig.lastKeepMediaCheckTime) < 24 * 60 * 60) {

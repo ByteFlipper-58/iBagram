@@ -1312,10 +1312,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `RecyclerScrollLocalDataSource.kt` (Scroll animation eligibility arbitration, plan calculation, scroll length geometry, translation offsets, progress interpolation)
     - `RecyclerScrollRepositoryImpl.kt` (Clean repository coordinating list scroll animations, eligibility evaluation, and view translation calculations)
     - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+  - [x] Feature: `AudioPlayer` Strangling (`feature.media.audioplayer` - ADR 196):
+    - `AudioPlayerRemoteDataSource.kt` (Remote streaming configuration and cloud playback policies)
+    - `AudioPlayerLocalDataSource.kt` (Playback state, playlist queue, shuffle/repeat modes, equalizer bands, and audio routes)
+    - `AudioPlayerRepositoryImpl.kt` (Clean repository coordinating playback state, queue navigation, equalizer, and remote sync)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `MediaController.java` strangler boundary with `getAudioPlayerRepository(account)` and `getAudioPlayerRepository()` accessors.
+  - [x] Feature: `AutoDeleteMedia` Strangling (`feature.media.autodeletemedia` - ADR 197):
+    - `AutoDeleteMediaRemoteDataSource.kt` (Cloud auto-delete media retention policies and telemetry)
+    - `AutoDeleteMediaLocalDataSource.kt` (Thread-safe file locks, cache eviction candidate scanning, and cleanup passes on Dispatchers.IO)
+    - `AutoDeleteMediaRepositoryImpl.kt` (Clean repository coordinating cleanup passes, locked files, and state observation)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `AutoDeleteMediaTask.java` strangler boundary with `getAutoDeleteMediaRepository(account)` and `getAutoDeleteMediaRepository()` accessors.
+  - [x] Feature: `ContentPreview` Strangling (`feature.media.contentpreview` - ADR 198):
+    - `ContentPreviewRemoteDataSource.kt` (Remote content preview metadata and cloud preview configuration)
+    - `ContentPreviewLocalDataSource.kt` (Interactive content preview overlay state, drag gesture progress, and contextual action menus)
+    - `ContentPreviewRepositoryImpl.kt` (Clean repository coordinating preview opening, drag progress, contextual menus, and dismissal)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ContentPreviewViewer.java` strangler boundary with `getContentPreviewRepository(account)` and `getContentPreviewRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 198: Content Preview Overlay, Gesture Drag Progress & Contextual Action Menus Strangling via Clean DataSources & ContentPreviewRepositoryImpl
+- **Context:** Sticker, emoji, and GIF preview popups with interactive drag-to-menu gestures and contextual actions were historically coordinated in `ContentPreviewViewer.java` (~2423 lines). State, view animations, and action triggers were tangled with static singleton access.
+- **Decision:** Apply the Strangler Fig pattern to `feature.media.contentpreview`:
+  1. Implement `ContentPreviewRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing preview policy configuration extension points.
+  2. Implement `ContentPreviewLocalDataSource`:
+     - Manages thread-safe `ContentPreviewState` flow, item selection, drag progress interpolation, and contextual action resolution.
+  3. Implement `ContentPreviewRepositoryImpl`:
+     - Implements `ContentPreviewRepository`, coordinating preview opening, drag updates, menu visibility, and dismissal.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `ContentPreviewRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `ContentPreviewViewer.getContentPreviewRepository(account)` and `getContentPreviewRepository()` accessors.
+- **Consequences:** Content preview state machine and drag gesture calculations are decoupled behind clean domain contracts. 100% unit test coverage achieved with `ContentPreviewRepositoryImplTest.kt`.
+
+### ADR 197: Auto-Delete Media Policies, Retention Rules & File Lock Registry Strangling via Clean DataSources & AutoDeleteMediaRepositoryImpl
+- **Context:** Automated background media cache eviction and retention limits were coordinated in `AutoDeleteMediaTask.java` and `CacheByChatsController.java`, checking file age against keep-media settings and verifying file locking sets. Calling static methods from various components coupled cache cleaning with singleton state.
+- **Decision:** Apply the Strangler Fig pattern to `feature.media.autodeletemedia`:
+  1. Implement `AutoDeleteMediaRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing retention policy synchronization extension points.
+  2. Implement `AutoDeleteMediaLocalDataSource`:
+     - Manages thread-safe file locks set (`ConcurrentHashMap`), cache eviction candidate scanning, and cleanup passes executed safely on `Dispatchers.IO`.
+  3. Implement `AutoDeleteMediaRepositoryImpl`:
+     - Implements `AutoDeleteMediaRepository`, coordinating cleanup execution, locked files management, and state observation.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `AutoDeleteMediaRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `AutoDeleteMediaTask.getAutoDeleteMediaRepository(account)` and `getAutoDeleteMediaRepository()` accessors.
+- **Consequences:** Media auto-delete passes and file locking arbitration are decoupled behind clean domain contracts. 100% unit test coverage achieved with `AutoDeleteMediaRepositoryImplTest.kt`.
+
+### ADR 196: Audio Player, Equalizer & Output Route Strangling via Clean DataSources & AudioPlayerRepositoryImpl
+- **Context:** Audio and music playback in Telegram Android is managed by `MediaController.java` (~7000 lines), controlling ExoPlayer instances, playlist navigation, equalizer bands, bass boost, proximity sensor routing, and playback speeds. UI components directly manipulated static singleton methods, hindering modularization and testing.
+- **Decision:** Apply the Strangler Fig pattern to `feature.media.audioplayer`:
+  1. Implement `AudioPlayerRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing cloud streaming policies and playback telemetry.
+  2. Implement `AudioPlayerLocalDataSource`:
+     - Manages reactive `AudioPlaybackState` flow, playlist queues, shuffle order generation, repeat mode transitions, equalizer bands, bass boost, and audio route selection.
+  3. Implement `AudioPlayerRepositoryImpl`:
+     - Implements `AudioPlayerRepository`, coordinating playback state, queue navigation, equalizer adjustments, and remote event reporting.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `AudioPlayerRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `MediaController.getAudioPlayerRepository(account)` and `getAudioPlayerRepository()` accessors.
+- **Consequences:** Audio playback state management, equalizer controls, and playlist navigation are decoupled behind clean domain contracts. 100% unit test coverage achieved with `AudioPlayerRepositoryImplTest.kt`.
 
 ### ADR 195: Recycler List Scroll Animations, Translation Geometry & View Arbitration Strangling via Clean DataSources & RecyclerScrollRepositoryImpl
 - **Context:** Smooth scrolling and transition animations for chat and dialog lists involved complex calculations of visible view ranges, scroll diffs, container heights, and directional view translations. In the legacy architecture, these calculations were embedded directly in UI controllers and helper classes without isolated testability or clean domain separation.
