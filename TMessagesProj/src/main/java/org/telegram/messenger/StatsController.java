@@ -150,6 +150,20 @@ public class StatsController extends BaseController {
         return getNetworkStatsRepository(currentAccount);
     }
 
+    @Nullable
+    public static org.telegram.messenger.feature.system.datastorage.domain.repository.DataStorageRepository getDataStorageRepository(int account) {
+        try {
+            return AccountFeatureContainer.get(account).getSystem().getDataStorageRepository();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    @Nullable
+    public org.telegram.messenger.feature.system.datastorage.domain.repository.DataStorageRepository getDataStorageRepository() {
+        return getDataStorageRepository(currentAccount);
+    }
+
     private StatsController(int account) {
         super(account);
         File filesDir = ApplicationLoader.getFilesDirFixed();

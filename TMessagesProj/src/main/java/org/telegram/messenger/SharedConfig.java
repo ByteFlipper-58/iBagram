@@ -51,6 +51,20 @@ import java.util.List;
 import java.util.Locale;
 
 public class SharedConfig {
+    @androidx.annotation.Nullable
+    public static org.telegram.messenger.feature.system.settings.domain.repository.SettingsRepository getSettingsRepository() {
+        return getSettingsRepository(UserConfig.selectedAccount);
+    }
+
+    @androidx.annotation.Nullable
+    public static org.telegram.messenger.feature.system.settings.domain.repository.SettingsRepository getSettingsRepository(int account) {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getSystem().getSettingsRepository();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
     /**
      * V2: Ping and check time serialized
      */

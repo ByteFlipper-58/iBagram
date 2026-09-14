@@ -199,6 +199,18 @@ public class NotificationsController extends BaseController implements Notificat
         return localInstance;
     }
 
+    public static org.telegram.messenger.feature.system.ringtones.domain.repository.RingtoneRepository getRingtoneRepository(int account) {
+        try {
+            return org.telegram.messenger.core.di.AccountFeatureContainer.get(account).getSystem().getRingtoneRepository();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    public org.telegram.messenger.feature.system.ringtones.domain.repository.RingtoneRepository getRingtoneRepository() {
+        return getRingtoneRepository(currentAccount);
+    }
+
     public NotificationsController(int instance) {
         super(instance);
         notificationId = currentAccount + 1;

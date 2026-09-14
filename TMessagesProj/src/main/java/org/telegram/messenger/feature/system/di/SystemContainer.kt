@@ -52,10 +52,28 @@ import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.Start
 import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.StopCountdownTimerUseCase
 import org.telegram.messenger.feature.system.countdowntimer.domain.usecase.TickCountdownTimerUseCase
 import org.telegram.messenger.feature.system.countdowntimer.presentation.CountdownTimerViewModel
+import org.telegram.messenger.feature.system.datastorage.data.datasource.DataStorageLocalDataSource
+import org.telegram.messenger.feature.system.datastorage.data.datasource.DataStorageRemoteDataSource
+import org.telegram.messenger.feature.system.datastorage.data.repository.DataStorageRepositoryImpl
 import org.telegram.messenger.feature.system.datastorage.data.repository.LegacyDataStorageRepository
 import org.telegram.messenger.feature.system.datastorage.domain.repository.DataStorageRepository
 import org.telegram.messenger.feature.system.datastorage.domain.usecase.ClearCacheUseCase
 import org.telegram.messenger.feature.system.datastorage.domain.usecase.ClearDatabaseUseCase
+import org.telegram.messenger.feature.system.ringtones.data.datasource.RingtoneLocalDataSource
+import org.telegram.messenger.feature.system.ringtones.data.datasource.RingtoneRemoteDataSource
+import org.telegram.messenger.feature.system.ringtones.data.repository.RingtoneRepositoryImpl
+import org.telegram.messenger.feature.system.settings.data.datasource.SettingsLocalDataSource
+import org.telegram.messenger.feature.system.settings.data.datasource.SettingsRemoteDataSource
+import org.telegram.messenger.feature.system.settings.data.repository.SettingsRepositoryImpl
+import org.telegram.messenger.feature.system.settings.domain.repository.SettingsRepository
+import org.telegram.messenger.feature.system.settings.domain.usecase.GetSettingsUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.ObserveSettingsUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateBubbleRadiusUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateFontSizeUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateSaveToGalleryUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateStreamMediaUseCase
+import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateSyncContactsUseCase
+import org.telegram.messenger.feature.system.settings.presentation.SettingsViewModel
 import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetAutoDownloadPresetUseCase
 import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetKeepMediaSettingsUseCase
 import org.telegram.messenger.feature.system.datastorage.domain.usecase.GetNetworkUsageUseCase
@@ -247,16 +265,6 @@ import org.telegram.messenger.feature.system.ringtones.domain.usecase.SelectRing
 import org.telegram.messenger.feature.system.ringtones.domain.usecase.UploadRingtoneUseCase
 import org.telegram.messenger.feature.system.ringtones.domain.usecase.ValidateRingtoneEligibilityUseCase
 import org.telegram.messenger.feature.system.ringtones.presentation.RingtoneViewModel
-import org.telegram.messenger.feature.system.settings.data.repository.LegacySettingsRepository
-import org.telegram.messenger.feature.system.settings.domain.repository.SettingsRepository
-import org.telegram.messenger.feature.system.settings.domain.usecase.GetSettingsUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.ObserveSettingsUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateBubbleRadiusUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateFontSizeUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateSaveToGalleryUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateStreamMediaUseCase
-import org.telegram.messenger.feature.system.settings.domain.usecase.UpdateSyncContactsUseCase
-import org.telegram.messenger.feature.system.settings.presentation.SettingsViewModel
 import org.telegram.messenger.feature.system.themes.data.repository.LegacyThemeRepository
 import org.telegram.messenger.feature.system.themes.domain.repository.ThemeRepository
 import org.telegram.messenger.feature.system.themes.domain.usecase.ApplyThemeUseCase
@@ -293,10 +301,25 @@ import org.telegram.ui.MainTabsActivityController
 
 class SystemContainer(val account: Int) {
 
+    val settingsRemoteDataSource: SettingsRemoteDataSource by lazy {
+        SettingsRemoteDataSource(account)
+    }
+
+    val settingsLocalDataSource: SettingsLocalDataSource by lazy {
+        SettingsLocalDataSource(account)
+    }
+
+    fun createSettingsRepository(): SettingsRepository {
+        return SettingsRepositoryImpl(
+            localDataSource = settingsLocalDataSource,
+            remoteDataSource = settingsRemoteDataSource
+        )
+    }
+
     private var customSettingsRepository: SettingsRepository? = null
 
     var settingsRepository: SettingsRepository
-        get() = customSettingsRepository ?: LegacySettingsRepository(account)
+        get() = customSettingsRepository ?: createSettingsRepository()
         set(value) {
             customSettingsRepository = value
         }
@@ -520,10 +543,25 @@ class SystemContainer(val account: Int) {
         )
     }
 
+    val dataStorageRemoteDataSource: DataStorageRemoteDataSource by lazy {
+        DataStorageRemoteDataSource(account)
+    }
+
+    val dataStorageLocalDataSource: DataStorageLocalDataSource by lazy {
+        DataStorageLocalDataSource(account)
+    }
+
+    fun createDataStorageRepository(): DataStorageRepository {
+        return DataStorageRepositoryImpl(
+            localDataSource = dataStorageLocalDataSource,
+            remoteDataSource = dataStorageRemoteDataSource
+        )
+    }
+
     private var customDataStorageRepository: DataStorageRepository? = null
 
     var dataStorageRepository: DataStorageRepository
-        get() = customDataStorageRepository ?: LegacyDataStorageRepository(account)
+        get() = customDataStorageRepository ?: createDataStorageRepository()
         set(value) {
             customDataStorageRepository = value
         }
@@ -1308,9 +1346,28 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    val ringtoneRepository: RingtoneRepository by lazy {
-        LegacyRingtoneRepository(account)
+    val ringtoneRemoteDataSource: RingtoneRemoteDataSource by lazy {
+        RingtoneRemoteDataSource(account)
     }
+
+    val ringtoneLocalDataSource: RingtoneLocalDataSource by lazy {
+        RingtoneLocalDataSource(account)
+    }
+
+    fun createRingtoneRepository(): RingtoneRepository {
+        return RingtoneRepositoryImpl(
+            localDataSource = ringtoneLocalDataSource,
+            remoteDataSource = ringtoneRemoteDataSource
+        )
+    }
+
+    private var customRingtoneRepository: RingtoneRepository? = null
+
+    var ringtoneRepository: RingtoneRepository
+        get() = customRingtoneRepository ?: createRingtoneRepository()
+        set(value) {
+            customRingtoneRepository = value
+        }
 
     val validateRingtoneEligibilityUseCase: ValidateRingtoneEligibilityUseCase
         get() = ValidateRingtoneEligibilityUseCase()
@@ -2166,5 +2223,5 @@ class SystemContainer(val account: Int) {
             observeAnimationLockerStateUseCase = observeAnimationLockerStateUseCase
         )
     }
-
 }
+

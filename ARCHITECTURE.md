@@ -1249,10 +1249,67 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `CountdownTimerLocalDataSource.kt` (ConcurrentHashMap timer records, ticking jobs, pause/resume, manual tick arbitration, StateFlow, SharedFlow)
     - `CountdownTimerRepositoryImpl.kt` (Clean repository coordinating start, stop, pause, resume, manual ticks, clear, and reactive observation)
     - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+  - [x] Feature: `DataStorage` Strangling (`feature.system.datastorage` - ADR 185):
+    - `DataStorageRemoteDataSource.kt` (System extension point for cloud storage limits, cleanup policies, and remote auto-download profiles)
+    - `DataStorageLocalDataSource.kt` (Local cache sizes, directory sizes, database maintenance, network stats, auto-download presets, keep-media settings, headless test mode)
+    - `DataStorageRepositoryImpl.kt` (Clean repository coordinating storage usage, cache clearing, database compaction, auto-download presets, and keep-media rules)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `StatsController.java` strangler boundary with `getDataStorageRepository(account)` and `getDataStorageRepository()` accessors.
+  - [x] Feature: `Ringtones` Strangling (`feature.system.ringtones` - ADR 186):
+    - `RingtoneRemoteDataSource.kt` (Remote MTProto custom sound synchronization, document saving/unsaving, and RPC cancellation)
+    - `RingtoneLocalDataSource.kt` (In-memory ringtone registry, eligibility limits, title extraction, upload lifecycle, tone selection, headless test mode)
+    - `RingtoneRepositoryImpl.kt` (Clean repository coordinating notification sounds, upload flows, selection, and reactive observation)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `NotificationsController.java` strangler boundary with `getRingtoneRepository(account)` and `getRingtoneRepository()` accessors.
+  - [x] Feature: `Settings` Strangling (`feature.system.settings` - ADR 187):
+    - `SettingsRemoteDataSource.kt` (Remote MTProto global privacy and account setting synchronization)
+    - `SettingsLocalDataSource.kt` (Thread-safe aggregated client settings, font size, bubble radius, stream media, gallery save, contact sync, headless test mode)
+    - `SettingsRepositoryImpl.kt` (Clean repository coordinating client preferences, UI appearance updates, and reactive observation)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `SharedConfig.java` strangler boundary with `getSettingsRepository(account)` and `getSettingsRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 187: Client Settings, Appearance Preferences & Account Configuration Strangling via Clean DataSources & SettingsRepositoryImpl
+- **Context:** In Telegram Android, client settings and configuration were distributed across mutable static singletons: `SharedConfig` (global app-wide preferences like font size, bubble radius, stream media, in-app camera) and `UserConfig` (account-scoped preferences like contact syncing, call tab visibility). Direct access from UI components scattered configuration logic and caused potential race conditions during persistence without isolated JVM testability.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.settings`:
+  1. Implement `SettingsRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote MTProto global privacy and setting synchronization extension points.
+  2. Implement `SettingsLocalDataSource`:
+     - Encapsulates thread-safe aggregated `SettingsModel`, main-thread mutation dispatching, config persistence, and headless JVM test mode.
+  3. Implement `SettingsRepositoryImpl`:
+     - Implements `SettingsRepository`, coordinating client preferences, appearance updates, media streaming switches, contact sync rules, and reactive state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `SettingsRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `SharedConfig.getSettingsRepository(account)` and `getSettingsRepository()` accessors.
+- **Consequences:** Client settings and appearance preferences are decoupled behind clean domain contracts. 100% unit test coverage achieved with `SettingsRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 186: Notification Sounds, Cloud Ringtones & Tone Conversion Strangling via Clean DataSources & RingtoneRepositoryImpl
+- **Context:** Telegram supports uploading and applying custom notification sound effects (short audio documents under 5 seconds and 300 KB). Managing uploaded tones, audio duration validation, document conversions, and sound path resolution was split between `MediaDataController` (`RingtoneDataStore`, `RingtoneUploader`), `NotificationsController`, and UI fragments without unified domain contracts or clean data source abstractions.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.ringtones`:
+  1. Implement `RingtoneRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote MTProto saved ringtone fetching and document saving/unsaving.
+  2. Implement `RingtoneLocalDataSource`:
+     - Encapsulates thread-safe in-memory ringtone registry, eligibility limits (duration <= 5s, size <= 300 KB, supported MIME types), upload tracking with cancellation, tone selection, and headless JVM test mode.
+  3. Implement `RingtoneRepositoryImpl`:
+     - Implements `RingtoneRepository`, coordinating tone retrieval, validation, upload flow, document persistence, and reactive state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `RingtoneRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `NotificationsController.getRingtoneRepository(account)` and `getRingtoneRepository()` accessors.
+- **Consequences:** Custom notification sound effects and upload state machines are decoupled behind clean domain contracts. 100% unit test coverage achieved with `RingtoneRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 185: Data & Storage Management, Cache Clearing & Auto-Download Presets Strangling via Clean DataSources & DataStorageRepositoryImpl
+- **Context:** In Telegram Android, cache calculation, directory cleaning, local SQLite maintenance, network stats, and auto-download presets were scattered across `FileLoader`, `DownloadController`, `CacheByChatsController`, `MessagesStorage`, and `StatsController`. Direct invocation from UI components caused heavy background thread orchestration in Activities and made storage operations hard to test in isolation.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.datastorage`:
+  1. Implement `DataStorageRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote cloud storage policy and auto-download profile extension points.
+  2. Implement `DataStorageLocalDataSource`:
+     - Encapsulates directory size calculations, media cache clearing, database compaction, network usage counters, auto-download preset configuration, keep-media rules, and headless JVM test mode.
+  3. Implement `DataStorageRepositoryImpl`:
+     - Implements `DataStorageRepository`, coordinating cache clearing, database compaction, network stats reset, preset updates, and reactive state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `DataStorageRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `StatsController.getDataStorageRepository(account)` and `getDataStorageRepository()` accessors.
+- **Consequences:** Storage management, cache cleanup, and network consumption monitoring are decoupled behind clean domain contracts. 100% unit test coverage achieved with `DataStorageRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 184: Precision Countdown Timer, Lifecycle State Machine & Tick Arbitration Strangling via Clean DataSources & CountdownTimerRepositoryImpl
 - **Context:** Managing asynchronous countdown timers for verification codes, temporary invites, self-destructing media, and auction lots was fragmented across UI fragments using raw handlers and arbitrary postDelayed loops without unified state machines, pause/resume semantics, or testable abstractions.
