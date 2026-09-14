@@ -92,6 +92,15 @@ import java.util.TreeSet;
 
 public class StoriesController {
 
+    public static org.telegram.messenger.feature.media.stories.domain.repository.StoriesRepository getStoriesRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return container != null ? container.getMedia().getStoriesRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.media.stories.domain.repository.StoriesRepository getStoriesRepository() {
+        return getStoriesRepository(UserConfig.selectedAccount);
+    }
+
     public final static int STATE_READ = 0;
     public final static int STATE_UNREAD = 1;
     public final static int STATE_UNREAD_CLOSE_FRIEND = 2;

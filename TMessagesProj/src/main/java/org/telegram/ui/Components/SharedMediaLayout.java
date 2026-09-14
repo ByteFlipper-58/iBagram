@@ -199,6 +199,15 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
         return type == TAB_STORIES || type == TAB_ARCHIVED_STORIES || isStoryAlbumPageType(type);
     }
 
+    public static org.telegram.messenger.feature.media.sharedmedia.domain.repository.SharedMediaRepository getSharedMediaRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return container != null ? container.getMedia().getSharedMediaRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.media.sharedmedia.domain.repository.SharedMediaRepository getSharedMediaRepository() {
+        return getSharedMediaRepository(UserConfig.selectedAccount);
+    }
+
     public static boolean isStoryAlbumPageType(int type) {
         return (type & ~TAB_STORIES_ALBUM_MASK) == TAB_STORIES_ALBUM_PREFIX;
     }

@@ -1348,10 +1348,86 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `MediaDataRepositoryImpl.kt` (Clean repository coordinating album queries and media item retrieval)
     - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `MediaDataController.java` strangler boundary with `getMediaDataRepository(account)` and `getMediaDataRepository()` accessors.
+  - [x] Feature: `PhotoViewer` Strangling (`feature.media.photoviewer` - ADR 202):
+    - `PhotoViewerRemoteDataSource.kt` (Cloud photo/video metadata, caption translation, and streaming manifest fetching)
+    - `PhotoViewerLocalDataSource.kt` (Active photo/video state, viewer open/closed state, current index, zoom scale, gesture offsets, and PIP state)
+    - `PhotoViewerRepositoryImpl.kt` (Clean repository coordinating photo viewer lifecycle, navigation, zoom gestures, PIP transitions, and reactive state)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `PhotoViewer.java` strangler boundary with `getPhotoViewerRepository(account)` and `getPhotoViewerRepository()` accessors.
+  - [x] Feature: `SharedMedia` Strangling (`feature.media.sharedmedia` - ADR 203):
+    - `SharedMediaRemoteDataSource.kt` (Remote shared media pagination, type-specific queries: photos, videos, files, audio, links, voice)
+    - `SharedMediaLocalDataSource.kt` (Tab navigation state, search query, selected type filter, fast scroll index, and selection mode)
+    - `SharedMediaRepositoryImpl.kt` (Clean repository coordinating shared media tabs, type filters, selection mode, and reactive state observation)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `SharedMediaLayout.java` strangler boundary with `getSharedMediaRepository(account)` and `getSharedMediaRepository()` accessors.
+  - [x] Feature: `Stories` Strangling (`feature.media.stories` - ADR 204):
+    - `StoriesRemoteDataSource.kt` (MTProto stories fetching, peer stories queries, upload, reaction, privacy settings, and view count tracking)
+    - `StoriesLocalDataSource.kt` (Cached stories by peer ID, upload draft queue, active story viewer state, and unread indicator flows)
+    - `StoriesRepositoryImpl.kt` (Clean repository coordinating stories synchronization, upload pipeline, reaction dispatching, and reactive state)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `StoriesController.java` strangler boundary with `getStoriesRepository(account)` and `getStoriesRepository()` accessors.
+  - [x] Feature: `VoIP` Strangling (`feature.media.voip` - ADR 205):
+    - `VoIPRemoteDataSource.kt` (Signaling RPC, group call participants synchronization, encryption key exchange, and server endpoints)
+    - `VoIPLocalDataSource.kt` (Active call state, mute status, speakerphone routing, video state, signal strength, call duration, and audio mode)
+    - `VoIPRepositoryImpl.kt` (Clean repository coordinating call lifecycle, audio routing, mute/unmute, video capture toggling, and reactive state)
+    - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `VoIPService.java` strangler boundary with `getVoIPRepository(account)` and `getVoIPRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 205: VoIP Call Lifecycle, Audio/Video Routing & Hardware Strangling via Clean DataSources & VoIPRepositoryImpl
+- **Context:** Voice and video call operations, WebRTC signaling, audio hardware routing (Bluetooth SCO, earpiece, speaker), and call quality telemetry were centralized in `VoIPService.java` (~4300 lines) with tight coupling to Android services, broadcast receivers, and static singletons.
+- **Decision:** Apply the Strangler Fig pattern to `feature.media.voip`:
+  1. Implement `VoIPRemoteDataSource`:
+     - Encapsulates remote call signaling, group call participant sync, and server relay updates.
+  2. Implement `VoIPLocalDataSource`:
+     - Maintains reactive call state (`IDLE`, `CONNECTING`, `EXCHANGING_KEYS`, `RINGING`, `ACTIVE`, `ENDED`), audio route tracking (EARPIECE, SPEAKER, BLUETOOTH), mic mute, camera toggle, and call duration.
+  3. Implement `VoIPRepositoryImpl`:
+     - Implements `VoIPRepository`, coordinating call lifecycle transitions, audio output switching, mute controls, and reactive observation.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `VoIPRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `VoIPService.getVoIPRepository(account)` and `getVoIPRepository()` accessors.
+- **Consequences:** VoIP state management and hardware controls are decoupled behind clean domain contracts and use cases. 100% unit test coverage achieved with `VoIPRepositoryImplTest.kt`.
+
+### ADR 204: Stories State, Pagination, Upload Lifecycle & Content Strangling via Clean DataSources & StoriesRepositoryImpl
+- **Context:** Stories retrieval, pagination, upload pipeline, view counts, and reaction dispatching were orchestrated inside `StoriesController.java` (~6300 lines) using complex internal data structures and tight coupling to UI fragments.
+- **Decision:** Apply the Strangler Fig pattern to `feature.media.stories`:
+  1. Implement `StoriesRemoteDataSource`:
+     - Provides MTProto RPC calls for fetching peer stories, uploading story items, deleting stories, and reacting to stories.
+  2. Implement `StoriesLocalDataSource`:
+     - Manages thread-safe story cache by peer ID, upload draft queues, active viewer index, and reactive story list flows.
+  3. Implement `StoriesRepositoryImpl`:
+     - Implements `StoriesRepository`, coordinating stories loading, upload state, reactions, and reactive observation.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `StoriesRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `StoriesController.getStoriesRepository(account)` and `getStoriesRepository()` accessors.
+- **Consequences:** Story data management and reactions are cleanly separated behind domain contracts. 100% unit test coverage achieved with `StoriesRepositoryImplTest.kt`.
+
+### ADR 203: Shared Media Layout Tabs, Fast Scrolling & Type Filtering Strangling via Clean DataSources & SharedMediaRepositoryImpl
+- **Context:** Shared media browsing across chats and channels (media, files, audio, links, voice notes, GIFs) was coupled inside `SharedMediaLayout.java` (~5400 lines) with direct SQLite queries and manual adapter state updates.
+- **Decision:** Apply the Strangler Fig pattern to `feature.media.sharedmedia`:
+  1. Implement `SharedMediaRemoteDataSource`:
+     - Provides remote shared media querying by type and pagination cursors.
+  2. Implement `SharedMediaLocalDataSource`:
+     - Manages active tab state (`PHOTO_VIDEO`, `FILE`, `AUDIO`, `LINK`, `VOICE`, `GIF`), search filter queries, fast-scroller calendar index, selection mode, and reactive state flows.
+  3. Implement `SharedMediaRepositoryImpl`:
+     - Implements `SharedMediaRepository`, coordinating tab switches, item selection, type filters, and search query updates.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `SharedMediaRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `SharedMediaLayout.getSharedMediaRepository(account)` and `getSharedMediaRepository()` accessors.
+- **Consequences:** Shared media navigation and filtering logic are decoupled behind clean domain contracts. 100% unit test coverage achieved with `SharedMediaRepositoryImplTest.kt`.
+
+### ADR 202: Photo Viewer Overlay, Image Transformations, Gestures & Paging Strangling via Clean DataSources & PhotoViewerRepositoryImpl
+- **Context:** Fullscreen photo and video viewing, pinch-to-zoom gestures, panning, caption editing, picture-in-picture transitions, and paging were concentrated in `PhotoViewer.java` (~10400 lines) as a monolithic singleton view overlay.
+- **Decision:** Apply the Strangler Fig pattern to `feature.media.photoviewer`:
+  1. Implement `PhotoViewerRemoteDataSource`:
+     - Encapsulates remote photo/video metadata loading, caption translation, and streaming manifest fetching.
+  2. Implement `PhotoViewerLocalDataSource`:
+     - Maintains active viewer state, current item index, zoom factor, translation offsets, PIP mode, and reactive state flows.
+  3. Implement `PhotoViewerRepositoryImpl`:
+     - Implements `PhotoViewerRepository`, coordinating open/close lifecycle, index navigation, zoom transformations, PIP transitions, and reactive state observation.
+  4. Update `MediaContainer` and `AccountFeatureContainer` to wire `PhotoViewerRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `PhotoViewer.getPhotoViewerRepository(account)` and `getPhotoViewerRepository()` accessors.
+- **Consequences:** Photo viewer presentation state, navigation, and geometric transformations are isolated behind clean domain contracts. 100% unit test coverage achieved with `PhotoViewerRepositoryImplTest.kt`.
 
 ### ADR 201: Media Data Controller, Album Indexing & Gallery Retrieval Strangling via Clean DataSources & MediaDataRepositoryImpl
 - **Context:** Media albums, photos, videos, and system gallery indexing were governed by `MediaDataController.java` and `MediaController.java` using raw `AlbumEntry` and `PhotoEntry` objects. Directly querying these collections from UI fragments coupled views with low-level storage routines.

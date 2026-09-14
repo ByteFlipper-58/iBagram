@@ -169,6 +169,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SuppressLint("NewApi")
 public class VoIPService extends Service implements SensorEventListener, AudioManager.OnAudioFocusChangeListener, VoIPController.ConnectionStateListener, NotificationCenter.NotificationCenterDelegate, VoIPServiceState {
 
+	public static org.telegram.messenger.feature.media.voip.domain.repository.VoIPRepository getVoIPRepository(int account) {
+		org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+		return container != null ? container.getMedia().getVoIPRepository() : null;
+	}
+
+	public static org.telegram.messenger.feature.media.voip.domain.repository.VoIPRepository getVoIPRepository() {
+		return getVoIPRepository(UserConfig.selectedAccount);
+	}
+
 	public static final int CALL_MIN_LAYER = 65;
 
 	public static final int STATE_HANGING_UP = 10;

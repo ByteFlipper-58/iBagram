@@ -176,6 +176,9 @@ import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetAllMedia
 import org.telegram.messenger.feature.media.mediadata.domain.usecase.GetMediaAlbumsUseCase
 import org.telegram.messenger.feature.media.mediadata.domain.usecase.ObserveMediaAlbumsUseCase
 import org.telegram.messenger.feature.media.mediadata.presentation.MediaViewModel
+import org.telegram.messenger.feature.media.photoviewer.data.datasource.PhotoViewerLocalDataSource
+import org.telegram.messenger.feature.media.photoviewer.data.datasource.PhotoViewerRemoteDataSource
+import org.telegram.messenger.feature.media.photoviewer.data.repository.PhotoViewerRepositoryImpl
 import org.telegram.messenger.feature.media.photoviewer.data.repository.LegacyPhotoViewerRepository
 import org.telegram.messenger.feature.media.photoviewer.domain.repository.PhotoViewerRepository
 import org.telegram.messenger.feature.media.photoviewer.domain.usecase.CalculateMediaPagingUseCase
@@ -203,6 +206,9 @@ import org.telegram.messenger.feature.media.pip.domain.usecase.TriggerPipActionU
 import org.telegram.messenger.feature.media.pip.domain.usecase.UnregisterPipSourceUseCase
 import org.telegram.messenger.feature.media.pip.domain.usecase.UpdatePipSourceStateUseCase
 import org.telegram.messenger.feature.media.pip.presentation.PipViewModel
+import org.telegram.messenger.feature.media.sharedmedia.data.datasource.SharedMediaLocalDataSource
+import org.telegram.messenger.feature.media.sharedmedia.data.datasource.SharedMediaRemoteDataSource
+import org.telegram.messenger.feature.media.sharedmedia.data.repository.SharedMediaRepositoryImpl
 import org.telegram.messenger.feature.media.sharedmedia.data.repository.LegacySharedMediaRepository
 import org.telegram.messenger.feature.media.sharedmedia.domain.repository.SharedMediaRepository
 import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.CalculateMediaSelectionUseCase
@@ -216,6 +222,9 @@ import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.SelectSha
 import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.SetSharedMediaFilterUseCase
 import org.telegram.messenger.feature.media.sharedmedia.domain.usecase.ToggleMediaSelectionUseCase
 import org.telegram.messenger.feature.media.sharedmedia.presentation.SharedMediaViewModel
+import org.telegram.messenger.feature.media.stories.data.datasource.StoriesLocalDataSource
+import org.telegram.messenger.feature.media.stories.data.datasource.StoriesRemoteDataSource
+import org.telegram.messenger.feature.media.stories.data.repository.StoriesRepositoryImpl
 import org.telegram.messenger.feature.media.stories.data.repository.LegacyStoriesRepository
 import org.telegram.messenger.feature.media.stories.domain.repository.StoriesRepository
 import org.telegram.messenger.feature.media.stories.domain.usecase.ActivateStealthModeUseCase
@@ -247,6 +256,9 @@ import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.Rem
 import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.SaveStoryCustomParamsUseCase
 import org.telegram.messenger.feature.media.storycustomparams.domain.usecase.UpdateStoryTranslationUseCase
 import org.telegram.messenger.feature.media.storycustomparams.presentation.StoryCustomParamsViewModel
+import org.telegram.messenger.feature.media.voip.data.datasource.VoIPLocalDataSource
+import org.telegram.messenger.feature.media.voip.data.datasource.VoIPRemoteDataSource
+import org.telegram.messenger.feature.media.voip.data.repository.VoIPRepositoryImpl
 import org.telegram.messenger.feature.media.voip.data.repository.LegacyVoIPRepository
 import org.telegram.messenger.feature.media.voip.domain.repository.VoIPRepository
 import org.telegram.messenger.feature.media.voip.domain.usecase.AcceptCallUseCase
@@ -318,13 +330,32 @@ class MediaContainer(val account: Int) {
         )
     }
 
+    val voIPRemoteDataSource: VoIPRemoteDataSource by lazy {
+        VoIPRemoteDataSource(account)
+    }
+
+    val voIPLocalDataSource: VoIPLocalDataSource by lazy {
+        VoIPLocalDataSource(account)
+    }
+
+    fun createVoIPRepository(): VoIPRepository {
+        return VoIPRepositoryImpl(
+            currentAccount = account,
+            localDataSource = voIPLocalDataSource,
+            remoteDataSource = voIPRemoteDataSource
+        )
+    }
+
     private var customVoIPRepository: VoIPRepository? = null
 
     var voipRepository: VoIPRepository
-        get() = customVoIPRepository ?: LegacyVoIPRepository(account)
+        get() = customVoIPRepository ?: createVoIPRepository()
         set(value) {
             customVoIPRepository = value
         }
+
+    val voIPRepository: VoIPRepository
+        get() = voipRepository
 
     val observeCurrentCallUseCase: ObserveCurrentCallUseCase
         get() = ObserveCurrentCallUseCase(voipRepository)
@@ -451,11 +482,26 @@ class MediaContainer(val account: Int) {
         )
     }
 
-    // --- Search ---
+    val storiesRemoteDataSource: StoriesRemoteDataSource by lazy {
+        StoriesRemoteDataSource(account)
+    }
+
+    val storiesLocalDataSource: StoriesLocalDataSource by lazy {
+        StoriesLocalDataSource(account)
+    }
+
+    fun createStoriesRepository(): StoriesRepository {
+        return StoriesRepositoryImpl(
+            currentAccount = account,
+            localDataSource = storiesLocalDataSource,
+            remoteDataSource = storiesRemoteDataSource
+        )
+    }
+
     private var customStoriesRepository: StoriesRepository? = null
 
     var storiesRepository: StoriesRepository
-        get() = customStoriesRepository ?: LegacyStoriesRepository(account)
+        get() = customStoriesRepository ?: createStoriesRepository()
         set(value) {
             customStoriesRepository = value
         }
@@ -955,21 +1001,34 @@ class MediaContainer(val account: Int) {
         )
     }
 
-    fun createSharedMediaRepository(): SharedMediaRepository {
-        return LegacySharedMediaRepository(
+    val sharedMediaRemoteDataSource: SharedMediaRemoteDataSource by lazy {
+        SharedMediaRemoteDataSource(account)
+    }
+
+    val sharedMediaLocalDataSource: SharedMediaLocalDataSource by lazy {
+        SharedMediaLocalDataSource(
+            currentAccount = account,
             groupMediaByMonthUseCase = groupMediaByMonthUseCase,
             calculateMediaSelectionUseCase = calculateMediaSelectionUseCase,
             filterSharedMediaUseCase = filterSharedMediaUseCase
         )
     }
 
-    val sharedMediaRepository: SharedMediaRepository by lazy {
-        LegacySharedMediaRepository(
-            groupMediaByMonthUseCase = groupMediaByMonthUseCase,
-            calculateMediaSelectionUseCase = calculateMediaSelectionUseCase,
-            filterSharedMediaUseCase = filterSharedMediaUseCase
+    fun createSharedMediaRepository(): SharedMediaRepository {
+        return SharedMediaRepositoryImpl(
+            currentAccount = account,
+            localDataSource = sharedMediaLocalDataSource,
+            remoteDataSource = sharedMediaRemoteDataSource
         )
     }
+
+    private var customSharedMediaRepository: SharedMediaRepository? = null
+
+    var sharedMediaRepository: SharedMediaRepository
+        get() = customSharedMediaRepository ?: createSharedMediaRepository()
+        set(value) {
+            customSharedMediaRepository = value
+        }
 
     val resolveAvailableTabsUseCase: ResolveAvailableTabsUseCase
         get() = ResolveAvailableTabsUseCase()
@@ -1104,14 +1163,26 @@ class MediaContainer(val account: Int) {
         )
     }
 
+    val photoViewerRemoteDataSource: PhotoViewerRemoteDataSource by lazy {
+        PhotoViewerRemoteDataSource(account)
+    }
+
+    val photoViewerLocalDataSource: PhotoViewerLocalDataSource by lazy {
+        PhotoViewerLocalDataSource(account)
+    }
+
+    fun createPhotoViewerRepository(): PhotoViewerRepository {
+        return PhotoViewerRepositoryImpl(
+            currentAccount = account,
+            localDataSource = photoViewerLocalDataSource,
+            remoteDataSource = photoViewerRemoteDataSource
+        )
+    }
+
     private var customPhotoViewerRepository: PhotoViewerRepository? = null
 
     var photoViewerRepository: PhotoViewerRepository
-        get() = customPhotoViewerRepository ?: LegacyPhotoViewerRepository(
-            pagingUseCase = calculateMediaPagingUseCase,
-            zoomUseCase = calculateZoomTransformUseCase,
-            actionsUseCase = validateViewerActionsUseCase
-        )
+        get() = customPhotoViewerRepository ?: createPhotoViewerRepository()
         set(value) {
             customPhotoViewerRepository = value
         }
@@ -1568,5 +1639,4 @@ class MediaContainer(val account: Int) {
             checkEmptyUseCase = checkStoryCustomParamsEmptyUseCase
         )
     }
-
 }

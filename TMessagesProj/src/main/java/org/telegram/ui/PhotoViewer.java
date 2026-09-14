@@ -368,7 +368,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         try {
             AccountFeatureContainer accountContainer = AccountFeatureContainer.get(account);
             if (accountContainer != null) {
-                photoViewerViewModel = accountContainer.getPhotoViewerViewModel();
+                photoViewerViewModel = accountContainer.getMedia().getPhotoViewerViewModel();
                 pinchToZoomViewModel = accountContainer.getPinchToZoomViewModel();
                 contentPreviewViewModel = accountContainer.getContentPreviewViewModel();
                 pipViewModel = accountContainer.getPipViewModel();
@@ -376,6 +376,15 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
         } catch (Exception e) {
             FileLog.e(e);
         }
+    }
+
+    public static org.telegram.messenger.feature.media.photoviewer.domain.repository.PhotoViewerRepository getPhotoViewerRepository(int account) {
+        AccountFeatureContainer accountContainer = AccountFeatureContainer.get(account);
+        return accountContainer != null ? accountContainer.getMedia().getPhotoViewerRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.media.photoviewer.domain.repository.PhotoViewerRepository getPhotoViewerRepository() {
+        return getPhotoViewerRepository(UserConfig.selectedAccount);
     }
 
     private static final int ANIMATOR_ID_POLL_ATTACH_BUTTONS_VISIBLE = 0;
