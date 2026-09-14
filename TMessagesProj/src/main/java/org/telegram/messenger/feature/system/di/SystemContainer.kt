@@ -1375,10 +1375,6 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    val browserRepository: BrowserRepository by lazy {
-        LegacyBrowserRepository(account)
-    }
-
     val classifyUrlTargetUseCase: ClassifyUrlTargetUseCase
         get() = ClassifyUrlTargetUseCase()
 
@@ -1387,6 +1383,29 @@ class SystemContainer(val account: Int) {
 
     val checkUrlSafetyUseCase: CheckUrlSafetyUseCase
         get() = CheckUrlSafetyUseCase(classifyUrlTargetUseCase, extractUsernameFromUrlUseCase)
+
+    val browserRemoteDataSource: org.telegram.messenger.feature.system.browser.data.datasource.BrowserRemoteDataSource by lazy {
+        org.telegram.messenger.feature.system.browser.data.datasource.BrowserRemoteDataSource(account)
+    }
+
+    val browserLocalDataSource: org.telegram.messenger.feature.system.browser.data.datasource.BrowserLocalDataSource by lazy {
+        org.telegram.messenger.feature.system.browser.data.datasource.BrowserLocalDataSource(checkUrlSafetyUseCase)
+    }
+
+    fun createBrowserRepository(): BrowserRepository {
+        return org.telegram.messenger.feature.system.browser.data.repository.BrowserRepositoryImpl(
+            localDataSource = browserLocalDataSource,
+            remoteDataSource = browserRemoteDataSource
+        )
+    }
+
+    private var customBrowserRepository: BrowserRepository? = null
+
+    var browserRepository: BrowserRepository
+        get() = customBrowserRepository ?: createBrowserRepository()
+        set(value) {
+            customBrowserRepository = value
+        }
 
     val observeBrowserStateUseCase: ObserveBrowserStateUseCase
         get() = ObserveBrowserStateUseCase(browserRepository)
@@ -1495,9 +1514,28 @@ class SystemContainer(val account: Int) {
         )
     }
 
-    val appConfigRepository: AppConfigRepository by lazy {
-        LegacyAppConfigRepository(account)
+    val appConfigRemoteDataSource: org.telegram.messenger.feature.system.appconfig.data.datasource.AppConfigRemoteDataSource by lazy {
+        org.telegram.messenger.feature.system.appconfig.data.datasource.AppConfigRemoteDataSource(account)
     }
+
+    val appConfigLocalDataSource: org.telegram.messenger.feature.system.appconfig.data.datasource.AppConfigLocalDataSource by lazy {
+        org.telegram.messenger.feature.system.appconfig.data.datasource.AppConfigLocalDataSource(account)
+    }
+
+    fun createAppConfigRepository(): AppConfigRepository {
+        return org.telegram.messenger.feature.system.appconfig.data.repository.AppConfigRepositoryImpl(
+            localDataSource = appConfigLocalDataSource,
+            remoteDataSource = appConfigRemoteDataSource
+        )
+    }
+
+    private var customAppConfigRepository: AppConfigRepository? = null
+
+    var appConfigRepository: AppConfigRepository
+        get() = customAppConfigRepository ?: createAppConfigRepository()
+        set(value) {
+            customAppConfigRepository = value
+        }
 
     val getAppConfigUseCase: GetAppConfigUseCase
         get() = GetAppConfigUseCase(appConfigRepository)
@@ -1631,10 +1669,25 @@ class SystemContainer(val account: Int) {
         )
     }
 
+    val countdownTimerRemoteDataSource: org.telegram.messenger.feature.system.countdowntimer.data.datasource.CountdownTimerRemoteDataSource by lazy {
+        org.telegram.messenger.feature.system.countdowntimer.data.datasource.CountdownTimerRemoteDataSource(account)
+    }
+
+    val countdownTimerLocalDataSource: org.telegram.messenger.feature.system.countdowntimer.data.datasource.CountdownTimerLocalDataSource by lazy {
+        org.telegram.messenger.feature.system.countdowntimer.data.datasource.CountdownTimerLocalDataSource()
+    }
+
+    fun createCountdownTimerRepository(): CountdownTimerRepository {
+        return org.telegram.messenger.feature.system.countdowntimer.data.repository.CountdownTimerRepositoryImpl(
+            localDataSource = countdownTimerLocalDataSource,
+            remoteDataSource = countdownTimerRemoteDataSource
+        )
+    }
+
     private var customCountdownTimerRepository: CountdownTimerRepository? = null
 
     var countdownTimerRepository: CountdownTimerRepository
-        get() = customCountdownTimerRepository ?: LegacyCountdownTimerRepository()
+        get() = customCountdownTimerRepository ?: createCountdownTimerRepository()
         set(value) {
             customCountdownTimerRepository = value
         }

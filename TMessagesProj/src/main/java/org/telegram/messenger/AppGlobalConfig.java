@@ -407,4 +407,18 @@ public class AppGlobalConfig {
     public static AppGlobalConfig getInstance(int num) {
         return MessagesController.getInstance(num).config;
     }
+
+    // Strangler hooks for architecture migration
+    public static org.telegram.messenger.feature.system.appconfig.domain.repository.AppConfigRepository getAppConfigRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getAppConfigRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.appconfig.domain.repository.AppConfigRepository getAppConfigRepository() {
+        return getAppConfigRepository(UserConfig.selectedAccount);
+    }
+
+    public org.telegram.messenger.feature.system.appconfig.domain.repository.AppConfigRepository getRepository() {
+        return getAppConfigRepository();
+    }
 }
+

@@ -866,4 +866,13 @@ public class Browser {
         return modifiedUriBuilder.toString();
     }
 
+    // Strangler hooks for architecture migration
+    public static org.telegram.messenger.feature.system.browser.domain.repository.BrowserRepository getBrowserRepository(int account) {
+        return org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account).getSystem().getBrowserRepository();
+    }
+
+    public static org.telegram.messenger.feature.system.browser.domain.repository.BrowserRepository getBrowserRepository() {
+        return getBrowserRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
 }
+

@@ -1232,10 +1232,65 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `FloatingDebugRepositoryImpl.kt` (Clean repository coordinating active state, dismissal, showing, fab visibility, and reactive observation)
     - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `FloatingDebugController.java` strangler boundary with `getFloatingDebugRepository(account)`, `getFloatingDebugRepository()`, and `getRepository()` accessors.
+  - [x] Feature: `AppGlobalConfig` Strangling (`feature.system.appconfig` - ADR 182):
+    - `AppConfigRemoteDataSource.kt` (System extension point for remote MTProto app configuration syncing)
+    - `AppConfigLocalDataSource.kt` (In-memory cached config state, NotificationCenter updates, custom key-value map, reactive flows, headless test mode)
+    - `AppConfigRepositoryImpl.kt` (Clean repository coordinating config state, reload, value mutations, and reactive observation)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `AppGlobalConfig.java` strangler boundary with `getAppConfigRepository(account)`, `getAppConfigRepository()`, and `getRepository()` accessors.
+  - [x] Feature: `Browser` Strangling (`feature.system.browser` - ADR 183):
+    - `BrowserRemoteDataSource.kt` (System extension point for safe browsing policies, URL blacklists, and malicious domain telemetry)
+    - `BrowserLocalDataSource.kt` (Browser settings, in-app / custom tabs / external browser dispatching, history tracking, URL classification, headless test mode)
+    - `BrowserRepositoryImpl.kt` (Clean repository coordinating browser preferences, URL safety checks, open URL, history, and cache clearing)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `Browser.java` strangler boundary with `getBrowserRepository(account)` and `getBrowserRepository()` accessors.
+  - [x] Feature: `CountdownTimer` Strangling (`feature.system.countdowntimer` - ADR 184):
+    - `CountdownTimerRemoteDataSource.kt` (System extension point for NTP server time synchronization and remote countdown calibration)
+    - `CountdownTimerLocalDataSource.kt` (ConcurrentHashMap timer records, ticking jobs, pause/resume, manual tick arbitration, StateFlow, SharedFlow)
+    - `CountdownTimerRepositoryImpl.kt` (Clean repository coordinating start, stop, pause, resume, manual ticks, clear, and reactive observation)
+    - `SystemContainer.kt` & `AccountFeatureContainer.kt` wiring
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 184: Precision Countdown Timer, Lifecycle State Machine & Tick Arbitration Strangling via Clean DataSources & CountdownTimerRepositoryImpl
+- **Context:** Managing asynchronous countdown timers for verification codes, temporary invites, self-destructing media, and auction lots was fragmented across UI fragments using raw handlers and arbitrary postDelayed loops without unified state machines, pause/resume semantics, or testable abstractions.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.countdowntimer`:
+  1. Implement `CountdownTimerRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote NTP time sync and countdown calibration extension points.
+  2. Implement `CountdownTimerLocalDataSource`:
+     - Encapsulates `ConcurrentHashMap<String, CountdownTimerTick>` registry, coroutine ticking jobs, lifecycle transitions (`RUNNING`, `PAUSED`, `IDLE`, `FINISHED`), decomposed components (days, hours, minutes, seconds), `StateFlow<CountdownTimerState>`, and `SharedFlow<CountdownTimerTick>`.
+  3. Implement `CountdownTimerRepositoryImpl`:
+     - Implements `CountdownTimerRepository`, coordinating timer start, stop, pause, resume, manual deterministic ticks, clear all, and reactive stream observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `CountdownTimerRepositoryImpl` alongside clean data sources.
+- **Consequences:** Countdown timer arbitration and lifecycle state machines are decoupled behind clean domain contracts. 100% unit test coverage achieved with `CountdownTimerRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 183: In-App Browser, Custom Tabs & URL Routing Strangling via Clean DataSources & BrowserRepositoryImpl
+- **Context:** In Telegram Android, URL dispatching, in-app web views, Chrome Custom Tabs, external browser routing, and URL safety checks were governed by `Browser.java` (~870 lines). The legacy class directly interacted with Android `Intent`, `ApplicationLoader.applicationContext`, and internal web controllers without decoupled data sources or isolated JVM testability.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.browser`:
+  1. Implement `BrowserRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote safe browsing policies and malicious domain telemetry extension points.
+  2. Implement `BrowserLocalDataSource`:
+     - Encapsulates browser type preference (`IN_APP`, `CUSTOM_TABS`, `EXTERNAL_BROWSER`), URL safety classification, thread-safe history registry, cache clearing, and headless JVM test mode.
+  3. Implement `BrowserRepositoryImpl`:
+     - Implements `BrowserRepository`, coordinating browser settings, URL safety validation, link opening, history management, and cache clearing.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `BrowserRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `Browser.getBrowserRepository(account)` and `getBrowserRepository()` accessors.
+- **Consequences:** Browser routing and URL safety verification are decoupled behind clean domain contracts. 100% unit test coverage achieved with `BrowserRepositoryImplTest.kt` passing and full backward compatibility preserved.
+
+### ADR 182: Global App Configuration, Dynamic Limits & Feature Flags Strangling via Clean DataSources & AppConfigRepositoryImpl
+- **Context:** Telegram's global application limits, dynamic star pricing, ton conversion rates, polls limits, rich message formatting boundaries, and feature flags synced from the backend were governed by `AppGlobalConfig.java` (~411 lines). Access was tied directly to `MessagesController.getInstance(account).config` and global static constants without a decoupled data source or isolated JVM testing.
+- **Decision:** Apply the Strangler Fig pattern to `feature.system.appconfig`:
+  1. Implement `AppConfigRemoteDataSource`:
+     - Subclasses `BaseRemoteDataSource(currentAccount)` providing remote MTProto configuration retrieval extension points.
+  2. Implement `AppConfigLocalDataSource`:
+     - Encapsulates in-memory cached `AppGlobalConfigState`, `NotificationCenter.appConfigUpdated` observation, custom key-value entries mutation, and headless JVM test mode.
+  3. Implement `AppConfigRepositoryImpl`:
+     - Implements `AppConfigRepository`, coordinating state retrieval, reload, custom value mutations, and reactive state observation.
+  4. Update `SystemContainer` and `AccountFeatureContainer` to wire `AppConfigRepositoryImpl` alongside clean data sources.
+  5. Introduce strangler boundary: `AppGlobalConfig.getAppConfigRepository(account)`, `getAppConfigRepository()`, and `getRepository()` accessors.
+- **Consequences:** Global application configuration and dynamic limits are decoupled behind clean domain contracts. 100% unit test coverage achieved with `AppConfigRepositoryImplTest.kt` passing and full backward compatibility preserved.
 
 ### ADR 181: Floating Debug Overlay & Diagnostics Controller Strangling via Clean DataSources & FloatingDebugRepositoryImpl
 - **Context:** In Telegram Android, the floating debug overlay controller was governed by `FloatingDebugController.java` (~120 lines). The controller directly managed a floating action button view, notification center event listeners (`floatingDebugActiveStateChanged`), launch activity context bindings, and in-memory boolean active state without a testable data source abstraction or isolated JVM testing.
