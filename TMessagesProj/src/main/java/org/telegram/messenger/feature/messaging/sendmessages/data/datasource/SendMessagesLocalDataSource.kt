@@ -151,4 +151,44 @@ class SendMessagesLocalDataSource(
     fun reset() = synchronized(lock) {
         _pendingSends.value = emptyList()
     }
+
+    // Phase 4: Synchronous legacy strangler methods
+    fun registerSending(localId: Long, dialogId: Long, isUploading: Boolean) = synchronized(lock) {
+        val existing = _pendingSends.value.firstOrNull { it.localId == localId }
+        if (existing != null) {
+            _pendingSends.update { list ->
+                list.map { item ->
+                    if (item.localId == localId) {
+                        item.copy(
+                            status = if (isUploading) SendStatus.UPLOADING else SendStatus.SENDING
+                        )
+                    } else item
+                }
+            }
+        } else {
+            val newSend = PendingSendModel(
+                localId = localId,
+                dialogId = dialogId,
+                type = org.telegram.messenger.feature.messaging.sendmessages.domain.model.SendMediaType.TEXT,
+                status = if (isUploading) SendStatus.UPLOADING else SendStatus.SENDING
+            )
+            _pendingSends.update { it + newSend }
+        }
+    }
+
+    fun unregisterSending(localId: Long, isSuccess: Boolean) = synchronized(lock) {
+        if (isSuccess) {
+            markSuccess(localId)
+        } else {
+            cancelSend(localId)
+        }
+    }
+
+    fun isSendingMessage(localId: Long): Boolean {
+        return _pendingSends.value.any { it.localId == localId && !it.isFinished }
+    }
+
+    fun isSendingDialog(dialogId: Long): Boolean {
+        return _pendingSends.value.any { it.dialogId == dialogId && !it.isFinished }
+    }
 }

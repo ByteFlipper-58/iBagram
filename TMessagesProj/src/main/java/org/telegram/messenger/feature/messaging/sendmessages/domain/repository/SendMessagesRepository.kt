@@ -1,4 +1,4 @@
-﻿package org.telegram.messenger.feature.messaging.sendmessages.domain.repository
+package org.telegram.messenger.feature.messaging.sendmessages.domain.repository
 
 import kotlinx.coroutines.flow.Flow
 import org.telegram.messenger.feature.messaging.sendmessages.domain.model.ForwardRequestModel
@@ -20,4 +20,12 @@ interface SendMessagesRepository {
     fun markSuccess(localId: Long)
     fun markFailed(localId: Long, reason: String)
     fun reset()
+
+    // Phase 4: Synchronous legacy strangler methods
+    fun registerSending(localId: Long, dialogId: Long, isUploading: Boolean) {}
+    fun unregisterSending(localId: Long, isSuccess: Boolean) {}
+    fun cancelSendSync(localId: Long): Boolean = false
+    fun retrySendSync(localId: Long): Boolean = false
+    fun isSendingMessage(localId: Long): Boolean = false
+    fun isSendingDialog(dialogId: Long): Boolean = false
 }

@@ -1004,6 +1004,11 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         importingStickersFiles.clear();
         importingStickersMap.clear();
         locationProvider.stop();
+
+        org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
+        if (repo != null) {
+            repo.reset();
+        }
     }
 
     @Override
@@ -1600,6 +1605,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             TLRPC.Message sendingMessage = removeFromSendingMessages(object.getId(), object.scheduled);
             if (sendingMessage != null) {
                 getConnectionsManager().cancelRequest(sendingMessage.reqId, true);
+            }
+            org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
+            if (repo != null) {
+                repo.cancelSendSync(object.getId());
             }
             StarsController.getInstance(currentAccount).hidePaidMessageToast(object);
 
@@ -7404,6 +7413,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (message == null) {
             return;
         }
+        org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
+        if (repo != null) {
+            repo.registerSending(message.id, MessageObject.getDialogId(message), false);
+        }
         if (message.id > 0) {
             editingMessages.put(message.id, message);
         } else {
@@ -7421,6 +7434,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     protected TLRPC.Message removeFromSendingMessages(int mid, boolean scheduled) {
+        org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
+        if (repo != null) {
+            repo.unregisterSending(mid, true);
+        }
         TLRPC.Message message;
         if (mid > 0) {
             message = editingMessages.get(mid);
@@ -7469,6 +7486,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (obj == null || obj.getId() > 0 || obj.scheduled) {
             return;
         }
+        org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
+        if (repo != null) {
+            repo.registerSending(obj.getId(), obj.getDialogId(), true);
+        }
         TLRPC.Message message = obj.messageOwner;
         boolean contains = uploadMessages.indexOfKey(message.id) >= 0;
         uploadMessages.put(message.id, message);
@@ -7482,6 +7503,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     protected void removeFromUploadingMessages(int mid, boolean scheduled) {
         if (mid > 0 || scheduled) {
             return;
+        }
+        org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
+        if (repo != null) {
+            repo.unregisterSending(mid, true);
         }
         TLRPC.Message message = uploadMessages.get(mid);
         if (message != null) {
@@ -7501,6 +7526,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     public boolean isSendingMessage(int mid) {
+        org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
+        if (repo != null && repo.isSendingMessage(mid)) {
+            return true;
+        }
         return sendingMessages.indexOfKey(mid) >= 0 || editingMessages.indexOfKey(mid) >= 0;
     }
 
@@ -7530,6 +7559,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     public boolean isSendingMessageIdDialog(long did) {
+        org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
+        if (repo != null && repo.isSendingDialog(did)) {
+            return true;
+        }
         return sendingMessagesIdDialogs.get(did, 0) > 0;
     }
 

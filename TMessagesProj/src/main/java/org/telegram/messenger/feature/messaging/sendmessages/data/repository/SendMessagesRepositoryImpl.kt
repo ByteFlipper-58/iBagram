@@ -155,4 +155,29 @@ class SendMessagesRepositoryImpl(
     override fun reset() {
         localDataSource.reset()
     }
+
+    // Phase 4: Synchronous legacy strangler methods
+    override fun registerSending(localId: Long, dialogId: Long, isUploading: Boolean) {
+        localDataSource.registerSending(localId, dialogId, isUploading)
+    }
+
+    override fun unregisterSending(localId: Long, isSuccess: Boolean) {
+        localDataSource.unregisterSending(localId, isSuccess)
+    }
+
+    override fun cancelSendSync(localId: Long): Boolean {
+        return localDataSource.cancelSend(localId)
+    }
+
+    override fun retrySendSync(localId: Long): Boolean {
+        return localDataSource.retrySend(localId)
+    }
+
+    override fun isSendingMessage(localId: Long): Boolean {
+        return localDataSource.isSendingMessage(localId)
+    }
+
+    override fun isSendingDialog(dialogId: Long): Boolean {
+        return localDataSource.isSendingDialog(dialogId)
+    }
 }

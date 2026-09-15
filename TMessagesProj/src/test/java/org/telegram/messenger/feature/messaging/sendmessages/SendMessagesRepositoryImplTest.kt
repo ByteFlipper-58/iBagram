@@ -155,4 +155,43 @@ class SendMessagesRepositoryImplTest {
         val listAll = repository.observePendingSends(null).first()
         assertEquals(2, listAll.size)
     }
+
+    @Test
+    fun testRegisterSendingAndUnregisterSending() {
+        repository.registerSending(localId = 999L, dialogId = 555L, isUploading = true)
+        val item = repository.getPendingSends(555L).first()
+        assertEquals(999L, item.localId)
+        assertEquals(SendStatus.UPLOADING, item.status)
+        assertTrue(repository.isSendingMessage(999L))
+        assertTrue(repository.isSendingDialog(555L))
+
+        repository.registerSending(localId = 999L, dialogId = 555L, isUploading = false)
+        val updatedItem = repository.getPendingSends(555L).first()
+        assertEquals(SendStatus.SENDING, updatedItem.status)
+
+        repository.unregisterSending(localId = 999L, isSuccess = true)
+        val successItem = repository.getPendingSends(555L).first()
+        assertEquals(SendStatus.SUCCESS, successItem.status)
+        assertFalse(repository.isSendingMessage(999L))
+        assertFalse(repository.isSendingDialog(555L))
+    }
+
+    @Test
+    fun testCancelSendSyncAndRetrySendSync() {
+        repository.registerSending(localId = 888L, dialogId = 777L, isUploading = false)
+        assertTrue(repository.isSendingMessage(888L))
+
+        val cancelled = repository.cancelSendSync(888L)
+        assertTrue(cancelled)
+        assertFalse(repository.isSendingMessage(888L))
+        val cancelledItem = repository.getPendingSends(777L).first()
+        assertEquals(SendStatus.CANCELLED, cancelledItem.status)
+
+        val retried = repository.retrySendSync(888L)
+        assertTrue(retried)
+        assertTrue(repository.isSendingMessage(888L))
+        val retriedItem = repository.getPendingSends(777L).first()
+        assertEquals(SendStatus.PENDING, retriedItem.status)
+        assertEquals(1, retriedItem.retryCount)
+    }
 }
