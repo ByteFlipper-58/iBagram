@@ -1420,10 +1420,86 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `EmojiPickerRepositoryImpl.kt` (Clean repository coordinating emoji picker state, tabs, category selection, and item filtering)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `EmojiView.java` strangler boundary with `getEmojiPickerRepository(account)` and `getEmojiPickerRepository()` accessors.
+  - [x] Feature: `Mentions` Strangling (`feature.messaging.mentions` - ADR 214):
+    - `MentionsRemoteDataSource.kt` (Contacts and bot user queries via ConnectionsManager and MessagesController)
+    - `MentionsLocalDataSource.kt` (Thread-safe in-memory cache, active query state, and bot context)
+    - `MentionsRepositoryImpl.kt` (Clean repository coordinating mention suggestions, inline bots, and usernames)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `MentionsAdapter.java` strangler boundary with `getMentionsRepository(account)` and `getMentionsRepository()` accessors.
+  - [x] Feature: `Reactions` Strangling (`feature.messaging.reactions` - ADR 215):
+    - `ReactionsRemoteDataSource.kt` (Remote reactions loading, send reactions, clear reactions, and poll voting via MessagesController & ConnectionsManager)
+    - `ReactionsLocalDataSource.kt` (Recent/top reactions cache, default reaction preferences, and reaction state flows)
+    - `ReactionsRepositoryImpl.kt` (Clean repository coordinating available reactions, selection, and message reactions)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ReactionsContainerLayout.java` strangler boundary with `getReactionsRepository(account)` and `getReactionsRepository()` accessors.
+  - [x] Feature: `RichCaption` Strangling (`feature.messaging.richcaption` - ADR 216):
+    - `RichCaptionRemoteDataSource.kt` (Remote caption translation and rich entity parsing)
+    - `RichCaptionLocalDataSource.kt` (Caption text, selection limits, format spans, quote styles, and expand/collapse state)
+    - `RichCaptionRepositoryImpl.kt` (Clean repository coordinating media viewer caption formatting, quote selection, and character bounds)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `RichCaptionController.java` strangler boundary with `getRichCaptionRepository(account)` and `getRichCaptionRepository()` accessors.
+  - [x] Feature: `Stickers` Strangling (`feature.messaging.stickers` - ADR 217):
+    - `StickersRemoteDataSource.kt` (Remote sticker sets loading, install, archive, and removal via MediaDataController)
+    - `StickersLocalDataSource.kt` (Thread-safe sticker sets cache, recent stickers, emoji mapping, and StateFlow)
+    - `StickersRepositoryImpl.kt` (Clean repository coordinating sticker sets, installation toggles, and emoji matching)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `StickersAlert.java` strangler boundary with `getStickersRepository(account)` and `getStickersRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 217: Sticker Sets, Recent Stickers & Emoji Matching Strangling via Clean DataSources & StickersRepositoryImpl
+- **Context:** Sticker sets management, install/archive state toggles, emoji-to-sticker correlations, and recent sticker caching were coupled inside `MediaDataController` and UI components like `StickersAlert.java`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.stickers`:
+  1. Implement `StickersRemoteDataSource`:
+     - Dispatches sticker set loading, install, and archive toggle operations via `MediaDataController` with headless environment protection.
+  2. Implement `StickersLocalDataSource`:
+     - Manages reactive StateFlow of sticker sets, thread-safe in-memory cache, recent stickers, and emoji-to-sticker mappings with headless fallback.
+  3. Implement `StickersRepositoryImpl`:
+     - Implements `StickersRepository`, coordinating sticker set queries, installation toggles, and emoji lookups.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `StickersRepositoryImpl`.
+  5. Introduce strangler boundary: `StickersAlert.getStickersRepository(account)` and `getStickersRepository()` accessors.
+- **Consequences:** Sticker management is decoupled behind clean domain contracts and use cases. 100% unit test coverage achieved with `StickersRepositoryImplTest.kt`.
+
+### ADR 216: Media Viewer Rich Caption Formatting, Quotes & Text Selection Strangling via Clean DataSources & RichCaptionRepositoryImpl
+- **Context:** Media viewer caption text formatting, selection range calculation, quote styling, expandable caption state, and character counter limits were coupled inside `RichCaptionController.java` with direct text view and animators interactions.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.richcaption`:
+  1. Implement `RichCaptionRemoteDataSource`:
+     - Handles remote caption translation and rich entity conversions.
+  2. Implement `RichCaptionLocalDataSource`:
+     - Encapsulates formatted caption state, character limits (1024 regular, 2048 premium), selection ranges, and expand/collapse transitions.
+  3. Implement `RichCaptionRepositoryImpl`:
+     - Implements `RichCaptionRepository`, coordinating caption updates, selection, and formatting.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `RichCaptionRepositoryImpl`.
+  5. Introduce strangler boundary: `RichCaptionController.getRichCaptionRepository(account)` and `getRichCaptionRepository()` accessors.
+- **Consequences:** Rich caption formatting and state management are decoupled behind clean domain contracts and use cases. 100% unit test coverage achieved with `RichCaptionRepositoryImplTest.kt`.
+
+### ADR 215: Message Reactions, Floating Emojis & Custom Reactions Strangling via Clean DataSources & ReactionsRepositoryImpl
+- **Context:** Message reactions dispatching, floating emoji animations, recent reactions storage, poll voting, and custom animated emoji reactions were coupled across `ReactionsContainerLayout.java`, `MessagesController`, and `ConnectionsManager`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.reactions`:
+  1. Implement `ReactionsRemoteDataSource`:
+     - Dispatches reactions sending, clear reactions, available reactions loading, and poll voting via MTProto RPCs.
+  2. Implement `ReactionsLocalDataSource`:
+     - Manages reactive StateFlow of recent reactions, top reactions, and selected custom reaction models.
+  3. Implement `ReactionsRepositoryImpl`:
+     - Implements `ReactionsRepository`, coordinating available reactions, sending reactions, and default reaction selection.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `ReactionsRepositoryImpl`.
+  5. Introduce strangler boundary: `ReactionsContainerLayout.getReactionsRepository(account)` and `getReactionsRepository()` accessors.
+- **Consequences:** Message reactions and voting are decoupled behind clean domain contracts and use cases. 100% unit test coverage achieved with `ReactionsRepositoryImplTest.kt`.
+
+### ADR 214: Username, Hashtag & Bot Mentions Autocomplete Strangling via Clean DataSources & MentionsRepositoryImpl
+- **Context:** Mention suggestions, hashtag autocompletion, bot commands, and inline bot results were intertwined in `MentionsAdapter.java` (~2800 lines) with direct references to `MessagesController`, `SearchQuery`, and `ConnectionsManager`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.mentions`:
+  1. Implement `MentionsRemoteDataSource`:
+     - Dispatches remote contact searches and inline bot result queries via MTProto RPCs.
+  2. Implement `MentionsLocalDataSource`:
+     - Manages thread-safe in-memory cache of suggested users, bot commands, hashtags, and active mention query.
+  3. Implement `MentionsRepositoryImpl`:
+     - Implements `MentionsRepository`, coordinating mention search queries, inline bot triggers, and cached username suggestions.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `MentionsRepositoryImpl`.
+  5. Introduce strangler boundary: `MentionsAdapter.getMentionsRepository(account)` and `getMentionsRepository()` accessors.
+- **Consequences:** Mentions autocompletion and bot querying are decoupled behind clean domain contracts and use cases. 100% unit test coverage achieved with `MentionsRepositoryImplTest.kt`.
 
 ### ADR 213: Emoji & Sticker Picker Navigation, Search & Category Tabs Strangling via Clean DataSources & EmojiPickerRepositoryImpl
 - **Context:** Emoji, sticker, and GIF picker navigation, category tabs (recent, favorite, premium, reaction packs), query filtering, and tab arbitration were tightly coupled inside `EmojiView.java` (~8500 lines) with direct view hierarchy interactions and static controller singletons.

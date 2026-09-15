@@ -109,7 +109,18 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.messaging.stickers.domain.repository.StickersRepository;
+
 public class StickersAlert extends BottomSheet implements NotificationCenter.NotificationCenterDelegate {
+
+    public static StickersRepository getStickersRepository(int currentAccount) {
+        return AccountFeatureContainer.get(currentAccount).getMessaging().getStickersRepository();
+    }
+
+    public StickersRepository getStickersRepository() {
+        return getStickersRepository(currentAccount);
+    }
 
     public final static boolean DISABLE_STICKER_EDITOR = false;
     public final static int STICKERS_MAX_COUNT = 120;

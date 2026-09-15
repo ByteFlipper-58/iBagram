@@ -93,7 +93,18 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.messaging.reactions.domain.repository.ReactionsRepository;
+
 public class ReactionsContainerLayout extends FrameLayout implements NotificationCenter.NotificationCenterDelegate {
+
+    public static ReactionsRepository getReactionsRepository(int currentAccount) {
+        return AccountFeatureContainer.get(currentAccount).getMessaging().getReactionsRepository();
+    }
+
+    public ReactionsRepository getReactionsRepository() {
+        return getReactionsRepository(currentAccount);
+    }
 
     public boolean forceAttachToParent = false;
     public final static Property<ReactionsContainerLayout, Float> TRANSITION_PROGRESS_VALUE = new Property<ReactionsContainerLayout, Float>(Float.class, "transitionProgress") {

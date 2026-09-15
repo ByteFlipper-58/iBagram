@@ -78,8 +78,18 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.messaging.mentions.domain.repository.MentionsRepository;
 
 public class MentionsAdapter extends RecyclerListView.SelectionAdapter implements NotificationCenter.NotificationCenterDelegate {
+
+    public static MentionsRepository getMentionsRepository(int currentAccount) {
+        return AccountFeatureContainer.get(currentAccount).getMessaging().getMentionsRepository();
+    }
+
+    public MentionsRepository getMentionsRepository() {
+        return getMentionsRepository(currentAccount);
+    }
 
     private boolean allowStickers = true;
     private boolean allowBots = true;

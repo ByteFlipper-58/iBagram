@@ -278,7 +278,10 @@ import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.Obs
 import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.RemoveHashtagFromHistoryUseCase
 import org.telegram.messenger.feature.messaging.hashtagsearch.domain.usecase.SearchHashtagUseCase
 import org.telegram.messenger.feature.messaging.hashtagsearch.presentation.HashtagSearchViewModel
+import org.telegram.messenger.feature.messaging.mentions.data.datasource.MentionsLocalDataSource
+import org.telegram.messenger.feature.messaging.mentions.data.datasource.MentionsRemoteDataSource
 import org.telegram.messenger.feature.messaging.mentions.data.repository.LegacyMentionsRepository
+import org.telegram.messenger.feature.messaging.mentions.data.repository.MentionsRepositoryImpl
 import org.telegram.messenger.feature.messaging.mentions.domain.repository.MentionsRepository
 import org.telegram.messenger.feature.messaging.mentions.domain.usecase.ClearMentionsUseCase
 import org.telegram.messenger.feature.messaging.mentions.domain.usecase.DismissMentionsUseCase
@@ -309,7 +312,10 @@ import org.telegram.messenger.feature.messaging.messagecustomparams.domain.useca
 import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateMessageTranslationUseCase
 import org.telegram.messenger.feature.messaging.messagecustomparams.domain.usecase.UpdateVoiceTranscriptionUseCase
 import org.telegram.messenger.feature.messaging.messagecustomparams.presentation.MessageCustomParamsViewModel
+import org.telegram.messenger.feature.messaging.reactions.data.datasource.ReactionsLocalDataSource
+import org.telegram.messenger.feature.messaging.reactions.data.datasource.ReactionsRemoteDataSource
 import org.telegram.messenger.feature.messaging.reactions.data.repository.LegacyReactionsRepository
+import org.telegram.messenger.feature.messaging.reactions.data.repository.ReactionsRepositoryImpl
 import org.telegram.messenger.feature.messaging.reactions.domain.repository.ReactionsRepository
 import org.telegram.messenger.feature.messaging.reactions.domain.usecase.ClearReactionsUseCase
 import org.telegram.messenger.feature.messaging.reactions.domain.usecase.GetAvailableReactionsUseCase
@@ -323,7 +329,10 @@ import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SendRea
 import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SendVoteUseCase
 import org.telegram.messenger.feature.messaging.reactions.domain.usecase.SetDoubleTapReactionUseCase
 import org.telegram.messenger.feature.messaging.reactions.presentation.ReactionsViewModel
+import org.telegram.messenger.feature.messaging.richcaption.data.datasource.RichCaptionLocalDataSource
+import org.telegram.messenger.feature.messaging.richcaption.data.datasource.RichCaptionRemoteDataSource
 import org.telegram.messenger.feature.messaging.richcaption.data.repository.LegacyRichCaptionRepository
+import org.telegram.messenger.feature.messaging.richcaption.data.repository.RichCaptionRepositoryImpl
 import org.telegram.messenger.feature.messaging.richcaption.domain.repository.RichCaptionRepository
 import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.CalculateCaptionMeasureWidthUseCase
 import org.telegram.messenger.feature.messaging.richcaption.domain.usecase.CheckCaptionPressHitUseCase
@@ -366,7 +375,10 @@ import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.Send
 import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendMediaMessageUseCase
 import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.SendTextMessageUseCase
 import org.telegram.messenger.feature.messaging.sendmessages.presentation.SendMessagesViewModel
+import org.telegram.messenger.feature.messaging.stickers.data.datasource.StickersLocalDataSource
+import org.telegram.messenger.feature.messaging.stickers.data.datasource.StickersRemoteDataSource
 import org.telegram.messenger.feature.messaging.stickers.data.repository.LegacyStickersRepository
+import org.telegram.messenger.feature.messaging.stickers.data.repository.StickersRepositoryImpl
 import org.telegram.messenger.feature.messaging.stickers.domain.repository.StickersRepository
 import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetRecentStickersUseCase
 import org.telegram.messenger.feature.messaging.stickers.domain.usecase.GetStickerSetUseCase
@@ -637,10 +649,18 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    fun createStickersRepository(): StickersRepository {
+        return StickersRepositoryImpl(
+            currentAccount = account,
+            localDataSource = StickersLocalDataSource(account),
+            remoteDataSource = StickersRemoteDataSource(account)
+        )
+    }
+
     private var customStickersRepository: StickersRepository? = null
 
     var stickersRepository: StickersRepository
-        get() = customStickersRepository ?: LegacyStickersRepository(account)
+        get() = customStickersRepository ?: createStickersRepository()
         set(value) {
             customStickersRepository = value
         }
@@ -935,10 +955,18 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    fun createReactionsRepository(): ReactionsRepository {
+        return ReactionsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = ReactionsLocalDataSource(account),
+            remoteDataSource = ReactionsRemoteDataSource(account)
+        )
+    }
+
     private var customReactionsRepository: ReactionsRepository? = null
 
     var reactionsRepository: ReactionsRepository
-        get() = customReactionsRepository ?: LegacyReactionsRepository(account)
+        get() = customReactionsRepository ?: createReactionsRepository()
         set(value) {
             customReactionsRepository = value
         }
@@ -1637,11 +1665,15 @@ class MessagingContainer(val account: Int) {
     }
 
     fun createRichCaptionRepository(): RichCaptionRepository {
-        return LegacyRichCaptionRepository()
+        return RichCaptionRepositoryImpl(
+            currentAccount = account,
+            localDataSource = RichCaptionLocalDataSource(),
+            remoteDataSource = RichCaptionRemoteDataSource(account)
+        )
     }
 
     val richCaptionRepository: RichCaptionRepository by lazy {
-        LegacyRichCaptionRepository()
+        createRichCaptionRepository()
     }
 
     val observeRichCaptionUseCase: ObserveRichCaptionUseCase
@@ -1770,11 +1802,15 @@ class MessagingContainer(val account: Int) {
     }
 
     fun createMentionsRepository(): MentionsRepository {
-        return LegacyMentionsRepository()
+        return MentionsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = MentionsLocalDataSource(account),
+            remoteDataSource = MentionsRemoteDataSource(account)
+        )
     }
 
     val mentionsRepository: MentionsRepository by lazy {
-        LegacyMentionsRepository()
+        createMentionsRepository()
     }
 
     val validateUsernameUseCase: ValidateUsernameUseCase

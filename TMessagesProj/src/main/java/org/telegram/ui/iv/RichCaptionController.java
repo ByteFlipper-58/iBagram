@@ -16,11 +16,22 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.tgnet.tl.TL_iv;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.core.di.AccountFeatureContainer;
+import org.telegram.messenger.feature.messaging.richcaption.domain.repository.RichCaptionRepository;
 import org.telegram.ui.Cells.TextSelectionHelper;
 
 import java.util.ArrayList;
 
 class RichCaptionController {
+
+    public static RichCaptionRepository getRichCaptionRepository(int currentAccount) {
+        return AccountFeatureContainer.get(currentAccount).getMessaging().getRichCaptionRepository();
+    }
+
+    public static RichCaptionRepository getRichCaptionRepository() {
+        return getRichCaptionRepository(UserConfig.selectedAccount);
+    }
 
     interface Host {
         BlockRow currentRow();
