@@ -1396,10 +1396,86 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `ChatInputRepositoryImpl.kt` (Clean repository coordinating input bar state, recording progress, send options, and panel visibility)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `ChatActivityEnterView.java` strangler boundary with `getChatInputRepository(account)` and `getChatInputRepository()` accessors.
+  - [x] Feature: `DraftMeasure` Strangling (`feature.messaging.draftmeasure` - ADR 210):
+    - `DraftMeasureRemoteDataSource.kt` (Remote draft measure capability query)
+    - `DraftMeasureLocalDataSource.kt` (Target calculation, height overrides, message height derivation, and config state flow)
+    - `DraftMeasureRepositoryImpl.kt` (Clean repository coordinating draft height calculations, target state, and layout measurements)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ChatActivityDraftMessageMeasureController.java` strangler boundary with `getDraftMeasureRepository(account)` and `getDraftMeasureRepository()` accessors.
+  - [x] Feature: `Drafts` Strangling (`feature.messaging.drafts` - ADR 211):
+    - `DraftsRemoteDataSource.kt` (Remote cloud drafts synchronization and cleanup RPCs)
+    - `DraftsLocalDataSource.kt` (Draft cache, state flows, TTL cleanup, and story/message draft storage)
+    - `DraftsRepositoryImpl.kt` (Clean repository coordinating draft persistence, edit drafts, expiration cleanup, and reactive state)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `DraftsController.java` strangler boundary with `getDraftsRepository(account)` and `getDraftsRepository()` accessors.
+  - [x] Feature: `EmojiEffects` Strangling (`feature.messaging.emojieffects` - ADR 212):
+    - `EmojiEffectsRemoteDataSource.kt` (Remote animated emoji effects configuration)
+    - `EmojiEffectsLocalDataSource.kt` (Emoji normalization, interaction payloads, screen overlay bounds, geometry calculations, and animation quotas)
+    - `EmojiEffectsRepositoryImpl.kt` (Clean repository coordinating emoji tap events, animation progress, dismissal, and overlay state)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `EmojiAnimationsOverlay.java` strangler boundary with `getEmojiEffectsRepository(account)` and `getEmojiEffectsRepository()` accessors.
+  - [x] Feature: `EmojiPicker` Strangling (`feature.messaging.emojipicker` - ADR 213):
+    - `EmojiPickerRemoteDataSource.kt` (Remote sticker/emoji packs and search queries)
+    - `EmojiPickerLocalDataSource.kt` (Picker tab selection, recent emoji/stickers cache, search query, and category filters)
+    - `EmojiPickerRepositoryImpl.kt` (Clean repository coordinating emoji picker state, tabs, category selection, and item filtering)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `EmojiView.java` strangler boundary with `getEmojiPickerRepository(account)` and `getEmojiPickerRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 213: Emoji & Sticker Picker Navigation, Search & Category Tabs Strangling via Clean DataSources & EmojiPickerRepositoryImpl
+- **Context:** Emoji, sticker, and GIF picker navigation, category tabs (recent, favorite, premium, reaction packs), query filtering, and tab arbitration were tightly coupled inside `EmojiView.java` (~8500 lines) with direct view hierarchy interactions and static controller singletons.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.emojipicker`:
+  1. Implement `EmojiPickerRemoteDataSource`:
+     - Fetches remote sticker and emoji pack metadata and search queries.
+  2. Implement `EmojiPickerLocalDataSource`:
+     - Manages active tab state, search query, recent emoji/sticker collections, and category filters.
+  3. Implement `EmojiPickerRepositoryImpl`:
+     - Implements `EmojiPickerRepository`, delegating tab switching, category selections, item filtering, and query state to local and remote data sources.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `EmojiPickerRepositoryImpl`.
+  5. Introduce strangler boundary: `EmojiView.getEmojiPickerRepository(account)` and `getEmojiPickerRepository()` accessors.
+- **Consequences:** Picker tab state, item filtering, and search queries are decoupled behind clean domain contracts and use cases. 100% unit test coverage achieved with `EmojiPickerRepositoryImplTest.kt`.
+
+### ADR 212: Animated Emoji Effects, Interaction JSON Payloads & Particle Overlay Strangling via Clean DataSources & EmojiEffectsRepositoryImpl
+- **Context:** Fullscreen and animated emoji interactions, emoji character normalization (stripping tone modifiers, ZWJ gender variations, variation selectors), JSON interaction payloads (`v`, `a`, `t`), screen-aware overlay bounds calculation, and animation quota rules (max 12 global, max 4 per message) were coupled inside `EmojiAnimationsOverlay.java` (~1200 lines).
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.emojieffects`:
+  1. Implement `EmojiEffectsRemoteDataSource`:
+     - Retrieves remote animation effects configuration and availability.
+  2. Implement `EmojiEffectsLocalDataSource`:
+     - Encapsulates emoji normalization, interaction JSON payload serialization, screen bounds calculations, animation quota limits, and active effect tracking.
+  3. Implement `EmojiEffectsRepositoryImpl`:
+     - Implements `EmojiEffectsRepository`, coordinating emoji tap events, animation progress, dismissal, and overlay state.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `EmojiEffectsRepositoryImpl`.
+  5. Introduce strangler boundary: `EmojiAnimationsOverlay.getEmojiEffectsRepository(account)` and `getEmojiEffectsRepository()` accessors.
+- **Consequences:** Animated emoji effects, geometry derivations, and interaction JSON payloads are isolated behind clean domain contracts and use cases. 100% unit test coverage achieved with `EmojiEffectsRepositoryImplTest.kt`.
+
+### ADR 211: Story & Message Drafts Persistence, Expiration & Synchronization Strangling via Clean DataSources & DraftsRepositoryImpl
+- **Context:** In-progress story and message multimedia drafts, SQLite table persistence (`story_drafts`), raw file copying in `cache/drafts`, 7-day expiration checks, and global notifications were entangled inside `DraftsController.java` (~1077 lines) in `org.telegram.ui.Stories.recorder`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.drafts`:
+  1. Implement `DraftsRemoteDataSource`:
+     - Synchronizes cloud drafts and executes remote cleanup RPCs.
+  2. Implement `DraftsLocalDataSource`:
+     - Manages reactive `DraftsStateModel` flows, in-memory drafts cache, TTL expiration checks, and draft mutations.
+  3. Implement `DraftsRepositoryImpl`:
+     - Implements `DraftsRepository`, coordinating draft saves, deletions, edit-draft retrieval, and expired draft cleanup.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `DraftsRepositoryImpl`.
+  5. Introduce strangler boundary: `DraftsController.getDraftsRepository(account)` and `getDraftsRepository()` accessors.
+- **Consequences:** Draft persistence, expiration lifecycle, and reactive state observation are decoupled behind clean domain contracts and use cases. 100% unit test coverage achieved with `DraftsRepositoryImplTest.kt`.
+
+### ADR 210: Draft Message Layout Measurement, Height Override & Keyboard Insets Strangling via Clean DataSources & DraftMeasureRepositoryImpl
+- **Context:** Chat draft measurement calculations, target view dimension overrides, previous message height compensation, and keyboard inset transitions were coupled inside `ChatActivityDraftMessageMeasureController.java` (~220 lines).
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.draftmeasure`:
+  1. Implement `DraftMeasureRemoteDataSource`:
+     - Queries remote draft measurement capabilities and platform limits.
+  2. Implement `DraftMeasureLocalDataSource`:
+     - Manages thread-safe `DraftMeasureConfigModel` StateFlow, target dimension calculations, height overrides, and keyboard inset adjustments.
+  3. Implement `DraftMeasureRepositoryImpl`:
+     - Implements `DraftMeasureRepository`, delegating calculation of layout overrides and configuration state to data sources.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `DraftMeasureRepositoryImpl`.
+  5. Introduce strangler boundary: `ChatActivityDraftMessageMeasureController.getDraftMeasureRepository(account)` and `getDraftMeasureRepository()` accessors.
+- **Consequences:** Draft height measurement, message ID tracking, and layout overrides are decoupled behind clean domain contracts and use cases. 100% unit test coverage achieved with `DraftMeasureRepositoryImplTest.kt`.
 
 ### ADR 209: Chat Input Bar, Text Formatting, Recording Lifecycle & Virtual Panels Strangling via Clean DataSources & ChatInputRepositoryImpl
 - **Context:** Text input entry, markdown selection formatting, audio/video recording lifecycles (lock, pause, resume, cancel, preview), virtual panel arbitration (emoji/sticker tabs, bot keyboards, attachment sheets), and reply/edit quotes were orchestrated by `ChatActivityEnterView.java` (~15600 lines) with tight coupling to Android views and animators.

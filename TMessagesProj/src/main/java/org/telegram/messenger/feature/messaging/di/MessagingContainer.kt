@@ -145,6 +145,9 @@ import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.LoadMoreD
 import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.MarkDialogAsReadUseCase
 import org.telegram.messenger.feature.messaging.dialogs.domain.usecase.PinDialogUseCase
 import org.telegram.messenger.feature.messaging.dialogs.presentation.DialogsViewModel
+import org.telegram.messenger.feature.messaging.draftmeasure.data.datasource.DraftMeasureLocalDataSource
+import org.telegram.messenger.feature.messaging.draftmeasure.data.datasource.DraftMeasureRemoteDataSource
+import org.telegram.messenger.feature.messaging.draftmeasure.data.repository.DraftMeasureRepositoryImpl
 import org.telegram.messenger.feature.messaging.draftmeasure.data.repository.LegacyDraftMeasureRepository
 import org.telegram.messenger.feature.messaging.draftmeasure.domain.repository.DraftMeasureRepository
 import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.CalculateDraftMeasureOverrideUseCase
@@ -155,6 +158,9 @@ import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.Rese
 import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.SetDraftMeasureTargetUseCase
 import org.telegram.messenger.feature.messaging.draftmeasure.domain.usecase.SetPreviousMessageHeightUseCase
 import org.telegram.messenger.feature.messaging.draftmeasure.presentation.DraftMeasureViewModel
+import org.telegram.messenger.feature.messaging.drafts.data.datasource.DraftsLocalDataSource
+import org.telegram.messenger.feature.messaging.drafts.data.datasource.DraftsRemoteDataSource
+import org.telegram.messenger.feature.messaging.drafts.data.repository.DraftsRepositoryImpl
 import org.telegram.messenger.feature.messaging.drafts.data.repository.LegacyDraftsRepository
 import org.telegram.messenger.feature.messaging.drafts.domain.repository.DraftsRepository
 import org.telegram.messenger.feature.messaging.drafts.domain.usecase.CleanupExpiredDraftsUseCase
@@ -166,6 +172,9 @@ import org.telegram.messenger.feature.messaging.drafts.domain.usecase.LoadDrafts
 import org.telegram.messenger.feature.messaging.drafts.domain.usecase.ObserveDraftsStateUseCase
 import org.telegram.messenger.feature.messaging.drafts.domain.usecase.SaveDraftUseCase
 import org.telegram.messenger.feature.messaging.drafts.presentation.DraftsViewModel
+import org.telegram.messenger.feature.messaging.emojieffects.data.datasource.EmojiEffectsLocalDataSource
+import org.telegram.messenger.feature.messaging.emojieffects.data.datasource.EmojiEffectsRemoteDataSource
+import org.telegram.messenger.feature.messaging.emojieffects.data.repository.EmojiEffectsRepositoryImpl
 import org.telegram.messenger.feature.messaging.emojieffects.data.repository.LegacyEmojiEffectsRepository
 import org.telegram.messenger.feature.messaging.emojieffects.domain.repository.EmojiEffectsRepository
 import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.CalculateEmojiBoundsUseCase
@@ -183,6 +192,9 @@ import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.Reco
 import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.StartEmojiEffectUseCase
 import org.telegram.messenger.feature.messaging.emojieffects.domain.usecase.UpdateEmojiEffectProgressUseCase
 import org.telegram.messenger.feature.messaging.emojieffects.presentation.EmojiEffectsViewModel
+import org.telegram.messenger.feature.messaging.emojipicker.data.datasource.EmojiPickerLocalDataSource
+import org.telegram.messenger.feature.messaging.emojipicker.data.datasource.EmojiPickerRemoteDataSource
+import org.telegram.messenger.feature.messaging.emojipicker.data.repository.EmojiPickerRepositoryImpl
 import org.telegram.messenger.feature.messaging.emojipicker.data.repository.LegacyEmojiPickerRepository
 import org.telegram.messenger.feature.messaging.emojipicker.domain.repository.EmojiPickerRepository
 import org.telegram.messenger.feature.messaging.emojipicker.domain.usecase.ClearRecentPickerItemsUseCase
@@ -1446,10 +1458,18 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    fun createDraftsRepository(): DraftsRepository {
+        return DraftsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = DraftsLocalDataSource(account),
+            remoteDataSource = DraftsRemoteDataSource(account)
+        )
+    }
+
     private var customDraftsRepository: DraftsRepository? = null
 
     var draftsRepository: DraftsRepository
-        get() = customDraftsRepository ?: LegacyDraftsRepository(account)
+        get() = customDraftsRepository ?: createDraftsRepository()
         set(value) {
             customDraftsRepository = value
         }
@@ -1508,11 +1528,15 @@ class MessagingContainer(val account: Int) {
     // ==========================================
 
     fun createDraftMeasureRepository(legacyController: ChatActivityDraftMessageMeasureController? = null): DraftMeasureRepository {
-        return LegacyDraftMeasureRepository(legacyController)
+        return DraftMeasureRepositoryImpl(
+            currentAccount = account,
+            localDataSource = DraftMeasureLocalDataSource(account),
+            remoteDataSource = DraftMeasureRemoteDataSource(account)
+        )
     }
 
     val draftMeasureRepository: DraftMeasureRepository by lazy {
-        LegacyDraftMeasureRepository()
+        createDraftMeasureRepository()
     }
 
     val calculateDraftMeasureOverrideUseCase: CalculateDraftMeasureOverrideUseCase
@@ -1668,11 +1692,15 @@ class MessagingContainer(val account: Int) {
     }
 
     fun createEmojiEffectsRepository(): EmojiEffectsRepository {
-        return LegacyEmojiEffectsRepository()
+        return EmojiEffectsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = EmojiEffectsLocalDataSource(account),
+            remoteDataSource = EmojiEffectsRemoteDataSource(account)
+        )
     }
 
     val emojiEffectsRepository: EmojiEffectsRepository by lazy {
-        LegacyEmojiEffectsRepository()
+        createEmojiEffectsRepository()
     }
 
     val normalizeEmojiUseCase: NormalizeEmojiUseCase
@@ -1803,7 +1831,11 @@ class MessagingContainer(val account: Int) {
     }
 
     fun createEmojiPickerRepository(): EmojiPickerRepository {
-        return LegacyEmojiPickerRepository(resolveAvailablePickerTabsUseCase)
+        return EmojiPickerRepositoryImpl(
+            currentAccount = account,
+            localDataSource = EmojiPickerLocalDataSource(account, resolveAvailablePickerTabsUseCase),
+            remoteDataSource = EmojiPickerRemoteDataSource(account)
+        )
     }
 
     val emojiPickerRepository: EmojiPickerRepository by lazy {

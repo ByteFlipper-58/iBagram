@@ -1135,4 +1135,13 @@ public class EmojiAnimationsOverlay implements NotificationCenter.NotificationCe
         return drawingObjects.get(drawingObjects.size() - 1).getProgress();
     }
 
+    public org.telegram.messenger.feature.messaging.emojieffects.domain.repository.EmojiEffectsRepository getEmojiEffectsRepository() {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(currentAccount);
+        return container != null ? container.getMessaging().getEmojiEffectsRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.messaging.emojieffects.domain.repository.EmojiEffectsRepository getEmojiEffectsRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return container != null ? container.getMessaging().getEmojiEffectsRepository() : null;
+    }
 }

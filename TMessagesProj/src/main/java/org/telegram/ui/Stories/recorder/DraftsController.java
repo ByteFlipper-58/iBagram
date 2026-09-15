@@ -42,6 +42,16 @@ public class DraftsController {
         loadFailed();
     }
 
+    public org.telegram.messenger.feature.messaging.drafts.domain.repository.DraftsRepository getDraftsRepository() {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(currentAccount);
+        return container != null ? container.getMessaging().getDraftsRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.messaging.drafts.domain.repository.DraftsRepository getDraftsRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return container != null ? container.getMessaging().getDraftsRepository() : null;
+    }
+
     public final ArrayList<StoryEntry> drafts = new ArrayList<>();
 
     private void loadInternal(final boolean failed, Utilities.Callback<ArrayList<StoryDraft>> callback) {

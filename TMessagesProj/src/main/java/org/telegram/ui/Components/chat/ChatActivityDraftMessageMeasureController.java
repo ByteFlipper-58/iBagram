@@ -105,4 +105,9 @@ public class ChatActivityDraftMessageMeasureController {
     public boolean filter(MessageObject messageObject) {
         return messageObject != null && (messageObject.getId() == messageIdToOverride || groupIdToOverride != 0 && messageObject.getGroupId() == groupIdToOverride);
     }
+
+    public static org.telegram.messenger.feature.messaging.draftmeasure.domain.repository.DraftMeasureRepository getDraftMeasureRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return container != null ? container.getMessaging().getDraftMeasureRepository() : null;
+    }
 }

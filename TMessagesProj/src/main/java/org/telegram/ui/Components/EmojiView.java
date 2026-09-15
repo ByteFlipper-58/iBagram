@@ -10263,4 +10263,14 @@ public class EmojiView extends FrameLayout implements
             setFoundPackButtonText(view, stickerSet, set, sticker, isEmoji, true);
         });
     }
+
+    public org.telegram.messenger.feature.messaging.emojipicker.domain.repository.EmojiPickerRepository getEmojiPickerRepository() {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(currentAccount);
+        return container != null ? container.getMessaging().getEmojiPickerRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.messaging.emojipicker.domain.repository.EmojiPickerRepository getEmojiPickerRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return container != null ? container.getMessaging().getEmojiPickerRepository() : null;
+    }
 }
