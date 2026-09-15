@@ -858,7 +858,7 @@ TMessagesProj/src/main/java/org/telegram/messenger/
   - [x] `VoIPFragment.java`: Connected `CallViewModel` (call state observation and safe lifecycle cleanup).
   - [x] `PrivacySettingsActivity.java` & `PasscodeActivity.java`: Connected `PrivacyViewModel`, `PasskeysViewModel`, and `BiometricsViewModel`.
   - [x] `SharedMediaLayout.java`: Connected `SavedMessagesViewModel` for saved messages tabs.
-- [/] Phase 3: Strangling Legacy Controllers from Within (In Progress)
+- [x] Phase 3: Strangling Legacy Controllers from Within (100% Complete)
   - [x] Standardized Data Sources Infrastructure (`core.data`):
     - `BaseRemoteDataSource.kt`: MTProto RPC execution via `ConnectionsManager.sendRequest`, coroutine cancellation (`suspendCancellableCoroutine`), typed `Result<T>`.
     - `BaseLocalDataSource.kt`: Safe database operations on `MessagesStorage` via `Dispatchers.IO`.
