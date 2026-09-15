@@ -290,4 +290,14 @@ public class CustomHtml {
             }
         }
     }
+
+    public static org.telegram.messenger.feature.messaging.texthtml.domain.repository.TextHtmlRepository getTextHtmlRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return container != null ? container.getMessaging().getTextHtmlRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.messaging.texthtml.domain.repository.TextHtmlRepository getTextHtmlRepository() {
+        return getTextHtmlRepository(org.telegram.messenger.UserConfig.selectedAccount);
+    }
 }
+

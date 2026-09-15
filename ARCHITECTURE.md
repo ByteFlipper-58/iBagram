@@ -1444,10 +1444,90 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `StickersRepositoryImpl.kt` (Clean repository coordinating sticker sets, installation toggles, and emoji matching)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `StickersAlert.java` strangler boundary with `getStickersRepository(account)` and `getStickersRepository()` accessors.
+  - [x] Feature: `TextHtml` Strangling (`feature.messaging.texthtml` - ADR 218):
+    - `TextHtmlRemoteDataSource.kt` (Custom emoji validation and remote formatting rules)
+    - `TextHtmlLocalDataSource.kt` (Bidirectional conversions between HTML markup and Telegram entity spans, escaping, and formatting state)
+    - `TextHtmlRepositoryImpl.kt` (Clean repository coordinating HTML serialization/deserialization and tag stripping)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `CustomHtml.java` strangler boundary with `getTextHtmlRepository(account)` and `getTextHtmlRepository()` accessors.
+  - [x] Feature: `Search` Strangling (`feature.messaging.search` - ADR 219):
+    - `SearchRemoteDataSource.kt` (Global MTProto search queries for dialogs, messages, and hashtags)
+    - `SearchLocalDataSource.kt` (Local dialog filtering, recent searches stack, and recent hashtags in-memory cache)
+    - `SearchRepositoryImpl.kt` (Clean repository coordinating local and global search pipelines and recent history)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `DialogsSearchAdapter.java` strangler boundary with `getSearchRepository(account)` and `getSearchRepository()` accessors.
+  - [x] Feature: `Dialogs` Strangling (`feature.messaging.dialogs` - ADR 220):
+    - `DialogsRemoteDataSource.kt` (Remote dialogs loading, folder categorization, pin/delete operations via MessagesController)
+    - `DialogsLocalDataSource.kt` (Thread-safe in-memory cache per folder, unread counters, and reactive StateFlow streams)
+    - `DialogsRepositoryImpl.kt` (Clean repository coordinating dialogs cache, pagination, and folder lists)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `DialogsActivity.java` strangler boundary with `getDialogsRepository(account)` and `getDialogsRepository()` accessors.
+  - [x] Feature: `Chat` Strangling (`feature.messaging.chat` - ADR 221):
+    - `ChatRemoteDataSource.kt` (Message history loading, send messages, and delete messages with revoke flags via MessagesController)
+    - `ChatLocalDataSource.kt` (In-memory message lists per dialogId, synthetic local message tracking, and reactive StateFlow)
+    - `ChatRepositoryImpl.kt` (Clean repository coordinating message caching, history pagination, and deletion)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ChatActivity.java` strangler boundary with `getChatRepository(account)` and `getChatRepository()` accessors.
+  - [x] Feature: `SendMessages` Strangling (`feature.messaging.sendmessages` - ADR 222):
+    - `SendMessagesRemoteDataSource.kt` (Outgoing dispatch of text, media, albums, and forwards via SendMessagesHelper with headless protection)
+    - `SendMessagesLocalDataSource.kt` (Reactive StateFlow tracking pending sends queue, progress fractions, byte counters, and status transitions)
+    - `SendMessagesRepositoryImpl.kt` (Clean repository coordinating pending send queue, status transitions, retries, and cancellations)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `SendMessagesHelper.java` strangler boundary with `getSendMessagesRepository(account)` and `getSendMessagesRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 222: Message Sending Queue, Media Uploads & Albums Strangling via Clean DataSources & SendMessagesRepositoryImpl
+- **Context:** Outgoing message queueing, chunked media uploads, album grouping, forwarding requests, progress observation, and retry/cancellation mechanics were coupled in `SendMessagesHelper.java` (~12k lines) with deep UI thread dependencies.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.sendmessages`:
+  1. Implement `SendMessagesRemoteDataSource`: Dispatches text, media, album, and forward operations to `SendMessagesHelper` with headless environment guards.
+  2. Implement `SendMessagesLocalDataSource`: Manages reactive StateFlow tracking of pending sends, upload progress fractions, byte counters, status transitions (PENDING, UPLOADING, SENDING, SUCCESS, FAILED, CANCELLED), and retry counts.
+  3. Implement `SendMessagesRepositoryImpl`: Implements `SendMessagesRepository` coordinating local state transitions with remote send dispatching.
+  4. Update `MessagingContainer` to wire `createSendMessagesRepository()` and `sendMessagesRepository`.
+  5. Introduce strangler boundary: `SendMessagesHelper.getSendMessagesRepository(account)` and `getSendMessagesRepository()` accessors.
+- **Consequences:** Outgoing message pipeline, upload progress tracking, and retry/cancel flows are cleanly isolated behind a pure domain contract with comprehensive unit tests (`SendMessagesRepositoryImplTest.kt`).
+
+### ADR 221: Chat History, Message Operations & Outgoing Dispatch Strangling via Clean DataSources & ChatRepositoryImpl
+- **Context:** Chat message loading, message deletion (for self and peer), and synthetic local message emission were embedded in `ChatActivity.java` (~42k lines) with direct `MessagesController` calls.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.chat`:
+  1. Implement `ChatRemoteDataSource`: Handles message history loading, sending requests, and message deletion with revoke flags via `MessagesController` and `SendMessagesHelper`.
+  2. Implement `ChatLocalDataSource`: Manages reactive StateFlow message streams, in-memory caching per dialog ID, and synthetic message tracking.
+  3. Implement `ChatRepositoryImpl`: Implements `ChatRepository` coordinating local caching and remote message dispatching.
+  4. Update `MessagingContainer` to wire `createChatRepository()` and `chatRepository`.
+  5. Introduce strangler boundary: `ChatActivity.getChatRepository(account)` and `getChatRepository()` accessors.
+- **Consequences:** Chat messaging operations are cleanly decoupled behind a pure domain interface with 100% unit test verification (`ChatRepositoryImplTest.kt`).
+
+### ADR 220: Dialogs List, Unread Counters & Folder Tabs Strangling via Clean DataSources & DialogsRepositoryImpl
+- **Context:** Dialogs list loading, folder categorization, unread message badges, pinned dialog arbitration, and dialog deletion were coupled inside `DialogsActivity.java` (~9500 lines) and `MessagesController.java`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.dialogs`:
+  1. Implement `DialogsRemoteDataSource`: Handles remote dialogs synchronization, pagination, pinning, and deletion via `MessagesController` with headless guards.
+  2. Implement `DialogsLocalDataSource`: In-memory and cached dialog lists per folder, unread badge counters, and reactive StateFlow streams.
+  3. Implement `DialogsRepositoryImpl`: Implements `DialogsRepository` coordinating local folder caches and remote dialog updates.
+  4. Update `MessagingContainer` to wire `createDialogsRepository()` and `dialogsRepository`.
+  5. Introduce strangler boundary: `DialogsActivity.getDialogsRepository(account)` and `getDialogsRepository()` accessors.
+- **Consequences:** Dialogs list presentation is isolated behind a reactive, testable domain repository without coupling to legacy activity lifecycles. 100% unit test coverage achieved with `DialogsRepositoryImplTest.kt`.
+
+### ADR 219: Dialogs, Global & Hashtags Search Strangling via Clean DataSources & SearchRepositoryImpl
+- **Context:** Dialogs filtering, global user/channel searches, recent searches history, and hashtags autocompletion were mixed into `DialogsSearchAdapter.java` (~4500 lines) with direct MTProto search dispatching and SQLite lookups.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.search`:
+  1. Implement `SearchRemoteDataSource`: Dispatches global MTProto searches for dialogs, messages, and hashtags with headless protection.
+  2. Implement `SearchLocalDataSource`: Manages local dialog filtering, recent searches stack, and recent hashtags in-memory cache.
+  3. Implement `SearchRepositoryImpl`: Implements `SearchRepository` coordinating local search, MTProto global queries, and search history pruning.
+  4. Update `MessagingContainer` to wire `createSearchRepository()` and `searchRepository`.
+  5. Introduce strangler boundary: `DialogsSearchAdapter.getSearchRepository(account)` and `getSearchRepository()` accessors.
+- **Consequences:** Global and local dialog search capabilities are cleanly decoupled from the UI adapter into a testable domain repository. 100% unit test coverage achieved with `SearchRepositoryImplTest.kt`.
+
+### ADR 218: Rich Text & HTML Entity Conversion Engine Strangling via Clean DataSources & TextHtmlRepositoryImpl
+- **Context:** HTML-to-spans and spans-to-HTML conversion, custom tag handlers (`<b>`, `<i>`, `<spoiler>`, `<pre lang="...">`, `<blockquote>`, `<animated-emoji>`), and entity escaping were coupled inside `CustomHtml.java` (~294 lines) and `CopyUtilities.java`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.texthtml`:
+  1. Implement `TextHtmlRemoteDataSource`: Handles custom emoji validation and remote formatting rules.
+  2. Implement `TextHtmlLocalDataSource`: Handles bidirectional conversions between HTML markup and Telegram entity spans with in-memory caching and regex parsing.
+  3. Implement `TextHtmlRepositoryImpl`: Implements `TextHtmlRepository` coordinating local bidirectional conversion and remote formatting checks.
+  4. Update `MessagingContainer` to wire `createTextHtmlRepository()` and `textHtmlRepository`.
+  5. Introduce strangler boundary: `CustomHtml.getTextHtmlRepository(account)` and `getTextHtmlRepository()` accessors.
+- **Consequences:** All text and HTML entity conversion logic is completely isolated behind a pure domain boundary with full unit test coverage (`TextHtmlRepositoryImplTest.kt`).
 
 ### ADR 217: Sticker Sets, Recent Stickers & Emoji Matching Strangling via Clean DataSources & StickersRepositoryImpl
 - **Context:** Sticker sets management, install/archive state toggles, emoji-to-sticker correlations, and recent sticker caching were coupled inside `MediaDataController` and UI components like `StickersAlert.java`.

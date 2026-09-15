@@ -14472,4 +14472,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         return true;
     }
 
+    public static org.telegram.messenger.feature.messaging.dialogs.domain.repository.DialogsRepository getDialogsRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return container != null ? container.getMessaging().getDialogsRepository() : null;
+    }
+
+    public org.telegram.messenger.feature.messaging.dialogs.domain.repository.DialogsRepository getDialogsRepository() {
+        return getDialogsRepository(currentAccount);
+    }
 }

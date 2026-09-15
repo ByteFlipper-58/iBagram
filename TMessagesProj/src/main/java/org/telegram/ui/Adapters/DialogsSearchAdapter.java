@@ -2545,4 +2545,14 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
         req.random_id = sponsoredPeer.random_id;
         ConnectionsManager.getInstance(currentAccount).sendRequest(req, null);
     }
+
+    public static org.telegram.messenger.feature.messaging.search.domain.repository.SearchRepository getSearchRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return container != null ? container.getMessaging().getSearchRepository() : null;
+    }
+
+    public org.telegram.messenger.feature.messaging.search.domain.repository.SearchRepository getSearchRepository() {
+        return getSearchRepository(currentAccount);
+    }
 }
+

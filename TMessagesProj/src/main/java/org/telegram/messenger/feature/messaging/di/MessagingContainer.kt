@@ -354,7 +354,10 @@ import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.Get
 import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.SearchSavedDialogsUseCase
 import org.telegram.messenger.feature.messaging.savedmessages.domain.usecase.TogglePinSavedDialogUseCase
 import org.telegram.messenger.feature.messaging.savedmessages.presentation.SavedMessagesViewModel
+import org.telegram.messenger.feature.messaging.search.data.datasource.SearchLocalDataSource
+import org.telegram.messenger.feature.messaging.search.data.datasource.SearchRemoteDataSource
 import org.telegram.messenger.feature.messaging.search.data.repository.LegacySearchRepository
+import org.telegram.messenger.feature.messaging.search.data.repository.SearchRepositoryImpl
 import org.telegram.messenger.feature.messaging.search.domain.repository.SearchRepository
 import org.telegram.messenger.feature.messaging.search.domain.usecase.ClearRecentHashtagsUseCase
 import org.telegram.messenger.feature.messaging.search.domain.usecase.ClearRecentSearchesUseCase
@@ -365,7 +368,10 @@ import org.telegram.messenger.feature.messaging.search.domain.usecase.RemoveRece
 import org.telegram.messenger.feature.messaging.search.domain.usecase.SearchGlobalUseCase
 import org.telegram.messenger.feature.messaging.search.domain.usecase.SearchLocalUseCase
 import org.telegram.messenger.feature.messaging.search.presentation.SearchViewModel
+import org.telegram.messenger.feature.messaging.sendmessages.data.datasource.SendMessagesLocalDataSource
+import org.telegram.messenger.feature.messaging.sendmessages.data.datasource.SendMessagesRemoteDataSource
 import org.telegram.messenger.feature.messaging.sendmessages.data.repository.LegacySendMessagesRepository
+import org.telegram.messenger.feature.messaging.sendmessages.data.repository.SendMessagesRepositoryImpl
 import org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository
 import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.CancelSendMessageUseCase
 import org.telegram.messenger.feature.messaging.sendmessages.domain.usecase.ForwardMessagesUseCase
@@ -494,13 +500,30 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val dialogsRemoteDataSource: org.telegram.messenger.feature.messaging.dialogs.data.datasource.DialogsRemoteDataSource by lazy {
+        org.telegram.messenger.feature.messaging.dialogs.data.datasource.DialogsRemoteDataSource(account)
+    }
+
+    val dialogsLocalDataSource: org.telegram.messenger.feature.messaging.dialogs.data.datasource.DialogsLocalDataSource by lazy {
+        org.telegram.messenger.feature.messaging.dialogs.data.datasource.DialogsLocalDataSource(account)
+    }
+
+    fun createDialogsRepository(): DialogsRepository {
+        return org.telegram.messenger.feature.messaging.dialogs.data.repository.DialogsRepositoryImpl(
+            currentAccount = account,
+            localDataSource = dialogsLocalDataSource,
+            remoteDataSource = dialogsRemoteDataSource
+        )
+    }
+
     private var customDialogsRepository: DialogsRepository? = null
 
     var dialogsRepository: DialogsRepository
-        get() = customDialogsRepository ?: LegacyDialogsRepository(account)
+        get() = customDialogsRepository ?: createDialogsRepository()
         set(value) {
             customDialogsRepository = value
         }
+
 
     val getDialogsUseCase: GetDialogsUseCase
         get() = GetDialogsUseCase(dialogsRepository)
@@ -536,13 +559,30 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    val chatRemoteDataSource: org.telegram.messenger.feature.messaging.chat.data.datasource.ChatRemoteDataSource by lazy {
+        org.telegram.messenger.feature.messaging.chat.data.datasource.ChatRemoteDataSource(account)
+    }
+
+    val chatLocalDataSource: org.telegram.messenger.feature.messaging.chat.data.datasource.ChatLocalDataSource by lazy {
+        org.telegram.messenger.feature.messaging.chat.data.datasource.ChatLocalDataSource(account)
+    }
+
+    fun createChatRepository(): ChatRepository {
+        return org.telegram.messenger.feature.messaging.chat.data.repository.ChatRepositoryImpl(
+            currentAccount = account,
+            localDataSource = chatLocalDataSource,
+            remoteDataSource = chatRemoteDataSource
+        )
+    }
+
     private var customChatRepository: ChatRepository? = null
 
     var chatRepository: ChatRepository
-        get() = customChatRepository ?: LegacyChatRepository(account)
+        get() = customChatRepository ?: createChatRepository()
         set(value) {
             customChatRepository = value
         }
+
 
     val observeMessagesUseCase: ObserveMessagesUseCase
         get() = ObserveMessagesUseCase(chatRepository)
@@ -708,13 +748,22 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    fun createSearchRepository(): SearchRepository {
+        return SearchRepositoryImpl(
+            currentAccount = account,
+            localDataSource = SearchLocalDataSource(account),
+            remoteDataSource = SearchRemoteDataSource(account)
+        )
+    }
+
     private var customSearchRepository: SearchRepository? = null
 
     var searchRepository: SearchRepository
-        get() = customSearchRepository ?: LegacySearchRepository(account)
+        get() = customSearchRepository ?: createSearchRepository()
         set(value) {
             customSearchRepository = value
         }
+
 
     val searchGlobalUseCase: SearchGlobalUseCase
         get() = SearchGlobalUseCase(searchRepository)
@@ -2068,8 +2117,18 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    fun createSendMessagesRepository(): SendMessagesRepository {
+        val localDataSource = SendMessagesLocalDataSource(account)
+        val remoteDataSource = SendMessagesRemoteDataSource(account)
+        return SendMessagesRepositoryImpl(
+            currentAccount = account,
+            localDataSource = localDataSource,
+            remoteDataSource = remoteDataSource
+        )
+    }
+
     val sendMessagesRepository: SendMessagesRepository by lazy {
-        LegacySendMessagesRepository(account)
+        createSendMessagesRepository()
     }
 
     val sendTextMessageUseCase: SendTextMessageUseCase
@@ -2457,10 +2516,18 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    fun createTextHtmlRepository(): org.telegram.messenger.feature.messaging.texthtml.domain.repository.TextHtmlRepository {
+        return org.telegram.messenger.feature.messaging.texthtml.data.repository.TextHtmlRepositoryImpl(
+            currentAccount = account,
+            localDataSource = org.telegram.messenger.feature.messaging.texthtml.data.datasource.TextHtmlLocalDataSource(account),
+            remoteDataSource = org.telegram.messenger.feature.messaging.texthtml.data.datasource.TextHtmlRemoteDataSource(account)
+        )
+    }
+
     private var customTextHtmlRepository: org.telegram.messenger.feature.messaging.texthtml.domain.repository.TextHtmlRepository? = null
 
     var textHtmlRepository: org.telegram.messenger.feature.messaging.texthtml.domain.repository.TextHtmlRepository
-        get() = customTextHtmlRepository ?: org.telegram.messenger.feature.messaging.texthtml.data.repository.LegacyTextHtmlRepository()
+        get() = customTextHtmlRepository ?: createTextHtmlRepository()
         set(value) {
             customTextHtmlRepository = value
         }
@@ -2516,3 +2583,5 @@ class MessagingContainer(val account: Int) {
     }
 
 }
+
+

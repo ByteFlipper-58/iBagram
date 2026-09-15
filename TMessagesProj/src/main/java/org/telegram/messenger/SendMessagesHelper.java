@@ -961,6 +961,16 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         return localInstance;
     }
 
+    public org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository getSendMessagesRepository() {
+        org.telegram.messenger.core.di.AccountFeatureContainer accountContainer = org.telegram.messenger.core.di.AccountFeatureContainer.get(currentAccount);
+        return accountContainer != null ? accountContainer.getMessaging().getSendMessagesRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository getSendMessagesRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer accountContainer = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return accountContainer != null ? accountContainer.getMessaging().getSendMessagesRepository() : null;
+    }
+
     public SendMessagesHelper(int instance) {
         super(instance);
 

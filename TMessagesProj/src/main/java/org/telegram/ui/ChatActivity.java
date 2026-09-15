@@ -3241,6 +3241,17 @@ public class ChatActivity extends BaseFragment implements
         return accountContainer != null ? accountContainer.getMessaging().getBottomViewsVisibilityRepository() : null;
     }
 
+    public org.telegram.messenger.feature.messaging.chat.domain.repository.ChatRepository getChatRepository() {
+        AccountFeatureContainer accountContainer = AccountFeatureContainer.get(currentAccount);
+        return accountContainer != null ? accountContainer.getMessaging().getChatRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.messaging.chat.domain.repository.ChatRepository getChatRepository(int account) {
+        AccountFeatureContainer accountContainer = AccountFeatureContainer.get(account);
+        return accountContainer != null ? accountContainer.getMessaging().getChatRepository() : null;
+    }
+
+
     protected void updateSearchingHashtag(String hashtag) {
         if (chatMode != MODE_SEARCH) {
             return;
