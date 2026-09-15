@@ -1474,6 +1474,12 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `SendMessagesRepositoryImpl.kt` (Clean repository coordinating pending send queue, status transitions, retries, and cancellations)
     - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `SendMessagesHelper.java` strangler boundary with `getSendMessagesRepository(account)` and `getSendMessagesRepository()` accessors.
+- [ ] Phase 4: Legacy Controller Shrinking & Code Deletion (Deep Legacy Cleanup)
+  - Objective: Gradual redirection of internal calls in massive Java god-classes (`MessagesController`, `SendMessagesHelper`, `MediaDataController`, etc.) directly to the new domain repositories and deletion of redundant legacy code.
+  - Step 1: Target Identification & Dependency Mapping (Identifying duplicated logic between Java controllers and Kotlin repositories).
+  - Step 2: Internal Method Redirection (Replacing internal legacy storage/network calls in Java classes with delegations to `get*Repository()`).
+  - Step 3: Deprecation & Safe Code Deletion (Removing redundant internal caches, obsolete helper methods, and dead legacy code without breaking upstream public APIs).
+  - Step 4: Continuous Verification via JVM Unit Tests (`:TMessagesProj:testDebugUnitTest`).
 
 ---
 
