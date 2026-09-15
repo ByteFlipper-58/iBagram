@@ -1372,10 +1372,86 @@ TMessagesProj/src/main/java/org/telegram/messenger/
     - `VoIPRepositoryImpl.kt` (Clean repository coordinating call lifecycle, audio routing, mute/unmute, video capture toggling, and reactive state)
     - `MediaContainer.kt` & `AccountFeatureContainer.kt` wiring
     - `VoIPService.java` strangler boundary with `getVoIPRepository(account)` and `getVoIPRepository()` accessors.
+  - [x] Feature: `AutoDelete` Strangling (`feature.messaging.autodelete` - ADR 206):
+    - `AutoDeleteRemoteDataSource.kt` (MTProto RPC requests: setDefaultHistoryTTL, setHistoryTTL)
+    - `AutoDeleteLocalDataSource.kt` (UserConfig default TTL & local chat TTL state flows)
+    - `AutoDeleteRepositoryImpl.kt` (Clean repository coordinating global and per-chat auto-delete TTL)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `MessagesController.java` strangler boundary with `getAutoDeleteRepository(account)` and `getAutoDeleteRepository()` accessors.
+  - [x] Feature: `BottomViews` Strangling (`feature.messaging.bottomviews` - ADR 207):
+    - `BottomViewsRemoteDataSource.kt` (Remote bottom bar overlay metadata)
+    - `BottomViewsLocalDataSource.kt` (Bitwise container flags, priority selection, and visibilities map)
+    - `BottomViewsVisibilityRepositoryImpl.kt` (Clean repository coordinating mutual exclusion and container visibility)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ChatActivity.java` strangler boundary with `getBottomViewsVisibilityRepository(account)` and `getBottomViewsVisibilityRepository()` accessors.
+  - [x] Feature: `ChatAttach` Strangling (`feature.messaging.chatattach` - ADR 208):
+    - `ChatAttachRemoteDataSource.kt` (Remote attachment limits and layout capabilities)
+    - `ChatAttachLocalDataSource.kt` (Attach alert state, layout selection, multi-item selection ordering, permissions, and send options)
+    - `ChatAttachRepositoryImpl.kt` (Clean repository coordinating attachment dialog state, layout arbitration, and send options)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ChatAttachAlert.java` strangler boundary with `getChatAttachRepository(account)` and `getChatAttachRepository()` accessors.
+  - [x] Feature: `ChatInput` Strangling (`feature.messaging.chatinput` - ADR 209):
+    - `ChatInputRemoteDataSource.kt` (Remote typing indicator dispatch and draft synchronization)
+    - `ChatInputLocalDataSource.kt` (Input text, selection, panel modes, reply/edit quotes, send button calculation, and voice/video recording lifecycle)
+    - `ChatInputRepositoryImpl.kt` (Clean repository coordinating input bar state, recording progress, send options, and panel visibility)
+    - `MessagingContainer.kt` & `AccountFeatureContainer.kt` wiring
+    - `ChatActivityEnterView.java` strangler boundary with `getChatInputRepository(account)` and `getChatInputRepository()` accessors.
 
 ---
 
 ## 6. Architecture Decision Records (ADRs)
+
+### ADR 209: Chat Input Bar, Text Formatting, Recording Lifecycle & Virtual Panels Strangling via Clean DataSources & ChatInputRepositoryImpl
+- **Context:** Text input entry, markdown selection formatting, audio/video recording lifecycles (lock, pause, resume, cancel, preview), virtual panel arbitration (emoji/sticker tabs, bot keyboards, attachment sheets), and reply/edit quotes were orchestrated by `ChatActivityEnterView.java` (~15600 lines) with tight coupling to Android views and animators.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.chatinput`:
+  1. Implement `ChatInputRemoteDataSource`:
+     - Dispatches remote typing indicators and saves drafts.
+  2. Implement `ChatInputLocalDataSource`:
+     - Manages thread-safe `ChatInputState` flows, text edits, selection spans, panel mode switches, reply/edit quotes, send button arbitration (`CalculateSendButtonStateUseCase`), voice/video recording transitions, and view-once toggles.
+  3. Implement `ChatInputRepositoryImpl`:
+     - Implements `ChatInputRepository`, delegating reactive state and mutation operations to local and remote data sources.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `ChatInputRepositoryImpl`.
+  5. Introduce strangler boundary: `ChatActivityEnterView.getChatInputRepository(account)` and `getChatInputRepository()` accessors.
+- **Consequences:** Input bar arbitration, recording lifecycle, and virtual panel routing are decoupled behind clean domain contracts and use cases. 100% unit test coverage achieved with `ChatInputRepositoryImplTest.kt`.
+
+### ADR 208: Chat Attachment Dialog, Multi-Selection Ordering & Send Options Strangling via Clean DataSources & ChatAttachRepositoryImpl
+- **Context:** Attachment sheet presentation, tab switching (photos, documents, audio, contacts, location, polls), multi-selection indexing with numbered order badges, caption character limits, and spoilered/file send options were managed inside `ChatAttachAlert.java` (~7280 lines).
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.chatattach`:
+  1. Implement `ChatAttachRemoteDataSource`:
+     - Resolves remote attachment limits and server-side layout capabilities.
+  2. Implement `ChatAttachLocalDataSource`:
+     - Manages reactive `ChatAttachState`, alert visibility, current/available layouts, multi-selection ordering, permission flags, and send options (`ChatAttachSendOptions`).
+  3. Implement `ChatAttachRepositoryImpl`:
+     - Implements `ChatAttachRepository`, coordinating attachment alert lifecycle, layout selection, item toggling, and send configuration.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `ChatAttachRepositoryImpl`.
+  5. Introduce strangler boundary: `ChatAttachAlert.getChatAttachRepository(account)` and `getChatAttachRepository()` accessors.
+- **Consequences:** All attachment dialog presentation, layout selection, and multi-item ordering logic are decoupled behind clean domain contracts. 100% unit test coverage achieved with `ChatAttachRepositoryImplTest.kt`.
+
+### ADR 207: Chat Bottom Views Visibility & Priority Mutual Exclusion Strangling via Clean DataSources & BottomViewsVisibilityRepositoryImpl
+- **Context:** Visibility transitions and mutual exclusion among bottom chat views (message input, recording panel, media attachments, search bar, actions/selection bar, join channel bar, bot overlays) were coordinated by `ChatActivityBottomViewsVisibilityController.java` using 32-bit bitwise container flags and float array weights.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.bottomviews`:
+  1. Implement `BottomViewsRemoteDataSource`:
+     - Retrieves remote bottom overlay configurations.
+  2. Implement `BottomViewsLocalDataSource`:
+     - Manages thread-safe bitwise container flags (`1 shl containerId`), priority calculations via `BottomViewsVisibilityMapper`, and reactive `BottomViewsVisibilityState` flows.
+  3. Implement `BottomViewsVisibilityRepositoryImpl`:
+     - Implements `BottomViewsVisibilityRepository`, delegating container visibility queries, mutations, and priority resolutions.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `BottomViewsVisibilityRepositoryImpl`.
+  5. Introduce strangler boundary: `ChatActivity.getBottomViewsVisibilityRepository(account)` and `getBottomViewsVisibilityRepository()` accessors.
+- **Consequences:** Bottom bar mutual exclusion and animation priorities are decoupled behind clean domain contracts. 100% unit test coverage achieved with `BottomViewsVisibilityRepositoryImplTest.kt`.
+
+### ADR 206: Auto-Delete & Self-Destruct Message History Timers Strangling via Clean DataSources & AutoDeleteRepositoryImpl
+- **Context:** Global account-level default TTL for new chats and per-dialog TTL periods were coordinated inside `AutoDeleteMessagesActivity.java` (~337 lines) and `MessagesController.java`, mixing MTProto requests (`TL_messages_setDefaultHistoryTTL`, `TL_messages_setHistoryTTL`) directly with UI logic and `UserConfig`.
+- **Decision:** Apply the Strangler Fig pattern to `feature.messaging.autodelete`:
+  1. Implement `AutoDeleteRemoteDataSource`:
+     - Executes MTProto RPC requests for setting global and per-chat history TTL.
+  2. Implement `AutoDeleteLocalDataSource`:
+     - Manages reactive `GlobalAutoDeleteStateModel` StateFlow and chat TTL lookups.
+  3. Implement `AutoDeleteRepositoryImpl`:
+     - Implements `AutoDeleteRepository`, coordinating global TTL and chat TTL settings and batch operations.
+  4. Update `MessagingContainer` and `AccountFeatureContainer` to wire `AutoDeleteRepositoryImpl`.
+  5. Introduce strangler boundary: `MessagesController.getAutoDeleteRepository(account)` and `getAutoDeleteRepository()` accessors.
+- **Consequences:** Auto-delete timers and history TTL management are isolated behind clean domain contracts and use cases. 100% unit test coverage achieved with `AutoDeleteRepositoryImplTest.kt`.
 
 ### ADR 205: VoIP Call Lifecycle, Audio/Video Routing & Hardware Strangling via Clean DataSources & VoIPRepositoryImpl
 - **Context:** Voice and video call operations, WebRTC signaling, audio hardware routing (Bluetooth SCO, earpiece, speaker), and call quality telemetry were centralized in `VoIPService.java` (~4300 lines) with tight coupling to Android services, broadcast receivers, and static singletons.

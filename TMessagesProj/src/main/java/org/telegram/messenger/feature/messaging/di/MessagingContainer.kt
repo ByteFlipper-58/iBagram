@@ -14,6 +14,9 @@ import org.telegram.messenger.feature.messaging.aitones.domain.usecase.ObserveAi
 import org.telegram.messenger.feature.messaging.aitones.domain.usecase.RemoveAiToneUseCase
 import org.telegram.messenger.feature.messaging.aitones.domain.usecase.UnsaveAiToneUseCase
 import org.telegram.messenger.feature.messaging.aitones.presentation.AiTonesViewModel
+import org.telegram.messenger.feature.messaging.autodelete.data.datasource.AutoDeleteLocalDataSource
+import org.telegram.messenger.feature.messaging.autodelete.data.datasource.AutoDeleteRemoteDataSource
+import org.telegram.messenger.feature.messaging.autodelete.data.repository.AutoDeleteRepositoryImpl
 import org.telegram.messenger.feature.messaging.autodelete.data.repository.LegacyAutoDeleteRepository
 import org.telegram.messenger.feature.messaging.autodelete.domain.repository.AutoDeleteRepository
 import org.telegram.messenger.feature.messaging.autodelete.domain.usecase.GetChatAutoDeleteUseCase
@@ -59,6 +62,9 @@ import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.Remov
 import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.ResolveCustomButtonTypeUseCase
 import org.telegram.messenger.feature.messaging.botkeyboard.domain.usecase.SetKeyboardForMessageUseCase
 import org.telegram.messenger.feature.messaging.botkeyboard.presentation.BotKeyboardViewModel
+import org.telegram.messenger.feature.messaging.bottomviews.data.datasource.BottomViewsLocalDataSource
+import org.telegram.messenger.feature.messaging.bottomviews.data.datasource.BottomViewsRemoteDataSource
+import org.telegram.messenger.feature.messaging.bottomviews.data.repository.BottomViewsVisibilityRepositoryImpl
 import org.telegram.messenger.feature.messaging.bottomviews.data.repository.LegacyBottomViewsVisibilityRepository
 import org.telegram.messenger.feature.messaging.bottomviews.domain.repository.BottomViewsVisibilityRepository
 import org.telegram.messenger.feature.messaging.bottomviews.domain.usecase.GetBottomViewVisibilityUseCase
@@ -75,6 +81,9 @@ import org.telegram.messenger.feature.messaging.chat.domain.usecase.LoadHistoryU
 import org.telegram.messenger.feature.messaging.chat.domain.usecase.ObserveMessagesUseCase
 import org.telegram.messenger.feature.messaging.chat.domain.usecase.SendMessageUseCase
 import org.telegram.messenger.feature.messaging.chat.presentation.ChatViewModel
+import org.telegram.messenger.feature.messaging.chatattach.data.datasource.ChatAttachLocalDataSource
+import org.telegram.messenger.feature.messaging.chatattach.data.datasource.ChatAttachRemoteDataSource
+import org.telegram.messenger.feature.messaging.chatattach.data.repository.ChatAttachRepositoryImpl
 import org.telegram.messenger.feature.messaging.chatattach.data.repository.LegacyChatAttachRepository
 import org.telegram.messenger.feature.messaging.chatattach.domain.repository.ChatAttachRepository
 import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.CalculateAttachCaptionLimitUseCase
@@ -88,6 +97,9 @@ import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.Toggle
 import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.UpdateAttachSendOptionsUseCase
 import org.telegram.messenger.feature.messaging.chatattach.domain.usecase.ValidateSendOptionsUseCase
 import org.telegram.messenger.feature.messaging.chatattach.presentation.ChatAttachViewModel
+import org.telegram.messenger.feature.messaging.chatinput.data.datasource.ChatInputLocalDataSource
+import org.telegram.messenger.feature.messaging.chatinput.data.datasource.ChatInputRemoteDataSource
+import org.telegram.messenger.feature.messaging.chatinput.data.repository.ChatInputRepositoryImpl
 import org.telegram.messenger.feature.messaging.chatinput.data.repository.LegacyChatInputRepository
 import org.telegram.messenger.feature.messaging.chatinput.domain.repository.ChatInputRepository
 import org.telegram.messenger.feature.messaging.chatinput.domain.usecase.CalculateSendButtonStateUseCase
@@ -1110,10 +1122,18 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    fun createAutoDeleteRepository(): AutoDeleteRepository {
+        return AutoDeleteRepositoryImpl(
+            currentAccount = account,
+            localDataSource = AutoDeleteLocalDataSource(account),
+            remoteDataSource = AutoDeleteRemoteDataSource(account)
+        )
+    }
+
     private var customAutoDeleteRepository: AutoDeleteRepository? = null
 
     var autoDeleteRepository: AutoDeleteRepository
-        get() = customAutoDeleteRepository ?: LegacyAutoDeleteRepository(account)
+        get() = customAutoDeleteRepository ?: createAutoDeleteRepository()
         set(value) {
             customAutoDeleteRepository = value
         }
@@ -1542,12 +1562,19 @@ class MessagingContainer(val account: Int) {
     }
 
     fun createBottomViewsRepository(legacyController: ChatActivityBottomViewsVisibilityController? = null): BottomViewsVisibilityRepository {
-        return LegacyBottomViewsVisibilityRepository(legacyController)
+        return BottomViewsVisibilityRepositoryImpl(
+            currentAccount = account,
+            localDataSource = BottomViewsLocalDataSource(account),
+            remoteDataSource = BottomViewsRemoteDataSource(account)
+        )
     }
 
     val bottomViewsRepository: BottomViewsVisibilityRepository by lazy {
-        LegacyBottomViewsVisibilityRepository()
+        createBottomViewsRepository()
     }
+
+    val bottomViewsVisibilityRepository: BottomViewsVisibilityRepository
+        get() = bottomViewsRepository
 
     val getBottomViewVisibilityUseCase: GetBottomViewVisibilityUseCase
         get() = GetBottomViewVisibilityUseCase(bottomViewsRepository)
@@ -1838,7 +1865,11 @@ class MessagingContainer(val account: Int) {
     }
 
     fun createChatAttachRepository(): ChatAttachRepository {
-        return LegacyChatAttachRepository()
+        return ChatAttachRepositoryImpl(
+            currentAccount = account,
+            localDataSource = ChatAttachLocalDataSource(account),
+            remoteDataSource = ChatAttachRemoteDataSource(account)
+        )
     }
 
     val chatAttachRepository: ChatAttachRepository by lazy {
@@ -1900,12 +1931,21 @@ class MessagingContainer(val account: Int) {
         )
     }
 
+    fun createChatInputRepository(): ChatInputRepository {
+        return ChatInputRepositoryImpl(
+            currentAccount = account,
+            localDataSource = ChatInputLocalDataSource(
+                currentAccount = account,
+                sendButtonStateUseCase = calculateSendButtonStateUseCase
+            ),
+            remoteDataSource = ChatInputRemoteDataSource(account)
+        )
+    }
+
     private var customChatInputRepository: ChatInputRepository? = null
 
     var chatInputRepository: ChatInputRepository
-        get() = customChatInputRepository ?: LegacyChatInputRepository(
-            sendButtonStateUseCase = calculateSendButtonStateUseCase
-        )
+        get() = customChatInputRepository ?: createChatInputRepository()
         set(value) {
             customChatInputRepository = value
         }

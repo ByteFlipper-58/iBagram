@@ -3231,6 +3231,16 @@ public class ChatActivity extends BaseFragment implements
         return true;
     }
 
+    public org.telegram.messenger.feature.messaging.bottomviews.domain.repository.BottomViewsVisibilityRepository getBottomViewsVisibilityRepository() {
+        AccountFeatureContainer accountContainer = AccountFeatureContainer.get(currentAccount);
+        return accountContainer != null ? accountContainer.getMessaging().getBottomViewsVisibilityRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.messaging.bottomviews.domain.repository.BottomViewsVisibilityRepository getBottomViewsVisibilityRepository(int account) {
+        AccountFeatureContainer accountContainer = AccountFeatureContainer.get(account);
+        return accountContainer != null ? accountContainer.getMessaging().getBottomViewsVisibilityRepository() : null;
+    }
+
     protected void updateSearchingHashtag(String hashtag) {
         if (chatMode != MODE_SEARCH) {
             return;

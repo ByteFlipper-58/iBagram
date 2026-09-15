@@ -7248,6 +7248,16 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
         }
     }
 
+    public org.telegram.messenger.feature.messaging.chatattach.domain.repository.ChatAttachRepository getChatAttachRepository() {
+        org.telegram.messenger.core.di.AccountFeatureContainer accountContainer = org.telegram.messenger.core.di.AccountFeatureContainer.get(currentAccount);
+        return accountContainer != null ? accountContainer.getMessaging().getChatAttachRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.messaging.chatattach.domain.repository.ChatAttachRepository getChatAttachRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer accountContainer = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return accountContainer != null ? accountContainer.getMessaging().getChatAttachRepository() : null;
+    }
+
     private void checkUi_fadeTopAlpha() {
         if (fadeView != null && actionBar != null) {
             final boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();

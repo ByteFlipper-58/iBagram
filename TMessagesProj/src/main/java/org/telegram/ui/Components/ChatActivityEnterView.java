@@ -15644,4 +15644,14 @@ public class ChatActivityEnterView extends FrameLayout implements
         newFilters[oldFilters.length] = noNewLinesFilter;
         editText.setFilters(newFilters);
     }
+
+    public org.telegram.messenger.feature.messaging.chatinput.domain.repository.ChatInputRepository getChatInputRepository() {
+        org.telegram.messenger.core.di.AccountFeatureContainer accountContainer = org.telegram.messenger.core.di.AccountFeatureContainer.get(currentAccount);
+        return accountContainer != null ? accountContainer.getMessaging().getChatInputRepository() : null;
+    }
+
+    public static org.telegram.messenger.feature.messaging.chatinput.domain.repository.ChatInputRepository getChatInputRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer accountContainer = org.telegram.messenger.core.di.AccountFeatureContainer.get(account);
+        return accountContainer != null ? accountContainer.getMessaging().getChatInputRepository() : null;
+    }
 }

@@ -23669,6 +23669,22 @@ public class MessagesController extends BaseController implements NotificationCe
         return foldersRepository;
     }
 
+    // Strangler Fig: Clean Architecture v2 repository for AutoDelete
+    private org.telegram.messenger.feature.messaging.autodelete.domain.repository.AutoDeleteRepository autoDeleteRepository;
+
+    public org.telegram.messenger.feature.messaging.autodelete.domain.repository.AutoDeleteRepository getAutoDeleteRepository() {
+        if (autoDeleteRepository == null) {
+            org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(currentAccount);
+            autoDeleteRepository = container != null ? container.getMessaging().getAutoDeleteRepository() : null;
+        }
+        return autoDeleteRepository;
+    }
+
+    public static org.telegram.messenger.feature.messaging.autodelete.domain.repository.AutoDeleteRepository getAutoDeleteRepository(int account) {
+        org.telegram.messenger.core.di.AccountFeatureContainer container = org.telegram.messenger.core.di.AccountFeatureContainer.Companion.get(account);
+        return container != null ? container.getMessaging().getAutoDeleteRepository() : null;
+    }
+
     public UnconfirmedAuthController getUnconfirmedAuthController() {
         if (unconfirmedAuthController != null) {
             return unconfirmedAuthController;
