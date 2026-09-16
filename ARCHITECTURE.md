@@ -3475,3 +3475,9 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 ### ADR 004: NotificationCenterFlowBridge for Reactive Upstream Sync
 - **Context:** Legacy Telegram notifies UI of data changes via `NotificationCenter.getInstance(account).postNotificationName(...)`.
 - **Decision:** Build a Kotlin Coroutines `callbackFlow` bridge that registers as a `NotificationCenterDelegate` and cleanly emits typed updates, automatically unregistering when the collector scope cancels.
+
+### ADR 223: Extraction of DialogFiltersController from MessagesController (Batch 4.2)
+- **Context:** In Telegram Android, `MessagesController.java` exceeded 25,500 lines of code, acting as a massive god-class managing dialogs, messages, app config, users, chats, reactions, and chat folders/dialog filters. Folders and filter operations (`loadRemoteFilters`, `loadSuggestedFilters`, `selectDialogFilter`, `onFilterUpdate`, `addFilter`, `removeFilter`, `lockFiltersInternal`) were tightly coupled with `MessagesController`'s internal state, cluttering the class and hindering modularity.
+- **Decision:** Extract chat folders and dialog filters logic into an isolated, dedicated `DialogFiltersController.java` extending `BaseController`, instantiated via per-account singleton (`DialogFiltersController.getInstance(account)`). Connect `DialogFiltersController` directly to modern `FoldersRepository` via strangler hooks. In `MessagesController.java`, delegate all dialog filter methods (`loadRemoteFilters`, `loadSuggestedFilters`, `selectDialogFilter`, `onFilterUpdate`, `addFilter`, `removeFilter`, `lockFiltersInternal`) to `getDialogFiltersController()`, shrinking legacy lines while maintaining 100% backward compatibility for all upstream Telegram UI callers.
+- **Consequences:** `MessagesController.java` is reduced by 138 lines; chat folder operations are modularized and testable in isolation; all 100% upstream callers continue to compile and function without modification.
+
