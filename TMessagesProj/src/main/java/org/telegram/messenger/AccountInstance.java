@@ -106,6 +106,10 @@ public class AccountInstance {
         return DialogFiltersController.getInstance(currentAccount);
     }
 
+    public EmojiStatusController getEmojiStatusController() {
+        return EmojiStatusController.getInstance(currentAccount);
+    }
+
     public int getCurrentAccount() {
         return currentAccount;
     }

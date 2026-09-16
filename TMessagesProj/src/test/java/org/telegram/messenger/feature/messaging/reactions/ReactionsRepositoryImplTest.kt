@@ -88,4 +88,12 @@ class ReactionsRepositoryImplTest {
         assertEquals(1, settings.availableReactions.size)
         assertEquals(1, settings.recentReactions.size)
     }
+
+    @Test
+    fun testEmojiStatusControllerAccess() {
+        val controller = org.telegram.messenger.EmojiStatusController.getInstance(0)
+        org.junit.Assert.assertNotNull(controller)
+        val repo = controller.reactionsRepository
+        org.junit.Assert.assertNotNull(repo)
+    }
 }

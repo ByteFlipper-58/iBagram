@@ -423,6 +423,10 @@ public class MessagesController extends BaseController implements NotificationCe
         return DialogFiltersController.getInstance(currentAccount);
     }
 
+    public EmojiStatusController getEmojiStatusController() {
+        return EmojiStatusController.getInstance(currentAccount);
+    }
+
     private final CacheFetcher<Integer, TLRPC.TL_help_appConfig> appConfigFetcher = new CacheFetcher<Integer, TLRPC.TL_help_appConfig>() {
         @Override
         protected void getRemote(int currentAccount, Integer arguments, long hash, Utilities.Callback4<Boolean, TLRPC.TL_help_appConfig, Long, Boolean> onResult) {
@@ -752,9 +756,6 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public NewMessageCallback newMessageCallback;
 
-    private long recentEmojiStatusUpdateRunnableTimeout, recentEmojiStatusUpdateRunnableTime;
-    private Runnable recentEmojiStatusUpdateRunnable;
-    private final ConcurrentHashMap<Long, Integer> emojiStatusUntilValues = new ConcurrentHashMap<Long, Integer>();
     private TopicsController topicsController;
     private CacheByChatsController cacheByChatsController;
     private TranslateController translateController;
@@ -2449,68 +2450,19 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public static TLRPC.TL_emojiStatusCollectible emojiStatusCollectibleFromGift(TL_stars.TL_starGiftUnique gift) {
-        final TLRPC.TL_emojiStatusCollectible status = new TLRPC.TL_emojiStatusCollectible();
-        status.collectible_id = gift.id;
-        final TL_stars.starGiftAttributeModel model = findAttribute(gift.attributes, TL_stars.starGiftAttributeModel.class);
-        final TL_stars.starGiftAttributeBackdrop backdrop = findAttribute(gift.attributes, TL_stars.starGiftAttributeBackdrop.class);
-        final TL_stars.starGiftAttributePattern pattern = findAttribute(gift.attributes, TL_stars.starGiftAttributePattern.class);
-        status.title = gift.title + " #" + gift.num;
-        if (model != null) {
-            status.document_id = model.document.id;
-        }
-        if (pattern != null) {
-            status.pattern_document_id = pattern.document.id;
-        }
-        if (backdrop != null) {
-            status.center_color = backdrop.center_color;
-            status.edge_color = backdrop.edge_color;
-            status.text_color = backdrop.text_color;
-            status.pattern_color = backdrop.pattern_color;
-        }
-        return status;
+        return EmojiStatusController.emojiStatusCollectibleFromGift(gift);
     }
 
     public void updateEmojiStatus(TLRPC.EmojiStatus newStatus) {
-        updateEmojiStatus(newStatus, null);
+        getEmojiStatusController().updateEmojiStatus(newStatus);
     }
+
     public void updateEmojiStatus(TLRPC.EmojiStatus newStatus, TL_stars.StarGift gift) {
-        updateEmojiStatus(0, newStatus, gift);
+        getEmojiStatusController().updateEmojiStatus(newStatus, gift);
     }
 
     public void updateEmojiStatus(long dialogId, TLRPC.EmojiStatus newStatus, TL_stars.StarGift gift) {
-        final boolean myself = dialogId == 0 || dialogId == getUserConfig().getClientUserId();
-        TLRPC.EmojiStatus new_emoji_status = newStatus;
-        if (new_emoji_status instanceof TLRPC.TL_inputEmojiStatusCollectible && gift instanceof TL_stars.TL_starGiftUnique) {
-            new_emoji_status = emojiStatusCollectibleFromGift((TL_stars.TL_starGiftUnique) gift);
-        }
-
-        TLObject r;
-        if (myself) {
-            TL_account.updateEmojiStatus req = new TL_account.updateEmojiStatus();
-            req.emoji_status = newStatus;
-            r = req;
-
-            TLRPC.User user = getUserConfig().getCurrentUser();
-            if (user != null) {
-                user.emoji_status = new_emoji_status;
-                getNotificationCenter().postNotificationName(NotificationCenter.userEmojiStatusUpdated, user);
-            }
-        } else {
-            TLRPC.TL_channels_updateEmojiStatus req = new TLRPC.TL_channels_updateEmojiStatus();
-            req.channel = getInputChannel(-dialogId);
-            req.emoji_status = newStatus;
-            r = req;
-
-            TLRPC.Chat chat = getChat(-dialogId);
-            if (chat != null) {
-                chat.flags |= 512;
-                chat.emoji_status = new_emoji_status;
-                putChat(chat, true);
-            }
-        }
-        getMessagesController().updateEmojiStatusUntilUpdate(dialogId, new_emoji_status);
-        getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_EMOJI_STATUS);
-        getConnectionsManager().sendRequest(r, null);
+        getEmojiStatusController().updateEmojiStatus(dialogId, newStatus, gift);
     }
 
     public void removeFilter(DialogFilter filter) {
@@ -23270,45 +23222,11 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void updateEmojiStatusUntilUpdate(long dialogId, TLRPC.EmojiStatus status) {
-        final int until = DialogObject.getEmojiStatusUntil(status);
-        if (until != 0) {
-            emojiStatusUntilValues.put(dialogId, until);
-        } else {
-            if (!emojiStatusUntilValues.containsKey(dialogId))
-                return;
-            emojiStatusUntilValues.remove(dialogId);
-        }
-        updateEmojiStatusUntil();
+        getEmojiStatusController().updateEmojiStatusUntilUpdate(dialogId, status);
     }
 
     public void updateEmojiStatusUntil() {
-        final int now = (int) (System.currentTimeMillis() / 1000L);
-        Long timeout = null;
-        for (Iterator<Long> it = emojiStatusUntilValues.keySet().iterator(); it.hasNext(); ) {
-            int until = emojiStatusUntilValues.get(it.next());
-            if (until > now) {
-                timeout = Math.min(timeout == null ? Long.MAX_VALUE : timeout, until - now);
-            } else {
-                it.remove();
-            }
-        }
-
-        if (timeout != null) {
-            timeout += 2;
-            if (now + timeout != recentEmojiStatusUpdateRunnableTime + recentEmojiStatusUpdateRunnableTimeout) {
-                AndroidUtilities.cancelRunOnUIThread(recentEmojiStatusUpdateRunnable);
-                recentEmojiStatusUpdateRunnableTime = now;
-                recentEmojiStatusUpdateRunnableTimeout = timeout;
-                AndroidUtilities.runOnUIThread(recentEmojiStatusUpdateRunnable = () -> {
-                    getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, UPDATE_MASK_EMOJI_STATUS);
-                    updateEmojiStatusUntil();
-                }, timeout * 1000);
-            }
-        } else if (recentEmojiStatusUpdateRunnable != null) {
-            recentEmojiStatusUpdateRunnableTime = -1;
-            recentEmojiStatusUpdateRunnableTimeout = -1;
-            AndroidUtilities.cancelRunOnUIThread(recentEmojiStatusUpdateRunnable);
-        }
+        getEmojiStatusController().updateEmojiStatusUntil();
     }
 
     public String getMutedString(long dialogId, long topicId) {
