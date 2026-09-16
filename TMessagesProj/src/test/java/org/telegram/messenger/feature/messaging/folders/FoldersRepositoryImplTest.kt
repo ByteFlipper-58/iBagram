@@ -193,4 +193,12 @@ class FoldersRepositoryImplTest {
         val reorderResult = repo.reorderFolders(listOf(f2.id, f1.id))
         assertTrue(reorderResult.isSuccess)
     }
+
+    @Test
+    fun testDialogFiltersControllerAccess() {
+        val controller = org.telegram.messenger.DialogFiltersController.getInstance(0)
+        assertNotNull(controller)
+        val repo = controller.foldersRepository
+        assertNotNull(repo)
+    }
 }

@@ -102,6 +102,10 @@ public class AccountInstance {
         return MemberRequestsController.getInstance(currentAccount);
     }
 
+    public DialogFiltersController getDialogFiltersController() {
+        return DialogFiltersController.getInstance(currentAccount);
+    }
+
     public int getCurrentAccount() {
         return currentAccount;
     }

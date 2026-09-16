@@ -280,8 +280,8 @@ public class MessagesController extends BaseController implements NotificationCe
     public ArrayList<DialogFilter> frozenDialogFilters = null;
     public ArrayList<Long> hiddenUndoChats = new ArrayList<>();
     public SparseArray<DialogFilter> dialogFiltersById = new SparseArray<>();
-    private boolean loadingSuggestedFilters;
-    private boolean loadingRemoteFilters;
+    /* package */ boolean loadingSuggestedFilters;
+    /* package */ boolean loadingRemoteFilters;
     public boolean dialogFiltersLoaded;
     public ArrayList<TLRPC.TL_dialogFilterSuggested> suggestedFilters = new ArrayList<>();
 
@@ -417,6 +417,10 @@ public class MessagesController extends BaseController implements NotificationCe
             return frozenDialogFilters;
         }
         return dialogFilters;
+    }
+
+    public DialogFiltersController getDialogFiltersController() {
+        return DialogFiltersController.getInstance(currentAccount);
     }
 
     private final CacheFetcher<Integer, TLRPC.TL_help_appConfig> appConfigFetcher = new CacheFetcher<Integer, TLRPC.TL_help_appConfig>() {
@@ -874,28 +878,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void lockFiltersInternal() {
-        boolean changed = false;
-        if (!getUserConfig().isPremium() && dialogFilters.size() - 1 > dialogFiltersLimitDefault) {
-            int n = dialogFilters.size() - 1 - dialogFiltersLimitDefault;
-            ArrayList<DialogFilter> filtersSortedById = new ArrayList<>(dialogFilters);
-            Collections.reverse(filtersSortedById);
-            for (int i = 0; i < filtersSortedById.size(); i++) {
-                if (i < n) {
-                    if (!filtersSortedById.get(i).locked) {
-                        changed = true;
-                    }
-                    filtersSortedById.get(i).locked = true;
-                } else {
-                    if (filtersSortedById.get(i).locked) {
-                        changed = true;
-                    }
-                    filtersSortedById.get(i).locked = false;
-                }
-            }
-        }
-        if (changed) {
-            getNotificationCenter().postNotificationName(NotificationCenter.dialogFiltersUpdated);
-        }
+        getDialogFiltersController().lockFiltersInternal();
     }
 
     public int getCaptionMaxLengthLimit() {
@@ -2407,77 +2390,17 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void loadSuggestedFilters() {
-        if (loadingSuggestedFilters) {
-            return;
-        }
-        loadingSuggestedFilters = true;
-
-        TLRPC.TL_messages_getSuggestedDialogFilters req = new TLRPC.TL_messages_getSuggestedDialogFilters();
-        getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-            loadingSuggestedFilters = false;
-            suggestedFilters.clear();
-            if (response instanceof Vector) {
-                suggestedFilters.addAll(((Vector<TLRPC.TL_dialogFilterSuggested>) response).objects);
-            }
-            getNotificationCenter().postNotificationName(NotificationCenter.suggestedFiltersLoaded);
-        }));
+        getDialogFiltersController().loadSuggestedFilters();
     }
 
-    private Utilities.Callback<Boolean> onLoadedRemoteFilters;
+    /* package */ Utilities.Callback<Boolean> onLoadedRemoteFilters;
 
     public void loadRemoteFilters(boolean force) {
-        loadRemoteFilters(force, null);
+        getDialogFiltersController().loadRemoteFilters(force);
     }
 
     public void loadRemoteFilters(boolean force, Utilities.Callback<Boolean> whenDone) {
-        if (whenDone != null) {
-            onLoadedRemoteFilters = whenDone;
-        }
-        if (loadingRemoteFilters || !getUserConfig().isClientActivated() || !force && getUserConfig().filtersLoaded) {
-            return;
-        }
-        if (force) {
-            getUserConfig().filtersLoaded = false;
-            getUserConfig().saveConfig(false);
-        }
-        TLRPC.TL_messages_getDialogFilters req = new TLRPC.TL_messages_getDialogFilters();
-        getConnectionsManager().sendRequest(req, (response, error) -> {
-            if (response instanceof Vector) {
-                ArrayList<TLRPC.DialogFilter> filters = new ArrayList<>();
-                Vector vector = (Vector) response;
-                for (int i = 0; i < vector.objects.size(); ++i) {
-                    filters.add((TLRPC.DialogFilter) vector.objects.get(i));
-                }
-                getMessagesStorage().checkLoadedRemoteFilters(filters, () -> {
-                    if (onLoadedRemoteFilters != null) {
-                        onLoadedRemoteFilters.run(true);
-                        onLoadedRemoteFilters = null;
-                    }
-                });
-            } else if (response instanceof TLRPC.TL_messages_dialogFilters) {
-                TLRPC.TL_messages_dialogFilters res = (TLRPC.TL_messages_dialogFilters) response;
-                if (folderTags != res.tags_enabled) {
-                    setFolderTags(res.tags_enabled);
-                    AndroidUtilities.runOnUIThread(() -> {
-                        getNotificationCenter().postNotificationName(NotificationCenter.dialogFiltersUpdated);
-                    });
-                }
-                getMessagesStorage().checkLoadedRemoteFilters(res.filters, () -> {
-                    if (onLoadedRemoteFilters != null) {
-                        onLoadedRemoteFilters.run(true);
-                        onLoadedRemoteFilters = null;
-                    }
-                });
-            } else {
-                AndroidUtilities.runOnUIThread(() -> {
-                    loadingRemoteFilters = false;
-                    if (onLoadedRemoteFilters != null) {
-                        onLoadedRemoteFilters.run(false);
-                        onLoadedRemoteFilters = null;
-                    }
-                });
-            }
-        });
+        getDialogFiltersController().loadRemoteFilters(force, whenDone);
     }
 
     private boolean loggedDeviceStats;
@@ -2514,59 +2437,15 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void selectDialogFilter(DialogFilter filter, int index) {
-        if (selectedDialogFilter[index] == filter) {
-            return;
-        }
-        DialogFilter prevFilter = selectedDialogFilter[index];
-        selectedDialogFilter[index] = filter;
-        if (selectedDialogFilter[index == 0 ? 1 : 0] == filter) {
-            selectedDialogFilter[index == 0 ? 1 : 0] = null;
-        }
-        if (selectedDialogFilter[index] == null) {
-            if (prevFilter != null) {
-                prevFilter.dialogs.clear();
-                prevFilter.dialogsForward.clear();
-            }
-        } else {
-            sortDialogs(null);
-        }
+        getDialogFiltersController().selectDialogFilter(filter, index);
     }
 
     public void onFilterUpdate(DialogFilter filter) {
-        for (int a = 0; a < 2; a++) {
-            if (selectedDialogFilter[a] == filter) {
-                sortDialogs(null);
-                getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload, true);
-                break;
-            }
-        }
+        getDialogFiltersController().onFilterUpdate(filter);
     }
 
     public void addFilter(DialogFilter filter, boolean atBegin) {
-        if (atBegin) {
-            int order = 254;
-            for (int a = 0, N = dialogFilters.size(); a < N; a++) {
-                order = Math.min(order, dialogFilters.get(a).order);
-            }
-            filter.order = order - 1;
-            if (dialogFilters.get(0).isDefault()) {
-                dialogFilters.add(1, filter);
-            } else {
-                dialogFilters.add(0, filter);
-            }
-        } else {
-            int order = 0;
-            for (int a = 0, N = dialogFilters.size(); a < N; a++) {
-                order = Math.max(order, dialogFilters.get(a).order);
-            }
-            filter.order = order + 1;
-            dialogFilters.add(filter);
-        }
-        dialogFiltersById.put(filter.id, filter);
-        if (dialogFilters.size() == 1 && SharedConfig.getChatSwipeAction(currentAccount) != SwipeGestureSettingsView.SWIPE_GESTURE_FOLDERS) {
-            SharedConfig.updateChatListSwipeSetting(SwipeGestureSettingsView.SWIPE_GESTURE_FOLDERS);
-        }
-        lockFiltersInternal();
+        getDialogFiltersController().addFilter(filter, atBegin);
     }
 
     public static TLRPC.TL_emojiStatusCollectible emojiStatusCollectibleFromGift(TL_stars.TL_starGiftUnique gift) {
@@ -2635,9 +2514,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void removeFilter(DialogFilter filter) {
-        dialogFilters.remove(filter);
-        dialogFiltersById.remove(filter.id);
-        getNotificationCenter().postNotificationName(NotificationCenter.dialogFiltersUpdated);
+        getDialogFiltersController().removeFilter(filter);
     }
 
     private Runnable loadAppConfigRunnable = this::loadAppConfig;
