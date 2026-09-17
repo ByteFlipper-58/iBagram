@@ -201,4 +201,21 @@ class SendMessagesRepositoryImpl(
     override fun getSendingAlbumsCount(dialogId: Long?): Int {
         return localDataSource.getSendingAlbumsCount(dialogId)
     }
+
+    // Phase 4: Message editing queue & tracking
+    override fun registerEditing(messageId: Long, dialogId: Long) {
+        localDataSource.registerEditing(messageId, dialogId)
+    }
+
+    override fun unregisterEditing(messageId: Long) {
+        localDataSource.unregisterEditing(messageId)
+    }
+
+    override fun isEditingMessage(messageId: Long): Boolean {
+        return localDataSource.isEditingMessage(messageId)
+    }
+
+    override fun getEditingMessagesCount(dialogId: Long?): Int {
+        return localDataSource.getEditingMessagesCount(dialogId)
+    }
 }

@@ -7439,6 +7439,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             repo.registerSending(message.id, MessageObject.getDialogId(message), false);
         }
         if (message.id > 0) {
+            if (repo != null) {
+                repo.registerEditing(message.id, MessageObject.getDialogId(message));
+            }
             editingMessages.put(message.id, message);
         } else {
             boolean contains = sendingMessages.indexOfKey(message.id) >= 0;
@@ -7461,6 +7464,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         }
         TLRPC.Message message;
         if (mid > 0) {
+            if (repo != null) {
+                repo.unregisterEditing(mid);
+            }
             message = editingMessages.get(mid);
             if (message != null) {
                 editingMessages.remove(mid);
@@ -7548,12 +7554,19 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
 
     public boolean isSendingMessage(int mid) {
         org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
-        if (repo != null && repo.isSendingMessage(mid)) {
+        if (repo != null && (repo.isSendingMessage(mid) || repo.isEditingMessage(mid))) {
             return true;
         }
         return sendingMessages.indexOfKey(mid) >= 0 || editingMessages.indexOfKey(mid) >= 0;
     }
 
+    public boolean isEditingMessage(int mid) {
+        org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
+        if (repo != null && repo.isEditingMessage(mid)) {
+            return true;
+        }
+        return editingMessages.indexOfKey(mid) >= 0;
+    }
 
     public boolean isSendingPaidMessage(int mid, int index) {
         DelayedMessage delayedMessage = null;
@@ -7575,6 +7588,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         }
         if (delayedMessage != null && index >= 0 && index < delayedMessage.messages.size()) {
             mid = delayedMessage.messages.get(index).id;
+        }
+        org.telegram.messenger.feature.messaging.sendmessages.domain.repository.SendMessagesRepository repo = getSendMessagesRepository();
+        if (repo != null && (repo.isSendingMessage(mid) || repo.isEditingMessage(mid))) {
+            return true;
         }
         return sendingMessages.indexOfKey(mid) >= 0 || editingMessages.indexOfKey(mid) >= 0;
     }

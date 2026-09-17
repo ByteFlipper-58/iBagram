@@ -243,4 +243,37 @@ class SendMessagesRepositoryImplTest {
             assertEquals(SendStatus.CANCELLED, item.status)
         }
     }
+
+    @Test
+    fun testMessageEditingQueueAndTracking() {
+        val dialogId = 55555L
+        val editedMsgId = 123456L
+
+        assertFalse(repository.isEditingMessage(editedMsgId))
+        assertFalse(repository.isSendingMessage(editedMsgId))
+        assertEquals(0, repository.getEditingMessagesCount())
+        assertEquals(0, repository.getEditingMessagesCount(dialogId))
+
+        // Register edited message
+        repository.registerEditing(editedMsgId, dialogId)
+        assertTrue(repository.isEditingMessage(editedMsgId))
+        assertTrue(repository.isSendingMessage(editedMsgId))
+        assertTrue(repository.isSendingDialog(dialogId))
+        assertEquals(1, repository.getEditingMessagesCount())
+        assertEquals(1, repository.getEditingMessagesCount(dialogId))
+
+        // Unregister edited message
+        repository.unregisterEditing(editedMsgId)
+        assertFalse(repository.isEditingMessage(editedMsgId))
+        assertFalse(repository.isSendingMessage(editedMsgId))
+        assertEquals(0, repository.getEditingMessagesCount())
+        assertEquals(0, repository.getEditingMessagesCount(dialogId))
+
+        // Re-register and test reset()
+        repository.registerEditing(editedMsgId, dialogId)
+        assertTrue(repository.isEditingMessage(editedMsgId))
+        repository.reset()
+        assertFalse(repository.isEditingMessage(editedMsgId))
+        assertEquals(0, repository.getEditingMessagesCount())
+    }
 }

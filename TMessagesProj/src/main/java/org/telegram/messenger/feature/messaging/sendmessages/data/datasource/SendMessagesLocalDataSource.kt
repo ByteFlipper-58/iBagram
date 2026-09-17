@@ -20,6 +20,7 @@ class SendMessagesLocalDataSource(
     private val idGenerator = AtomicLong(1000L)
     private val _pendingSends = MutableStateFlow<List<PendingSendModel>>(emptyList())
     private val albumQueue = ConcurrentHashMap<Long, AlbumEntry>()
+    private val editingMessages = ConcurrentHashMap<Long, Long>() // messageId -> dialogId
 
     data class AlbumEntry(val albumId: Long, val dialogId: Long, val localIds: List<Long>)
 
@@ -155,6 +156,7 @@ class SendMessagesLocalDataSource(
     fun reset() = synchronized(lock) {
         _pendingSends.value = emptyList()
         albumQueue.clear()
+        editingMessages.clear()
     }
 
     // Phase 4: Synchronous legacy strangler methods
@@ -190,11 +192,11 @@ class SendMessagesLocalDataSource(
     }
 
     fun isSendingMessage(localId: Long): Boolean {
-        return _pendingSends.value.any { it.localId == localId && !it.isFinished }
+        return editingMessages.containsKey(localId) || _pendingSends.value.any { it.localId == localId && !it.isFinished }
     }
 
     fun isSendingDialog(dialogId: Long): Boolean {
-        return _pendingSends.value.any { it.dialogId == dialogId && !it.isFinished }
+        return editingMessages.containsValue(dialogId) || _pendingSends.value.any { it.dialogId == dialogId && !it.isFinished }
     }
 
     // Phase 4: Media album queue & batch dispatching
@@ -227,6 +229,27 @@ class SendMessagesLocalDataSource(
             albumQueue.size
         } else {
             albumQueue.values.count { it.dialogId == dialogId }
+        }
+    }
+
+    // Phase 4: Message editing queue & tracking
+    fun registerEditing(messageId: Long, dialogId: Long) = synchronized(lock) {
+        editingMessages[messageId] = dialogId
+    }
+
+    fun unregisterEditing(messageId: Long) = synchronized(lock) {
+        editingMessages.remove(messageId)
+    }
+
+    fun isEditingMessage(messageId: Long): Boolean {
+        return editingMessages.containsKey(messageId)
+    }
+
+    fun getEditingMessagesCount(dialogId: Long? = null): Int {
+        return if (dialogId == null) {
+            editingMessages.size
+        } else {
+            editingMessages.values.count { it == dialogId }
         }
     }
 }

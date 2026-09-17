@@ -35,4 +35,10 @@ interface SendMessagesRepository {
     fun isSendingAlbum(albumId: Long): Boolean = false
     fun getAlbumLocalIds(albumId: Long): List<Long> = emptyList()
     fun getSendingAlbumsCount(dialogId: Long? = null): Int = 0
+
+    // Phase 4: Message editing queue & tracking
+    fun registerEditing(messageId: Long, dialogId: Long) {}
+    fun unregisterEditing(messageId: Long) {}
+    fun isEditingMessage(messageId: Long): Boolean = false
+    fun getEditingMessagesCount(dialogId: Long? = null): Int = 0
 }
