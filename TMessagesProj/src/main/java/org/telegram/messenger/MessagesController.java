@@ -85,7 +85,6 @@ import org.telegram.ui.ActionBar.ActionBarLayout;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Business.QuickRepliesController;
 import org.telegram.ui.Cells.CheckBoxCell;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.ChatReactionsEditActivity;
@@ -331,7 +330,6 @@ public class MessagesController extends BaseController implements NotificationCe
     private LongSparseArray<ArrayList<MessageObject>> reloadingSavedWebpagesPending = new LongSparseArray<>();
 
     private LongSparseArray<Long> lastScheduledServerQueryTime = new LongSparseArray<>();
-    private LongSparseArray<Long> lastQuickReplyServerQueryTime = new LongSparseArray<>();
     private LongSparseArray<Long> lastWelcomeMessagesServerQueryTime = new LongSparseArray<>();
     private LongSparseArray<Long> lastSavedServerQueryTime = new LongSparseArray<>();
     private LongSparseArray<Long> lastServerQueryTime = new LongSparseArray<>();
@@ -425,6 +423,10 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public EmojiStatusController getEmojiStatusController() {
         return EmojiStatusController.getInstance(currentAccount);
+    }
+
+    public QuickRepliesController getQuickRepliesController() {
+        return QuickRepliesController.getInstance(currentAccount);
     }
 
     private final CacheFetcher<Integer, TLRPC.TL_help_appConfig> appConfigFetcher = new CacheFetcher<Integer, TLRPC.TL_help_appConfig>() {
@@ -1169,7 +1171,7 @@ public class MessagesController extends BaseController implements NotificationCe
     public void clearQueryTime() {
         lastServerQueryTime.clear();
         lastScheduledServerQueryTime.clear();
-        lastQuickReplyServerQueryTime.clear();
+        getQuickRepliesController().clearQueryTimes();
         lastWelcomeMessagesServerQueryTime.clear();
         lastSavedServerQueryTime.clear();
     }
@@ -6358,7 +6360,7 @@ public class MessagesController extends BaseController implements NotificationCe
         }
 
         lastScheduledServerQueryTime.clear();
-        lastQuickReplyServerQueryTime.clear();
+        getQuickRepliesController().clearQueryTimes();
         lastWelcomeMessagesServerQueryTime.clear();
         lastSavedServerQueryTime.clear();
         lastServerQueryTime.clear();
@@ -9174,7 +9176,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, false, ChatActivity.MODE_SCHEDULED, 0);
             } else if (quickReplies) {
                 if (mode == ChatActivity.MODE_QUICK_REPLIES) {
-                    QuickRepliesController.getInstance(currentAccount).deleteLocalMessages(messages);
+                    org.telegram.ui.Business.QuickRepliesController.getInstance(currentAccount).deleteLocalMessages(messages);
                 }
                 getMessagesStorage().markMessagesAsDeleted(dialogId, messages, true, false, ChatActivity.MODE_QUICK_REPLIES, topicId);
             } else if (welcomeMessages) {
@@ -11800,7 +11802,7 @@ public class MessagesController extends BaseController implements NotificationCe
         if (mode == ChatActivity.MODE_SCHEDULED) {
             reload = ((SystemClock.elapsedRealtime() - lastScheduledServerQueryTime.get(dialogId, 0L)) > 60 * 1000);
         } else if (mode == ChatActivity.MODE_QUICK_REPLIES) {
-            reload = ((SystemClock.elapsedRealtime() - lastQuickReplyServerQueryTime.get(threadMessageId, 0L)) > 60 * 1000);
+            reload = getQuickRepliesController().shouldReloadMessages(threadMessageId);
         } else if (mode == ChatActivity.MODE_WELCOME_MESSAGES) {
             reload = ((SystemClock.elapsedRealtime() - lastWelcomeMessagesServerQueryTime.get(dialogId, 0L)) > 60 * 1000);
         } else if (mode == ChatActivity.MODE_SAVED) {
@@ -11812,7 +11814,7 @@ public class MessagesController extends BaseController implements NotificationCe
             if (mode == ChatActivity.MODE_SCHEDULED) {
                 lastScheduledServerQueryTime.put(dialogId, SystemClock.elapsedRealtime());
             } else if (mode == ChatActivity.MODE_QUICK_REPLIES) {
-                lastQuickReplyServerQueryTime.put(threadMessageId, SystemClock.elapsedRealtime());
+                getQuickRepliesController().recordServerQueryTime(threadMessageId);
             } else if (mode == ChatActivity.MODE_WELCOME_MESSAGES) {
                 lastWelcomeMessagesServerQueryTime.put(dialogId, SystemClock.elapsedRealtime());
             } else if (mode == ChatActivity.MODE_SAVED) {
@@ -20555,7 +20557,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         }
                     } else if (baseUpdate instanceof TL_update.TL_updatePinnedSavedDialogs || baseUpdate instanceof TL_update.TL_updateSavedDialogPinned) {
                         getSavedMessagesController().processUpdate(baseUpdate);
-                    } else if (QuickRepliesController.getInstance(currentAccount).processUpdate(baseUpdate, null, 0)) {
+                    } else if (org.telegram.ui.Business.QuickRepliesController.getInstance(currentAccount).processUpdate(baseUpdate, null, 0)) {
 
                     } else if (baseUpdate instanceof TL_update.TL_updatePaidReactionPrivacy) {
                         TL_update.TL_updatePaidReactionPrivacy upd = (TL_update.TL_updatePaidReactionPrivacy) baseUpdate;
@@ -21731,7 +21733,7 @@ public class MessagesController extends BaseController implements NotificationCe
         }
         getMediaDataController().loadReplyMessagesForMessages(messages, dialogId, mode, 0, null, 0, null);
         if (mode == ChatActivity.MODE_QUICK_REPLIES) {
-            QuickRepliesController.getInstance(currentAccount).checkLocalMessages(messages);
+            org.telegram.ui.Business.QuickRepliesController.getInstance(currentAccount).checkLocalMessages(messages);
         }
         getNotificationCenter().postNotificationName(NotificationCenter.didReceiveNewMessages, dialogId, messages, scheduled, mode);
 

@@ -110,6 +110,10 @@ public class AccountInstance {
         return EmojiStatusController.getInstance(currentAccount);
     }
 
+    public QuickRepliesController getQuickRepliesController() {
+        return QuickRepliesController.getInstance(currentAccount);
+    }
+
     public int getCurrentAccount() {
         return currentAccount;
     }

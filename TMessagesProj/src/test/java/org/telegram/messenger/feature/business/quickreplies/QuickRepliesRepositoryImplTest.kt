@@ -175,4 +175,27 @@ class QuickRepliesRepositoryImplTest {
         assertEquals(1, emitted.size)
         assertEquals(10, emitted[0].id)
     }
+
+    @Test
+    fun `testQuickRepliesControllerAccess and queryTimes`() {
+        val controller = org.telegram.messenger.QuickRepliesController.getInstance(0)
+        assertNotNull(controller)
+        val repo = controller.quickRepliesRepository
+        assertNotNull(repo)
+
+        // Initially without recorded time, should reload
+        assertTrue(controller.shouldReloadMessages(12345L))
+
+        // Record query time
+        controller.recordServerQueryTime(12345L)
+        assertFalse(controller.shouldReloadMessages(12345L))
+
+        // Clear query times
+        controller.clearQueryTimes()
+        assertTrue(controller.shouldReloadMessages(12345L))
+
+        // Strangler hook on UI controller
+        val uiRepo = org.telegram.ui.Business.QuickRepliesController.getQuickRepliesRepository(0)
+        assertNotNull(uiRepo)
+    }
 }
