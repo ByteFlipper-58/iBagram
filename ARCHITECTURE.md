@@ -3496,5 +3496,12 @@ TMessagesProj/src/main/java/org/telegram/messenger/
 - **Decision:** Extend `SendMessagesRepository` and its data source `SendMessagesLocalDataSource` with thread-safe media album tracking (`registerMediaAlbum`, `unregisterMediaAlbum`, `isSendingAlbum`, `getAlbumLocalIds`, `getSendingAlbumsCount`). In `SendMessagesHelper.java`, hook `DelayedMessage.initForGroup()` to register active albums upon creation; add `DelayedMessage.updateAlbumLocalIds()` to synchronize message item IDs as individual media entries are attached; wire `DelayedMessage.sendDelayedRequests()` to unregister albums upon successful multi-media dispatch; and wire `DelayedMessage.markAsError()` to cancel/unregister failed albums.
 - **Consequences:** Modern repository and presentation layers can now query and observe media album queuing and dispatching in real time; `SendMessagesHelper` remains 100% backward-compatible with upstream MTProto and local SQLite pipelines; comprehensive JVM unit tests cover registration, batch dispatch, and error cancellation.
 
+### ADR 227: Message Editing Queue and Upload Tracking in SendMessagesHelper (Batch 4.6)
+- **Context:** In Telegram Android, editing already-sent messages (identified by positive message IDs `message.id > 0`) maintains pending network updates and upload states inside `SendMessagesHelper.java` via `editingMessages` (`SparseArray<TLRPC.Message>`). The modern `SendMessagesRepository` lacked visibility into ongoing message edits, causing divergence between the legacy controller state and modern repository observers.
+- **Decision:** Extend `SendMessagesRepository` and `SendMessagesLocalDataSource` with thread-safe editing tracking (`registerEditing`, `unregisterEditing`, `isEditingMessage`, `getEditingMessagesCount`). Hook `SendMessagesHelper.putToSendingMessages()` to register edited messages when `message.id > 0`, hook `removeFromSendingMessages()` to unregister completed/cancelled edits, connect `isSendingMessage()` and `isSendingPaidMessage()` to consult `repo.isEditingMessage()`, and expose `isEditingMessage(int mid)` as a public helper on `SendMessagesHelper`.
+- **Consequences:** Ongoing message editing operations are fully observable via `SendMessagesRepository`; dialog sending state correctly reflects pending edits; `SendMessagesHelper` maintains 100% backward compatibility for all upstream UI callers; full JVM unit test coverage verifies registration, unregistration, dialog association, and reset mechanics.
+
+
+
 
 
