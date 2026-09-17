@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import org.telegram.messenger.feature.messaging.sendmessages.domain.model.PendingSendModel
 import org.telegram.messenger.feature.messaging.sendmessages.domain.model.SendStatus
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -18,6 +19,9 @@ class SendMessagesLocalDataSource(
     private val lock = Any()
     private val idGenerator = AtomicLong(1000L)
     private val _pendingSends = MutableStateFlow<List<PendingSendModel>>(emptyList())
+    private val albumQueue = ConcurrentHashMap<Long, AlbumEntry>()
+
+    data class AlbumEntry(val albumId: Long, val dialogId: Long, val localIds: List<Long>)
 
     fun nextId(): Long = idGenerator.incrementAndGet()
 
@@ -150,6 +154,7 @@ class SendMessagesLocalDataSource(
 
     fun reset() = synchronized(lock) {
         _pendingSends.value = emptyList()
+        albumQueue.clear()
     }
 
     // Phase 4: Synchronous legacy strangler methods
@@ -190,5 +195,38 @@ class SendMessagesLocalDataSource(
 
     fun isSendingDialog(dialogId: Long): Boolean {
         return _pendingSends.value.any { it.dialogId == dialogId && !it.isFinished }
+    }
+
+    // Phase 4: Media album queue & batch dispatching
+    fun registerMediaAlbum(albumId: Long, dialogId: Long, localIds: List<Long>) = synchronized(lock) {
+        albumQueue[albumId] = AlbumEntry(albumId, dialogId, localIds)
+        for (id in localIds) {
+            registerSending(id, dialogId, isUploading = true)
+        }
+    }
+
+    fun unregisterMediaAlbum(albumId: Long, isSuccess: Boolean) = synchronized(lock) {
+        val entry = albumQueue.remove(albumId)
+        if (entry != null) {
+            for (id in entry.localIds) {
+                unregisterSending(id, isSuccess)
+            }
+        }
+    }
+
+    fun isSendingAlbum(albumId: Long): Boolean {
+        return albumQueue.containsKey(albumId)
+    }
+
+    fun getAlbumLocalIds(albumId: Long): List<Long> {
+        return albumQueue[albumId]?.localIds ?: emptyList()
+    }
+
+    fun getSendingAlbumsCount(dialogId: Long? = null): Int {
+        return if (dialogId == null) {
+            albumQueue.size
+        } else {
+            albumQueue.values.count { it.dialogId == dialogId }
+        }
     }
 }

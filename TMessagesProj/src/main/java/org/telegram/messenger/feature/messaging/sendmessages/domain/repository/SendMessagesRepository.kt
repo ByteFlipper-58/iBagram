@@ -28,4 +28,11 @@ interface SendMessagesRepository {
     fun retrySendSync(localId: Long): Boolean = false
     fun isSendingMessage(localId: Long): Boolean = false
     fun isSendingDialog(dialogId: Long): Boolean = false
+
+    // Phase 4: Media album queue & batch dispatching
+    fun registerMediaAlbum(albumId: Long, dialogId: Long, localIds: List<Long>) {}
+    fun unregisterMediaAlbum(albumId: Long, isSuccess: Boolean) {}
+    fun isSendingAlbum(albumId: Long): Boolean = false
+    fun getAlbumLocalIds(albumId: Long): List<Long> = emptyList()
+    fun getSendingAlbumsCount(dialogId: Long? = null): Int = 0
 }

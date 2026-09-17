@@ -869,6 +869,19 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             videoEditedInfos = new ArrayList<>();
             pollIndexes = new ArrayList<>();
             livePhotoIndexes = new ArrayList<>();
+            if (getSendMessagesRepository() != null) {
+                getSendMessagesRepository().registerMediaAlbum(id, peer, java.util.Collections.emptyList());
+            }
+        }
+
+        public void updateAlbumLocalIds() {
+            if (groupId != 0 && getSendMessagesRepository() != null && messageObjects != null) {
+                ArrayList<Long> ids = new ArrayList<>(messageObjects.size());
+                for (int i = 0; i < messageObjects.size(); i++) {
+                    ids.add((long) messageObjects.get(i).getId());
+                }
+                getSendMessagesRepository().registerMediaAlbum(groupId, peer, ids);
+            }
         }
 
         public void addDelayedRequest(final TLObject req, final MessageObject msgObj, final String originalPath, Object parentObject, DelayedMessage delayedMessage, boolean scheduled) {
@@ -903,6 +916,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             if (requests == null || type != 4 && type != 0) {
                 return;
             }
+            if (type == 4 && groupId != 0 && getSendMessagesRepository() != null) {
+                getSendMessagesRepository().unregisterMediaAlbum(groupId, true);
+            }
             int size = requests.size();
             for (int a = 0; a < size; a++) {
                 DelayedMessageSendAfterRequest request = requests.get(a);
@@ -923,6 +939,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
 
         public void markAsError() {
             if (type == 4) {
+                if (groupId != 0 && getSendMessagesRepository() != null) {
+                    getSendMessagesRepository().unregisterMediaAlbum(groupId, false);
+                }
                 for (int a = 0; a < messageObjects.size(); a++) {
                     MessageObject obj = messageObjects.get(a);
                     getMessagesStorage().markMessageAsSendError(obj.messageOwner, obj.scheduled ? 1 : 0);
@@ -5898,6 +5917,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                         delayedMessage.originalPaths.add(originalPath);
                         delayedMessage.pollIndexes.add(pollIndex);
                         delayedMessage.livePhotoIndexes.add(delayedMessage.isLivePhoto);
+                        delayedMessage.updateAlbumLocalIds();
 
                         if (request instanceof TLRPC.TL_messages_sendMultiMedia) {
                             TLRPC.TL_inputSingleMedia inputSingleMedia = new TLRPC.TL_inputSingleMedia();
@@ -6300,6 +6320,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                         delayedMessage.messageObjects.add(newMsgObj);
                         delayedMessage.messages.add(newMsg);
                         delayedMessage.originalPaths.add(originalPath);
+                        delayedMessage.updateAlbumLocalIds();
                         delayedMessage.performMediaUpload = true;
                         request.messages.add(reqSend);
                         TLRPC.TL_inputEncryptedFile encryptedFile = new TLRPC.TL_inputEncryptedFile();

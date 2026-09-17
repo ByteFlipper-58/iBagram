@@ -194,4 +194,53 @@ class SendMessagesRepositoryImplTest {
         assertEquals(SendStatus.PENDING, retriedItem.status)
         assertEquals(1, retriedItem.retryCount)
     }
+
+    @Test
+    fun testMediaAlbumQueueAndBatchDispatch() {
+        val albumId = 44445555L
+        val dialogId = 12345L
+        val localIds = listOf(1001L, 1002L, 1003L)
+
+        // Initially no album is queued
+        assertFalse(repository.isSendingAlbum(albumId))
+        assertEquals(0, repository.getSendingAlbumsCount(dialogId))
+        assertTrue(repository.getAlbumLocalIds(albumId).isEmpty())
+
+        // Register media album with local IDs
+        repository.registerMediaAlbum(albumId, dialogId, localIds)
+        assertTrue(repository.isSendingAlbum(albumId))
+        assertEquals(1, repository.getSendingAlbumsCount(dialogId))
+        assertEquals(localIds, repository.getAlbumLocalIds(albumId))
+
+        // Each item should be registered as sending / uploading
+        localIds.forEach { id ->
+            assertTrue(repository.isSendingMessage(id))
+        }
+        assertTrue(repository.isSendingDialog(dialogId))
+
+        // Complete album successfully (e.g. batch dispatched)
+        repository.unregisterMediaAlbum(albumId, isSuccess = true)
+        assertFalse(repository.isSendingAlbum(albumId))
+        assertEquals(0, repository.getSendingAlbumsCount(dialogId))
+
+        localIds.forEach { id ->
+            assertFalse(repository.isSendingMessage(id))
+            val item = repository.getPendingSends(dialogId).first { it.localId == id }
+            assertEquals(SendStatus.SUCCESS, item.status)
+        }
+
+        // Test album failure/cancellation
+        val failedAlbumId = 88889999L
+        val failedIds = listOf(2001L, 2002L)
+        repository.registerMediaAlbum(failedAlbumId, dialogId, failedIds)
+        assertTrue(repository.isSendingAlbum(failedAlbumId))
+        assertEquals(1, repository.getSendingAlbumsCount(dialogId))
+
+        repository.unregisterMediaAlbum(failedAlbumId, isSuccess = false)
+        assertFalse(repository.isSendingAlbum(failedAlbumId))
+        failedIds.forEach { id ->
+            val item = repository.getPendingSends(dialogId).first { it.localId == id }
+            assertEquals(SendStatus.CANCELLED, item.status)
+        }
+    }
 }

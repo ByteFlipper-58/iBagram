@@ -180,4 +180,25 @@ class SendMessagesRepositoryImpl(
     override fun isSendingDialog(dialogId: Long): Boolean {
         return localDataSource.isSendingDialog(dialogId)
     }
+
+    // Phase 4: Media album queue & batch dispatching
+    override fun registerMediaAlbum(albumId: Long, dialogId: Long, localIds: List<Long>) {
+        localDataSource.registerMediaAlbum(albumId, dialogId, localIds)
+    }
+
+    override fun unregisterMediaAlbum(albumId: Long, isSuccess: Boolean) {
+        localDataSource.unregisterMediaAlbum(albumId, isSuccess)
+    }
+
+    override fun isSendingAlbum(albumId: Long): Boolean {
+        return localDataSource.isSendingAlbum(albumId)
+    }
+
+    override fun getAlbumLocalIds(albumId: Long): List<Long> {
+        return localDataSource.getAlbumLocalIds(albumId)
+    }
+
+    override fun getSendingAlbumsCount(dialogId: Long?): Int {
+        return localDataSource.getSendingAlbumsCount(dialogId)
+    }
 }
