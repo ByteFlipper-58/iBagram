@@ -118,6 +118,10 @@ public class AccountInstance {
         return HistoryImportController.getInstance(currentAccount);
     }
 
+    public TranscribeAudioController getTranscribeAudioController() {
+        return TranscribeAudioController.getInstance(currentAccount);
+    }
+
     public int getCurrentAccount() {
         return currentAccount;
     }

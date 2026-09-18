@@ -433,6 +433,10 @@ public class MessagesController extends BaseController implements NotificationCe
         return HistoryImportController.getInstance(currentAccount);
     }
 
+    public TranscribeAudioController getTranscribeAudioController() {
+        return TranscribeAudioController.getInstance(currentAccount);
+    }
+
     private final CacheFetcher<Integer, TLRPC.TL_help_appConfig> appConfigFetcher = new CacheFetcher<Integer, TLRPC.TL_help_appConfig>() {
         @Override
         protected void getRemote(int currentAccount, Integer arguments, long hash, Utilities.Callback4<Boolean, TLRPC.TL_help_appConfig, Long, Boolean> onResult) {
@@ -917,16 +921,12 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean didPressTranscribeButtonEnough() {
-        return transcribeButtonPressed >= 2;
+        return getTranscribeAudioController().didPressTranscribeButtonEnough();
     }
 
     public void pressTranscribeButton() {
-        if (transcribeButtonPressed < 2) {
-            transcribeButtonPressed++;
-            if (mainPreferences != null) {
-                mainPreferences.edit().putInt("transcribeButtonPressed", transcribeButtonPressed).apply();
-            }
-        }
+        getTranscribeAudioController().pressTranscribeButton();
+        transcribeButtonPressed = getTranscribeAudioController().getTranscribeButtonPressed();
     }
 
     public void putLastGiftAuctionUpdate() {
@@ -4860,11 +4860,14 @@ public class MessagesController extends BaseController implements NotificationCe
                 transcribeAudioTrialCurrentNumber = transcribeAudioTrialWeeklyNumber;
                 editor.putInt("transcribeAudioTrialCurrentNumber", transcribeAudioTrialCurrentNumber);
             }
+            getTranscribeAudioController().setTranscribeAudioTrialWeeklyNumber(this.transcribeAudioTrialWeeklyNumber);
+            getTranscribeAudioController().setTranscribeAudioTrialCurrentNumber(this.transcribeAudioTrialCurrentNumber);
             changed = true;
         }
         if (transcribeAudioTrialCooldownUntil != this.transcribeAudioTrialCooldownUntil) {
             this.transcribeAudioTrialCooldownUntil = transcribeAudioTrialCooldownUntil;
             editor.putInt("transcribeAudioTrialCooldownUntil", transcribeAudioTrialCooldownUntil);
+            getTranscribeAudioController().setTranscribeAudioTrialCooldownUntil(this.transcribeAudioTrialCooldownUntil);
             changed = true;
             scheduleTranscriptionUpdate();
         }
@@ -4892,34 +4895,18 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void updateTranscribeAudioTrialCurrentNumber(int num) {
-        if (num != transcribeAudioTrialCurrentNumber) {
-            transcribeAudioTrialCurrentNumber = num;
-            mainPreferences.edit()
-                .putInt("transcribeAudioTrialCurrentNumber", transcribeAudioTrialCurrentNumber)
-                .apply();
-        }
+        getTranscribeAudioController().updateTranscribeAudioTrialCurrentNumber(num);
+        transcribeAudioTrialCurrentNumber = getTranscribeAudioController().getTranscribeAudioTrialCurrentNumber();
     }
 
     public void updateTranscribeAudioTrialCooldownUntil(int until) {
-        if (until != transcribeAudioTrialCooldownUntil) {
-            transcribeAudioTrialCooldownUntil = until;
-            mainPreferences.edit()
-                .putInt("transcribeAudioTrialCooldownUntil", transcribeAudioTrialCooldownUntil)
-                .apply();
-            scheduleTranscriptionUpdate();
-        }
+        getTranscribeAudioController().updateTranscribeAudioTrialCooldownUntil(until);
+        transcribeAudioTrialCooldownUntil = getTranscribeAudioController().getTranscribeAudioTrialCooldownUntil();
     }
 
     private void scheduleTranscriptionUpdate() {
-        AndroidUtilities.runOnUIThread(() -> {
-            AndroidUtilities.cancelRunOnUIThread(notifyTranscriptionAudioCooldownUpdate);
-            final long wait = transcribeAudioTrialCooldownUntil - getConnectionsManager().getCurrentTime();
-            if (wait > 0) {
-                AndroidUtilities.runOnUIThread(notifyTranscriptionAudioCooldownUpdate, wait);
-            }
-        });
+        getTranscribeAudioController().scheduleTranscriptionUpdate();
     }
-    private final Runnable notifyTranscriptionAudioCooldownUpdate = () -> getNotificationCenter().postNotificationName(NotificationCenter.updateTranscriptionLock);
 
     public static class PeerColors {
 
