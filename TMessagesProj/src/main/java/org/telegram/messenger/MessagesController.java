@@ -318,7 +318,6 @@ public class MessagesController extends BaseController implements NotificationCe
 
     private SparseIntArray migratedChats = new SparseIntArray();
 
-    private LongSparseArray<SponsoredMessagesInfo> sponsoredMessages = new LongSparseArray<>();
     private LongSparseArray<SendAsPeersInfo> sendAsPeers = new LongSparseArray<>();
     private LongSparseArray<SendAsPeersInfo> sendAsPeersLiveStories = new LongSparseArray<>();
 
@@ -1093,7 +1092,15 @@ public class MessagesController extends BaseController implements NotificationCe
         return userNameResolver;
     }
 
-    public class SponsoredMessagesInfo {
+    public SponsoredMessagesController getSponsoredMessagesController() {
+        return getAccountInstance().getSponsoredMessagesController();
+    }
+
+    public BlockedPeersController getBlockedPeersController() {
+        return getAccountInstance().getBlockedPeersController();
+    }
+
+    public static class SponsoredMessagesInfo {
         public ArrayList<MessageObject> messages;
         public Integer posts_between;
         public long loadTime;
@@ -1540,6 +1547,7 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public MessagesController(int num) {
         super(num);
+        blockePeers = getBlockedPeersController().blockePeers;
         ImageLoader.getInstance();
         getMessagesStorage();
         getLocationController();
@@ -4046,6 +4054,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         TLRPC.TL_jsonNumber num = (TLRPC.TL_jsonNumber) value.value;
                         if (channelRestrictSponsoredLevelMin != num.value) {
                             channelRestrictSponsoredLevelMin = (int) num.value;
+                            getSponsoredMessagesController().channelRestrictSponsoredLevelMin = channelRestrictSponsoredLevelMin;
                             editor.putInt("channelRestrictSponsoredLevelMin", channelRestrictSponsoredLevelMin);
                             changed = true;
                         }
@@ -4557,6 +4566,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         TLRPC.TL_jsonBool bool = (TLRPC.TL_jsonBool) value.value;
                         if (bool.value != sponsoredLinksInappAllow) {
                             sponsoredLinksInappAllow = bool.value;
+                            getSponsoredMessagesController().sponsoredLinksInappAllow = sponsoredLinksInappAllow;
                             editor.putBoolean("sponsoredLinksInappAllow", sponsoredLinksInappAllow);
                             changed = true;
                         }
@@ -6361,7 +6371,7 @@ public class MessagesController extends BaseController implements NotificationCe
         reloadingScheduledWebpagesPending.clear();
         reloadingSavedWebpages.clear();
         reloadingSavedWebpagesPending.clear();
-        sponsoredMessages.clear();
+        getSponsoredMessagesController().cleanup();
         sendAsPeers.clear();
         sendAsPeersLiveStories.clear();
         dialogs_dict.clear();
@@ -6445,7 +6455,7 @@ public class MessagesController extends BaseController implements NotificationCe
         createdDialogMainThreadIds.clear();
         visibleDialogMainThreadIds.clear();
         visibleScheduledDialogMainThreadIds.clear();
-        blockePeers.clear();
+        getBlockedPeersController().cleanup();
         for (int a = 0; a < sendingTypings.length; a++) {
             if (sendingTypings[a] == null) {
                 continue;
@@ -6476,9 +6486,6 @@ public class MessagesController extends BaseController implements NotificationCe
         currentDeletingTaskMids = null;
         currentDeletingTaskMediaMids = null;
         gettingNewDeleteTask = false;
-        loadingBlockedPeers = false;
-        totalBlockedCount = -1;
-        blockedEndReached = false;
         firstGettingTask = false;
         updatingState = false;
         resetingDialogs = false;
@@ -7548,18 +7555,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         TL_bots.BotInfo botInfo = res.full_chat.bot_info.get(a);
                         getMediaDataController().putBotInfo(-chatId, botInfo);
                     }
-                    int index = blockePeers.indexOfKey(-chatId);
-                    if (res.full_chat.blocked) {
-                        if (index < 0) {
-                            blockePeers.put(-chatId, 1);
-                            getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
-                        }
-                    } else {
-                        if (index >= 0) {
-                            blockePeers.removeAt(index);
-                            getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
-                        }
-                    }
+                    getBlockedPeersController().onPeerBlockedChanged(-chatId, res.full_chat.blocked);
                     exportedChats.put(chatId, res.full_chat.exported_invite);
                     loadingFullChats.remove(chatId);
                     loadedFullChats.put(chatId,  System.currentTimeMillis());
@@ -7642,18 +7638,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         userFull.bot_info.user_id = user.id;
                         getMediaDataController().putBotInfo(user.id, userFull.bot_info);
                     }
-                    int index = blockePeers.indexOfKey(user.id);
-                    if (userFull.blocked) {
-                        if (index < 0) {
-                            blockePeers.put(user.id, 1);
-                            getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
-                        }
-                    } else {
-                        if (index >= 0) {
-                            blockePeers.removeAt(index);
-                            getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
-                        }
-                    }
+                    getBlockedPeersController().onPeerBlockedChanged(user.id, userFull.blocked);
                     fullUsers.put(user.id, userFull);
                     getTranslateController().updateDialogFull(user.id);
                     StarsController.getInstance(currentAccount).invalidateProfileGifts(userFull);
@@ -8522,43 +8507,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void blockPeer(long id) {
-        TLRPC.User user = null;
-        TLRPC.Chat chat = null;
-        if (id > 0) {
-            user = getUser(id);
-            if (user == null) {
-                return;
-            }
-        } else {
-            chat = getChat(-id);
-            if (chat == null) {
-                return;
-            }
-        }
-        if (blockePeers.indexOfKey(id) >= 0) {
-            return;
-        }
-        blockePeers.put(id, 1);
-        if (user != null) {
-            if (user.bot) {
-                getMediaDataController().removeInline(id);
-            } else {
-                getMediaDataController().removePeer(id);
-            }
-        }
-        if (totalBlockedCount >= 0) {
-            totalBlockedCount++;
-        }
-        getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
-        TLRPC.TL_contacts_block req = new TLRPC.TL_contacts_block();
-        if (user != null) {
-            req.id = getInputPeer(user);
-        } else {
-            req.id = getInputPeer(chat);
-        }
-        getConnectionsManager().sendRequest(req, (response, error) -> {
-
-        });
+        getBlockedPeersController().blockPeer(id);
     }
 
     public void setParticipantBannedRole(long chatId, TLRPC.User user, TLRPC.Chat chat, TLRPC.TL_chatBannedRights rights, boolean isChannel, BaseFragment parentFragment) {
@@ -8713,66 +8662,15 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void unblockPeer(long id) {
-        unblockPeer(id, null);
+        getBlockedPeersController().unblockPeer(id);
     }
 
     public void unblockPeer(long id, Runnable callback) {
-        TLRPC.TL_contacts_unblock req = new TLRPC.TL_contacts_unblock();
-        TLRPC.User user = null;
-        TLRPC.Chat chat = null;
-        if (id > 0) {
-            user = getUser(id);
-            if (user == null) {
-                return;
-            }
-        } else {
-            chat = getChat(-id);
-            if (chat == null) {
-                return;
-            }
-        }
-        totalBlockedCount--;
-        blockePeers.delete(id);
-        if (user != null) {
-            req.id = getInputPeer(user);
-        } else {
-            req.id = getInputPeer(chat);
-        }
-        getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
-        getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-            if (callback != null) {
-                callback.run();
-            }
-        }));
+        getBlockedPeersController().unblockPeer(id, callback);
     }
 
     public void getBlockedPeers(boolean reset) {
-        if (!getUserConfig().isClientActivated() || loadingBlockedPeers) {
-            return;
-        }
-        loadingBlockedPeers = true;
-        TLRPC.TL_contacts_getBlocked req = new TLRPC.TL_contacts_getBlocked();
-        req.offset = reset ? 0 : blockePeers.size();
-        req.limit = reset ? 20 : 100;
-        getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
-            if (response != null) {
-                TLRPC.contacts_Blocked res = (TLRPC.contacts_Blocked) response;
-                putUsers(res.users, false);
-                putChats(res.chats, false);
-                getMessagesStorage().putUsersAndChats(res.users, res.chats, true, true);
-                if (reset) {
-                    blockePeers.clear();
-                }
-                totalBlockedCount = Math.max(res.count, res.blocked.size());
-                blockedEndReached = res.blocked.size() < req.limit;
-                for (int a = 0, N = res.blocked.size(); a < N; a++) {
-                    TLRPC.TL_peerBlocked blocked = res.blocked.get(a);
-                    blockePeers.put(MessageObject.getPeerId(blocked.peer_id), 1);
-                }
-                loadingBlockedPeers = false;
-                getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
-            }
-        }));
+        getBlockedPeersController().getBlockedPeers(reset);
     }
 
     public void deleteUserPhoto(TLRPC.InputPhoto photo) {
@@ -10318,18 +10216,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     getTranslateController().updateDialogFull(user.id);
                     StarsController.getInstance(currentAccount).invalidateProfileGifts(info);
 
-                    int index = blockePeers.indexOfKey(user.id);
-                    if (info.blocked) {
-                        if (index < 0) {
-                            blockePeers.put(user.id, 1);
-                            getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
-                        }
-                    } else {
-                        if (index >= 0) {
-                            blockePeers.removeAt(index);
-                            getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
-                        }
-                    }
+                    getBlockedPeersController().onPeerBlockedChanged(user.id, info.blocked);
                 }
                 getNotificationCenter().postNotificationName(NotificationCenter.userInfoDidLoad, user.id, info);
             }
@@ -19001,14 +18888,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 TL_update.TL_updatePeerBlocked finalUpdate = (TL_update.TL_updatePeerBlocked) baseUpdate;
                 getMessagesStorage().getStorageQueue().postRunnable(() -> AndroidUtilities.runOnUIThread(() -> {
                     long id = MessageObject.getPeerId(finalUpdate.peer_id);
-                    if (finalUpdate.blocked) {
-                        if (blockePeers.indexOfKey(id) < 0) {
-                            blockePeers.put(id, 1);
-                        }
-                    } else {
-                        blockePeers.delete(id);
-                    }
-                    getNotificationCenter().postNotificationName(NotificationCenter.blockedUsersDidLoad);
+                    getBlockedPeersController().onPeerBlockedChanged(id, finalUpdate.blocked);
                     getStoriesController().updateBlockUser(id, finalUpdate.blocked_my_stories_from, false);
                 }));
             } else if (baseUpdate instanceof TL_update.TL_updateServiceNotification) {
@@ -21432,102 +21312,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public SponsoredMessagesInfo getSponsoredMessages(long dialogId) {
-        SponsoredMessagesInfo info = sponsoredMessages.get(dialogId);
-        if (info != null && (info.loading || Math.abs(SystemClock.elapsedRealtime() - info.loadTime) <= 5 * 60 * 1000)) {
-            return info;
-        }
-        if (dialogId < 0 ? !ChatObject.isChannel(getChat(-dialogId)) : !UserObject.isBot(getUser(dialogId))) {
-            return null;
-        }
-        info = new SponsoredMessagesInfo();
-        info.loading = true;
-        sponsoredMessages.put(dialogId, info);
-        SponsoredMessagesInfo infoFinal = info;
-        TLRPC.TL_messages_getSponsoredMessages req = new TLRPC.TL_messages_getSponsoredMessages();
-        req.peer = getInputPeer(dialogId);
-        getConnectionsManager().sendRequest(req, (response, error) -> {
-            ArrayList<MessageObject> result;
-            Integer posts_between;
-            if (response instanceof TLRPC.messages_SponsoredMessages) {
-                TLRPC.messages_SponsoredMessages res = (TLRPC.messages_SponsoredMessages) response;
-                if (res.messages.isEmpty()) {
-                    result = null;
-                    posts_between = null;
-                } else {
-                    if (res instanceof TLRPC.TL_messages_sponsoredMessages && (res.flags & 0x1) > 0) {
-                        posts_between = res.posts_between;
-                    } else {
-                        posts_between = null;
-                    }
-                    result = new ArrayList<>();
-                    AndroidUtilities.runOnUIThread(() -> {
-                        putUsers(res.users, false);
-                        putChats(res.chats, false);
-                    });
-                    final LongSparseArray<TLRPC.User> usersDict = new LongSparseArray<>();
-                    final LongSparseArray<TLRPC.Chat> chatsDict = new LongSparseArray<>();
-
-                    for (int a = 0; a < res.users.size(); a++) {
-                        TLRPC.User u = res.users.get(a);
-                        usersDict.put(u.id, u);
-                    }
-                    for (int a = 0; a < res.chats.size(); a++) {
-                        TLRPC.Chat c = res.chats.get(a);
-                        chatsDict.put(c.id, c);
-                    }
-
-                    int messageId = -10000000;
-                    for (int a = 0, N = res.messages.size(); a < N; a++) {
-                        TLRPC.TL_sponsoredMessage sponsoredMessage = res.messages.get(a);
-                        TLRPC.TL_message message = new TLRPC.TL_message();
-                        if (!sponsoredMessage.entities.isEmpty()) {
-                            message.entities = sponsoredMessage.entities;
-                            message.flags |= 128;
-                        }
-                        message.peer_id = getPeer(dialogId);
-                        message.flags |= 256;
-                        message.date = getConnectionsManager().getCurrentTime();
-                        message.id = messageId--;
-                        message.message = sponsoredMessage.message;
-                        if (sponsoredMessage.media != null) {
-                            message.flags |= 512;
-                        }
-                        message.media = sponsoredMessage.media;
-                        MessageObject messageObject = new MessageObject(currentAccount, message, usersDict, chatsDict, true, true);
-                        messageObject.sponsoredId = sponsoredMessage.random_id;
-                        messageObject.sponsoredTitle = sponsoredMessage.title;
-                        messageObject.sponsoredUrl = sponsoredMessage.url;
-                        messageObject.sponsoredRecommended = sponsoredMessage.recommended;
-                        messageObject.sponsoredPhoto = sponsoredMessage.photo;
-                        messageObject.sponsoredInfo = sponsoredMessage.sponsor_info;
-                        messageObject.sponsoredAdditionalInfo = sponsoredMessage.additional_info;
-                        messageObject.sponsoredButtonText = sponsoredMessage.button_text;
-                        messageObject.sponsoredCanReport = sponsoredMessage.can_report;
-                        messageObject.sponsoredColor = sponsoredMessage.color;
-                        messageObject.sponsoredMedia = sponsoredMessage.media;
-                        messageObject.setType();
-                        messageObject.textLayoutBlocks = new ArrayList<>();
-                        messageObject.generateThumbs(true);
-                        result.add(messageObject);
-                    }
-                }
-            } else {
-                result = null;
-                posts_between = null;
-            }
-            AndroidUtilities.runOnUIThread(() -> {
-                if (result == null) {
-                    sponsoredMessages.remove(dialogId);
-                } else {
-                    infoFinal.loadTime = SystemClock.elapsedRealtime();
-                    infoFinal.loading = false;
-                    infoFinal.messages = result;
-                    infoFinal.posts_between = posts_between;
-                    getNotificationCenter().postNotificationName(NotificationCenter.didLoadSponsoredMessages, dialogId, result);
-                }
-            });
-        });
-        return null;
+        return getSponsoredMessagesController().getSponsoredMessages(dialogId);
     }
 
     public void clearSendAsPeers() {
@@ -22907,7 +22692,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void markSponsoredAsRead(long dialog_id, MessageObject object) {
-        // sponsoredMessages.remove(dialog_id);
+        getSponsoredMessagesController().markSponsoredAsRead(dialog_id, object);
     }
 
     public void deleteMessagesRange(long dialogId, long channelId, int minDate, int maxDate, boolean forAll, Runnable callback) {
@@ -24112,21 +23897,11 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void disableAds(boolean send) {
-        TLRPC.UserFull userFull = getUserFull(getUserConfig().getClientUserId());
-        if (userFull == null) return;
-        userFull.sponsored_enabled = false;
-        getMessagesStorage().updateUserInfo(userFull, false);
-        if (send) {
-            TL_account.toggleSponsoredMessages req = new TL_account.toggleSponsoredMessages();
-            req.enabled = false;
-            getConnectionsManager().sendRequest(req, null);
-        }
+        getSponsoredMessagesController().disableAds(send);
     }
 
     public boolean isSponsoredDisabled() {
-        TLRPC.UserFull userFull = getUserFull(getUserConfig().getClientUserId());
-        if (userFull == null) return false;
-        return !userFull.sponsored_enabled;
+        return getSponsoredMessagesController().isSponsoredDisabled();
     }
 
     private boolean loadingAvailableEffects;

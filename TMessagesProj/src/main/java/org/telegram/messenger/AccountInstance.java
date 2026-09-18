@@ -122,6 +122,14 @@ public class AccountInstance {
         return TranscribeAudioController.getInstance(currentAccount);
     }
 
+    public SponsoredMessagesController getSponsoredMessagesController() {
+        return SponsoredMessagesController.getInstance(currentAccount);
+    }
+
+    public BlockedPeersController getBlockedPeersController() {
+        return BlockedPeersController.getInstance(currentAccount);
+    }
+
     public int getCurrentAccount() {
         return currentAccount;
     }
