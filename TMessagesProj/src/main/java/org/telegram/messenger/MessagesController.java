@@ -429,6 +429,10 @@ public class MessagesController extends BaseController implements NotificationCe
         return QuickRepliesController.getInstance(currentAccount);
     }
 
+    public HistoryImportController getHistoryImportController() {
+        return HistoryImportController.getInstance(currentAccount);
+    }
+
     private final CacheFetcher<Integer, TLRPC.TL_help_appConfig> appConfigFetcher = new CacheFetcher<Integer, TLRPC.TL_help_appConfig>() {
         @Override
         protected void getRemote(int currentAccount, Integer arguments, long hash, Utilities.Callback4<Boolean, TLRPC.TL_help_appConfig, Long, Boolean> onResult) {

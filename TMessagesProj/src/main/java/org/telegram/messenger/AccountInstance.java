@@ -114,6 +114,10 @@ public class AccountInstance {
         return QuickRepliesController.getInstance(currentAccount);
     }
 
+    public HistoryImportController getHistoryImportController() {
+        return HistoryImportController.getInstance(currentAccount);
+    }
+
     public int getCurrentAccount() {
         return currentAccount;
     }
